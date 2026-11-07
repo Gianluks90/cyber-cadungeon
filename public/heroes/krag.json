@@ -1,0 +1,35 @@
+{
+  "id": "krag",
+  "name": "Krag",
+  "class": "La montagna",
+  "portrait": "characters/krag-token.webp",
+  "portraitFull": "characters/krag-portrait.webp",
+  "wounds": 16,
+  "energy": 3,
+  "armor": 2,
+  "speed": 3,
+  "value": 4,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 3,
+    "cunning": 0,
+    "magic": 0
+  },
+  "dice": {
+    "melee": 3,
+    "ranged": 0,
+    "magic": 0
+  },
+  "abilityName": "Recupero dai colpi",
+  "ability": "Ogni volta che subisci ferite da un attacco recuperi {energy:1}.",
+  "effects": [
+    {
+      "kind": "rule",
+      "rule": "energyOnWounded",
+      "amount": 1,
+      "name": "Furia del dolore"
+    }
+  ]
+}

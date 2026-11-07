@@ -1,0 +1,130 @@
+import { tr } from '../../i18n/catalog-text';
+import { AttackType, ItemDef } from '../items/item';
+import { Piece, StatusKind } from '../pieces/piece';
+import { SkillEffect } from '../skills/skill';
+import type { GameState } from './game-state';
+
+/**
+ * Gli effetti attivi di un eroe (docs/cards/abilities.md, sezione 9): quelli delle sue carte abilità e degli oggetti equipaggiati, nello stesso vocabolario
+ * (`stat`, `attack`, `rule`...). Le regole chiedono qui i numeri che le riguardano: velocità, armatura, bonus di attacco, eccezioni.
+ * Per ora sono attivi `stat`, `attack` e alcune `rule`; `trigger`, `active` e `grant` aspettano energia, stati e altro (vedi abilities.md).
+ */
+
+/** Un effetto con i campi che le regole leggono, tipati (il catalogo li scrive come dati liberi). */
+export interface Effect extends SkillEffect {
+  rule?: string;
+  amount?: number;
+  stat?: string;
+  vs?: AttackType;
+  when?: string;
+  afterCaps?: boolean;
+  /** Per un effetto `attack`: i tipi di attacco; per un `trigger`: quando scatta (chooseAction, kill, death...). */
+  on?: AttackType[] | string;
+  damage?: number;
+  range?: number;
+  sparks?: number;
+  /** Solo contro un nemico che l'eroe non vedeva all'inizio del round (`Piece.seenAtStart`, `state/ambush.ts`). */
+  ifUnseenAtStart?: boolean;
+}
+
+/** Un effetto con il nome di chi lo dà (la carta o l'oggetto), per mostrarlo nelle finestre. */
+export interface SourcedEffect {
+  source: string;
+  effect: Effect;
+}
+
+function equippedDefs(state: GameState, piece: Piece): ItemDef[] {
+  return piece.equipped.flatMap((id) => {
+    const d = state.items.get(id);
+    return d ? [d] : [];
+  });
+}
+
+/** Tutti gli effetti di carte abilità e oggetti equipaggiati. */
+export function effectsOf(state: GameState, piece: Piece): SourcedEffect[] {
+  const out: SourcedEffect[] = [];
+  for (const id of piece.skillCards) {
+    const card = state.skills.get(id);
+    for (const effect of card?.effects ?? []) out.push({ source: card!.name, effect });
+  }
+  for (const d of equippedDefs(state, piece)) for (const effect of d.effects ?? []) out.push({ source: d.name, effect });
+  for (const effect of piece.heroEffects ?? []) out.push({ source: String(effect['name'] ?? (piece.abilityName || piece.name)), effect });
+  return out;
+}
+
+/** Ha questa eccezione di regola? */
+export function hasRule(state: GameState, piece: Piece, rule: string): boolean {
+  return effectsOf(state, piece).some((x) => x.effect.kind === 'rule' && x.effect.rule === rule);
+}
+
+/** Il valore (`amount`) di una regola con un numero, sommato se ci sono più fonti (0 se non c'è). */
+export function ruleAmount(state: GameState, piece: Piece, rule: string): number {
+  return effectsOf(state, piece).reduce((n, x) => (x.effect.kind === 'rule' && x.effect.rule === rule ? n + (Number(x.effect.amount) || 1) : n), 0);
+}
+
+export interface StatContext {
+  /** Contro che tipo di attacco si chiede il valore (per i bonus che valgono solo contro un tipo). */
+  vs?: AttackType;
+  /** Per la velocità: i bonus che si sommano dopo i limiti dell'armatura (`afterCaps`) oppure prima. */
+  afterCaps?: boolean;
+}
+
+/** Somma dei bonus `stat` per `stat` (wounds, energy, speed, armor): quelli con `vs` valgono solo contro quel tipo, quelli con `when: noArmorWorn` solo senza armatura. */
+export function statBonus(state: GameState, piece: Piece, stat: string, ctx: StatContext = {}): number {
+  const wearsArmor = equippedDefs(state, piece).some((d) => d.kind === 'armor');
+  return effectsOf(state, piece).reduce((n, { effect: e }) => {
+    if (e.kind !== 'stat' || e.stat !== stat) return n;
+    if (e.vs && e.vs !== ctx.vs) return n;
+    if (e.when === 'noArmorWorn' && wearsArmor) return n;
+    if (stat === 'speed' && !!e.afterCaps !== !!ctx.afterCaps) return n;
+    return n + Number(e.amount);
+  }, 0);
+}
+
+/** Gli stati che gli effetti `onHit` (Zanna) piazzano sul bersaglio quando l'attacco di questo tipo lo ferisce. */
+export function onHitStatuses(state: GameState, piece: Piece, type: AttackType): { kind: StatusKind; n: number }[] {
+  const out: { kind: StatusKind; n: number }[] = [];
+  for (const { effect: e } of effectsOf(state, piece)) {
+    if (e.kind === 'onHit' && ((e['on'] as AttackType[] | undefined) ?? []).includes(type)) out.push({ kind: e['status'] as StatusKind, n: Number(e['amount'] ?? 1) });
+  }
+  return out;
+}
+
+export interface AttackBonus {
+  damage: number;
+  range: number;
+  sparks: number;
+  /** Chi li dà e cosa, per mostrarlo ("Possente: +2 danno"). */
+  sources: { source: string; text: string }[];
+}
+
+/** I bonus agli attacchi di questo tipo: danno, gittata e scintille bonus. */
+export function attackBonus(state: GameState, piece: Piece, type: AttackType, target?: Piece): AttackBonus {
+  const out: AttackBonus = { damage: 0, range: 0, sparks: 0, sources: [] };
+  for (const { source, effect: e } of effectsOf(state, piece)) {
+    if (e.kind !== 'attack' || !((e.on as AttackType[] | undefined) ?? []).includes(type)) continue;
+    // Colpo a tradimento: serve il bersaglio, e che non fosse fra i nemici visti a inizio round (senza il ricordo di quel momento non vale).
+    if (e.ifUnseenAtStart && (!target || !piece.seenAtStart || piece.seenAtStart.includes(target.id))) continue;
+    const parts: string[] = [];
+    if (e.damage) { out.damage += Number(e.damage); parts.push(tr('+{n} danno', { n: e.damage })); }
+    if (e.range) { out.range += Number(e.range); parts.push(tr('+{n} gittata', { n: e.range })); }
+    if (e.sparks) { out.sparks += Number(e.sparks); parts.push(Number(e.sparks) === 1 ? tr('+1 scintilla') : tr('+{n} scintille', { n: e.sparks })); }
+    if (parts.length) out.sources.push({ source, text: parts.join(', ') });
+  }
+  return out;
+}
+
+/** Quando un eroe prende una carta, i suoi bonus permanenti ai massimi (ferite e energia) si sommano subito, anche a ciò che ha adesso. */
+export function applyPermanentStats(hero: Piece, effects: readonly SkillEffect[]): void {
+  for (const e of effects as readonly Effect[]) {
+    if (e.kind !== 'stat' || e.vs || e.when) continue;
+    const n = Number(e.amount);
+    if (e.stat === 'wounds') {
+      hero.maxWounds += n;
+      hero.wounds += n;
+    } else if (e.stat === 'energy') {
+      hero.maxEnergy += n;
+      hero.energy += n;
+    }
+  }
+}

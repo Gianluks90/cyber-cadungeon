@@ -1,0 +1,40 @@
+{
+  "id": "gjoffrid",
+  "name": "Gjöffrid",
+  "class": "ladro fantasma",
+  "portrait": "characters/gjoffrid-token.webp",
+  "portraitFull": "characters/gjoffrid-portrait.webp",
+  "wounds": 8,
+  "energy": 4,
+  "armor": 1,
+  "speed": 5,
+  "value": 2,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 1,
+    "cunning": 2,
+    "magic": 0
+  },
+  "dice": {
+    "melee": 1,
+    "ranged": 2,
+    "magic": 0
+  },
+  "abilityName": "Attacco furtivo",
+  "ability": "I tuoi attacchi infliggono +2 danni contro un nemico che non vedevi all'inizio del turno.",
+  "effects": [
+    {
+      "kind": "attack",
+      "on": [
+        "melee",
+        "ranged",
+        "magic"
+      ],
+      "damage": 2,
+      "ifUnseenAtStart": true,
+      "name": "Colpo a tradimento"
+    }
+  ]
+}

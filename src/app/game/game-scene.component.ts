@@ -1,0 +1,4806 @@
+import { graphics, renderResolution } from './graphics-settings';
+import { TrPipe } from '../i18n/tr.pipe';
+import { catalogText, tr } from '../i18n/catalog-text';
+import { areaNames } from './map/area-names';
+import { setHatchZoom } from './map/wall-hatch';
+import { AreaLabelView, setAreaLabelZoom } from './map/area-label-view';
+import { LabelPlace, placeAreaLabels } from './map/area-labels';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  ElementRef,
+  NgZone,
+  OnDestroy,
+  afterNextRender,
+  inject,
+  computed,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { ActivatedRoute, Router } from '@angular/router';
+import { Application, ColorMatrixFilter, Container, Graphics } from 'pixi.js';
+import {
+  CAMERA_CENTER_MS,
+  CAMERA_FOCUS_ZOOM,
+  CAMERA_FOLLOW_SMOOTH_MS,
+  CELL_SIZE,
+  START_MARK,
+  AREA_WARNING,
+  AREA_WAVE,
+  FX,
+  CLICK_SLOP_PX,
+  DEV_PLACEABLE_TILES,
+  ICONS,
+  OBSTACLE_VARIANTS,
+  PAWN_RADIUS_RATIO,
+  POTION_DRINK_COST,
+  POTION_HEAL,
+  POTION_PRICES,
+  MAP_FIT_FILL,
+  ZOOM_BUTTON_FACTOR,
+  ZOOM_MAX,
+  ZOOM_MIN,
+  ZOOM_START,
+  ZOOM_TRACKPAD_PINCH_BOOST,
+  ZOOM_WHEEL_SENSITIVITY,
+  CHECK_MAX_DICE,
+  EVIL_HAND_MAX,
+  TREASURE_PRICES,
+} from './constants';
+import { onThemeChange, readTokens, theme } from './theme';
+import { Board, Cell, cellKey } from './board/board';
+import type { Reach } from './board/movement';
+import { DoorSpan, RuneColor } from './board/door';
+import { Obstacle, obstacleCells } from './board/obstacle';
+import { ObstacleView } from './obstacles/obstacle-view';
+import { DoorView } from './doors/door-view';
+import { createFilledIcon, preloadIcons } from './icons/icon-loader';
+import { GameState } from './state/game-state';
+import { VeilView } from './veil-view';
+import { MarkerView } from './markers/marker-view';
+import { ChestView } from './markers/chest-view';
+import { StairsView } from './markers/stairs-view';
+import { stairsWalls } from './markers/stairs-walls';
+import { loadTokenImages, tokenImage, tokenPortraitUrl } from './markers/token-looks';
+import { monsterTakesItem } from './state/behaviors';
+import { PickupView } from './markers/pickup-view';
+import { handItem } from './state/events';
+import { ActionChange, ContextAction, CurseHit, drawTreasureFor, armorOf, killHero, transformToad, canActOnMap, contextActions, endEvilTurn, explore, energyForMovement, inventoryOf, speedOf, adjacentHeroes, placeOrder, loseOrdersOnWounds, changeOrder, orderChangeCost } from './state/actions';
+import { snapshotSeen } from './state/ambush';
+import { FamiliarsView } from './familiars/familiars-view';
+import { loadFamiliarCatalog } from './familiars/familiar';
+import { familiarCost, familiarHas, familiarPath, familiarReach, familiarsOf, spawnFamiliars, weakening } from './state/familiars';
+import { FAMILIAR_CARRY_COST, familiarContextActions, familiarDrop, familiarGive, familiarPickUp } from './state/familiar-carry';
+import { Spot, chooseMonsterTarget, monsterStops, planMonsterMove, settleOverlap } from './state/evil';
+import { STATUS_NAMES, applyTurnStart, describeStatus, hasStatus, shedStatus, shedStatusCost } from './state/status';
+import { SkillAction, skillActions, useSkill } from './state/skills';
+import { RemovalResult, removeMonster } from './state/loot';
+import { applyKnockback, knockbackCells, knockbackSteps, pushAway } from './state/knockback';
+import { SETUP_PLAYERS, confirmReading, hasSetup, objectiveText, placeHero, startCells, startSetup } from './state/setup';
+import * as cityRules from './state/city';
+import { CityEvent } from '../ui/city-panel.component';
+import { PanelKind } from '../ui/hero-panel.component';
+import { MonsterDetails } from '../ui/monster-sheet.component';
+import { AttackDialogComponent, AttackView, DecisionView } from '../ui/attack-dialog.component';
+import { CatalogCategory, CatalogEntry, ComponentsDialogComponent } from '../ui/components-dialog.component';
+import { MenuItem } from '../ui/logo-button.component';
+import { ItemDef, itemDetail } from './items/item';
+import { AttackOption, AttackPlan, Breath, applyAttack, areaCells, areaVictims, attackOptions, breathDirTo, controlledAttackOptions, monsterAttackOption, planAttack, scriptSparks, resolveAttack } from './state/combat';
+import { POTION_NAMES } from './markers/marker-rules';
+import { HeroAction, ORDER_NAMES, Piece, PieceData, StatusKind, createPieces, footprint, occupies } from './pieces/piece';
+import { PillComponent } from '../ui/pill.component';
+import { LogoButtonComponent } from '../ui/logo-button.component';
+import { CompassComponent } from '../ui/compass.component';
+import { AdventureDialogComponent, AdventureView } from '../ui/adventure-dialog.component';
+import { Torch, TorchView } from './torches/torch-view';
+import { guardChances, vigilanceChances } from './state/vigilance';
+import { turnEndItems, useTurnEndItem } from './state/turn-end-items';
+import { itemUse, useItem } from './state/item-use';
+import { rerollsFor } from './state/reroll';
+import { cancelAmount, markReactionUsed, reactionBlock, woundReactions } from './state/reactions';
+import { moveCells, telekinesisMoves, telekinesisTargets } from './state/telekinesis';
+import { ChoiceDialogComponent, ChoiceView } from '../ui/choice-dialog.component';
+import { DicePickerComponent, DicePickView } from '../ui/dice-picker.component';
+import { EvilPanelComponent } from '../ui/evil-panel.component';
+import { EvilFooterComponent } from '../ui/evil-footer.component';
+import { EvilTurnDialogComponent } from '../ui/evil-turn-dialog.component';
+import { AreaInfoView, EvilAreaDialogComponent } from '../ui/evil-area-dialog.component';
+import { EvilActionsComponent } from '../ui/evil-actions.component';
+import { EvilDeckComponent } from '../ui/evil-deck.component';
+import { EvilHatredComponent } from '../ui/evil-hatred.component';
+import { EvilHandComponent, EvilStep, HandCardView } from '../ui/evil-hand.component';
+import { ActivationView, EvilActivationComponent } from '../ui/evil-activation.component';
+import { activationOf } from './state/activation';
+import { ActionControlsComponent } from '../ui/action-controls.component';
+import { FamiliarBarComponent } from '../ui/familiar-bar.component';
+import { ZoomControlsComponent } from '../ui/zoom-controls.component';
+import { ContextMenuComponent } from '../ui/context-menu.component';
+import { Announcement, AnnounceComponent } from '../ui/announce.component';
+import { MarkdownPipe } from '../ui/markdown.pipe';
+import { Toast, ToastAuthor, ToastsComponent, noticeTitle } from '../ui/toasts.component';
+import { BarMember, PartyBarComponent } from '../ui/party-bar.component';
+import { HeroDetails } from '../ui/hero-sheet.component';
+import { Glyph, Marker, PotionKind, Stairs } from './board/marker';
+import type { Reveal } from './exploration';
+import { DotGrid } from './dot-grid';
+import { MapData, PlacedTile, loadMap } from './map/map-data';
+import { MapBounds, mapBounds } from './map/map-view';
+import { TilePlacer } from './map/tile-placer';
+import { loadTileDef, tileCells } from './map/tile';
+import { PiecesController } from './pieces/pieces-controller';
+import { loadPortraits } from './pieces/portraits';
+import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
+import { DotWaveComponent } from '../ui/dot-wave.component';
+import { IconComponent } from '../ui/icon.component';
+import { LocalSaveStore } from './save-store';
+import type { SkillDef } from './skills/skill';
+import type { EvilCardDef } from './evil/card';
+import { partySetupStore } from './heroes/party-setup';
+import { composeRules } from './state/setup-text';
+import { DEFAULT_PARTY, HeroSheet, loadAllHeroSheets, loadHeroSheets } from './heroes/hero-sheet';
+import { loadItemCatalog, loadShopStock } from './items/item';
+import { loadSkillCatalog } from './skills/skill';
+import { MonsterDef, loadMonsterCatalog } from './monsters/monster';
+import { loadEvilCatalog } from './evil/card';
+import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, evilUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnMonster, summonCells, summonQueue, hatredPerTurn } from './state/evil-deck';
+import { ruleAmount } from './state/effects';
+import { DieColor } from './items/item';
+import { FaceRoll } from './dice/faces';
+import { ArmedTrap, TrapSpot, armTrap, armTrapAt, consumeTrap, freeAdjacentCell, isBlank, trapCost, trapDamageBonus, trapLimitReached, trapSpots, sparks, woundIgnoringArmor } from './state/traps';
+import { HORDE_TYPES, hordeAnchors, isDormant, monstersIn, revealArea, upgradeMonster, upgradeOptions } from './state/areas';
+import { PendingCheck, armCleared, checkCleared, checkDiceCount, refuseCheck, resolveCheck, runEvents } from './state/events';
+import { inflictStatus, keywordLevel } from './state/status';
+import { DiceService } from './dice/dice.service';
+
+type Point = { x: number; y: number };
+
+/** I nomi dei colori delle chiavi runiche, per gli avvisi. */
+/** Quanto resta almeno il loader della partita (ms). */
+const LOADER_MIN_MS = 1000;
+
+const RUNE_NAMES = { get red() { return tr('rossa'); }, get blue() { return tr('blu'); }, get green() { return tr('verde'); } } as const;
+
+/** Cosa dire quando un'azione in città non va a buon fine. */
+const CITY_TEXTS: Record<string, string> = {
+  get soon() { return tr('Presto disponibile'); }, get late() { return tr('Devi tornare nel dungeon'); }, get coins() { return tr('Non hai abbastanza monete'); }, get full() { return tr('Non hai posto'); }, get 'sold-out'() { return tr('Esaurito'); }, get stock() { return tr('Esaurito'); }, get already() { return tr('Hai già scelto un servizio'); },
+  get 'full-health'() { return tr('Sei già in piena salute'); }, get 'not-yet'() { return tr('Potrai tornare nel dungeon al prossimo turno'); }, get occupied() { return tr('Quel glifo non è libero'); }, get busy() { return tr('Ora non puoi'); },
+  get 'wrong-service'() { return tr('Prima scegli questo servizio'); }, get maxed() { return tr('Hai già il massimo di dadi'); }, get locked() { return tr('Apri prima uno scrigno di quel tipo'); }, get none() { return tr('Non hai questo oggetto'); }, get unknown() { return tr('Non è possibile'); },
+};
+
+type Mode = 'play' | 'tiles' | 'doors' | 'obstacles';
+
+const HINTS: Record<Mode, string> = {
+  play: '', // i comandi di gioco stanno nel pannello "?"
+  tiles: tr('R ruota · T cambia tile · clic piazza · Backspace annulla · P: torna a giocare'),
+  get doors() { return tr('Clic: piazza o togli una porta · D: torna a giocare'); },
+  get obstacles() { return tr('R ruota · T cambia ostacolo · clic piazza o togli · O: torna a giocare'); },
+};
+
+@Component({
+  selector: 'app-game-scene',
+  imports: [DotWaveComponent, ConfirmDialogComponent, IconComponent, TrPipe, PillComponent, LogoButtonComponent, ZoomControlsComponent, ActionControlsComponent, FamiliarBarComponent, AdventureDialogComponent, ChoiceDialogComponent, DicePickerComponent, EvilPanelComponent, EvilFooterComponent, EvilTurnDialogComponent, EvilAreaDialogComponent, EvilActionsComponent, EvilDeckComponent, EvilHandComponent, EvilHatredComponent, EvilActivationComponent, PartyBarComponent, ContextMenuComponent, ToastsComponent, AnnounceComponent, AttackDialogComponent, ComponentsDialogComponent, MarkdownPipe],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  host: { '[style.--footer-height]': "hint() ? '30px' : '0px'" },
+  template: `
+    <div #host class="host"></div>
+    @if (!loaderGone()) { <div class="loader" [class.done]="!loading()" aria-hidden="true"><app-dot-wave /></div> }
+    <app-toasts [toasts]="toasts()" (expired)="expireToast($event)" />
+    <app-announce [message]="announcement()" [durationMs]="announceMs" />
+    <app-context-menu [anchor]="loaderGone() ? contextAnchor() : null" [actions]="contextActions()" (chosen)="runContext($event)" (denied)="showNotice($event, 'warning')" />
+    <!-- Il menu dell'attacco: compare sopra il nemico toccato, già aperto, con le armi che si possono usare. -->
+    <app-context-menu [anchor]="loaderGone() ? attackAnchor() : null" [actions]="attackActions()" [autoOpen]="true" [evil]="evilMode" bangIcon="swords" (chosen)="startAttack($event)" (denied)="showNotice($event, 'warning')" (closed)="closeAttackMenu()" />
+    <app-attack-dialog [view]="attackView()" [decision]="evilDecision()" (decide)="decideEvil($event)" (aim)="aimChosen()" (reroll)="rerollChosen($event)" (roll)="rollAttack()" (apply)="applyAttackNow()" (autoDone)="applyAttackNow()" (addDie)="addProficiencyDie()" (sweep)="toggleSweep()" [adding]="addingDie()" (cancel)="cancelAttack()" (choose)="chooseFace($event)" (use)="useEffect($event)" (reset)="resetEffects()" (sorceryStep)="sorceryStep($event)" />
+    <!-- I testi dell'avventura: introduzione e obiettivo all'inizio (si confermano), l'obiettivo si rilegge dal suo tasto. -->
+    <app-confirm-dialog [open]="confirmQuit()" [title]="'Concludere la partita?' | tr" [text]="'Tornerai alla home e la partita in corso, con il suo salvataggio, sarà cancellata. L\\'azione è irreversibile.' | tr" [confirmLabel]="'Concludi' | tr" (confirmed)="quitGame()" (cancel)="confirmQuit.set(false)" />
+    <app-adventure-dialog [view]="adventureDialog()" (confirm)="onAdventureDialog()" />
+    <app-choice-dialog [view]="choiceView()" (chosen)="onChoice($event)" />
+    <app-dice-picker [view]="dicePickView()" (done)="onDicePicked($event)" />
+    @if (setupPrompt(); as prompt) { <div class="setup-prompt" role="status">{{ prompt }}</div> }
+    <app-components-dialog [open]="componentsOpen()" [categories]="catalog()" (closed)="componentsOpen.set(false)" />
+    @if (telekinesis(); as t) {
+      <div class="knockback" role="status">{{ 'Telecinesi' | tr }}: {{ (t.step === 'model' ? 'tocca uno dei modelli evidenziati per spostarlo di 1 spazio' : 'tocca la casella dove spostarlo') | tr }}<button type="button" (click)="cancelTelekinesis()">{{ 'Annulla' | tr }}</button></div>
+    }
+    <app-context-menu [anchor]="loaderGone() ? familiarAnchor() : null" [actions]="familiarActions()" (chosen)="runFamiliarAction($event)" (denied)="showNotice($event, 'warning')" />
+    @if (familiarMove(); as f) {
+      <app-familiar-bar [slots]="heroSlots()" [text]="'Sposta {name}: tocca una casella evidenziata (fino a {n} spazi)' | tr: { name: f.name, n: f.points }" (pass)="familiarSkip()" />
+    }
+    @if (evilSummonInfo(); as s) {
+      <div class="summon-bar" role="status"><span>{{ s.name }}: <strong>{{ s.next }}</strong> · {{ s.left }}</span><button type="button" (click)="endSummon()">{{ 'Termina' | tr }}</button></div>
+    }
+    @if (evilPickInfo(); as p) {
+      <div class="summon-bar" role="status"><span>{{ p.prompt }}</span>@if (p.cancellable) { <button type="button" (click)="cancelPick()">{{ 'Annulla' | tr }}</button> }</div>
+    }
+    @if (evilTrapInfo(); as t) {
+      <div class="summon-bar" role="status"><span>{{ t }}</span><button type="button" (click)="endTrap()">{{ 'Annulla' | tr }}</button></div>
+    }
+    @if (evilSelInfo(); as a) { <app-evil-activation [monster]="a" [slots]="heroSlots()" (done)="endEvilActivation()" /> }
+    @if (knockback(); as k) {
+      <div class="knockback" role="status">{{ 'Contraccolpo: tocca una casella evidenziata per spostare {name} (fino a 3 spazi)' | tr: { name: k.name } }}<button type="button" (click)="chooseKnockback(null)">{{ 'Resta fermo' | tr }}</button></div>
+    }
+    @if ((victory() || defeated()) && !endDismissed()) {
+      <div class="end" role="dialog" aria-modal="true" [attr.aria-label]="(victory() ? 'Vittoria' : 'Sconfitta') | tr">
+        <div class="end-box">
+          <h2>{{ (victory() ? 'Vittoria!' : 'Sconfitta') | tr }}</h2>
+          @if (victory()) { <p class="reward">{{ 'Conquista finale: {n}' | tr: { n: progress() } }}</p> }
+          @if (victory() && conclusion()) { <div class="md" [innerHTML]="conclusion() | markdown"></div> } @else { <p>{{ endText() }}</p> }
+          <div class="end-actions">
+            <button type="button" (click)="endDismissed.set(true)">{{ 'Guarda la mappa' | tr }}</button>
+            <button type="button" class="strong" (click)="restart()">{{ 'Ricomincia' | tr }}</button>
+          </div>
+        </div>
+      </div>
+    }
+    <div class="top" [class.evil]="evilMode">
+      <app-logo-button [items]="menuItems" (chosen)="onMenu($event)" />
+      <button type="button" class="save" [class.done]="justSaved()" [attr.aria-label]="'Salva la partita' | tr" [title]="'Salva la partita' | tr" (click)="save()"><app-icon [name]="justSaved() ? 'check' : 'save'" [size]="20" /><span class="label">{{ 'Salva' | tr }}</span></button>
+      <!-- Telefono, vista del Maligno: lo strumento "Mostri automatici" sta nell'intestazione, con il logo e Salva. -->
+      @if (barsIn() && evilMode && narrow()) { <app-evil-actions [inline]="true" [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
+      @if (defeated()) { <app-pill icon="skull" [label]="'Sconfitta' | tr" class="alert" /> }
+    </div>
+    <!-- Contatori sul bordo sinistro (come i comandi della camera sul destro): solo icona e valore, l'etichetta si apre al passaggio. -->
+    @if (!evilMode) {
+      <div class="rail">
+        <app-pill rail primary icon="brightness_empty" [label]="'Conquista' | tr" [value]="progress()" [class.alert]="defeated()" />
+        <app-pill rail primary icon="autorenew" [label]="'Round' | tr" [value]="round()" />
+        <app-pill rail icon="tokens/little_key" [label]="'Chiavi' | tr" [value]="keys()" />
+      </div>
+    }
+    @if (barsIn() && evilMode) { <app-evil-hatred [hatred]="hatred()" [animate]="hatredAnimated()" /> }
+    @if (barsIn() && evilMode) { <app-evil-footer [round]="round()" [phase]="stepName()" [passLabel]="passLabel()" [passBusy]="commandsBusy()" (pass)="evilPass()" /> }
+    @if (barsIn() && evilMode) { <app-evil-hand [cards]="handCards()" [step]="evilStep()" [discarding]="evilStep() === 'hand' && handExcessN() > 0" (consume)="consumeAt($event)" (play)="playAt($event)" (discard)="discardAt($event)" (denied)="showNotice($event, 'warning', 'evil')" /> }
+    @if (barsIn() && evilMode) { <app-evil-deck [count]="deckLeft()" /> }
+    @if (barsIn() && evilMode && !narrow()) { <app-evil-actions [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
+    @if (evilAreaInfo(); as a) { <app-evil-area-dialog [area]="a" (closed)="evilAreaInfo.set(null)" /> }
+    @if (evilTurnDialog(); as t) { <app-evil-turn-dialog [from]="t.from" [to]="t.to" (ok)="closeEvilTurnDialog()" /> }
+    @if (barsIn() && !evilMode) { <app-evil-panel [slots]="heroSlots()" [hasObjective]="hasObjective()" (objective)="showObjective()" [view]="evilView()" [playing]="evilBusy()" [hatred]="hatred()" [deck]="deckLeft()" [hand]="handCount()" (toggle)="toggleEvilView()" /> }
+    @if (barsIn()) { <app-party-bar [publicView]="evilMode" [compact]="evilMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [monster]="monsterInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendEnergy)="spendEnergyForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (monsterClosed)="monsterPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
+    <!-- Footer temporaneo: tiene i comandi a schermo fuori dalla barra degli eroi. -->
+    @if (hint()) { <footer class="footer keyboard-hints"><p class="hint">{{ hint() }}</p></footer> }
+    @if (barsIn() && !settingUp() && !evilMode) { <app-action-controls [style.visibility]="familiarMove() ? 'hidden' : null" [slots]="heroSlots()" [runes]="runes()" [action]="activeAction()" [busy]="commandsBusy()" (chosen)="tapCommand($event)" /> }
+    <app-zoom-controls (zoom)="zoomByButton($event)" (center)="centerOnActive()" (fit)="showWholeMap()" />
+  `,
+  styles: `
+    :host { position: fixed; inset: 0; display: block; overflow: hidden; }
+    .host { position: absolute; inset: 0; touch-action: none; }
+    /* Il loader, come nell'editor: sopra la scena e sotto i comandi, con lo sfondo pieno; quando la mappa è pronta si dissolve. */
+    .loader { position: absolute; inset: 0; z-index: 5; background: var(--c-bg); transition: opacity 0.4s ease-out; pointer-events: none; }
+    .loader.done { opacity: 0; }
+    .footer {
+      position: absolute; z-index: 5; left: 0; right: 0; bottom: 0; box-sizing: border-box; overflow: hidden;
+      height: calc(var(--footer-height) + env(safe-area-inset-bottom)); padding: 0 16px env(safe-area-inset-bottom);
+      display: flex; align-items: center; justify-content: center; text-align: center;
+      background: var(--c-surface); border-top: 1px solid var(--c-line-strong);
+      pointer-events: none; user-select: none;
+    }
+    .hint { margin: 0; font: 12px/1.35 var(--font-ui); color: var(--c-text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    /* La schermata finale: vittoria o sconfitta */
+    .end { position: fixed; inset: 0; z-index: 850; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, 0.6); animation: end-in 0.3s ease-out; }
+    .end-box { display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; max-width: 420px; padding: 28px 32px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-text); font: 14px/1.4 var(--font-ui); }
+    .end-box .reward { color: var(--c-text); font-weight: 600; }
+    .end-box .md { color: var(--c-text-dim); text-align: left; max-height: 50vh; overflow-y: auto; }
+    .end-box h2 { margin: 0; font: 600 22px/1.2 var(--font-ui); letter-spacing: 0.12em; text-transform: uppercase; }
+    .end-box p { margin: 0; color: var(--c-text-dim); }
+    .end-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .end-actions button { padding: 8px 18px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 13px/1.2 var(--font-ui); }
+    .end-actions button.strong { border-color: var(--c-interact); font-weight: 600; }
+    .end-actions button:hover { border-color: var(--c-interact); color: var(--c-interact); }
+    @keyframes end-in { from { opacity: 0; } }
+    /* Contraccolpo: la barra in basso al centro (sopra i tab) che dice cosa fare; in alto al centro ci sono le notifiche */
+    /* La scelta della casella di partenza: la barra in alto al centro che dice cosa fare */
+    .setup-prompt { position: absolute; z-index: 12; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-interact); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); text-align: center; pointer-events: none; }
+    /* La barra dell'evocazione (vista del Maligno): sotto la barra degli eroi come la box del mostro in attivazione, bordo rosso. */
+    .summon-bar { position: absolute; z-index: 24; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top) + 76px + 26px + 8px); display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-faction-evil); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); }
+    .summon-bar strong { font-weight: 600; }
+    .summon-bar button { padding: 4px 14px; border-radius: var(--radius-1); background: none; color: var(--c-faction-evil); cursor: pointer; border: 1px solid var(--c-faction-evil); font: 600 12px/1.2 var(--font-ui); text-transform: uppercase; letter-spacing: var(--label-tracking); }
+    .summon-bar button:hover { background: color-mix(in srgb, var(--c-faction-evil) 12%, transparent); }
+    .knockback { position: absolute; z-index: 12; bottom: calc(var(--footer-height, 0px) + env(safe-area-inset-bottom) + 12px + 76px + 28px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-interact); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); }
+    .knockback button { padding: 4px 12px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 12px/1.2 var(--font-ui); }
+    .knockback button:hover { border-color: var(--c-interact); color: var(--c-interact); }
+    @media (max-width: 720px) { .top { max-width: calc(100% - 232px) !important; } }
+    /* Vista del Maligno su un telefono: un'intestazione sola in alto (logo, Salva e "Mostri automatici" in una riga, senza la scritta di Salva); sotto, la barra degli eroi e le barre delle scelte (44 px di intestazione + 8 di distanza + 56 della barra + 26 della Conquista). */
+    @media (max-width: 760px) {
+      .top.evil { width: calc(100% - 24px); max-width: calc(100% - 24px) !important; flex-wrap: nowrap; align-items: center; }
+      .top.evil .save .label { display: none; }
+      .top.evil .save { gap: 0; padding: 6px; }
+    }
+    @media (max-width: 760px) and (pointer: coarse) {
+      .top.evil .save { padding: 11px; }
+      .summon-bar { top: calc(12px + env(safe-area-inset-top) + 44px + 8px + 56px + 26px + 8px); }
+    }
+    .rail { position: absolute; z-index: 22; left: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
+    .rail app-pill { box-sizing: border-box; min-width: 72px; }
+    .save { pointer-events: auto; display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: var(--radius-1); cursor: pointer; background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-strong); transition: border-color 0.15s, color 0.15s; }
+    .save:hover, .save:focus-visible { border-color: var(--c-interact); color: var(--c-interact); outline: none; }
+    .save.done { border-color: var(--c-ok); color: var(--c-ok); }
+    /* Col mouse il tasto ha anche il testo; col dito resta la sola icona. */
+    .save .label { display: none; font: 600 13px/1 var(--font-ui); }
+    @media (pointer: fine) { .save { gap: 8px; padding: 6px 12px 6px 8px; } .save .label { display: inline; } }
+    @media (pointer: coarse) { .save { padding: 11px; } }
+    .top { max-width: calc(100% - 356px); z-index: 30; /* sopra il menu contestuale (20) e la barra (25): il pannello della guida si apre da qui */ position: absolute; top: calc(12px + env(safe-area-inset-top)); left: 12px; display: flex; flex-wrap: wrap; gap: 8px; pointer-events: none; }
+  `,
+})
+export class GameSceneComponent implements OnDestroy {
+  private readonly zone = inject(NgZone);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly dice = inject(DiceService);
+  private readonly hostRef = viewChild.required<ElementRef<HTMLDivElement>>('host');
+
+  private app?: Application;
+  private world?: Container; // qui dentro andranno tile e pedine
+  private placer?: TilePlacer; // strumento di sviluppo: piazza tile agganciandoli
+  private pieces?: PiecesController;
+  private placed: PlacedTile[] = []; // i tile della mappa (lo strumento di piazzamento ne aggiunge)
+  private mode: Mode = 'play';
+  private board?: Board;
+  /** Lo stato della partita: porte, ostacoli, segnalini, pedine, gruppo, ciò che si è visto. */
+  private state = GameState.empty();
+  private get doors() { return this.state.doors; }
+  private get obstacles() { return this.state.obstacles; }
+  private get markers() { return this.state.markers; }
+  private get party() { return this.state.party; }
+  private get exploration() { return this.state.exploration; }
+  private get pieceList() { return this.state.pieces; }
+  private doorView?: DoorView;
+  private markerView?: MarkerView;
+  private chestView?: ChestView;
+  private stairsView?: StairsView;
+  private pickupView?: PickupView;
+  private veil?: VeilView;
+  private obstacleView?: ObstacleView;
+  private obstacleVariant = 0; // quale tipo e lunghezza si sta piazzando
+  private obstacleVertical = false;
+  private toastId = 0;
+  private readonly toastTimers = new Set<ReturnType<typeof setTimeout>>();
+  protected readonly hint = signal(HINTS.play);
+  protected readonly progress = signal(0);
+  /** L'Odio del Maligno (si vede solo nella sua vista) e le carte che restano nel suo mazzo (si vedono sempre). */
+  protected readonly hatred = signal(0);
+  protected readonly deckLeft = signal(0);
+  protected readonly handCount = signal(0);
+  /** Le carte in mano al Maligno, per la mano in basso nella sua vista. */
+  protected readonly handCards = signal<HandCardView[]>([]);
+  protected readonly round = signal(1);
+  protected readonly defeated = signal(false);
+  /** L'avventura è vinta (l'obiettivo è raggiunto); la schermata finale si può chiudere per guardare la mappa. */
+  protected readonly victory = signal(false);
+  protected readonly endDismissed = signal(false);
+  /** Il testo di conclusione dell'avventura (markdown), se l'autore l'ha scritto. */
+  protected conclusion(): string {
+    return [this.state.objective?.conclusion ?? '', ...this.state.endingExtras.map((x) => x.text)].filter((t) => t.trim()).join('\n\n'); // la conclusione e, dopo, i pezzi aggiunti dagli eventi
+  }
+  protected endText(): string {
+    return this.victory() ? (this.state.objective?.text ? tr('Obiettivo raggiunto: {text}.', { text: this.state.objective.text }) : tr('L\'obiettivo dell\'avventura è raggiunto.')) : tr('La Conquista è arrivata a zero: gli eroi hanno perso.');
+  }
+  protected restart() {
+    location.reload();
+  }
+  protected readonly keys = signal(0);
+  /** Il denaro: ogni eroe ne ha questa quantità. */
+  /** Le chiavi runiche presenti nella partita (al massimo 3): colorate quando il gruppo le ha, altrimenti spente. */
+  protected readonly runes = signal<{ color: RuneColor; owned: boolean; label: string }[]>([]);
+  protected readonly members = signal<BarMember[]>([]);
+  /** Quanti eroi ha la partita, anche quelli ancora da parte durante la preparazione: serve a dimensionare il blocco del Maligno fin dall'inizio. */
+  protected readonly heroSlots = signal(2);
+  /** La barra degli eroi, il blocco del Maligno e i comandi compaiono (con uno scorrimento) solo a preparazione finita. */
+  protected readonly barsIn = signal(false);
+  /** Il pannello aperto (informazioni o inventario) dal tab di un eroe, se ce n'è uno. */
+  protected readonly panel = signal<{ id: string; kind: PanelKind } | null>(null);
+  /** La vista del Maligno (provvisoria: toccando il tab del Maligno): si vedono tutti i mostri e toccandone uno si apre la sua scheda. I giocatori non conoscono i parametri dei nemici. */
+  protected readonly evilView = signal(false);
+  /** "Inizia il tuo turno" (`/evil/<map>`): l'Odio prima e dopo aver ricevuto quello del turno. Finché c'è, la dialog non si chiude se non con OK. */
+  protected readonly evilTurnDialog = signal<{ from: number; to: number } | null>(null);
+  private evilTurnDone: (() => void) | null = null;
+  /** "Mostri automatici" (`/evil/<map>`, tasto A): acceso, a inizio turno i mostri agiscono da soli. Parte spento. */
+  protected readonly monstersAuto = signal(false);
+  /** Il mostro che il Maligno sta attivando a mano (`/evil/<map>`) e dove può fermarsi, per casella. */
+  private evilSel: { monster: Piece; stops: Map<string, Spot> } | null = null;
+  /** Per la barra dell'attivazione: nome, punti movimento e attacchi che restano. */
+  protected readonly evilSelInfo = signal<ActivationView | null>(null);
+  /** La descrizione di un'area aperta con la `i` della sua etichetta (vista del Maligno). */
+  protected readonly evilAreaInfo = signal<AreaInfoView | null>(null);
+  /** Aperta da `/evil/<map>`: la partita parte subito, con gli eroi già in campo, la mappa tutta visibile (vista del Maligno accesa) e senza salvataggi. */
+  protected get evilMode(): boolean {
+    return (this.route.snapshot.routeConfig?.path ?? '').startsWith('evil/');
+  }
+  /** Il menu dell'app (dal logo). Le prime due voci sono segnaposto. */
+  protected readonly menuItems: MenuItem[] = [
+    { id: 'quit', label: tr('Concludi partita') },
+    { id: 'components', label: tr('Componenti') },
+  ];
+  /** Il catalogo dei componenti di gioco: aperto dal menu, costruito dai cataloghi caricati. */
+  protected readonly componentsOpen = signal(false);
+  /** La domanda "Concludere la partita?" è aperta. */
+  protected readonly confirmQuit = signal(false);
+  protected readonly catalog = signal<CatalogCategory[]>([]);
+  /** Il catalogo dei mostri caricato all'avvio (per il catalogo dei componenti). */
+  /** Nome e testo delle aree dell'avventura (dalla mappa). */
+  private areaInfo = new Map<string, { name?: string; subtitle?: string; text?: string; label?: { x: number; y: number } }>();
+  private monsterDefs: ReadonlyMap<string, MonsterDef> = new Map();
+  /** Il nemico toccato per attaccarlo (il menu delle armi è aperto sopra di lui) e le armi che si possono usare. */
+  protected readonly attackTarget = signal<string | null>(null);
+  protected readonly attackActions = signal<ContextAction[]>([]);
+  protected readonly attackAnchor = signal<{ x: number; y: number } | null>(null);
+  /** L'attacco in corso nella finestra al centro: arma scelta, piano, tiro e scelte. */
+  protected readonly attackSession = signal<{
+    attackerId: string; targetId: string; option: AttackOption; plan: AttackPlan;
+    step: 'preview' | 'rolling' | 'rolled'; rolls: FaceRoll[]; choices: Record<number, 'range' | 'heart'>; spent: number[];
+    /** Stregoneria: i punti scelti dopo il tiro per la gittata e per il danno. */
+    sorcery: { range: number; damage: number };
+    /** Lo gioca lo script del Maligno: i dadi li tira lui e chi guarda può solo proseguire. */
+    auto?: boolean;
+    /** Soffio: la direzione del cono. */
+    breathDir?: Breath | null;
+    /** Mira: l'eroe ha l'ordine e può ripetere dei dadi (uno solo ripete per attacco: vale anche per Occhio del cacciatore). */
+    aim?: boolean;
+    /** Quanti dadi si possono ancora ripetere scegliendo (Occhio del cacciatore) e chi lo permette. */
+    rerolls?: number;
+    rerollSource?: string;
+    /** Un attacco fuori turno (Vigilanza): non consuma gli attacchi dell'eroe, e l'energia si paga quando lo si applica. */
+    free?: { pay: number; consumeOrder?: boolean };
+    /** Spazzata a pagamento (Grumshar): l'energia spesa prima del tiro, rimborsata se si toglie la scelta o si annulla l'attacco. */
+    sweepPaid?: number;
+  } | null>(null);
+  /** È il turno del Maligno (lo script): niente comandi per gli eroi. */
+  protected readonly evilBusy = signal(false);
+  /** Il loader a puntini: finché la mappa non è pronta (`loading`, e comunque per almeno un'onda intera) copre la scena, poi si dissolve e infine esce dalla pagina (`loaderGone`). */
+  protected readonly loading = signal(true);
+  protected readonly loaderGone = signal(false);
+  private readonly loadStart = performance.now();
+  private readonly saves = new LocalSaveStore();
+  /** Il tasto Salva diventa verde con una spunta per un istante dopo un salvataggio. */
+  protected readonly justSaved = signal(false);
+  /** La partita viene da un salvataggio: niente preparazione né notizia dell'obiettivo. */
+  private resumedGame = false;
+  protected readonly attackView = computed<AttackView | null>(() => {
+    const se = this.attackSession();
+    const attacker = this.state?.pieces.find((p) => p.id === se?.attackerId);
+    const target = this.state?.pieces.find((p) => p.id === se?.targetId);
+    if (!se || !attacker || !target) return null;
+    const outcome = se.step === 'rolled' ? resolveAttack(this.state, target, se.plan, se.rolls, se.choices, se.spent, se.sorcery) : null;
+    const side = (p: Piece) => ({ name: p.name, subtitle: p.team === 'hero' ? p.heroClass : p.enhanced ? tr('Mostro potenziato') : tr('Mostro'), portrait: p.portraitFull ?? p.portrait, team: p.team, enhanced: p.enhanced, wounds: p.wounds, maxWounds: p.maxWounds });
+    return {
+      attacker: side(attacker),
+      target: { ...side(target), armor: target.team === 'hero' ? armorOf(this.state, target, se.option.attack) : target.armor, invincible: !!target.invincible },
+      auto: !!se.auto,
+      weapon: { lead: attacker.team === 'monster' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), magic: tr('magico') }[se.option.attack], dice: se.option.dice },
+      distance: se.plan.distance, needsRange: se.plan.needsRange, bonuses: se.plan.sources, step: se.step,
+      energy: attacker.energy, blackDice: se.rolls.filter((r) => r.color === 'black').length,
+      sweep: se.step === 'preview' && !se.auto && attacker.team === 'hero' && se.option.attack === 'melee' && ruleAmount(this.state, attacker, 'sweepAttack') > 0 && (!se.plan.area.sweep || !!se.sweepPaid) // un'arma che ha già Spazzata non ne ha bisogno
+        ? { cost: ruleAmount(this.state, attacker, 'sweepAttack'), on: !!se.sweepPaid, enough: !!se.sweepPaid || attacker.energy >= ruleAmount(this.state, attacker, 'sweepAttack') }
+        : null,
+      rolls: se.rolls.map((r, i) => ({ ...r, choice: se.choices[i] ?? null })),
+      rerolls: se.step === 'rolled' && !se.auto && !this.rerolling() ? (se.rerolls ?? 0) : 0, rerollSource: se.rerollSource ?? '', aim: se.step === 'rolled' && !se.auto && !!se.aim && !this.rerolling(),
+      effects: se.plan.effects.map((e) => ({
+        index: e.index, cost: e.cost, text: e.text, supported: e.supported, blockedBy: e.blockedBy, count: se.spent.filter((i) => i === e.index).length,
+        usable: e.supported && !!outcome && e.cost <= outcome.sparks - outcome.sparksSpent,
+      })),
+      sorcery: { level: se.plan.sorcery, ...se.sorcery },
+      victims: outcome && !outcome.miss && outcome.inRange && !outcome.feared && this.board
+        ? areaVictims(this.state, this.board, attacker, target, se.plan, se.spent, se.breathDir).map((v) => ({
+            name: v.name, friend: v.team === attacker.team,
+            damage: resolveAttack(this.state, v, { ...se.plan, fearless: true }, se.rolls, se.choices, se.spent, se.sorcery).damage,
+          }))
+        : [],
+      outcome,
+    };
+  });
+  protected readonly monsterPanel = signal<string | null>(null);
+  protected readonly monsterInfo = computed<MonsterDetails | null>(() => {
+    void this.members(); // si ricalcola a ogni cambio dello stato (ferite, ecc.)
+    const p = this.state?.pieces.find((q) => q.id === this.monsterPanel() && q.team === 'monster');
+    if (!p) return null; // le carte dei mostri sono pubbliche: la scheda si apre anche nella vista dei giocatori
+    const attack = p.attackType ? { melee: tr('Mischia'), ranged: tr('Distanza'), magic: tr('Magia') }[p.attackType] : '—';
+    return {
+      id: p.id, name: p.name, heroClass: p.enhanced ? tr('Mostro potenziato') : tr('Mostro'), enhanced: p.enhanced, portrait: p.portrait, portraitFull: p.portraitFull,
+      wounds: p.wounds, maxWounds: p.maxWounds, speed: p.speed, armor: p.armor, invincible: !!p.invincible, attack, dice: p.attackDice, abilities: p.traits, size: `${p.size.w}×${p.size.h}`, states: describeStatus(p.status), poison: p.status.poison,
+    };
+  });
+  /** Un eroe in città sta scegliendo il glifo su cui tornare: i glifi possibili emettono l'onda e un clic su uno lo fa tornare. */
+  private readonly returnMode = signal(false);
+  private noGlyphFor = '';
+  protected readonly toasts = signal<Toast[]>([]);
+  protected readonly contextActions = signal<ContextAction[]>([]);
+  /** Il punto sullo schermo appena sopra la pedina attiva, dove sta il bottone contestuale. */
+  protected readonly contextAnchor = signal<{ x: number; y: number } | null>(null);
+  private dots?: DotGrid;
+  private destroyed = false;
+  private cleanup: Array<() => void> = [];
+
+  // Camera: dove cade l'origine del mondo sullo schermo (pixel CSS) e quanto è ingrandito.
+  private camX = 0;
+  private camY = 0;
+  private zoom = ZOOM_START;
+  private mapBox?: MapBounds;
+
+  // Dita/mouse attualmente premuti (per pan e pinch).
+  private pointers = new Map<number, Point>();
+  private lastPinchDistance = 0;
+  private mouse: Point | null = null; // ultima posizione del mouse sul canvas
+  private downPos: Point | null = null; // dove è stato premuto il tasto, per distinguere clic e trascinamento
+
+  /** Schermo stretto (telefono in verticale, sotto i 760 px): la vista del Maligno ha un'intestazione sola in alto e gli eroi sono solo avatar. */
+  private readonly narrowQuery = typeof matchMedia === 'function' ? matchMedia('(max-width: 760px)') : null;
+  protected readonly narrow = signal(this.narrowQuery?.matches ?? false);
+
+  constructor() {
+    const onNarrow = () => this.narrow.set(this.narrowQuery?.matches ?? false);
+    this.narrowQuery?.addEventListener('change', onNarrow);
+    this.cleanup.push(() => this.narrowQuery?.removeEventListener('change', onNarrow));
+    this.dice.onResult = (text) => this.showNotice(text, 'deployed_code'); // prova temporanea: il risultato dei dadi toccati sulle card
+    afterNextRender(() => {
+      // Pixi lavora fuori da Angular, così i suoi eventi non scatenano controlli inutili.
+      this.zone.runOutsideAngular(() => this.start());
+    });
+  }
+
+  private async start() {
+    readTokens(); // i fogli di stile sono già caricati: rilegge i token per essere sicuri
+    const host = this.hostRef().nativeElement;
+    const app = new Application();
+    await app.init({
+      resizeTo: host,
+      background: theme.color.background,
+      antialias: graphics().antialias,
+      resolution: renderResolution(),
+      autoDensity: true,
+      preference: 'webgl',
+    });
+    if (this.destroyed) {
+      app.destroy(true);
+      return;
+    }
+    this.app = app;
+    host.appendChild(app.canvas);
+
+    // Pixi segue solo l'evento "resize" della finestra: se il contenitore cambia misura senza (per esempio durante un ricaricamento) il canvas resta della misura sbagliata. Si osserva il contenitore.
+    const sizeWatch = new ResizeObserver(() => app.queueResize());
+    sizeWatch.observe(host);
+    this.cleanup.push(() => sizeWatch.disconnect());
+
+    this.dots = new DotGrid();
+    // Al cambio di tema si ridisegna tutto (oggi c'è un solo tema, ma la struttura resta).
+    this.cleanup.push(onThemeChange(() => this.applyTheme()));
+    this.world = new Container();
+    app.stage.addChild(this.dots.mesh, this.world);
+
+    // All'inizio l'origine del mondo sta al centro dello schermo.
+    this.camX = app.screen.width / 2;
+    this.camY = app.screen.height / 2;
+    this.applyCamera();
+
+    // Mappa di prova: tile piazzati a mano (public/maps/test.json).
+    // La mappa viene dall'indirizzo (/play/catalog mostra tutti i tile del catalogo).
+    const mapName = this.route.snapshot.paramMap.get('map')?.replace(/[^a-z0-9-]/g, '') || 'test';
+    this.mapName = mapName;
+    await preloadIcons([ICONS.doorKey, ICONS.doorEvent, ICONS.doorRune, ICONS.potion, ICONS.runeKey, ICONS.keyPickup, 'pets', 'target', 'air', 'bedtime', 'visibility', 'fit_screen', 'info', 'warning']); // le icone delle porte e della pozione; quelle che mancano usano una forma di riserva
+    try {
+      const { data, placed } = await loadMap(`maps/${mapName}.json`);
+      const defs = await Promise.all(DEV_PLACEABLE_TILES.map(loadTileDef));
+      if (this.destroyed) return;
+      const mapLayer = new Container();
+      const pawnLayer = new Container();
+      this.doorView = new DoorView();
+      this.obstacleView = new ObstacleView(data.seed);
+      await loadTokenImages(); // le immagini dei gettoni (Incontro, oggetti a terra) e le icone che usano, prima di disegnare
+      await preloadIcons([...new Set((data.markers ?? []).flatMap((m) => ('look' in m && m.look?.icon ? [m.look.icon] : [])))]);
+      this.veil = new VeilView();
+      this.torchView = new TorchView();
+      this.torches = data.torches ?? [];
+      this.markerView = new MarkerView(data.seed);
+      this.chestView = new ChestView();
+      this.stairsView = new StairsView();
+      this.pickupView = new PickupView(data.seed);
+      this.pickupView.iconOf = (id) => this.state?.items.get(id)?.icon;
+      // Vista del Maligno: ciò che gli eroi non hanno ancora scoperto si vede lo stesso, senza colore (una seconda copia delle viste, solo con gli elementi non scoperti).
+      this.ghosts = { obstacles: new ObstacleView(data.seed), doors: new DoorView(), markers: new MarkerView(data.seed), chests: new ChestView(), stairs: new StairsView(), pickups: new PickupView(data.seed) };
+      this.ghosts.pickups.iconOf = this.pickupView.iconOf;
+      const grayscale = new ColorMatrixFilter();
+      grayscale.desaturate();
+      this.ghostLayer.filters = [grayscale];
+      this.ghostLayer.addChild(this.ghosts.markers.container, this.ghosts.stairs.container, this.ghosts.chests.container, this.ghosts.pickups.container, this.ghosts.obstacles.container, this.ghosts.doors.container);
+      // Il velo sta sopra mappa, ostacoli e porte (così li spegne se non sono ancora esplorati) e sotto le pedine.
+      this.world.addChild(mapLayer, this.markerView.container, this.stairsView.container, this.chestView.container, this.pickupView.container, this.obstacleView.container, this.doorView.container, this.ghostLayer, this.torchView.container, this.veil.graphics, this.areaLabelView.container, pawnLayer, this.familiarsLayer, this.trapLayer);
+      this.placed = placed;
+      // Pedine dalla mappa; senza, parte un solo eroe al centro del primo tile.
+      const start = this.startCell(placed);
+      // Le avventure fatte con l'editor non hanno eroi: la squadra è della partita (per ora i due eroi che ci sono), e prende posto sulle caselle di partenza alla preparazione.
+      const hasHeroes = (data.pieces ?? []).some((p) => p.team === 'hero');
+      // Una partita multiplayer porta la squadra scelta nella sala d'attesa (`?party=a,b`); senza, quella di base.
+      const chosen = (this.route.snapshot.queryParamMap.get('party') ?? '').split(',').filter((id) => /^[a-z0-9-]+$/.test(id));
+      const partyIds = chosen.length ? chosen : this.evilMode ? ['najim', 'gjoffrid', 'sporin', 'thael'] : DEFAULT_PARTY; // `/evil/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
+      // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
+      const setup = partySetupStore.take();
+      const party: PieceData[] = hasHeroes ? [] : partyIds.map((hero, i) => ({ id: `h${i + 1}`, team: 'hero', hero, x: start.x, y: start.y, ...(setup[hero] ? { items: setup[hero].items, potions: setup[hero].potions, coins: setup[hero].coins, skillCards: setup[hero].skillCards } : {}) }));
+      const mapData = party.length ? { ...data, pieces: [...party, ...(data.pieces ?? [])] } : data;
+      const sheets = await loadHeroSheets((mapData.pieces ?? []).map((p) => p.hero));
+      const [items, shopStock, skills, monsters, evilCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadMonsterCatalog(), loadEvilCatalog(), loadFamiliarCatalog()]);
+      this.monsterDefs = monsters;
+      const names = areaNames(data.areas ?? []);
+      this.areaInfo = new Map((data.areas ?? []).map((a) => [a.id, { ...a, name: names.get(a.id) }]));
+      this.areaOrder = (data.areas ?? []).map((a) => ({ id: a.id, start: !!a.start }));
+      // Aprendo l'avventura (anche ricaricando la pagina) si riprende il salvataggio, se c'è; `?new` (da "Gioca" della scelta dell'avventura) comincia da capo e lo cancella.
+      if (this.route.snapshot.queryParamMap.has('new')) {
+        this.saves.clear(mapName);
+        void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true }); // così un refresh riprende l'autosalvataggio
+      }
+      const resumed = this.evilMode ? null : this.resumeGame(data, items, skills, monsters, evilCards);
+      this.resumedGame = !!resumed;
+      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Eroe 1'), team: 'hero', x: start.x, y: start.y }], sheets, items, shopStock, skills, monsters, evilCards);
+      this.state.familiarDefs = familiarDefs;
+      // I tesori comprati in preparazione: ora che i mazzi esistono si pesca la carta (come in città); a mazzo vuoto le monete tornano all'eroe.
+      if (!resumed && !hasHeroes) {
+        partyIds.forEach((hero, i) => {
+          const piece = this.state.pieces.find((p) => p.id === `h${i + 1}`);
+          for (const tier of setup[hero]?.treasures ?? []) {
+            if (!piece) break;
+            if (this.state.decks[tier].length === 0) piece.coins += TREASURE_PRICES[tier];
+            else drawTreasureFor(this.state, piece, tier);
+          }
+        });
+      }
+      this.placer = new TilePlacer(data.seed, placed, defs, mapLayer);
+      // La cella di un glifo è liscia: niente crepe né altri dettagli ambientali.
+      // ...e così le caselle con un segnalino o un ostacolo: niente crepe né ragnatele. Intorno alle rocce cadono sassi e detriti, ma non in acqua, in buche o sui glifi.
+      const keyOf = (c: Cell) => `${c.x},${c.y}`;
+      this.placer.setNoCrackCells(new Set([...this.markers.map(keyOf), ...this.obstacles.flatMap((o) => obstacleCells(o).map(keyOf))]));
+      this.placer.setScenery({
+        rocks: new Set(this.obstacles.filter((o) => o.type === 'rock').flatMap((o) => obstacleCells(o).map(keyOf))),
+        noPebbles: new Set([...this.obstacles.filter((o) => o.type !== 'rock').flatMap((o) => obstacleCells(o).map(keyOf)), ...this.markers.filter((m) => m.type === 'glyph').map(keyOf)]),
+      });
+      const portraits = await loadPortraits([...this.state.pieces.map((p) => p.portrait), ...[...familiarDefs.values()].map((d) => d.image)]);
+      // Con una preparazione (introduzione o caselle di partenza) gli eroi entrano in campo solo alla fine: intanto restano da parte.
+      if (hasSetup(data) && !this.resumedGame) this.setUpAdventure();
+      this.startLayer = new Graphics();
+      this.world.addChild(this.startLayer);
+      this.warnLayer = new Graphics();
+      this.world.addChild(this.warnLayer);
+      this.pieces = new PiecesController(
+        pawnLayer,
+        app.ticker,
+        this.state,
+        (a) => this.showHud(a),
+        (text, icon) => this.showNotice(text, icon),
+        portraits,
+      );
+      this.familiarsView = new FamiliarsView(app.ticker, this.state, portraits, (cell) => this.familiarCohabitant(cell), (id) => this.pieces?.worldPosOf(id) ?? null);
+      this.familiarsLayer.addChild(this.familiarsView.container);
+      // Dopo ogni passo di un eroe si ricalcola cosa vede il gruppo; se compare un mostro, il movimento si ferma.
+      this.markerView!.stateProvider = () => this.glyphState();
+      this.pieces.onMonsterClick = (piece) => {
+        if (this.evilMode) {
+          this.evilMonsterClick(piece); // il Maligno: un mostro da attivare si attiva, gli altri aprono la scheda
+          return;
+        }
+        if (!this.evilView()) {
+          this.selectAttackTarget(piece); // i giocatori non vedono i parametri dei nemici: toccandolo si attacca
+          return;
+        }
+        this.panel.set(null); // un solo pannello alla volta
+        this.monsterPanel.set(piece.id);
+      };
+      this.pieces.onMonsterStep = (m, before) => !!this.board && (vigilanceChances(this.state, this.board, m, before).length > 0 || guardChances(this.state, this.board, m, this.guardDeclined).length > 0) && ((this.vigilanceFrom = before), true);
+      this.pieces.onDied = (piece) => {
+        this.showNotice(this.fallenNotice(piece), 'skull');
+        this.pass();
+      };
+      this.pieces.onStepped = (_piece, outcome) => {
+        // Entrando in una casella un eroe può aver acceso un glifo o raccolto un oggetto (anche solo passandoci sopra).
+        const event = outcome.marker;
+        if (event) {
+          this.showNotice(event.notice, this.markerIcon(event.marker));
+          if (event.kind === 'picked-up') this.pickupView?.redraw(this.board!, (m) => !this.fogOn() || this.exploration.markers.has(m));
+        }
+        this.afterDrop(outcome.drop);
+        if (outcome.opened?.length) this.monsterOpenedDoors(_piece, outcome.opened);
+        if (outcome.trap && _piece.team === 'hero') {
+          void this.resolveTrap(_piece, outcome.trap); // una trappola armata scatta: il movimento si ferma
+          return true;
+        }
+        if (event?.twin && event.marker.type === 'glyph') {
+          // Glifi gemelli: il movimento si ferma qui e la camera li mostra uno dopo l'altro. Fino ad allora restano spenti nel disegno.
+          this.markerView?.hold(event.marker);
+          this.markerView?.hold(event.twin);
+          void this.twinGlyphSequence(_piece, event.marker, event.twin);
+          this.exploreAndNotify();
+          return true;
+        }
+        return this.exploreAndNotify();
+      };
+      if (this.evilMode) {
+        this.evilView.set(true);
+        this.pieces?.setViewOnly(true); // il Maligno guarda gli eroi, non li comanda
+        this.areaLabelView.setTools(true); // accanto a ogni etichetta d'area: inquadra e informazioni
+        this.state.evilManual = true; // le trappole le arma il Maligno, non lo script
+        this.pieces?.setActivationDots((m) => activationOf(this.state, this.board ?? null, m)); // il pallino verde / giallo / grigio sui mostri
+      }
+      this.rebuildBoard();
+      this.hasObjective.set(!!this.state.objective);
+      this.mapBox = mapBounds(placed);
+      this.fitToBounds(this.mapBox);
+      this.loadSavedCamera(); // l'inquadratura che il giocatore aveva l'ultima volta
+      this.finishLoading();
+      if (this.state.setup && this.evilMode) this.autoPlaceHeroes();
+      else if (this.state.setup) this.nextSetupStep();
+      else this.barsIn.set(true); // senza preparazione la partita è già pronta
+      if (this.resumedGame) {
+        // Ripresa: a loader finito si dice che è ripresa e si rifà il punto della situazione (barre, comandi e, se l'eroe di turno è in città, la scelta del glifo su cui tornare, che parte da `showHud`).
+        void this.waitUntil(() => this.loaderGone(), 8000).then(() => {
+          if (this.destroyed) return;
+          this.showNotice(tr('Partita ripresa dal salvataggio'), 'autorenew', 'game');
+          this.showHud(this.pieces?.active ?? null);
+        });
+      }
+      if (!this.resumedGame && !this.state.setup && this.state.objective) this.showNotice(tr('Obiettivo: {text}', { text: this.state.objective.text ?? tr('sconfiggi il boss') }), 'brightness_empty', 'game');
+    } catch (err) {
+      console.error(tr('Impossibile caricare la mappa di prova'), err);
+      this.barsIn.set(true);
+      this.finishLoading(); // meglio una scena vuota che il loader per sempre
+    }
+
+    // Quando la finestra cambia, il punto al centro resta al centro.
+    app.renderer.on('resize', (w: number, h: number) => {
+      this.camX += (w - this.lastW) / 2;
+      this.camY += (h - this.lastH) / 2;
+      this.applyCamera();
+    });
+    this.lastW = app.screen.width;
+    this.lastH = app.screen.height;
+
+    app.ticker.add((t) => {
+      this.doorView?.tick(t.deltaMS);
+      this.veil?.tick(t.deltaMS);
+      this.markerView?.tick(performance.now(), t.deltaMS);
+      this.chestView?.tick(t.deltaMS);
+      this.obstacleView?.tick(t.deltaMS);
+      this.tickFadingObstacles(t.deltaMS);
+      this.torchView?.tick(t.deltaMS);
+      this.tickStartLayer(t.deltaMS);
+      this.tickWarnLayer(t.deltaMS);
+      this.tickCameraTween(t.deltaMS);
+      this.followMovingPawn(t.deltaMS);
+      this.updateContextAnchor();
+    });
+    this.bindInput(app.canvas);
+  }
+
+  private lastW = 0;
+  /** L'utente ha trascinato o zoomato durante un movimento: la camera non segue più la pedina fino alla fine del movimento. */
+  private followSuppressed = false;
+  /** Lo scorrimento in corso della camera verso l'eroe, con pan e zoom (si interrompe se l'utente trascina o zooma). */
+  private camTween?: { fromZoom: number; toZoom: number; from: Point; to: Point; elapsed: number; /** Durata (se manca, quella del tasto centra). */ ms?: number };
+  private lastH = 0;
+
+  /** Il tema è cambiato: sfondo, puntini, mappa, porte, ostacoli e pedine riprendono i colori nuovi. */
+  private applyTheme() {
+    if (!this.app) return;
+    this.app.renderer.background.color = theme.color.background;
+    this.dots?.applyTheme();
+    this.placer?.refresh();
+    this.pieces?.applyTheme();
+    if (this.board) this.rebuildBoard();
+  }
+
+  private applyCamera() {
+    const app = this.app!;
+    this.world!.position.set(this.camX, this.camY);
+    this.world!.scale.set(this.zoom);
+    setHatchZoom(this.zoom); // la retinatura dei muri ha più o meno linee secondo lo zoom
+    setAreaLabelZoom(this.zoom); // le etichette delle aree spariscono da lontano
+    this.refreshHover();
+    this.dots!.update(app.screen.width, app.screen.height, this.camX, this.camY, this.zoom, app.renderer.resolution);
+    this.lastW = app.screen.width;
+    this.lastH = app.screen.height;
+    if (!this.cameraScripted) this.rememberCamera();
+  }
+
+  // --- La camera di chi gioca: si ricorda a ogni cambiamento (e si salva nel localStorage) e ci si torna dopo le inquadrature automatiche ---
+
+  private mapName = 'test';
+  /** La camera dell'utente: il centro (in pixel del mondo) e lo zoom. Non cambia mentre la muove lo script (turno del Maligno). */
+  private userCam: { x: number; y: number; zoom: number } | null = null;
+  private cameraScripted = false;
+  private camSaveTimer?: ReturnType<typeof setTimeout>;
+
+  private rememberCamera() {
+    const app = this.app;
+    if (!app) return;
+    this.userCam = { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom, zoom: this.zoom };
+    clearTimeout(this.camSaveTimer);
+    this.camSaveTimer = setTimeout(() => {
+      try { localStorage.setItem(`cad-camera:${this.mapName}`, JSON.stringify(this.userCam)); } catch { /* storage non disponibile: vale solo per questa sessione */ }
+    }, 400);
+  }
+
+  /** Ripristina la camera salvata per questa mappa (se c'è e ha senso). */
+  private loadSavedCamera() {
+    const app = this.app;
+    if (!app) return;
+    try {
+      const raw = localStorage.getItem(`cad-camera:${this.mapName}`);
+      const c = raw ? JSON.parse(raw) : null;
+      if (!c || ![c.x, c.y, c.zoom].every(Number.isFinite) || c.zoom < ZOOM_MIN || c.zoom > ZOOM_MAX) return;
+      this.zoom = c.zoom;
+      this.camX = app.screen.width / 2 - c.x * c.zoom;
+      this.camY = app.screen.height / 2 - c.y * c.zoom;
+      this.applyCamera();
+    } catch { /* niente storage o dati rovinati: resta l'inquadratura iniziale */ }
+  }
+
+  /**
+   * Nel turno del Maligno, quando un mostro attacca un eroe: la camera si adatta (pan e, se serve, zoom indietro) perché entrambe le pedine stiano
+   * nell'area libera dello schermo (sotto i contatori e sopra la barra degli eroi). Se ci stanno già, non si muove.
+   */
+  private async frameBoth(a: Piece, b: Piece) {
+    await this.frameCells([...footprint(a), ...footprint(b)]);
+  }
+
+  /** Come `frameBoth`, per delle caselle qualunque (una scala e la pedina vicina, per esempio). */
+  private async frameCells(cells: Cell[]) {
+    const app = this.app;
+    if (!app) return;
+    const pad = 1; // una casella di respiro
+    const x0 = (Math.min(...cells.map((c) => c.x)) - pad) * CELL_SIZE;
+    const x1 = (Math.max(...cells.map((c) => c.x)) + 1 + pad) * CELL_SIZE;
+    const y0 = (Math.min(...cells.map((c) => c.y)) - pad) * CELL_SIZE;
+    const y1 = (Math.max(...cells.map((c) => c.y)) + 1 + pad) * CELL_SIZE;
+    const m = { top: 96, bottom: 150, left: 24, right: 24 }; // l'interfaccia: contatori e blocco del Maligno in alto, barra degli eroi in basso
+    const sw = app.screen.width, sh = app.screen.height;
+    const vw = sw - m.left - m.right, vh = sh - m.top - m.bottom;
+    const sx = (wx: number) => this.camX + wx * this.zoom;
+    const sy = (wy: number) => this.camY + wy * this.zoom;
+    if (sx(x0) >= m.left && sx(x1) <= sw - m.right && sy(y0) >= m.top && sy(y1) <= sh - m.bottom) return;
+    const need = Math.min(vw / (x1 - x0), vh / (y1 - y0));
+    const zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(this.zoom, need)));
+    const focus = { x: (x0 + x1) / 2 + (sw / 2 - (m.left + vw / 2)) / zoom, y: (y0 + y1) / 2 + (sh / 2 - (m.top + vh / 2)) / zoom };
+    this.camTween = {
+      fromZoom: this.zoom,
+      toZoom: zoom,
+      from: { x: (sw / 2 - this.camX) / this.zoom, y: (sh / 2 - this.camY) / this.zoom },
+      to: focus,
+      elapsed: 0,
+      ms: FX.cameraPanMs,
+    };
+    await this.sleep(FX.cameraPanMs + 50);
+  }
+
+  /** Finito il turno automatico del Maligno ognuno ritrova la sua camera (quella che aveva prima, o che ha cambiato lui). */
+  private async restoreUserCamera() {
+    const app = this.app;
+    const u = this.userCam;
+    if (!app || !u) return;
+    this.camTween = {
+      fromZoom: this.zoom,
+      toZoom: u.zoom,
+      from: { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom },
+      to: { x: u.x, y: u.y },
+      elapsed: 0,
+      ms: FX.cameraPanMs,
+    };
+    await this.sleep(FX.cameraPanMs + 50);
+  }
+
+  /** La casella da cui parte la pedina: al centro del primo tile. */
+  private startCell(placed: PlacedTile[]): Cell {
+    const t = placed[0];
+    const centre = { x: t.x + Math.floor(t.def.size.w / 2), y: t.y + Math.floor(t.def.size.h / 2) };
+    if (tileCells(t.def).has(`${centre.x - t.x},${centre.y - t.y}`)) return centre;
+    const [cx, cy] = [...tileCells(t.def)][0].split(',').map(Number);
+    return { x: t.x + cx, y: t.y + cy };
+  }
+
+  /** Posizione di un punto dello schermo, in celle (con la parte decimale). */
+  private toCells(p: Point): Point {
+    const scale = this.zoom * CELL_SIZE;
+    return { x: (p.x - this.camX) / scale, y: (p.y - this.camY) / scale };
+  }
+
+  /** Ricostruisce le regole della mappa (dopo che tile o porte sono cambiati) e ridisegna le porte. */
+  private rebuildBoard(): Reveal {
+    this.board = new Board(this.placed, this.doors, this.obstacles, this.markers, this.state.walls);
+    this.state.board = this.board;
+    armCleared(this.state); // gli eventi "non c'è più nessuno" ricordano chi c'era all'inizio
+    this.pieces?.setBoard(this.board);
+    const revealed = explore(this.state, this.board); // quello che si vede subito, senza animazione
+    this.applyVisibility();
+    this.refreshContext();
+    return revealed; // chi vuole può mostrare le aree appena rivelate (la descrizione, i poteri dei mostri): lo fa `finishSetup`
+  }
+
+  /** Giocando si vede solo ciò che gli eroi hanno visto; negli strumenti di piazzamento si vede tutto, perché l'autore deve poter lavorare. */
+  private fogOn(): boolean {
+    return this.mode === 'play';
+  }
+
+  /** Le copie "senza colore" delle viste, per la vista del Maligno: contengono solo ciò che gli eroi non hanno ancora scoperto. */
+  private readonly ghostLayer = new Container();
+  private ghosts?: { obstacles: ObstacleView; doors: DoorView; markers: MarkerView; chests: ChestView; stairs: StairsView; pickups: PickupView };
+
+  /** Nella vista del Maligno mostra, senza colore, ostacoli, porte, scale, bauli e oggetti non ancora scoperti; altrimenti le copie restano vuote. */
+  private syncGhosts() {
+    const g = this.ghosts;
+    const board = this.board;
+    if (!g || !board) return;
+    const on = this.fogOn() && this.evilView();
+    this.ghostLayer.visible = on;
+    const e = this.exploration;
+    const hidden = (m: Marker) => !e.markers.has(m);
+    g.obstacles.redraw(board, on ? (o) => !e.obstacles.has(o) : () => false);
+    g.doors.redraw(board, on ? (d) => !e.doors.has(d) : () => false);
+    g.markers.redraw(board, on ? hidden : () => false);
+    g.chests.redraw(board, on ? hidden : () => false);
+    g.stairs.redraw(board, on ? hidden : () => false);
+    g.pickups.redraw(board, on ? hidden : () => false);
+  }
+
+  /** Ridisegna ostacoli, porte, velo e mostri secondo ciò che è rivelato. */
+  private applyVisibility() {
+    const board = this.board;
+    if (!board) return;
+    const fog = this.fogOn();
+    this.syncGhosts();
+    this.obstacleView?.redraw(board, fog ? (o) => this.exploration.obstacles.has(o) : undefined);
+    this.doorView?.redraw(board, fog ? (d) => this.exploration.doors.has(d) : undefined);
+    this.markerView?.redraw(board, fog ? (m) => this.exploration.markers.has(m) : undefined);
+    this.chestView?.redraw(board, fog ? (m) => this.exploration.markers.has(m) : undefined);
+    this.stairsView?.redraw(board, fog ? (m) => this.exploration.markers.has(m) : undefined);
+    this.syncStairsWalls(board);
+    this.syncAreaLabels(board, fog);
+    this.pickupView?.redraw(board, fog ? (m) => this.exploration.markers.has(m) : undefined);
+    this.veil?.setState(board, fog ? this.exploration.cells : null);
+    this.syncTorches();
+    this.syncMonsterVisibility(fog);
+    this.pieces?.setKnownMarkers(fog ? this.exploration.markers : null); // si viaggia solo verso glifi già scoperti
+  }
+
+  /** Le etichette con il nome delle aree (solo di quelle già rivelate, giocando). */
+  private readonly areaLabelView = new AreaLabelView();
+  private labelsBoard: Board | null = null;
+  private labelPlaces: LabelPlace[] = [];
+
+  private syncAreaLabels(board: Board, fog: boolean) {
+    if (this.labelsBoard !== board) {
+      this.labelsBoard = board;
+      const cellsByArea = new Map<string, Cell[]>();
+      for (const c of board.walkableCells()) {
+        const id = board.areaAt(c);
+        if (id) cellsByArea.set(id, [...(cellsByArea.get(id) ?? []), c]);
+      }
+      const areas = [...this.areaInfo].flatMap(([id, info]) => {
+        const cells = cellsByArea.get(id);
+        return cells?.length ? [{ id, cells, text: info.name ?? id, manual: info.label ?? null }] : [];
+      });
+      this.labelPlaces = placeAreaLabels(areas, new Set(board.walkableCells().map((c) => `${c.x},${c.y}`)));
+    }
+    // Solo le aree già rivelate (giocando): le altre compaiono, con una dissolvenza, quando gli eroi le vedono.
+    this.areaLabelView.set(this.labelPlaces, fog && !this.evilView() ? new Set(this.state.exploration.areas) : null); // il Maligno le vede tutte
+  }
+
+  private torchView?: TorchView;
+  private torches: Torch[] = [];
+  private torchKey = '';
+
+  /** Le torce con almeno una delle due caselle che illuminano già esplorata si vedono, e la loro luce cade solo sulle caselle esplorate. */
+  private syncTorches() {
+    const board = this.board;
+    if (!board || !this.torchView) return;
+    const fog = this.fogOn() && !this.evilView();
+    const seen = (c: Cell) => !fog || this.exploration.cells.has(cellKey(c));
+    const lit = board.walkableCells().filter(seen);
+    const near = (t: Torch): Cell[] => {
+      const a = t.facing === 'S' || t.facing === 'E' ? { x: t.x, y: t.y } : { x: t.x - 1, y: t.y - 1 };
+      // Le due caselle accanto all'incrocio dal lato verso cui sporge la torcia.
+      return t.facing === 'S' ? [{ x: t.x - 1, y: t.y }, { x: t.x, y: t.y }]
+        : t.facing === 'N' ? [{ x: t.x - 1, y: t.y - 1 }, { x: t.x, y: t.y - 1 }]
+        : t.facing === 'E' ? [{ x: t.x, y: t.y - 1 }, a]
+        : [{ x: t.x - 1, y: t.y - 1 }, { x: t.x - 1, y: t.y }];
+    };
+    const shown = this.torches.filter((t) => near(t).some(seen));
+    const key = `${shown.map((t) => `${t.x},${t.y},${t.facing}`).join('|')}#${lit.length}`;
+    if (key === this.torchKey) return;
+    this.torchKey = key;
+    this.torchView.redraw(shown, lit);
+  }
+
+  /** Quali scale hanno i muri già disegnati: si ridisegna la mappa solo quando ne compare una nuova. */
+  private stairsDrawn = '';
+
+  /** I muri delle scale si disegnano insieme a quelli dei tile, ma solo per le scale scoperte (non svelano dove sono). */
+  private syncStairsWalls(board: Board) {
+    const fog = this.fogOn() && !this.evilView(); // il Maligno vede tutte le scale e le porte
+    const shown = board.markers.filter((m): m is Stairs => m.type === 'stairs' && (!fog || this.exploration.markers.has(m)));
+    const posts = board.looseDoorPosts((d) => !fog || this.exploration.doors.has(d)); // gli stipiti delle porte fuori dai varchi, solo per quelle già scoperte
+    const key = shown.map((s) => `${s.x},${s.y},${s.rotation ?? 0}`).join('|') + `#${board.walls.length}#${JSON.stringify(posts)}`;
+    if (key === this.stairsDrawn) return;
+    this.stairsDrawn = key;
+    this.placer?.setExtraWalls([...stairsWalls(shown), ...board.wallSegments(), ...posts]); // i muri dell'avventura si vedono sempre, come quelli dei tile
+  }
+
+  /** Per i glifi: quali sono destinazioni di un viaggio e quali hanno una pedina sopra. */
+  private glyphState() {
+    const occupied = new Set<Marker>();
+    for (const p of this.pieceList) {
+      const m = p.city ? undefined : this.board?.markerAt(p.cell);
+      if (m) occupied.add(m);
+    }
+    // Chi è in città e sta scegliendo dove tornare: i glifi possibili emettono l'onda.
+    const active = this.pieces?.active;
+    const returning = this.returnMode() && active?.city ? new Set<Marker>(this.returnOptions().map((c) => c.marker)) : null;
+    return { destinations: returning ?? this.pieces?.travelDestinations() ?? new Set<Marker>(), occupied };
+  }
+
+  /**
+   * Ricalcola cosa vede il gruppo e mostra le novità: il velo svanisce sulle caselle nuove, compaiono ostacoli, porte
+   * e mostri rivelati. Restituisce true se è comparso un mostro (chi si sta muovendo deve fermarsi).
+   */
+  private exploreAndNotify(): boolean {
+    if (!this.board || !this.fogOn()) return false;
+    const r = explore(this.state, this.board);
+    if (r.obstacles.length || r.doors.length || r.markers.length) {
+      this.obstacleView?.redraw(this.board, (o) => this.exploration.obstacles.has(o));
+      this.doorView?.redraw(this.board, (d) => this.exploration.doors.has(d));
+      this.markerView?.redraw(this.board, (m) => this.exploration.markers.has(m));
+      this.chestView?.redraw(this.board, (m) => this.exploration.markers.has(m));
+      this.stairsView?.redraw(this.board, (m) => this.exploration.markers.has(m));
+      this.syncStairsWalls(this.board);
+      this.pickupView?.redraw(this.board, (m) => this.exploration.markers.has(m));
+      this.syncGhosts(); // ciò che è appena stato scoperto riprende i colori
+    }
+    this.veil?.reveal(r.cells);
+    if (r.cells.length) this.syncTorches(); // la luce segue ciò che si vede
+    if (r.monsters.length) {
+      this.syncMonsterVisibility(true);
+      this.pieces?.revealMonsters(r.monsters.map((m) => m.id));
+      this.showNotice(tr('Compare: {names}', { names: r.monsters.map((m) => m.name).join(', ') }), 'skull', 'evil');
+    }
+    if (r.areas.length) {
+      this.syncMonsterVisibility(); // i mostri dell'area rivelata riprendono i colori (vista del Maligno)
+      void this.areasRevealed(r.areas);
+    }
+    this.refreshContext(); // una porta appena vista può diventare un'azione
+    return r.monsters.length > 0 || !!this.state.events.endHeroesTurn; // un evento che finisce il turno degli eroi ferma anche chi si sta muovendo
+  }
+
+  /** Le aree rivelate per la prima volta: il testo dell'avventura (se c'è), i mostri si svegliano e agiscono Orda di Creature e Abile comandante. */
+  private async areasRevealed(areas: string[]) {
+    if (!this.board) return;
+    for (const id of areas) {
+      const info = this.areaInfo.get(id);
+      if (info?.text) {
+        // La descrizione dell'area è una dialog bloccante da confermare (come introduzione e obiettivo): si mette in coda con i messaggi degli eventi e si aspetta che sia letta.
+        this.state.events.messages.push({ kicker: tr('Area'), title: [info.name, info.subtitle].filter(Boolean).join(' · ') || undefined, text: info.text });
+        await this.flushEvents();
+      }
+      const res = revealArea(this.state, this.board, id);
+      if (res.upgraded.length) {
+        for (const m of res.upgraded) this.pieces?.redraw(m);
+        await this.announce(tr('Abile comandante'), tr('{names} diventa potenziato.', { names: res.upgraded.map((m) => m.name).join(', ') }));
+      }
+      if (res.spawned.length) await this.presentSpawned(res.spawned, tr('Orda di Creature'), tr('Appaiono: {names}.', { names: res.spawned.map((m) => m.name).join(', ') }));
+      if (res.spawned.length || res.upgraded.length) this.exploreAndNotify(); // i nuovi mostri possono essere in vista
+      if (this.state.evilManual) {
+        await this.manualAreaPowers(id); // Abile comandante e Orda di Creature: li sceglie il Maligno
+        this.exploreAndNotify();
+      }
+    }
+    await this.flushEvents(); // i messaggi degli eventi "area rivelata" (e un eventuale fine del turno degli eroi) subito dopo la presentazione delle aree
+  }
+
+  /** Dice a chi ne ha bisogno dove si trova il mouse (niente durante il trascinamento). */
+  private refreshHover() {
+    const cell = this.mouse && this.pointers.size === 0 ? this.toCells(this.mouse) : null;
+    this.placer?.setHover(this.mode === 'tiles' ? cell : null);
+    const hoverCell = this.mode === 'play' && cell ? { x: Math.floor(cell.x), y: Math.floor(cell.y) } : null;
+    this.pieces?.hover(hoverCell);
+    this.familiarsView?.hover(hoverCell);
+    this.doorView?.setPreview(null);
+    this.obstacleView?.setPreview(null);
+    if (this.mode === 'obstacles' && cell) {
+      const o = this.obstacleCandidate({ x: Math.floor(cell.x), y: Math.floor(cell.y) });
+      this.obstacleView?.setPreview(o, this.canPlace(o));
+    }
+    if (this.mode === 'doors' && cell) {
+      const c = this.doorCandidate(cell);
+      if (c) this.doorView?.setPreview(c.span, c.index >= 0, this.board!.hasJambPosts(c.span));
+    }
+  }
+
+  /** Il lato di cella più vicino al puntatore su cui può stare una porta, con la porta (da muro a muro) che ci starebbe. */
+  private doorCandidate(cell: Point): { span: DoorSpan; unit: number; index: number } | null {
+    if (!this.board) return null;
+    // Le due possibilità: la linea orizzontale più vicina e la verticale più vicina; si prova prima la più vicina.
+    const options = [
+      { horizontal: true, line: Math.round(cell.y), unit: Math.floor(cell.x), dist: Math.abs(cell.y - Math.round(cell.y)) },
+      { horizontal: false, line: Math.round(cell.x), unit: Math.floor(cell.y), dist: Math.abs(cell.x - Math.round(cell.x)) },
+    ].sort((a, b) => a.dist - b.dist);
+    for (const o of options) {
+      const span = this.board.spanAt(o.horizontal, o.line, o.unit);
+      if (span) return { span, unit: o.unit, index: this.board.doorIndexAt(o.horizontal, o.line, o.unit) };
+    }
+    return null;
+  }
+
+  /** L'ostacolo che si piazzerebbe con la cella `c` come prima casella: tipo, lunghezza e rotazione correnti. */
+  private obstacleCandidate(c: Point): Obstacle {
+    const v = OBSTACLE_VARIANTS[this.obstacleVariant];
+    return { type: v.type, length: v.length, x: c.x, y: c.y, vertical: this.obstacleVertical || undefined };
+  }
+
+  /** Si può piazzare qui? Serve che stia sui tile, senza altri ostacoli e senza pedine sopra. */
+  private canPlace(o: Obstacle): boolean {
+    return !!this.board?.canPlaceObstacle(o) && !obstacleCells(o).some((c) => this.pieces?.isOccupied(c));
+  }
+
+  /** Clic in modalità "ostacoli": toglie l'ostacolo che c'è, oppure ne mette uno nuovo. */
+  private obstaclesClick(p: Point) {
+    const c = this.toCells(p);
+    const cell = { x: Math.floor(c.x), y: Math.floor(c.y) };
+    const existing = this.board?.obstacleAt(cell);
+    if (existing) this.obstacles.splice(this.obstacles.indexOf(existing), 1);
+    else {
+      const o = this.obstacleCandidate(cell);
+      if (!this.canPlace(o)) return;
+      this.obstacles.push(o);
+    }
+    this.rebuildBoard();
+    this.refreshHover();
+  }
+
+  /** Cambia modalità: tornando a "gioco" i tile e le porte appena piazzati diventano parte della mappa. */
+  private setMode(mode: Mode) {
+    this.mode = this.mode === mode ? 'play' : mode;
+    this.hint.set(HINTS[this.mode]);
+    this.pieces?.setEnabled(this.mode === 'play');
+    if (this.mode === 'play') this.rebuildBoard();
+    else this.applyVisibility(); // negli strumenti di piazzamento si vede tutto
+    this.refreshContext();
+    this.refreshHover();
+  }
+
+  /** Aggiorna l'interfaccia (pillole in alto e barra degli eroi) da ciò che c'è nello stato. */
+  private showHud(_active: Piece | null) {
+    const s = this.state;
+    if (!s.setup) spawnFamiliars(s); // i famigli compaiono quando la partita comincia (e quando un eroe prende una carta che ne dà uno)
+    this.familiarsView?.sync();
+    s.checkVictory(); // prima della Conquista: la vittoria dà i punti dell'obiettivo
+    void this.flushEvents(); // i messaggi degli eventi scattati (una sconfitta, uno scrigno, un'area) si leggono appena la scena è aggiornata
+    this.progress.set(s.progress);
+    this.round.set(s.round);
+    this.hatred.set(s.evil.hatred);
+    this.deckLeft.set(cardsLeft(s));
+    this.handCount.set(s.evil.hand.length);
+    this.refreshHand();
+    this.defeated.set(s.status === 'defeat');
+    this.victory.set(s.status === 'victory');
+    if (s.status !== 'playing') this.saves.clear(this.mapName); // una partita finita non si riprende
+    this.keys.set(s.party.keys.size);
+    const hero = s.pieces.find((p) => p.id === s.activeId && p.team === 'hero');
+    this.runes.set(s.runesInPlay().map((color) => ({ color, owned: s.party.runeKeys.has(color), label: s.party.runeKeys.has(color) ? tr('Chiave runica {color}', { color: RUNE_NAMES[color] }) : tr('Chiave runica {color} (non ancora trovata)', { color: RUNE_NAMES[color] }) })));
+    const heroes: BarMember[] = s.pieces
+      .filter((p) => p.team === 'hero')
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        kind: 'hero',
+        portrait: p.portrait,
+        current: p.id === s.activeId && s.phase === 'heroes',
+        active: this.evilMode ? p.id === (this.viewedHero() ?? s.activeId) : p.id === s.activeId && s.phase === 'heroes',
+        done: p.done,
+        wounds: p.wounds,
+        maxWounds: p.maxWounds,
+        points: p.points,
+        energy: p.energy,
+        armor: armorOf(s, p),
+        potions: p.potions.length,
+        inCity: !!p.city,
+        cityPanel: !!p.city && !cityRules.cityView(s, p)?.mustReturn,
+        action: p.action,
+        order: p.order ?? null,
+        canChangeOrder: orderChangeCost(s, p) !== null,
+        status: { ...p.status },
+        skillsReady: !this.evilMode && p.id === s.activeId && skillActions(s, p).some((a) => a.enabled),
+        details: {
+          name: p.name, heroClass: p.heroClass, portrait: p.portrait, portraitFull: p.portraitFull, wounds: p.wounds, maxWounds: p.maxWounds, energy: p.energy,
+          armor: armorOf(s, p), speed: speedOf(s, p), value: p.value, potions: [...p.potions], coins: p.coins, inventory: this.inventoryWithUses(s, p), inCity: !!p.city, cityPanel: !!p.city && !cityRules.cityView(s, p)?.mustReturn, city: cityRules.cityView(s, p), dice: p.dice, skillActions: skillActions(s, p), states: [...describeStatus(p.status), ...(p.toad ? [tr('Rospo ×{n}', { n: p.toad.tokens })] : [])], poison: p.status.poison, skills: p.skills, skillCards: p.skillCards.flatMap((id) => { const c = s.skills.get(id); return c ? [c] : []; }), ability: p.ability, abilityName: p.abilityName, familiars: [...[...s.familiarDefs.values()].filter((d) => d.item && p.equipped.includes(d.item)), ...familiarsOf(s, p.id).flatMap((f) => s.familiarDefs.get(f.id) ?? [])],
+        } satisfies HeroDetails,
+      }));
+    this.members.set(heroes);
+    this.heroSlots.set(heroes.length + this.pendingHeroes.length);
+    if (this.panel() && this.panel()!.id !== (this.evilMode ? (this.viewedHero() ?? s.activeId) : s.activeId)) this.panel.set(null); // il pannello è dell'eroe che agisce
+    const shown = this.panel();
+    if (shown?.kind === 'city' && !(s.pieces.find((p) => p.id === shown.id)?.city && !cityRules.cityView(s, s.pieces.find((p) => p.id === shown.id)!)?.mustReturn)) this.panel.set(null); // la città c'è solo per chi ci si trova e non deve ancora tornare
+    if (this.returnMode() && !this.pieces?.active?.city) this.endReturn();
+    this.maybeStartReturn();
+    this.refreshContext();
+  }
+
+  /** Dai titoli in cima ai pannelli: passa all'altro pannello, per lo stesso eroe. */
+  protected switchPanel(kind: PanelKind) {
+    this.panel.update((cur) => (cur ? { id: cur.id, kind } : cur));
+  }
+
+  /** I tasti "i" e della cassa del tab: aprono la scheda con le informazioni o l'inventario dell'eroe, o li chiudono se sono già aperti. */
+  protected togglePanel(id: string, kind: PanelKind) {
+    this.monsterPanel.set(null); // un solo pannello alla volta
+    this.panel.update((cur) => (cur?.id === id && cur.kind === kind ? null : { id, kind }));
+  }
+
+  /** Un nemico toccato nella vista dei giocatori: se si può attaccare compare il menu delle armi. */
+  private selectAttackTarget(target: Piece) {
+    const hero = this.pieces?.active;
+    if (!hero || hero.team !== 'hero' || !this.board || this.attackSession() || this.evilBusy()) return;
+    if (this.fogOn() && !this.exploration.monsters.has(target.id)) return; // un nemico non ancora scoperto non si può toccare
+    if (target.inactive) return; // un nemico inattivo è come un ostacolo: non si attacca
+    // Le carte dei mostri sono pubbliche (come sul tavolo, manuale 3B): oltre alle armi c'è sempre la voce Scheda; se non si può attaccare resta solo quella.
+    const options = canActOnMap(this.state, hero) ? attackOptions(this.state, this.board, hero, target) : [];
+    this.attackTarget.set(target.id);
+    this.attackActions.set([
+      ...options.map((o) => ({ id: o.id, kind: 'attack' as const, icon: o.icon, label: o.name, cost: 0, enabled: o.enabled, reason: o.reason })),
+      { id: 'sheet', kind: 'attack' as const, icon: 'info', label: tr('Scheda'), cost: 0, enabled: true },
+    ]);
+    this.updateContextAnchor();
+  }
+
+  protected closeAttackMenu() {
+    this.attackTarget.set(null);
+    this.attackActions.set([]);
+  }
+
+  /** Dal menu delle armi: apre la finestra dell'attacco con l'arma scelta (prima del tiro non si spende niente). */
+  protected async startAttack(optionId: string) {
+    if (optionId === 'sheet') {
+      // La scheda del nemico: stessa cornice dei pannelli degli eroi, sopra la barra.
+      const monster = this.attackTarget();
+      this.closeAttackMenu();
+      if (monster) {
+        this.panel.set(null);
+        this.monsterPanel.set(monster);
+      }
+      return;
+    }
+    if (this.evilMode) {
+      // Il menu rosso di un mostro del Maligno: Avanza, Carica, Furore.
+      const monster = this.state.pieces.find((p) => p.id === this.attackTarget());
+      this.closeAttackMenu();
+      if (monster) void this.startActivation(monster, optionId === 'charge' || optionId === 'fury' ? optionId : undefined);
+      return;
+    }
+    const hero = this.pieces?.active;
+    const target = this.state.pieces.find((p) => p.id === this.attackTarget());
+    if (!hero || !target || !this.board || this.attackSession()) return;
+    const option = attackOptions(this.state, this.board, hero, target).find((o) => o.id === optionId);
+    if (!option?.enabled) return;
+    this.attackTarget.set(null);
+    this.attackActions.set([]);
+    await this.attackIntro(hero, target, option);
+    this.attackSession.set({
+      attackerId: hero.id, targetId: target.id, option, plan: planAttack(this.state, hero, target, option),
+      step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 },
+    });
+  }
+
+  /** Spazzata di Grumshar: prima del tiro, per l'energia della regola, l'attacco in mischia colpisce anche tutti i nemici adiacenti. Un secondo tocco la toglie e rende l'energia. */
+  protected toggleSweep() {
+    const se = this.attackSession();
+    const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
+    if (!se || !attacker || se.step !== 'preview' || se.auto) return;
+    const cost = ruleAmount(this.state, attacker, 'sweepAttack');
+    if (se.sweepPaid) {
+      attacker.energy += se.sweepPaid;
+      this.attackSession.set({ ...se, sweepPaid: 0, plan: { ...se.plan, area: { ...se.plan.area, sweep: false } } });
+    } else if (cost > 0 && attacker.energy >= cost) {
+      attacker.energy -= cost;
+      this.attackSession.set({ ...se, sweepPaid: cost, plan: { ...se.plan, area: { ...se.plan.area, sweep: true } } });
+    } else {
+      this.showNotice(tr('Non hai abbastanza energia'), 'warning', 'game');
+      return;
+    }
+    this.pieces?.refreshActive();
+  }
+
+  protected cancelAttack() {
+    const se = this.attackSession();
+    const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
+    if (attacker && se?.sweepPaid && se.step === 'preview') { attacker.energy += se.sweepPaid; this.pieces?.refreshActive(); } // la Spazzata non pagata torna
+    if (attacker) this.pieces?.cancelAttackFx(attacker); // la pedina torna al suo posto e la linea sparisce
+    this.attackSession.set(null);
+    this.dice.scheduleClear(true);
+  }
+
+  /** Il tiro: i dadi 3D rotolano sopra la finestra e le facce uscite arrivano nella finestra. */
+  protected async rollAttack() {
+    const se = this.attackSession();
+    if (!se || se.step !== 'preview') return;
+    this.attackSession.set({ ...se, step: 'rolling' });
+    const announcer = this.state.pieces.find((p) => p.id === se.attackerId);
+    const announced = this.state.pieces.find((p) => p.id === se.targetId);
+    if (announcer && announced) await this.announceAttack(announcer, announced, se.plan, se.breathDir);
+    const rolls = await this.dice.rollFaces(se.option.dice);
+    const cur = this.attackSession();
+    if (!cur) return;
+    if (!rolls) {
+      this.attackSession.set({ ...cur, step: 'preview' });
+      this.showNotice(tr('I dadi 3D non sono disponibili'), 'warning', 'game');
+      return;
+    }
+    const victim = this.state.pieces.find((p) => p.id === cur.targetId);
+    // Schivare (non vale vicino a Nero il Corvo): lo script a caso, il Maligno a mano quando lo decide lui, dopo aver visto il tiro.
+    const final = victim?.team === 'monster' && !weakening(this.state, victim).noDodge
+      ? this.evilMode ? ((await this.evilPlays('dodge', tr('Schivare · {hatred:{n}}'), tr('Non schivare'))) ? await this.dodgeReroll(rolls) : rolls) : await this.maybeDodge(rolls, cur.plan)
+      : rolls;
+    if (!this.attackSession()) return;
+    const attacker = this.state.pieces.find((p) => p.id === cur.attackerId);
+    const offer = attacker && attacker.team === 'hero' ? rerollsFor(this.state, attacker, cur.option.attack) : { count: 0, sources: [] as string[] };
+    const aim = !!attacker && attacker.team === 'hero' && attacker.order === 'aim' && !cur.auto && !cur.free?.consumeOrder;
+    this.attackSession.set({ ...cur, step: 'rolled', rolls: final, choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, rerolls: offer.count, rerollSource: offer.sources.join(', '), aim });
+  }
+
+  /** Un dado competenza in più per 1 energia, dopo il tiro (al massimo 5 dadi competenza in un attacco). */
+  protected readonly addingDie = signal(false);
+  protected async addProficiencyDie() {
+    const se = this.attackSession();
+    const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
+    if (!se || !attacker || se.step !== 'rolled' || se.auto || this.addingDie()) return;
+    if (attacker.energy < 1 || se.rolls.filter((r) => r.color === 'black').length >= 5) return;
+    this.addingDie.set(true);
+    attacker.energy -= 1; // l'energia si spende subito: il dado non si può annullare
+    this.pieces?.refreshActive();
+    const extra = await this.dice.rollFaces(['black'], true);
+    this.addingDie.set(false);
+    const cur = this.attackSession();
+    if (!cur) return;
+    if (!extra) {
+      attacker.energy += 1; // i dadi 3D non ci sono: l'energia torna
+      this.pieces?.refreshActive();
+      this.showNotice(tr('I dadi 3D non sono disponibili'), 'warning', 'game');
+      return;
+    }
+    this.attackSession.set({ ...cur, rolls: [...cur.rolls, ...extra] });
+  }
+
+  /** Sta ripetendo un dado scelto (Occhio del cacciatore): i tasti aspettano. */
+  private readonly rerolling = signal(false);
+
+  /** Ripete il dado `index` scelto dall'eroe (una delle ripetizioni che la sua abilità gli dà): resta il secondo risultato. */
+  protected async rerollChosen(index: number) {
+    const se = this.attackSession();
+    if (!se || se.step !== 'rolled' || se.auto || (se.rerolls ?? 0) < 1 || this.rerolling() || !se.rolls[index]) return;
+    this.rerolling.set(true);
+    const rolls = await this.rerollDice(se.rolls, [index]);
+    this.rerolling.set(false);
+    const cur = this.attackSession();
+    if (!cur) return;
+    const choices = { ...cur.choices };
+    delete choices[index]; // il dado è nuovo: se è multivalente si sceglie di nuovo
+    this.attackSession.set({ ...cur, rolls, choices, spent: [], rerolls: (cur.rerolls ?? 1) - 1, aim: false }); // un solo ripetuto per attacco
+  }
+
+  /** Mira: l'eroe sceglie quali dadi ripetere (anche i mancati); si tiene il secondo risultato e l'ordine si usa. */
+  protected async aimChosen() {
+    const se = this.attackSession();
+    if (!se || se.step !== 'rolled' || se.auto || !se.aim || this.rerolling()) return;
+    const picked = await this.pickDice({ title: tr('Attacco mirato'), text: tr('Scegli i dadi da ripetere, anche i mancati: terrai il secondo risultato. È l\'unica ripetizione di questo attacco.'), dice: se.rolls, confirm: tr('Ripeti i dadi scelti'), skip: tr('Annulla') });
+    if (!picked?.length) return;
+    this.rerolling.set(true);
+    const rolls = await this.rerollDice(se.rolls, picked);
+    this.rerolling.set(false);
+    const cur = this.attackSession();
+    if (!cur) return;
+    const choices = { ...cur.choices };
+    for (const i of picked) delete choices[i];
+    const attacker = this.state.pieces.find((p) => p.id === cur.attackerId);
+    if (attacker) attacker.order = null; // l'ordine si usa
+    this.attackSession.set({ ...cur, rolls, choices, spent: [], rerolls: 0, aim: false });
+    this.showNotice(tr('Attacco mirato: ordine Mira usato'), 'tactic');
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** Sulla faccia multivalente del dado competenza chi tira sceglie quale dei due valori tenere. */
+  protected chooseFace(e: { index: number; value: 'range' | 'heart' | null }) {
+    this.attackSession.update((se) => {
+      if (!se) return se;
+      const choices = { ...se.choices };
+      if (e.value) choices[e.index] = e.value;
+      else delete choices[e.index]; // un tocco sul risultato riapre la scelta
+      return { ...se, choices };
+    });
+  }
+
+  /** Attiva un'abilità dell'arma pagando le sue scintille: si può fare più volte, finché ce ne sono. */
+  protected useEffect(index: number) {
+    const se = this.attackSession();
+    const target = this.state.pieces.find((p) => p.id === se?.targetId);
+    if (!se || !target) return;
+    const effect = se.plan.effects.find((e) => e.index === index);
+    const o = resolveAttack(this.state, target, se.plan, se.rolls, se.choices, se.spent, se.sorcery);
+    if (!effect?.supported || effect.cost > o.sparks - o.sparksSpent) return;
+    this.attackSession.set({ ...se, spent: [...se.spent, index] });
+  }
+
+  /** Stregoneria: sposta un punto (dopo il tiro) fra la gittata e il danno, senza superare il livello. */
+  protected sorceryStep(e: { kind: 'range' | 'damage'; delta: 1 | -1 }) {
+    this.attackSession.update((se) => {
+      if (!se || se.auto) return se;
+      const next = { ...se.sorcery, [e.kind]: Math.max(0, se.sorcery[e.kind] + e.delta) };
+      if (next.range + next.damage > se.plan.sorcery) return se;
+      return { ...se, sorcery: next };
+    });
+  }
+
+  /** Rimette a posto tutte le scintille spese. */
+  protected resetEffects() {
+    this.attackSession.update((se) => (se ? { ...se, spent: [] } : se));
+  }
+
+  /** Applica l'attacco: consuma l'attacco, toglie le ferite e, se il nemico è sconfitto, sparisce dalla mappa. */
+  protected async applyAttackNow() {
+    const se = this.attackSession();
+    const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
+    const target = this.state.pieces.find((p) => p.id === se?.targetId);
+    if (!se || !attacker || !target || se.step !== 'rolled') return;
+    let outcome = resolveAttack(this.state, target, se.plan, se.rolls, se.choices, se.spent, se.sorcery);
+    if (!outcome.miss && se.rolls.some((r, i) => r.face.slash && !se.choices[i])) {
+      this.showNotice(tr('Scegli cosa tenere sulle facce del dado competenza'), 'warning');
+      return;
+    }
+    this.attackSession.set(null); // chiude la finestra subito (e non si applica due volte)
+    this.applyingAttack = true;
+    this.dice.scheduleClear(true);
+    // Un eroe che sta per subire ferite può reagire (Mantelli, Scudi, Pelle di corteccia): quelle che restano sono quelle che subisce davvero.
+    if (target.team === 'hero' && outcome.damage > 0 && !outcome.kill) {
+      const left = await this.reduceWounds(target, outcome.damage);
+      if (left !== outcome.damage) outcome = { ...outcome, damage: left, poison: outcome.poison > 0 ? left : 0 };
+    }
+    // Immortale: se il colpo sarebbe mortale si tira un dado competenza; con una scintilla il mostro si rialza.
+    let undying = false;
+    if (outcome.damage > 0 && outcome.damage >= target.wounds && !outcome.kill && target.traits.some((t) => /^Immortale$/i.test(t))) { // il Tocco della morte ignora Immortale
+      const roll = await this.dice.rollFaces(['black']);
+      await this.sleep(1600);
+      undying = !!roll?.some((r) => r.face.spark > 0);
+    }
+    // Chi altro è colpito (Spazzata, Esplosione, Soffio): si calcola prima, perché il bersaglio può uscire dalla mappa.
+    const hit = !outcome.miss && outcome.inRange && !outcome.feared;
+    const shield = se.plan.effects.find((e) => e.blockedBy)?.blockedBy; // la Corazza runica contro il Tocco della morte
+    if (hit && shield) this.showNotice(tr('{name} protegge {target} dal {weapon}', { name: shield, target: target.name, weapon: se.option.name }), 'shield', attacker.team === 'monster' ? 'evil' : 'hero');
+    const victims = hit && this.board ? areaVictims(this.state, this.board, attacker, target, se.plan, se.spent, se.breathDir) : [];
+    // Le scintille spese possono allargare un'Esplosione oltre la sagoma già mostrata: in quel caso si fa lampeggiare di nuovo.
+    if (hit && this.board && areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir).length > areaCells(this.board, attacker, target, se.plan, [], se.breathDir).length) await this.flashCells(areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir));
+    if (se.free) {
+      attacker.energy = Math.max(0, attacker.energy - se.free.pay); // Vigilanza: l'energia si paga adesso
+      this.pieces?.refreshActive();
+    }
+    const result = applyAttack(this.state, attacker, target, outcome, { undying, option: se.option, extra: !!se.free });
+    await this.attackImpact(attacker, target, se.option, outcome, se.plan.area.breath && se.breathDir && this.board ? { cells: areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir), shape: se.breathDir } : undefined);
+    // Il nome delle abilità e la sagoma sono già stati mostrati prima del tiro (`announceAttack`); qui solo gli stati inflitti sopra chi li subisce.
+    result.applied.forEach((a, i) => this.pieces?.floatTag(target, STATUS_NAMES[a.kind], a.kind, i * 450));
+    if (result.energyGained) this.showNotice(tr('{name} recupera {energy:{n}}', { name: target.name, n: result.energyGained }), 'water_drop', 'hero'); // Furia del dolore
+    const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
+    const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
+    const by = attacker.team === 'monster' ? 'evil' : 'hero';
+    if (outcome.hatredLoss) this.showHud(this.pieces?.active ?? null);
+    if (outcome.hatredLoss) this.showNotice(outcome.hatredLoss === 1 ? tr('Il Maligno perde 1 punto Odio') : tr('Il Maligno perde {n} punti Odio', { n: outcome.hatredLoss }), 'skull', 'evil');
+    if (result.killed && target.team === 'hero') this.showNotice(this.fallenNotice(target), 'skull', by);
+    else this.showNotice(text, result.killed ? 'skull' : 'swords', by);
+    this.pieces?.afterCombat(attacker, target, result.killed);
+    this.afterDrop(result.drop);
+    for (const v of victims) {
+      let vo = resolveAttack(this.state, v, { ...se.plan, fearless: true }, se.rolls, se.choices, se.spent, se.sorcery);
+      if (v.team === 'hero' && vo.damage > 0) {
+        const left = await this.reduceWounds(v, vo.damage);
+        if (left !== vo.damage) vo = { ...vo, damage: left, poison: vo.poison > 0 ? left : 0 };
+      }
+      const vr = applyAttack(this.state, attacker, v, vo, { extra: true, option: se.option });
+      this.pieces?.floatText(v, vo.miss || !vo.inRange ? tr('Mancato') : vo.damage > 0 ? `-${vo.damage}` : '0', vo.damage > 0 ? 'damage' : 'miss');
+      this.pieces?.afterCombat(attacker, v, vr.killed);
+      this.pieces?.monstersSlain(vr.slain);
+      this.afterDrop(vr.drop);
+      this.showNotice(vr.killed ? `${v.name} è ${v.team === 'hero' ? 'caduto' : 'sconfitto'}!` : `${se.option.name}: ${vo.damage} ${vo.damage === 1 ? 'ferita' : 'ferite'} a ${v.name}`, vr.killed ? 'skull' : 'swords', by);
+    }
+    if (result.slain.length) {
+      this.pieces?.monstersSlain(result.slain);
+      this.showNotice(result.slain.length > 1 ? tr('Giustizia divina: {names} sono uccisi', { names: result.slain.map((m) => m.name).join(', ') }) : tr('Giustizia divina: {names} è ucciso', { names: result.slain.map((m) => m.name).join(', ') }), 'skull', 'hero');
+    }
+    this.exploreAndNotify(); // un nemico in meno cambia cosa si vede
+    this.refreshContext();
+    if (result.knockback) await this.startKnockback(attacker, target);
+    await this.waitUntil(() => !this.pieces?.isDying(), 6000); // chi è morto deve sparire del tutto prima che il gioco riprenda
+    this.applyingAttack = false;
+  }
+
+  /**
+   * Un eroe sta per subire `damage` ferite da un attacco: prima si applicano le reazioni (docs/cards/abilities.md, livello 2). I Mantelli tirano un dado competenza per ogni
+   * ferita e ne annullano una per faccia vuota (inganno) o per scintilla (nebbie, Elfico); gli Scudi (si esauriscono) e Pelle di corteccia si propongono al giocatore, che
+   * può usarle una dopo l'altra finché ci sono ferite e reazioni. Restituisce le ferite che subisce davvero.
+   */
+  private async reduceWounds(hero: Piece, damage: number): Promise<number> {
+    let left = damage;
+    const reactions = woundReactions(this.state, hero);
+    for (const r of reactions.filter((x) => x.auto && !reactionBlock(hero, x))) {
+      if (left <= 0) break;
+      const faces = await this.proficiencyDice(Math.min(left, 8));
+      const n = r.cancel === 'blank' ? faces.filter(isBlank).length : r.cancel === 'spark' ? sparks(faces) : 0;
+      const cancelled = Math.min(left, n);
+      left -= cancelled;
+      this.showNotice(cancelled ? (cancelled === 1 ? tr('{name}: 1 ferita annullata', { name: r.name }) : tr('{name}: {n} ferite annullate', { name: r.name, n: cancelled })) : tr('{name}: nessuna ferita annullata', { name: r.name }), 'shield', 'hero');
+    }
+    for (let guard = 0; guard < 6 && left > 0; guard++) {
+      const options = reactions.filter((x) => !x.auto && !reactionBlock(hero, x));
+      if (!options.length) break;
+      const answer = await this.askChoice({
+        title: tr('Reazione'),
+        text: left === 1 ? tr('{name} sta per subire 1 ferita. Usare una reazione?', { name: hero.name }) : tr('{name} sta per subire {left} ferite. Usare una reazione?', { name: hero.name, left }),
+        choices: [...options.map((o) => ({ id: o.id, label: `${o.name} (−${cancelAmount(this.state, hero, o)})`, primary: true })), { id: 'no', label: tr('Subisci le ferite') }],
+      });
+      const picked = options.find((o) => o.id === answer);
+      if (!picked) break;
+      markReactionUsed(hero, picked);
+      const cancelled = Math.min(left, cancelAmount(this.state, hero, picked));
+      left -= cancelled;
+      this.showNotice(cancelled === 1 ? tr('{name}: 1 ferita annullata', { name: picked.name }) : tr('{name}: {n} ferite annullate', { name: picked.name, n: cancelled }), 'shield', 'hero');
+    }
+    return left;
+  }
+
+  /** Il bottino di un mostro appena uscito dalla mappa: si dice cosa ha lasciato e, se un oggetto è caduto a terra, si ridisegna la mappa. */
+  private afterDrop(drop: RemovalResult | null | undefined) {
+    if (!drop) return;
+    if (drop.lines.length) this.showNotice(tr('Bottino: {lines}', { lines: drop.lines.join(' · ') }), 'inventory_2', 'game');
+    if (drop.groundItems) this.rebuildBoard();
+    for (const m of drop.modified ?? []) this.pieces?.redraw(m); // un evento ha cambiato i valori di una pedina
+  }
+
+  /**
+   * I messaggi degli eventi (`state.events`, vedi `state/events.ts`): uno alla volta in una dialog con "Ho letto", e le frasi brevi come notifiche. Si può chiamare spesso: se sta già
+   * mostrando la coda restituisce quella stessa attesa, e il turno del Maligno la aspetta prima di andare avanti.
+   */
+  private eventResolve: (() => void) | null = null;
+  private eventFlush: Promise<void> | null = null;
+  private flushEvents(): Promise<void> {
+    const ev = this.state.events;
+    this.drainEventChanges();
+    if (this.eventFlush || (!ev.messages.length && !ev.notices.length && !ev.checks?.length && !ev.entered?.length && !ev.endHeroesTurn && !ev.killHeroes?.length && !ev.pendingGifts?.length)) return this.eventFlush ?? Promise.resolve();
+    this.eventFlush = (async () => {
+      while (!this.destroyed && (ev.messages.length || ev.notices.length || ev.checks?.length || ev.entered?.length || ev.pendingGifts?.length)) {
+        const note = ev.notices.shift();
+        if (note) {
+          this.showNotice(note, 'inventory_2', 'game');
+          continue;
+        }
+        const message = ev.messages.shift();
+        if (message) {
+          await new Promise<void>((resolve) => {
+            this.eventResolve = resolve;
+            this.adventureDialog.set({ kicker: message.kicker ?? tr('Evento'), title: message.title ?? this.state.title ?? tr('Avventura'), text: message.text, action: tr('Ho letto'), dismissible: false });
+          });
+        } else if (ev.checks?.length) await this.runCheck(ev.checks.shift()!);
+        else if (ev.pendingGifts?.length) await this.giveChosenItem(ev.pendingGifts.shift()!);
+        else await this.presentEntered(ev.entered.splice(0));
+        this.drainEventChanges(); // ciò che l'evento o la prova hanno cambiato
+      }
+      if (ev.killHeroes?.length) await this.killHeroesByEvent(ev.killHeroes.splice(0));
+      if (ev.endHeroesTurn) {
+        ev.endHeroesTurn = false;
+        await this.endHeroesTurnNow(); // un evento ha chiesto di finire il turno degli eroi: dopo aver letto tutti i messaggi
+      }
+    })().finally(() => {
+      this.eventFlush = null;
+    });
+    return this.eventFlush;
+  }
+
+  /** Degli eroi muoiono per un evento (effetto `killActor`): svaniscono in rosso, si dice cosa è successo e, se era l'eroe di turno, il turno passa. */
+  private async killHeroesByEvent(ids: string[]) {
+    for (const id of ids) {
+      const hero = this.state.pieces.find((p) => p.id === id && p.team === 'hero' && !p.city);
+      if (!hero) continue;
+      const wasActive = this.state.activeId === hero.id;
+      this.pieces?.killHeroByEvent(hero);
+      this.showNotice(this.fallenNotice(hero), 'skull');
+      this.exploreAndNotify();
+      if (wasActive) {
+        await this.sleep(900);
+        void this.pass();
+      }
+    }
+  }
+
+  /**
+   * Un evento finisce il turno degli eroi (effetto `endHeroesTurn`): dopo i messaggi, un avviso, si aspetta che chi si muove si fermi e tutti gli eroi che non hanno agito passano; comincia il turno del Maligno.
+   * Il turno dei famigli di chi stava agendo si salta.
+   */
+  private async endHeroesTurnNow() {
+    const s = this.state;
+    if (s.phase !== 'heroes' || s.status !== 'playing' || this.evilBusy() || this.settingUp() || this.destroyed) return;
+    this.showNotice(tr('Il turno degli eroi finisce'), 'skip_next', 'game');
+    await this.waitUntil(() => !this.pieces?.isMoving, 5000);
+    await this.sleep(900); // il tempo di leggere l'avviso
+    if (this.destroyed || s.phase !== 'heroes' || s.status !== 'playing') return;
+    const r = this.pieces?.endHeroesTurn();
+    this.tellCurses(r?.curses);
+    if (r?.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'evil');
+    if (r?.evil) void this.runEvilTurn();
+  }
+
+  /** Mostra ciò che gli eventi hanno cambiato sulla mappa: gruppi di nemici svuotati ("non c'è più nessuno"), porte evento aperte, nemici attivati o tolti. */
+  private drainEventChanges() {
+    const ev = this.state.events;
+    for (const m of checkCleared(this.state).modified) this.pieces?.redraw(m);
+    if (ev.itemsChanged) {
+      ev.itemsChanged = false;
+      this.showHud(this.pieces?.active ?? null); // un oggetto è cresciuto: inventario e carte con i valori nuovi
+    }
+    this.fadeRemovedObstacles(ev.removedObstacles?.splice(0) ?? []); // prima di ridisegnare la mappa: serve ancora quella di prima
+    if (ev.groundItems) {
+      ev.groundItems = false;
+      this.rebuildBoard(); // un oggetto è caduto a terra
+    }
+    // Le porte evento appena aperte si ridisegnano (parte l'animazione dell'anta) e aprirle può far vedere cose nuove.
+    if (ev.doorsOpened?.splice(0).length && this.board) {
+      this.doorView?.redraw(this.board, (d) => !this.fogOn() || this.exploration.doors.has(d));
+      this.exploreAndNotify();
+    }
+    // I nemici attivati si ridisegnano, quelli tolti dalla mappa svaniscono.
+    for (const change of ev.pieceChanges?.splice(0) ?? []) {
+      if (change.kind === 'restyled') this.pieces?.fadeLook(change.piece, change.from);
+      else if (change.kind === 'activated' || change.kind === 'modified') this.pieces?.redraw(change.piece);
+      else this.pieces?.withdraw([change.piece]);
+    }
+  }
+
+  /** Una sequenza dei glifi gemelli è in corso: i comandi sono fermi. */
+  protected readonly glyphSequence = signal(false);
+
+  /**
+   * Un eroe accende un glifo gemello: zoom leggero e accensione del suo glifo, la camera passa sul gemello che si accende a sua volta, una pausa, poi la camera torna all'inquadratura
+   * del giocatore (quella memorizzata, o l'eroe). I due glifi nello stato sono già accesi: nel disegno restano spenti (`MarkerView.hold`) finché non tocca a loro.
+   */
+  private async twinGlyphSequence(hero: Piece, glyph: Glyph, twin: Glyph) {
+    const view = this.markerView;
+    this.glyphSequence.set(true);
+    this.pieces?.setEnabled(false);
+    this.cameraScripted = true; // la camera la muove la sequenza: quella del giocatore resta quella di prima
+    const center = (g: Glyph) => ({ x: (g.x + 0.5) * CELL_SIZE, y: (g.y + 0.5) * CELL_SIZE });
+    try {
+      const zoom = Math.max(this.zoom, FX.glyphZoom);
+      await this.panCamera(center(glyph), FX.glyphPanMs, zoom);
+      view?.release(glyph); // parte l'accensione del primo
+      await this.sleep(FX.glyphLightMs);
+      this.markerView?.redraw(this.board!, this.fogOn() ? (m) => this.exploration.markers.has(m) : undefined); // il gemello compare, ancora spento
+      await this.panCamera(center(twin), FX.glyphPanMs, zoom);
+      view?.release(twin);
+      await this.sleep(FX.glyphLightMs);
+      if (this.userCam) await this.restoreUserCamera();
+      else await this.panCamera({ x: (hero.cell.x + 0.5) * CELL_SIZE, y: (hero.cell.y + 0.5) * CELL_SIZE });
+    } finally {
+      view?.release(glyph);
+      view?.release(twin);
+      setTimeout(() => {
+        this.cameraScripted = false;
+        this.rememberCamera();
+      }, FX.cameraPanMs + 100);
+      this.glyphSequence.set(false);
+      if (!this.destroyed) this.pieces?.setEnabled(this.mode === 'play');
+    }
+  }
+
+  /** Gli ostacoli che stanno svanendo (tolti da un evento): una copia disegnata di quelli tolti che si rimpicciolisce e si dissolve, poi sparisce. */
+  private fadingObstacles: { view: ObstacleView; t: number; center: Point }[] = [];
+
+  /** Fa svanire gli ostacoli tolti da un evento (solo quelli che gli eroi avevano scoperto): scala da 1 a 0 e opacità a 0, come se defluissero via. */
+  private fadeRemovedObstacles(removed: { obstacle: Obstacle; seen: boolean }[]) {
+    const seen = removed.filter((r) => r.seen).map((r) => r.obstacle);
+    if (!seen.length || !this.board || !this.obstacleView || !this.state) return;
+    const cells = seen.flatMap((o) => obstacleCells(o));
+    const center = { x: (cells.reduce((n, c) => n + c.x + 0.5, 0) / cells.length) * CELL_SIZE, y: (cells.reduce((n, c) => n + c.y + 0.5, 0) / cells.length) * CELL_SIZE };
+    // Il disegno si fa con la mappa di adesso (muri e vicini), prima che venga ricostruita senza questi ostacoli.
+    const view = new ObstacleView(this.state.seed);
+    const old = new Set(seen);
+    view.redraw(new Board(this.placed, this.doors, [...this.obstacles, ...seen], this.markers, this.state.walls), (o) => old.has(o));
+    view.container.pivot.set(center.x, center.y);
+    view.container.position.set(center.x, center.y);
+    const world = this.world;
+    if (!world) return;
+    world.addChildAt(view.container, world.getChildIndex(this.obstacleView.container) + 1);
+    this.fadingObstacles.push({ view, t: 0, center });
+  }
+
+  private tickFadingObstacles(deltaMs: number) {
+    for (const f of [...this.fadingObstacles]) {
+      f.t += deltaMs;
+      const k = Math.min(1, f.t / FX.obstacleFadeMs);
+      f.view.tick(deltaMs);
+      f.view.container.alpha = 1 - k;
+      f.view.container.scale.set(Math.max(0.001, 1 - k));
+      if (k < 1) continue;
+      this.fadingObstacles.splice(this.fadingObstacles.indexOf(f), 1);
+      f.view.container.destroy({ children: true });
+    }
+  }
+
+  /**
+   * Una prova di un evento: l'eroe legge il testo e sceglie se farla (se si può rifiutare); tira i dadi competenza (tanti quanti i dadi in più del suo attacco: senza dadi la prova
+   * fallisce da sola); con abbastanza scintille valgono gli effetti "superata", altrimenti "fallita".
+   */
+  private async runCheck(check: PendingCheck) {
+    const hero = this.state.pieces.find((p) => p.id === check.heroId);
+    if (!hero) return;
+    const base = Math.min(checkDiceCount(this.state, check), CHECK_MAX_DICE);
+    const kind = { melee: tr('Mischia'), ranged: tr('Distanza'), magic: tr('Magia') }[check.dice];
+    // Prima del tiro l'eroe può comprare dadi competenza con l'energia (1 per dado), a meno che l'evento lo vieti; l'energia si spende subito e torna se rinuncia.
+    let extra = 0;
+    let answer = '';
+    for (;;) {
+      const total = base + extra;
+      const canAdd = !check.noEnergy && hero.energy >= 1 && total < CHECK_MAX_DICE;
+      const dice = total === 0 ? tr('nessun dado competenza') : `${total} ${total === 1 ? 'dado competenza' : 'dadi competenza'}`;
+      const paid = extra ? (extra === 1 ? tr(', di cui 1 pagato con l\'energia') : tr(', di cui {extra} pagati con l\'energia', { extra })) : '';
+      const none = total === 0 ? (canAdd ? tr(' Senza dadi la prova fallisce: puoi comprarne con l\'energia.') : tr(' Senza dadi la prova fallisce.')) : '';
+      const rule = (check.needs === 1 ? tr('**Prova:** {name} tira {dice} (dadi in più dell\'attacco {kind}{paid}); serve almeno 1 scintilla.{none}', { name: hero.name, dice, kind, paid, none }) : tr('**Prova:** {name} tira {dice} (dadi in più dell\'attacco {kind}{paid}); serve almeno {needs} scintille.{none}', { name: hero.name, dice, kind, paid, needs: check.needs, none }));
+      answer = await this.askChoice({
+        title: check.title ?? tr('Prova'),
+        text: `${check.text}\n\n${rule}`,
+        markdown: true,
+        choices: [...(canAdd ? [{ id: 'add', label: tr('{energy:1} +1 dado competenza') }] : []), { id: 'roll', label: tr('Effettua la prova'), primary: true }, ...(check.refusable ? [{ id: 'cancel', label: tr('Annulla') }] : [])],
+      });
+      if (answer !== 'add') break;
+      hero.energy -= 1;
+      extra += 1;
+      this.pieces?.refreshActive();
+    }
+    if (answer === 'cancel') {
+      hero.energy += extra; // rinuncia: l'energia spesa torna
+      const target = refuseCheck(this.state, check);
+      if (target) this.pieces?.redraw(target); // il "?" torna sulla miniatura
+      this.pieces?.refreshActive(); // i punti e l'energia tornano all'eroe
+      this.showNotice(`${hero.name} rinuncia`, 'info', 'hero');
+      return;
+    }
+    const n = base + extra;
+    const faces = n > 0 ? await this.proficiencyDice(n) : [];
+    const sparks = faces.reduce((sum, f) => sum + (f.spark ?? 0), 0);
+    const { success, report } = resolveCheck(this.state, check, sparks);
+    for (const m of report.modified) this.pieces?.redraw(m);
+    this.showNotice((success ? (sparks === 1 ? tr('Prova superata: 1 scintilla su {needs} richiesta', { needs: check.needs }) : tr('Prova superata: {sparks} scintille su {needs} richieste', { sparks, needs: check.needs })) : (sparks === 1 ? tr('Prova fallita: 1 scintilla su {needs} richiesta', { needs: check.needs }) : tr('Prova fallita: {sparks} scintille su {needs} richieste', { sparks, needs: check.needs }))), success ? 'check_circle' : 'warning', 'hero');
+    this.pieces?.refreshActive();
+  }
+
+  /** Sta applicando un attacco (può aspettare un dado o una scelta): lo script del Maligno aspetta che finisca. */
+  private applyingAttack = false;
+
+  // --- Contraccolpo ---
+
+  /** Le caselle dove si può spostare il bersaglio (scelta di chi ha attaccato) e chi è. */
+  /** La dialog dei testi dell'avventura (introduzione, obiettivo), e la barra che guida la scelta delle caselle di partenza. */
+  protected readonly adventureDialog = signal<AdventureView | null>(null);
+  protected readonly setupPrompt = signal<string | null>(null);
+  /** C'è una preparazione in corso: i comandi degli eroi sono fermi. */
+  protected readonly settingUp = signal(false);
+  protected readonly hasObjective = signal(false);
+  /** Gli eroi non ancora messi in campo, nell'ordine in cui sceglieranno la casella, e dove stavano nella lista delle pedine. */
+  private pendingHeroes: { piece: Piece; index: number }[] = [];
+  private startLayer?: Graphics;
+  private warnLayer?: Graphics;
+  private warnMs = 0;
+  private wave: { rows: { cell: Cell; k: number }[]; t: number; total: number } | null = null;
+  protected readonly knockback = signal<{ targetId: string; name: string; cells: Cell[] } | null>(null);
+
+  /** Dopo un attacco con Contraccolpo: l'eroe sceglie dove spostare il bersaglio (o resta fermo), lo script lo spinge lontano. */
+  private async startKnockback(attacker: Piece, target: Piece) {
+    if (!this.board) return;
+    if (attacker.team === 'monster') {
+      const dest = pushAway(this.state, this.board, attacker, target);
+      if (dest) {
+        await this.sleep(500);
+        await this.doKnockback(target, dest);
+      }
+      return;
+    }
+    const cells = knockbackCells(this.state, this.board, target);
+    if (!cells.length) {
+      if (target.size.w * target.size.h > 1 && knockbackSteps(target) < 1) this.showNotice(tr('{name} è troppo pesante per essere spostato dal Contraccolpo', { name: target.name }), 'info');
+      return;
+    }
+    this.knockback.set({ targetId: target.id, name: target.name, cells });
+    this.pieces?.showCells(cells);
+    // Si aspetta la scelta: la scena riprende il controllo quando si tocca una casella o "Resta fermo".
+  }
+
+  /** Il bersaglio si sposta nella casella scelta: cade se è una buca, subisce l'Aura, può morire. */
+  private async doKnockback(target: Piece, dest: Cell) {
+    if (!this.board) return;
+    this.pieces?.showCells(null);
+    this.knockback.set(null);
+    const from = { ...target.cell };
+    const out = applyKnockback(this.state, this.board, target, dest);
+    this.pieces?.redraw(target);
+    if (!out.died) await this.pieces?.jump(target, from); // la pedina salta fino alla nuova casella e atterra con una raggiera di linee
+    this.showNotice(tr('{name} è scaraventato', { name: target.name }), 'swords', 'hero');
+    if (out.fell) this.showNotice(tr('{name} cade in una buca', { name: target.name }), 'warning');
+    out.auraHits.forEach((h, i) => this.pieces?.floatTag(h, tr('Aura'), 'skill', i * 450));
+    for (const h of out.auraHits) this.showNotice(tr('{name} subisce 1 ferita per l\'Aura di {name2}', { name: target.name, name2: h.name }), 'warning');
+    this.afterDrop(out.drop);
+    if (out.died) {
+      this.pieces?.afterCombat(target, target, true);
+      this.pieces?.monstersSlain(out.slain);
+      this.showNotice(target.team === 'hero' ? this.fallenNotice(target) : tr('{name} è sconfitto!', { name: target.name }), 'skull');
+    }
+    this.exploreAndNotify();
+    this.refreshContext();
+  }
+
+  /** Si tocca una casella evidenziata (o "Resta fermo"): scelto dove spostare il bersaglio con il Contraccolpo. */
+  protected chooseKnockback(cell: Cell | null) {
+    const k = this.knockback();
+    const target = this.state.pieces.find((p) => p.id === k?.targetId);
+    if (!k || !target) return;
+    if (cell && k.cells.some((c) => c.x === cell.x && c.y === cell.y)) void this.doKnockback(target, cell);
+    else if (!cell) {
+      this.pieces?.showCells(null);
+      this.knockback.set(null);
+    } else this.showNotice(tr('Tocca una casella evidenziata'), 'warning');
+  }
+
+  // --- Il turno del Maligno (script v1, docs/REGOLE.md sezione 9) ---
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  /** Aspetta che `cond` sia vera (controlla ogni 100 ms), al massimo `maxMs`. */
+  private async waitUntil(cond: () => boolean, maxMs: number) {
+    for (let t = 0; t < maxMs && !cond() && !this.destroyed; t += 100) await this.sleep(100);
+  }
+
+  /**
+   * Gli stati all'inizio del turno di una creatura (un eroe a inizio round, un mostro quando viene attivato): per fiamma e rete un dado competenza per segnalino
+   * (ogni scintilla ne toglie uno), le ferite della fiamma rimasta, la rete che toglie il movimento, uno stordimento che si scarta. Restituisce true se muore.
+   */
+  private async resolveTurnStart(piece: Piece): Promise<boolean> {
+    if (piece.team === 'hero') await this.offerShedStatus(piece);
+    const s = piece.status;
+    if (!s.burn && !s.web && !s.stun) return false;
+    const sparksOf = async (n: number) => {
+      if (n < 1) return 0;
+      const rolls = await this.dice.rollFaces(Array<'black'>(Math.min(n, 8)).fill('black'));
+      await this.sleep(1700);
+      return rolls ? rolls.filter((r) => r.face.spark > 0).length : 0;
+    };
+    const burn = await sparksOf(s.burn);
+    const web = await sparksOf(s.web);
+    const r = applyTurnStart(piece, { burn, web });
+    const by = piece.team === 'hero' ? 'hero' : 'evil';
+    if (r.burnBefore) this.showNotice(tr('{burn}: {done} su {total} spente', { burn: STATUS_NAMES.burn, done: r.burnBefore - r.burnLeft, total: r.burnBefore }) + (r.burnDamage ? (r.burnDamage === 1 ? tr(', {name} subisce 1 ferita', { name: piece.name }) : tr(', {name} subisce {n} ferite', { name: piece.name, n: r.burnDamage })) : ''), 'skull', by);
+    if (r.webBefore) this.showNotice(r.webLeft ? tr('{web}: {name} resta impigliato e non può muoversi', { web: STATUS_NAMES.web, name: piece.name }) : tr('{web}: {name} si libera', { web: STATUS_NAMES.web, name: piece.name }), 'warning', by);
+    if (r.stunned) this.showNotice((piece.team === 'hero' ? tr('{name} è stordito: può solo muoversi o attaccare', { name: piece.name }) : tr('{name} è stordito: perde il turno', { name: piece.name })), 'warning', by);
+    if (r.killed) {
+      const slain = piece.team === 'hero' ? killHero(this.state, piece) : [];
+      if (piece.team !== 'hero') this.afterDrop(removeMonster(this.state, piece));
+      this.pieces?.afterCombat(piece, piece, true);
+      this.pieces?.monstersSlain(slain);
+      this.showNotice(piece.team === 'hero' ? this.fallenNotice(piece) : tr('{name} è sconfitto!', { name: piece.name }), 'skull', by);
+    } else this.pieces?.roundStarted();
+    return r.killed;
+  }
+
+  /** La notizia di un eroe caduto: torna dalla città, o è eliminato se la morte è permanente. */
+  private fallenNotice(hero: Piece): string {
+    return this.state.events.permadeath
+      ? tr('{name} è caduto: il gruppo perde {value} di Conquista ed è eliminato dalla partita', { name: hero.name, value: hero.value })
+      : tr('{name} è caduto: il gruppo perde {value} di Conquista e torna dalla città', { name: hero.name, value: hero.value });
+  }
+
+  /**
+   * Rigenerazione dei tessuti (Sporin): a inizio turno, prima che gli stati facciano effetto, chi ha la regola e soffre di qualche stato può spendere energia per togliersi
+   * un segnalino a sua scelta (anche uno solo di più: il livello scende di 1). Una dialog chiede quale; il segnalino tolto non produce effetti.
+   */
+  private async offerShedStatus(hero: Piece) {
+    const cost = shedStatusCost(this.state, hero);
+    if (cost <= 0 || hero.energy < cost || !hasStatus(hero)) return;
+    const kinds = (Object.keys(STATUS_NAMES) as StatusKind[]).filter((k) => hero.status[k] > 0);
+    const id = await this.askChoice({
+      title: tr('Rigenerazione dei tessuti'),
+      text: tr('{name} può spendere {energy:{n}} per togliersi un segnalino di uno stato che lo affligge: non farà effetto. Quale?', { name: hero.name, n: cost }),
+      choices: [
+        ...kinds.map((k) => ({ id: k, label: tr('{state}: da {from} a {to}', { state: STATUS_NAMES[k], from: hero.status[k], to: hero.status[k] - 1 }), primary: true })),
+        { id: 'none', label: tr('Non usarla') },
+      ],
+    });
+    const kind = kinds.find((k) => k === id);
+    if (!kind || !shedStatus(this.state, hero, kind)) return;
+    this.pieces?.refreshActive();
+    this.showNotice(tr('{name} si rigenera: {state} −1', { name: hero.name, state: STATUS_NAMES[kind] }), 'water_drop', 'hero');
+  }
+
+  /** Tocca al Maligno: ogni mostro, uno alla volta, si muove verso l'eroe più vicino e attacca; poi comincia il nuovo round. */
+  /** La scena è pronta: il loader si dissolve (dopo un fotogramma, perché sotto ci sia già il disegno) e poi esce dalla pagina. */
+  private finishLoading() {
+    // Il loader dura almeno un secondo: con pochi elementi da caricare, altrimenti, sparirebbe così in fretta da sembrare un errore.
+    const wait = Math.max(0, LOADER_MIN_MS - (performance.now() - this.loadStart));
+    setTimeout(() => requestAnimationFrame(() => {
+      if (this.destroyed) return;
+      this.zone.run(() => {
+        this.loading.set(false);
+        setTimeout(() => this.loaderGone.set(true), 450);
+      });
+    }), wait);
+  }
+
+  /** Si può salvare solo a partita avviata, nel turno degli eroi, senza un attacco o una scelta a metà: lo stato è allora un insieme di dati completo. */
+  private canSaveNow(): boolean {
+    const s = this.state;
+    return !!s && !this.evilMode && !s.setup && s.status === 'playing' && s.phase === 'heroes' && !this.evilBusy() && !this.attackView() && !this.choiceView() && !this.adventureDialog();
+  }
+
+  private writeSave(auto: boolean): boolean {
+    const ok = this.saves.save({ version: 1, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
+    if (ok) {
+      this.justSaved.set(true);
+      setTimeout(() => !this.destroyed && this.justSaved.set(false), 1400);
+    }
+    return ok;
+  }
+
+  /** Il tasto Salva. */
+  protected save() {
+    if (!this.canSaveNow()) {
+      this.showNotice(tr('Non si può salvare adesso'), 'warning');
+      return;
+    }
+    this.showNotice(this.writeSave(false) ? tr('Partita salvata') : tr('Non riesco a salvare: il browser non lo permette'), 'info', 'game');
+  }
+
+  /** Il salvataggio automatico (a fine turno di un eroe e del Maligno): senza notizia, solo la spunta sul tasto. */
+  private autosave() {
+    if (this.canSaveNow()) this.writeSave(true);
+  }
+
+  /** La partita salvata di questa avventura, ricostruita; `null` se non c'è o è di una versione che non si legge (allora si comincia da capo). I testi dell'avventura tornano dalla mappa. */
+  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, monsters: Map<string, MonsterDef>, cards: Map<string, EvilCardDef>): GameState | null {
+    const save = this.saves.load(this.mapName);
+    if (!save) return null;
+    try {
+      const state = GameState.restore(save.snapshot, items, skills, monsters, cards);
+      state.title = data.title;
+      state.intro = data.intro;
+      state.rules = composeRules(data.rules, data.setup, (id) => cards.get(id)?.name ?? id);
+      state.rulesImage = data.rulesImage;
+      state.startCells = (data.start ?? []).map((c) => ({ x: c.x, y: c.y }));
+      return state;
+    } catch (err) {
+      console.warn('Salvataggio non leggibile, si comincia da capo', err);
+      return null;
+    }
+  }
+
+  private async runEvilTurn() {
+    if (this.evilBusy()) return;
+    this.evilBusy.set(true);
+    this.panel.set(null);
+    this.monsterPanel.set(null);
+    this.closeAttackMenu();
+    this.cameraScripted = true; // da qui la camera la muove lo script: quella dell'utente resta quella di prima
+    try {
+      const recharge = hatredPerTurn(this.state); // 1 Odio per eroe, meno Prudente (lo riceve `evilUpkeep`)
+      this.showNotice((recharge === 1 ? tr('Turno del Maligno: ricarica 1 punto Odio') : tr('Turno del Maligno: ricarica {recharge} punti Odio', { recharge })), 'skull', 'evil');
+      await this.sleep(900);
+      try {
+        await this.evilCards();
+      } catch (err) {
+        console.error('Errore nelle Carte del Male', err); // un errore nelle carte non deve fermare il turno
+      }
+      runEvents(this.state, { kind: 'evilTurnStart' }); // gli eventi "comincia il turno del Maligno" (dopo Odio e carte, prima dei mostri)
+      await this.flushEvents();
+      await this.playMonsters();
+      if (!this.destroyed && this.state.status === 'playing') {
+        const energyBefore = new Map(this.state.pieces.map((p) => [p.id, p.energy] as const));
+        const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
+        const revived = endEvilTurn(this.state);
+        snapshotSeen(this.state); // chi vedeva chi all'inizio del round (Colpo a tradimento)
+        for (const h of this.state.pieces) {
+          const gained = h.energy - (energyBefore.get(h.id) ?? h.energy);
+          if (h.team === 'hero' && gained > 0 && ruleAmount(this.state, h, 'energyAtStart') > 0) this.showNotice(tr('{name} recupera {energy:{n}}', { name: h.name, n: gained }), 'water_drop', 'hero');
+          const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
+          if (h.team === 'hero' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'hero');
+        }
+        await this.flushEvents(); // messaggi e avvisi degli eventi di fine turno
+        this.pieces?.roundStarted();
+        if (revived.length) await this.presentSpawned(revived, tr('Ritorno in vita'), (revived.length === 1 ? tr('{join} torna in vita.', { join: revived[0].name }) : tr('{join} tornano in vita.', { join: revived.map((m) => m.name).join(', ') })));
+        this.showNotice(tr('Round {n}: tocca agli eroi', { n: this.state.round }), 'autorenew', 'game');
+        // Ricomincia il turno degli eroi: ognuno ritrova la sua camera (zoom e pan di prima); senza, si va sul primo eroe.
+        if (this.userCam) void this.restoreUserCamera();
+        else {
+          const first = this.pieces?.active;
+          if (first) void this.panCamera({ x: (first.cell.x + 0.5) * CELL_SIZE, y: (first.cell.y + 0.5) * CELL_SIZE }, FX.cameraPanMs);
+        }
+        // Gli stati degli eroi si risolvono a inizio round (uno alla volta, con i dadi competenza).
+        for (const hero of this.state.pieces.filter((p) => p.team === 'hero' && !p.city)) if (!this.destroyed) await this.resolveTurnStart(hero);
+        if (!this.destroyed) this.autosave(); // finito il turno del Maligno, e risolti gli stati a inizio round
+      }
+    } finally {
+      // Lo scorrimento di ritorno dura FX.cameraPanMs: finché non è finito la camera resta "dello script" (e non si memorizza).
+      setTimeout(() => {
+        this.cameraScripted = false;
+        this.rememberCamera();
+      }, FX.cameraPanMs + 100);
+      this.evilBusy.set(false);
+    }
+  }
+
+  /** Ogni mostro gioca il suo turno, uno alla volta, con lo script (decisioni di `state/evil.ts`). */
+  private async playMonsters() {
+    for (const id of this.state.pieces.filter((p) => p.team === 'monster').map((p) => p.id)) {
+      if (this.destroyed || this.state.status !== 'playing') break;
+      const monster = this.state.pieces.find((p) => p.id === id);
+      if (monster?.done && this.evilMode) continue; // già attivato a mano
+      await this.waitUntil(() => !this.pieces?.isDying(), 6000);
+      if (monster && this.board) await this.monsterTurn(monster);
+      if (monster) monster.done = true; // attivazione completata (il pallino diventa grigio fino al round dopo)
+      await this.waitUntil(() => !this.pieces?.isDying(), 6000); // le miniature morte svaniscono del tutto prima del mostro dopo
+      await this.flushEvents();
+    }
+  }
+
+  /** `/evil/<map>` con "Mostri automatici" acceso: i mostri giocano da soli, con la camera dello script; poi il turno torna al Maligno, che lo chiude con Passa. */
+  private async autoMonstersTurn() {
+    if (this.evilBusy()) return;
+    this.evilBusy.set(true);
+    this.panel.set(null);
+    this.monsterPanel.set(null);
+    this.closeAttackMenu();
+    this.cameraScripted = true;
+    try {
+      await this.playMonsters();
+    } finally {
+      setTimeout(() => {
+        this.cameraScripted = false;
+        this.rememberCamera();
+      }, FX.cameraPanMs + 100);
+      this.evilBusy.set(false);
+    }
+  }
+
+  // --- `/evil/<map>`: il Maligno attiva i mostri a mano ---
+
+  /** Un mostro toccato dal Maligno: se è da attivare si attiva (con un menu rosso se ha le carte Carica o Furore e può pagarle), altrimenti si apre la sua scheda. */
+  private evilMonsterClick(monster: Piece) {
+    if (this.evilBusy() || this.evilSel || this.state.phase !== 'evil' || this.evilStep() !== 'activate') { // i mostri si attivano solo nel passo Attivazione
+      if (!this.evilSel && !this.evilBusy()) {
+        this.panel.set(null);
+        this.monsterPanel.set(monster.id);
+      }
+      return;
+    }
+    if (activationOf(this.state, this.board ?? null, monster) !== 'ready') {
+      this.panel.set(null);
+      this.monsterPanel.set(monster.id);
+      return;
+    }
+    const cards = (['charge', 'fury'] as const).flatMap((id) => {
+      const card = cardOf(this.state, id);
+      if (!card || !inHand(this.state, id)) return [];
+      const cost = cardCost(this.state, card);
+      const enough = cost <= this.state.evil.hatred;
+      const label = id === 'charge' ? tr('Carica · {hatred:{n}}', { n: cost }) : tr('Furore · {hatred:{n}}', { n: cost });
+      return [{ id, kind: 'attack' as const, icon: id === 'charge' ? 'directions_run' : 'swords', label, cost: 0, enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }];
+    });
+    if (!cards.length) {
+      void this.startActivation(monster);
+      return;
+    }
+    this.attackTarget.set(monster.id);
+    this.attackActions.set([
+      { id: 'advance', kind: 'attack' as const, icon: 'bolt', label: tr('Avanza'), cost: 0, enabled: true },
+      ...cards,
+      { id: 'sheet', kind: 'attack' as const, icon: 'info', label: tr('Scheda'), cost: 0, enabled: true },
+    ]);
+    this.updateContextAnchor();
+  }
+
+  /**
+   * Comincia l'attivazione manuale di un mostro: risolve gli stati di inizio turno (fiamma, rete, stordimento), gioca la carta scelta (Carica: velocità doppia; Furore:
+   * due attacchi, quattro con Colpo veloce) e mostra l'area dove può andare. Poi il Maligno lo muove, lo fa attaccare, e chiude l'attivazione con "Fine attivazione".
+   */
+  private async startActivation(monster: Piece, card?: 'charge' | 'fury') {
+    if (this.evilBusy() || this.evilSel || !this.board) return;
+    this.panel.set(null);
+    this.monsterPanel.set(null);
+    this.evilBusy.set(true);
+    try {
+      this.guardDeclined = new Set();
+      if (await this.resolveTurnStart(monster)) {
+        monster.done = true; // morto per la fiamma
+        return;
+      }
+      if (card === 'charge' && playEvent(this.state, 'charge')) {
+        monster.points *= 2;
+        await this.announceEvent(tr('Carica'), tr('{name} corre il doppio.', { name: monster.name }));
+      } else if (card === 'fury' && playEvent(this.state, 'fury')) {
+        monster.attacks = keywordLevel(this.state, monster, 'Colpo veloce') > 0 ? 4 : 2;
+        await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: monster.name }));
+      }
+      this.showHud(this.pieces?.active ?? null); // l'Odio speso
+      this.evilSel = { monster, stops: new Map() };
+      this.refreshEvilActivation();
+    } finally {
+      this.evilBusy.set(false);
+    }
+  }
+
+  /** Ricalcola dove può andare il mostro in attivazione (con i punti movimento che gli restano), il contorno rosso e la barra; se non ha più né punti né attacchi, l'attivazione finisce. */
+  private refreshEvilActivation() {
+    const sel = this.evilSel;
+    if (!sel || !this.board) return;
+    const m = sel.monster;
+    if (!this.state.pieces.includes(m) || m.wounds <= 0) {
+      this.endEvilActivation();
+      return;
+    }
+    const stops = m.points >= 1 ? monsterStops(this.state, this.board, m) : [];
+    sel.stops = new Map(stops.map((s) => [cellKey(s.cell), s] as const));
+    this.pieces?.showMonsterReach(stops.length ? [m.cell, ...stops.map((s) => s.cell)] : null);
+    this.evilSelInfo.set({ name: m.name, portrait: m.portrait, wounds: m.wounds, maxWounds: m.maxWounds, points: m.points, attacks: m.attacks, abilities: [...m.traits] });
+    if (m.points < 1 && m.attacks < 1) this.endEvilActivation();
+  }
+
+  /** Una casella toccata mentre un mostro è in attivazione: un eroe che può colpire si attacca, una casella raggiungibile ci muove il mostro. */
+  private async evilActivationClick(cell: Cell) {
+    const sel = this.evilSel;
+    if (!sel || this.evilBusy() || !this.board) return;
+    const m = sel.monster;
+    const hero = this.state.pieces.find((p) => p.team === 'hero' && !p.city && footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
+    if (hero) {
+      const option = monsterAttackOption(this.state, this.board, m, hero);
+      if (m.attacks < 1) this.showNotice(tr('Nessun attacco rimasto'), 'warning', 'evil');
+      else if (!option?.enabled) this.showNotice(option?.reason ?? tr('{name} non può attaccare {target}', { name: m.name, target: hero.name }), 'warning', 'evil');
+      else await this.evilScripted(async () => this.monsterAttack(m, hero, option));
+      this.refreshEvilActivation();
+      return;
+    }
+    const spot = sel.stops.get(cellKey(cell));
+    if (!spot) return;
+    this.pieces?.showMonsterReach(null);
+    await this.evilScripted(async () => {
+      await this.walkMonster(m, spot.path());
+      if (this.state.pieces.includes(m) && settleOverlap(this.state, this.board!, m)) this.pieces?.redraw(m);
+      this.monsterPicksUp(m);
+    });
+    this.refreshEvilActivation();
+  }
+
+  /** Fa qualcosa con la camera dello script e i comandi fermi (un passo, un attacco), come il turno automatico dei mostri. */
+  private async evilScripted(run: () => Promise<void>) {
+    this.evilBusy.set(true);
+    this.cameraScripted = true;
+    try {
+      await run();
+    } finally {
+      setTimeout(() => {
+        this.cameraScripted = false;
+        this.rememberCamera();
+      }, FX.cameraPanMs + 100);
+      this.evilBusy.set(false);
+    }
+  }
+
+  /** "Fine attivazione" (o niente più da spendere): il mostro ha finito, il suo pallino diventa grigio. */
+  protected endEvilActivation() {
+    const sel = this.evilSel;
+    this.evilSel = null;
+    this.evilSelInfo.set(null);
+    this.pieces?.showMonsterReach(null);
+    if (sel) sel.monster.done = true;
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** Il Mazzo del Male all'inizio del suo turno: raccoglie Odio, pesca e gioca le sue carte (Potere, Raffica di vento, Seduzione oscura, una trappola armata in segreto e una Evocazione). */
+  private async evilCards() {
+    if (!this.board) return;
+    const o = this.state.evil;
+    o.gust = false; // la Raffica di vento dura fino all'inizio di questo turno
+    const up = evilUpkeep(this.state);
+    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'evil');
+    const power = playPowerCard(this.state);
+    if (power) {
+      await this.announce(power.name, catalogText(power.text.replace(/^Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te\.\s*/, '')));
+    }
+    if (!o.gust && this.state.random() < 0.5 && playEvent(this.state, 'gust')) {
+      o.gust = true;
+      await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno gli eroi non vedono oltre 5 spazi.'), 'warning');
+    }
+    await this.seduction();
+    const armed = armTrap(this.state, this.board); // le trappole si armano in segreto: i giocatori non lo sanno
+    if (armed && this.evilView()) this.showNotice(tr('Trappola armata: {name}', { name: cardOf(this.state, armed.card)?.name }), 'warning', 'evil');
+    const played = playSummonCard(this.state, this.board);
+    if (played) await this.presentSpawned(played.spawned, played.card.name, tr('Evoca: {names}', { names: played.spawned.map((m) => m.name).join(', ') }));
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** Seduzione oscura: un eroe tira un dado competenza; se non è vuoto attacca, sotto il controllo del Maligno, un altro eroe che può colpire. */
+  private async seduction() {
+    const o = this.state.evil;
+    const heroes = this.state.pieces.filter((p) => p.team === 'hero' && !p.city);
+    const card = cardOf(this.state, 'dark-allure');
+    if (!card || heroes.length < 2 || !inHand(this.state, card.id) || cardCost(this.state, card) > o.hatred || !this.board) return;
+    // Lo script la gioca solo se l'eroe scelto ha qualcuno da colpire (altrimenti sarebbe sprecata).
+    const options = heroes.flatMap((h) => heroes.filter((t) => t !== h).flatMap((t) => controlledAttackOptions(this.state, this.board!, h, t).map((option) => ({ h, t, option }))));
+    if (!options.length) return;
+    playEvent(this.state, card.id);
+    const pick = options[Math.floor(this.state.random() * options.length)];
+    await this.announceEvent(tr('Seduzione oscura'), tr('{name} deve tirare un dado competenza.', { name: pick.h.name }), 'warning');
+    const [face] = await this.proficiencyDice(1);
+    if (!face || isBlank(face)) {
+      this.showNotice(tr('{name} resiste alla seduzione', { name: pick.h.name }), 'shield', 'evil');
+      return;
+    }
+    // Fra le sue opzioni, l'attacco con più dadi contro il bersaglio più ferito.
+    const mine = options.filter((x) => x.h === pick.h).sort((a, b) => b.option.dice.length - a.option.dice.length || a.t.wounds / a.t.maxWounds - b.t.wounds / b.t.maxWounds)[0];
+    this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: mine.h.name, name2: mine.t.name }), 'swords', 'evil');
+    await this.monsterAttack(mine.h, mine.t, mine.option);
+  }
+
+  /** Ripete il tiro dei dadi `indices` di `rolls` (Mirare, Schivare): resta il secondo risultato. */
+  private async rerollDice(rolls: FaceRoll[], indices: number[]): Promise<FaceRoll[]> {
+    if (!indices.length) return rolls;
+    const fresh = await this.dice.rollFaces(indices.map((i) => rolls[i].color));
+    await this.sleep(1700);
+    if (!fresh) return rolls;
+    const pool = new Map<DieColor, FaceRoll[]>();
+    for (const f of fresh) pool.set(f.color, [...(pool.get(f.color) ?? []), f]);
+    const out = [...rolls];
+    for (const i of indices) out[i] = pool.get(rolls[i].color)?.shift() ?? rolls[i];
+    return out;
+  }
+
+  /** Schivare: dopo l'attacco di un eroe a un mostro, lo script può obbligare l'eroe a ripetere i dadi migliori. Restituisce le facce (nuove o le stesse). */
+  private async maybeDodge(rolls: FaceRoll[], plan: AttackPlan): Promise<FaceRoll[]> {
+    // Se il tiro è già fallito (un Mancato, o una gittata che nemmeno al meglio arriva) un giocatore vero non spenderebbe punti per Schivare: lo script nemmeno.
+    const bestRange = rolls.reduce((n, r) => n + r.face.range, 0) + plan.bonusRange + plan.effects.reduce((n, e) => n + (e.supported ? e.range : 0), 0) + plan.sorcery;
+    const failed = rolls.some((r) => r.face.miss) || (plan.needsRange && bestRange < plan.distance);
+    if (failed) return rolls;
+    const hearts = rolls.reduce((n, r) => n + (r.face.slash ? 0 : r.face.hearts), 0);
+    if (hearts < 2 || this.state.random() > 0.7 || !playEvent(this.state, 'dodge')) return rolls;
+    return this.dodgeReroll(rolls);
+  }
+
+  /** Schivare giocata: il mostro evita il colpo e l'eroe ripete i dadi migliori (resta il secondo risultato). */
+  private async dodgeReroll(rolls: FaceRoll[]): Promise<FaceRoll[]> {
+    await this.announceEvent(tr('Schivare'), tr('Il mostro evita il colpo: l\'eroe ripete i dadi migliori.'), 'shield');
+    const strong = rolls.map((r, i) => i).filter((i) => rolls[i].face.hearts >= 2 || rolls[i].face.spark > 0);
+    return this.rerollDice(rolls, strong.length ? strong : rolls.map((r, i) => i).filter((i) => rolls[i].face.hearts >= 1));
+  }
+
+  // --- Scelte del Maligno a mano nella finestra dell'attacco ---
+
+  /** La scelta aperta nella finestra dell'attacco (`null` = nessuna) e chi la aspetta. */
+  protected readonly evilDecision = signal<DecisionView | null>(null);
+  private evilDecided: ((id: string) => void) | null = null;
+
+  /**
+   * Il Maligno a mano ha una carta Evento da giocare adesso? Se ce l'ha in mano e l'Odio basta, nella finestra compaiono i tasti "<carta> · costo" e quello per non
+   * giocarla, e il tiro aspetta. Giocandola paga l'Odio e scarta la carta. Restituisce vero se l'ha giocata. Senza la carta in mano non c'è nessuna scelta.
+   */
+  private async evilPlays(id: 'aim' | 'dodge', label: string, skipLabel = tr('Tira i dadi')): Promise<boolean> {
+    const card = cardOf(this.state, id);
+    if (!card || !inHand(this.state, id)) return false;
+    const cost = cardCost(this.state, card);
+    const enough = cost <= this.state.evil.hatred;
+    const picked = await new Promise<string>((resolve) => {
+      this.evilDecided = resolve;
+      this.evilDecision.set({ options: [{ id, label: label.replace('{n}', String(cost)), enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }, { id: 'skip', label: skipLabel, enabled: true }] });
+    });
+    this.evilDecision.set(null);
+    if (picked !== id || !playEvent(this.state, id)) return false;
+    this.showHud(this.pieces?.active ?? null); // l'Odio speso
+    return true;
+  }
+
+  /** Un tasto della scelta: se è spento dice perché, altrimenti la scelta è fatta. */
+  protected decideEvil(id: string) {
+    const option = this.evilDecision()?.options.find((o) => o.id === id);
+    if (!option) return;
+    if (!option.enabled) {
+      this.showNotice(option.reason ?? tr('Non è possibile'), 'warning', 'evil');
+      return;
+    }
+    const done = this.evilDecided;
+    this.evilDecided = null;
+    done?.(id);
+  }
+
+  // --- Messaggio al centro, camera e ingressi (i tempi sono in `FX`, constants.ts) ---
+
+  protected readonly announcement = signal<Announcement | null>(null);
+  protected readonly announceMs = FX.announceMs;
+  private announceSeq = 0;
+
+  /** La coda dei messaggi: ognuno aspetta che il precedente sia sparito, così più carte di fila si leggono una alla volta. */
+  private announceChain: Promise<void> = Promise.resolve();
+
+  /**
+   * Un messaggio al centro dello schermo (una carta giocata, una trappola scattata): resta `announceMs` e sparisce da solo, senza bloccare i tocchi.
+   * Se ce n'è già uno in corso aspetta che finisca. Restituisce una promessa che si risolve `announceLeadMs` dopo che il messaggio è comparso:
+   * chi la aspetta fa partire la sua azione solo allora, dopo il tempo di leggere.
+   */
+  private announce(title: string, text: string, icon = 'skull'): Promise<void> {
+    const shown = this.announceChain.then(async () => {
+      const id = ++this.announceSeq;
+      this.announcement.set({ id, by: 'Maligno', icon, title, text });
+      setTimeout(() => {
+        if (this.announcement()?.id === id) this.announcement.set(null);
+      }, FX.announceMs);
+      await this.sleep(FX.announceLeadMs);
+    });
+    this.announceChain = shown.then(() => this.sleep(Math.max(0, FX.announceMs - FX.announceLeadMs)));
+    return shown;
+  }
+
+  /** Come `announce`, per gli eventi (Mirare, Carica, Furore, Schivare). */
+  private announceEvent(title: string, text: string, icon = 'bolt'): Promise<void> {
+    return this.announce(title, text, icon);
+  }
+
+  /** La camera scorre (solo pan: lo zoom resta quello dei giocatori) fino al punto `to`, in pixel del mondo. Finisce quando arriva. */
+  private async panCamera(to: Point, ms = FX.cameraPanMs, zoom?: number) {
+    const app = this.app;
+    if (!app) return;
+    this.camTween = {
+      fromZoom: this.zoom,
+      toZoom: zoom ?? this.zoom,
+      from: { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom },
+      to,
+      elapsed: 0,
+      ms,
+    };
+    await this.sleep(ms + 50);
+  }
+
+  /** Il centro del tile (in pixel del mondo) che contiene la casella: da lì escono i mostri evocati. */
+  private tileCenterOf(cell: Cell): Point {
+    for (const t of this.placed) {
+      const cells = [...tileCells(t.def)].map((k) => k.split(',').map(Number));
+      if (!cells.some(([cx, cy]) => t.x + cx === cell.x && t.y + cy === cell.y)) continue;
+      const xs = cells.map(([cx]) => t.x + cx);
+      const ys = cells.map(([, cy]) => t.y + cy);
+      return { x: ((Math.min(...xs) + Math.max(...xs) + 1) / 2) * CELL_SIZE, y: ((Math.min(...ys) + Math.max(...ys) + 1) / 2) * CELL_SIZE };
+    }
+    return { x: (cell.x + 0.5) * CELL_SIZE, y: (cell.y + 0.5) * CELL_SIZE };
+  }
+
+  /**
+   * Dei mostri appaiono (evocazione, Orda di Creature): messaggio al centro, la camera va sulla zona, poi i mostri escono dall'ombra
+   * (arrivano dall'alto: scala da 1,5 a 1) e restano visibili a tutti prima che qualcuno si attivi.
+   */
+  private async presentSpawned(spawned: Piece[], title: string, text: string, zoom?: number) {
+    await this.announce(title, text); // il tempo di leggere l'effetto prima che qualcosa si muova
+    const mid = {
+      x: (spawned.reduce((n, p) => n + p.cell.x + p.size.w / 2, 0) / spawned.length) * CELL_SIZE,
+      y: (spawned.reduce((n, p) => n + p.cell.y + p.size.h / 2, 0) / spawned.length) * CELL_SIZE,
+    };
+    await this.panCamera(mid, FX.cameraPanMs, zoom);
+    await this.sleep(FX.summonDelayMs);
+    const textures = await loadPortraits(spawned.map((p) => p.portrait));
+    for (const m of spawned) this.exploration.monsters.add(m.id);
+    this.syncMonsterVisibility(true);
+    for (const m of spawned) this.pieces?.addPiece(m, textures);
+    await Promise.all(spawned.map((m) => this.pieces?.enter(m)));
+    await this.sleep(FX.afterSummonMs);
+  }
+
+  /**
+   * Dei nemici entrano in gioco per un evento (`enterPiece`): la camera li inquadra (pan e zoom avanti) e compaiono come le evocazioni. Fuori dal turno del Maligno la camera
+   * torna poi all'inquadratura del giocatore; nel turno del Maligno lo fa chi lo gioca, a fine turno.
+   */
+  private async presentEntered(entered: Piece[]) {
+    const text = entered.length === 1 ? tr('{name} entra in scena.', { name: entered[0].name }) : tr('{names} entrano in scena.', { names: entered.map((p) => p.name).join(', ') });
+    await this.presentSpawned(entered, tr('Un nemico appare'), text, Math.max(this.zoom, FX.focusZoom));
+    if (!this.cameraScripted && this.userCam) await this.restoreUserCamera();
+  }
+
+  /** Un id libero per una pedina nuova. */
+  private newPieceId(base: string): string {
+    let n = this.state.pieces.length;
+    while (this.state.pieces.some((p) => p.id === `${base}-${n}`)) n++;
+    return `${base}-${n}`;
+  }
+
+  /** Tira `n` dadi competenza e dice le facce uscite. */
+  private async proficiencyDice(n: number) {
+    const rolls = await this.dice.rollFaces(Array<'black'>(n).fill('black'));
+    await this.sleep(1700);
+    return (rolls ?? []).map((r) => r.face);
+  }
+
+  /** I dadi competenza che un eroe tira contro una trappola: quelli della carta più quelli che gli dà un'abilità (Talento naturale: 1 in più). */
+  private trapDice(hero: Piece, n: number) {
+    return this.proficiencyDice(n + ruleAmount(this.state, hero, 'trapProficiencyDice'));
+  }
+
+  /** Ferite che l'armatura non riduce, da una trappola (1 in meno con Prudente, mai meno di 0). Se l'eroe cade lo racconta e restituisce true. */
+  private hurtByTrap(hero: Piece, base: number): boolean {
+    const amount = Math.max(0, base + ruleAmount(this.state, hero, 'trapWounds'));
+    if (amount <= 0) {
+      this.showNotice(tr('{name} non subisce ferite', { name: hero.name }), 'shield', 'evil');
+      return false;
+    }
+    const dead = woundIgnoringArmor(hero, amount);
+    loseOrdersOnWounds(hero); // e perde la Mira e la Guardia
+    this.showNotice(`${hero.name} subisce ${amount} ${amount === 1 ? 'ferita' : 'ferite'}`, 'skull', 'evil');
+    if (!dead) {
+      this.pieces?.redraw(hero);
+      return false;
+    }
+    const slain = killHero(this.state, hero);
+    this.pieces?.afterCombat(hero, hero, true);
+    this.pieces?.monstersSlain(slain);
+    this.showNotice(this.fallenNotice(hero), 'skull', 'evil');
+    return true;
+  }
+
+  /** Una trappola armata scatta su `hero`: la carta si scopre, si tirano i dadi competenza e si applica l'effetto (docs/cards/evil.md). */
+  private async resolveTrap(hero: Piece, trap: ArmedTrap) {
+    const card = cardOf(this.state, trap.card);
+    if (!card || !this.board || this.evilBusy()) return;
+    this.evilBusy.set(true);
+    consumeTrap(this.state, trap);
+    await this.announce(card.name, tr('{name} ha fatto scattare una trappola!', { name: hero.name }), 'warning');
+    const bonus = trapDamageBonus(this.state);
+    let endTurn = false;
+    const fallen: Piece[] = [];
+    const board = this.board;
+    switch (trap.card) {
+      case 'spike-pit': {
+        const faces = await this.trapDice(hero, 1);
+        const cell = { ...hero.cell };
+        this.obstacles.push({ type: 'pit', x: cell.x, y: cell.y, length: 1 });
+        if (faces.some(isBlank)) { // basta una faccia vuota per schivare
+          const out = freeAdjacentCell(this.state, board, cell);
+          if (out) hero.cell = out;
+          this.showNotice(tr('{name} schiva la fossa e si sposta', { name: hero.name }), 'shield', 'evil');
+        } else if (this.hurtByTrap(hero, 2 + bonus)) fallen.push(hero);
+        this.rebuildBoard();
+        break;
+      }
+      case 'rockfall': {
+        const faces = await this.trapDice(hero, 4);
+        const cell = { ...hero.cell };
+        const out = freeAdjacentCell(this.state, board, cell);
+        if (this.hurtByTrap(hero, 4 + bonus - sparks(faces))) fallen.push(hero);
+        else if (out) hero.cell = out;
+        this.obstacles.push({ type: 'rock', x: cell.x, y: cell.y, length: 1 });
+        this.rebuildBoard();
+        break;
+      }
+      case 'exploding-door': {
+        const index = board.doors.findIndex((d) => d.door === this.doors[trap.at.kind === 'door' ? trap.at.index : -1]);
+        for (const h of this.state.pieces.filter((p) => p.team === 'hero' && !p.city && index >= 0 && board.isAdjacentToDoor(p.cell, index))) {
+          const faces = await this.trapDice(h, 4);
+          if (this.hurtByTrap(h, 4 + bonus - sparks(faces))) fallen.push(h);
+        }
+        break;
+      }
+      case 'exploding-rune': {
+        const at = trap.at.kind === 'chest' ? trap.at : null;
+        for (const h of this.state.pieces.filter((p) => at && p.team === 'hero' && !p.city && Math.max(Math.abs(p.cell.x - at.x), Math.abs(p.cell.y - at.y)) <= 1)) {
+          const faces = await this.trapDice(h, 3);
+          if (this.hurtByTrap(h, 6 + bonus - 2 * sparks(faces))) fallen.push(h);
+        }
+        break;
+      }
+      case 'mimic': {
+        // Lo scrigno è vivo: si sposta accanto all'eroe, diventa un Mimic e agisce subito; il bottino arriva quando muore.
+        const chest = board.markerAt(hero.cell);
+        const out = freeAdjacentCell(this.state, board, hero.cell);
+        if (chest?.type !== 'chest' || !out) {
+          this.showNotice(tr('Lo scrigno resta immobile'), 'inventory_2', 'evil');
+          break;
+        }
+        this.markers.splice(this.markers.indexOf(chest), 1);
+        const [mimic] = createPieces([{ id: this.newPieceId('mimic'), team: 'monster', monster: 'mimic', x: out.x, y: out.y, drop: chest.contents ?? [], chestTier: chest.random === false ? undefined : chest.tier, chestDraws: chest.treasures }], new Map(), this.state.items, this.state.monsters, this.state.pieces.filter((p) => p.team === 'hero').length);
+        this.state.pieces.push(mimic);
+        this.exploration.monsters.add(mimic.id);
+        const textures = await loadPortraits([mimic.portrait]);
+        this.rebuildBoard();
+        this.pieces?.addPiece(mimic, textures);
+        await this.announce('Mimic', tr('Lo scrigno era vivo!'));
+        await this.pieces?.enter(mimic);
+        await this.sleep(500);
+        await this.monsterTurn(mimic);
+        break;
+      }
+      case 'toad-curse': {
+        const faces = await this.trapDice(hero, 1);
+        if (faces.length && !faces.some(isBlank)) { // si resiste con almeno una faccia vuota
+          transformToad(hero);
+          this.showNotice(tr('{name} è trasformato in un rospo: il suo turno finisce', { name: hero.name }), 'warning', 'evil');
+          endTurn = true;
+        } else this.showNotice(tr('{name} resiste alla maledizione', { name: hero.name }), 'shield', 'evil');
+        break;
+      }
+      case 'paralyzing-gas': {
+        const faces = await this.trapDice(hero, 1);
+        if (faces.length && !faces.some(isBlank)) { // si resiste con almeno una faccia vuota
+          inflictStatus(this.state, hero, 'stun', 1);
+          this.showNotice(tr('{name} è paralizzato: il suo turno finisce', { name: hero.name }), 'stun', 'evil');
+          endTurn = true;
+        } else this.showNotice(tr('{name} trattiene il fiato: il gas non ha effetto', { name: hero.name }), 'shield', 'evil');
+        break;
+      }
+    }
+    this.pieces?.redraw(hero);
+    this.exploreAndNotify();
+    this.showHud(this.pieces?.active ?? null);
+    this.evilBusy.set(false);
+    if (fallen.includes(hero) || endTurn) this.pass();
+  }
+
+  /** Un mostro: si muove se serve e, se può, attacca. */
+  /** Com'era un mostro prima dell'ultimo passo, quando un eroe può usare la Vigilanza (il suo movimento si ferma lì). */
+  /** Gli eroi che hanno rifiutato la Guardia contro il mostro che sta agendo (si azzera a ogni sua attivazione). */
+  private guardDeclined = new Set<string>();
+  private vigilanceFrom: { cell: Cell; size: { w: number; h: number } } | null = null;
+
+  /**
+   * Il mostro cammina lungo il suo percorso; se a un passo un eroe può usare la Vigilanza (è entrato accanto a lui), il movimento si ferma, l'eroe sceglie
+   * se attaccare, e se il mostro sopravvive riprende da dove era arrivato.
+   */
+  private async walkMonster(monster: Piece, steps: Reach[]) {
+    let rest = steps;
+    for (let guard = 0; guard < 24 && rest.length && !this.destroyed; guard++) {
+      this.vigilanceFrom = null;
+      await this.pieces?.walk(monster, rest);
+      if (!this.state.pieces.includes(monster)) return; // morto per strada
+      const at = rest.findIndex((s) => s.cell.x === monster.cell.x && s.cell.y === monster.cell.y && (!s.size || (s.size.w === monster.size.w && s.size.h === monster.size.h)));
+      rest = at < 0 ? [] : rest.slice(at + 1);
+      const from = this.vigilanceFrom;
+      if (!rest.length || !from) return;
+      await this.resolveVigilance(monster, from);
+      if (!this.state.pieces.includes(monster) || monster.wounds <= 0 || this.state.status !== 'playing') return;
+    }
+  }
+
+  /** Vigilanza: a ogni eroe che può, si chiede se spendere l'energia per attaccare il mostro appena arrivato accanto a lui (e con quale arma). */
+  private async resolveVigilance(monster: Piece, from: { cell: Cell; size: { w: number; h: number } }) {
+    if (!this.board) return;
+    for (const chance of vigilanceChances(this.state, this.board, monster, from)) {
+      if (!this.state.pieces.includes(monster)) return;
+      const answer = await this.askChoice({
+        title: tr('Vigilanza'),
+        text: tr('{name} è entrato accanto a {name2}. Spendere {energy:{cost}} per attaccarlo subito?', { name: monster.name, name2: chance.hero.name, cost: chance.cost }),
+        choices: [...chance.options.map((o) => ({ id: o.id, label: o.name, primary: true })), { id: 'no', label: tr('Rinuncia') }],
+      });
+      const option = chance.options.find((o) => o.id === answer);
+      if (option) await this.vigilanceAttack(chance.hero, monster, option, chance.cost);
+    }
+    await this.resolveGuard(monster);
+  }
+
+  /** Guardia: gli eroi con quell'ordine scelgono se interrompere il mostro con un attacco gratuito; l'ordine si perde dopo l'uso. */
+  /** Il cambio d'ordine di Ordini flessibili (Anarien): si sceglie fra gli altri due ordini, pagando l'energia. `monster` c'è se l'eroe sta per essere attaccato. */
+  private async offerOrderChange(hero: Piece, monster?: Piece) {
+    const cost = orderChangeCost(this.state, hero);
+    if (cost === null || !hero.order) return;
+    if (hero.energy < cost) {
+      if (!monster) this.showNotice(tr('Non hai abbastanza energia per cambiare ordine'), 'warning');
+      return;
+    }
+    const others = (['aim', 'dodge', 'rest', 'guard'] as const).filter((o) => o !== hero.order);
+    const answer = await this.askChoice({
+      title: tr('Cambiare ordine?'),
+      text: monster
+        ? tr('{name} sta per essere attaccato da {name2}. Ordine attuale: {order}. Spendere {energy:{cost}} per cambiarlo?', { name: hero.name, name2: monster.name, order: ORDER_NAMES[hero.order], cost })
+        : tr('Ordine attuale di {name}: {order}. Spendere {energy:{cost}} per cambiarlo?', { name: hero.name, order: ORDER_NAMES[hero.order], cost }),
+      choices: [...others.map((o) => ({ id: o, label: ORDER_NAMES[o], primary: true })), { id: 'no', label: tr('Tieni {order}', { order: ORDER_NAMES[hero.order] }) }],
+    });
+    if (answer !== 'aim' && answer !== 'dodge' && answer !== 'rest' && answer !== 'guard') return;
+    const r = changeOrder(this.state, hero, answer);
+    if (!r.ok) return;
+    this.showNotice(tr('{name} cambia ordine: {order} ({energy:{cost}})', { name: hero.name, order: ORDER_NAMES[answer], cost: r.cost }), 'tactic', 'hero');
+    this.pieces?.refreshActive();
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** Dal tab dell'eroe: cambiare ordine quando si vuole. */
+  protected async changeOrderFor(id: string) {
+    const hero = this.state.pieces.find((p) => p.id === id);
+    if (!hero || this.commandsBusy() || this.attackSession()) return;
+    await this.offerOrderChange(hero);
+  }
+
+  private async resolveGuard(monster: Piece) {
+    if (!this.board) return;
+    for (const chance of guardChances(this.state, this.board, monster, this.guardDeclined)) {
+      if (!this.state.pieces.includes(monster) || monster.wounds <= 0) return;
+      const answer = await this.askChoice({
+        title: tr('Guardia'),
+        text: tr('{name} è in Guardia: può interrompere {name2} con un attacco. Perde l\'ordine dopo averlo usato.', { name: chance.hero.name, name2: monster.name }),
+        choices: [...chance.options.map((o) => ({ id: o.id, label: o.name, primary: true })), { id: 'no', label: tr('Rinuncia') }],
+      });
+      const option = chance.options.find((o) => o.id === answer);
+      if (!option) {
+        this.guardDeclined.add(chance.hero.id); // non può ripensarci in questa attivazione
+        continue;
+      }
+      chance.hero.order = null;
+      await this.vigilanceAttack(chance.hero, monster, option, 0);
+      this.showHud(this.pieces?.active ?? null);
+    }
+  }
+
+  /** L'attacco della Vigilanza: la finestra normale dell'attacco (l'eroe tira i dadi), fuori turno e senza consumare i suoi attacchi; l'energia si paga all'applicazione. */
+  private async vigilanceAttack(hero: Piece, monster: Piece, option: AttackOption, pay: number) {
+    await this.frameBoth(hero, monster);
+    const plan = planAttack(this.state, hero, monster, option);
+    await this.attackIntro(hero, monster, option);
+    this.attackSession.set({ attackerId: hero.id, targetId: monster.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, free: { pay } });
+    await this.waitUntil(() => !this.attackSession() && !this.applyingAttack, 120000);
+    await this.waitUntil(() => !this.knockback(), 60000); // un Contraccolpo dell'arma si risolve prima che il mostro riprenda
+  }
+
+  private async monsterTurn(monster: Piece) {
+    this.guardDeclined = new Set();
+    if (monster.inactive) return; // un nemico inattivo non agisce
+    if (await this.resolveTurnStart(monster)) return; // morto per la fiamma
+    // Stordito: un mostro normale perde il turno; uno potenziato può solo muoversi oppure attaccare.
+    if (monster.stunned && !monster.enhanced) return;
+    if (isDormant(this.state, this.board!, monster)) return; // dorme finché la sua area non è rivelata
+    // Carica: se non ha nessuno da colpire, la velocità di questa attivazione è raddoppiata.
+    if (!chooseMonsterTarget(this.state, this.board!, monster) && this.state.random() < 0.6 && playEvent(this.state, 'charge')) {
+      monster.points *= 2;
+      await this.announceEvent(tr('Carica'), tr('{name} corre il doppio.', { name: monster.name }));
+    }
+    const steps = monster.stunned && chooseMonsterTarget(this.state, this.board!, monster) ? [] : planMonsterMove(this.state, this.board!, monster);
+    if (steps.length) {
+      await this.walkMonster(monster, steps);
+      if (this.state.pieces.includes(monster) && settleOverlap(this.state, this.board!, monster)) this.pieces?.redraw(monster); // rete di sicurezza: mai sopra un'altra pedina
+      await this.sleep(250);
+    }
+    this.monsterPicksUp(monster); // se si è fermato su un oggetto trasportabile (la Principessa) lo prende
+    let attacked = false;
+    // Furore: due attacchi in questa attivazione (quattro con Colpo veloce).
+    if (!(monster.stunned && steps.length) && monster.attacks > 0 && chooseMonsterTarget(this.state, this.board!, monster) && this.state.random() < 0.7 && playEvent(this.state, 'fury')) {
+      monster.attacks = keywordLevel(this.state, monster, 'Colpo veloce') > 0 ? 4 : 2;
+      await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: monster.name }));
+    }
+    // Colpo veloce: fino a due attacchi (uno solo per chi non lo ha).
+    for (let i = 0; i < 5 && monster.attacks > 0 && !this.destroyed; i++) {
+      const target = monster.stunned && steps.length ? null : chooseMonsterTarget(this.state, this.board!, monster);
+      if (!target) break;
+      await this.monsterAttack(monster, target);
+      attacked = true;
+      if (this.state.status !== 'playing') break;
+    }
+    if (!attacked) await this.sleep(150);
+  }
+
+  /** Un mostro che sa trasportare e si è fermato sulla casella di un oggetto trasportabile lo prende: sparisce dalla mappa e lo si dice. */
+  private monsterPicksUp(monster: Piece) {
+    if (!this.board) return;
+    const item = monsterTakesItem(this.state, this.board, monster);
+    if (!item) return;
+    this.rebuildBoard();
+    this.pieces?.redraw(monster);
+    this.showNotice(`${monster.name} afferra ${item.name}!`, item.icon ?? 'person', 'evil');
+  }
+
+  /**
+   * L'inizio di un attacco, prima del dialogo: in mischia l'attaccante scatta verso il bersaglio e si ferma a metà strada; a distanza o con la magia
+   * compare la linea (azzurra o viola) e un proiettile corre a metà strada.
+   */
+  private async attackIntro(attacker: Piece, target: Piece, option: AttackOption) {
+    if (!this.pieces) return;
+    if (option.attack === 'melee') {
+      if (option.via) await this.pieces.pulse(attacker); // attraverso una scala il bersaglio è lontano: niente scatto, solo un guizzo
+      else await this.pieces.lunge(attacker, target);
+    } else await this.pieces.beginShot(attacker, target, option.attack === 'magic' ? 'magic' : 'ranged', option.via);
+  }
+
+  /** Prima del tiro: il nome delle abilità dell'attacco sopra chi attacca (Soffio, Spazzata, Esplosione, Contraccolpo) e, per un attacco ad area, le caselle che colpirà lampeggiano di rosso, così si sa già cosa sta per succedere. */
+  private async announceAttack(attacker: Piece, target: Piece, plan: AttackPlan, breath?: Breath | null) {
+    const tags: string[] = [];
+    if (plan.area.breath) tags.push(tr('Soffio'));
+    if (plan.area.sweep && plan.option.attack === 'melee') tags.push(tr('Spazzata'));
+    if (plan.area.blast > 0) tags.push(tr('Esplosione'));
+    if (plan.knockback) tags.push(tr('Contraccolpo'));
+    tags.forEach((t, i) => this.pieces?.floatTag(attacker, t, 'skill', i * 450));
+    const cells = this.board ? areaCells(this.board, attacker, target, plan, [], breath) : [];
+    if (cells.length) await this.flashCells(cells);
+    else if (tags.length) await this.sleep(700);
+  }
+
+  /** Dopo che l'attacco si applica: lo scontro (mischia) o l'arrivo del proiettile, con il numero rosso dei danni o la scritta Mancato sopra il bersaglio. */
+  private async attackImpact(attacker: Piece, target: Piece, option: AttackOption, outcome: { miss: boolean; inRange: boolean; feared?: boolean; damage: number }, breath?: { cells: Cell[]; shape: Breath }) {
+    if (!this.pieces) return;
+    const hit = !outcome.miss && outcome.inRange && !outcome.feared;
+    const hurt = hit && outcome.damage > 0;
+    const text = !hit ? (outcome.miss ? tr('Mancato') : !outcome.inRange ? tr('Fuori portata') : tr('Spaventato')) : outcome.damage > 0 ? `-${outcome.damage}` : '0';
+    const show = () => this.pieces?.floatText(target, text, hurt ? 'damage' : 'miss');
+    // Attraverso una scala il bersaglio sta altrove: la camera va da lui perché si veda l'esito.
+    if (breath) {
+      // Il Soffio non ha scatto né proiettile: un'onda rossa percorre la sagoma e poi compaiono gli esiti.
+      await this.waveCells(breath.cells, breath.shape);
+      show();
+      return;
+    }
+    if (option.via) await this.frameCells([...footprint(target), option.via.to]);
+    if (option.attack === 'melee') await (option.via ? this.pieces.strikeThrough(attacker, target, hurt, show) : this.pieces.strike(attacker, target, hurt, show));
+    else await this.pieces.finishShot(hit, show);
+  }
+
+  /** L'attacco di un mostro con la stessa finestra degli eroi: tira il Maligno, chi guarda vede e prosegue (o aspetta qualche secondo). */
+  private async monsterAttack(monster: Piece, target: Piece, forced?: AttackOption) {
+    const option = forced ?? monsterAttackOption(this.state, this.board!, monster, target);
+    if (!option?.enabled) return;
+    if (monster.team === 'monster') {
+      this.exploration.monsters.add(monster.id); // chi attacca si fa vedere
+      this.pieces?.showMonster(monster);
+    }
+    if (monster.team === 'monster' && target.team === 'hero') {
+      // La camera contiene i due che combattono; se l'attacco passa per una scala sono lontani: si inquadra prima l'attaccante con la sua scala, poi (all'impatto) il bersaglio.
+      if (option.via) await this.frameCells([...footprint(monster), option.via.from]);
+      else await this.frameBoth(monster, target);
+    }
+    // Ordini flessibili: prima dell'attacco chi ha l'abilità può cambiare ordine (anche per passare a Guardia e interrompere, o a Schivata).
+    if (monster.team === 'monster' && target.team === 'hero') await this.offerOrderChange(target, monster);
+    // Guardia: gli eroi in guardia possono interrompere prima che l'attacco si svolga; se il mostro cade, l'attacco salta.
+    if (monster.team === 'monster' && target.team === 'hero') {
+      await this.resolveGuard(monster);
+      if (!this.state.pieces.includes(monster) || monster.wounds <= 0 || !this.state.pieces.includes(target) || this.state.status !== 'playing') return;
+    }
+    // Mirare: l'attacco è mirato, cioè i dadi che non servono si ripetono (resta il secondo risultato). Contro un eroe con Schivata si annullano a vicenda.
+    const dodging = target.team === 'hero' && target.order === 'dodge' && monster.team === 'monster';
+    const manual = this.evilMode && monster.team === 'monster' && target.team === 'hero'; // il Maligno a mano decide lui, nella finestra dell'attacco
+    let aimed = !manual && monster.team === 'monster' && !weakening(this.state, monster).noAim && this.state.random() < 0.8 && playEvent(this.state, 'aim'); // vicino a Nero il Corvo non si mira
+    if (aimed && dodging) {
+      aimed = false;
+      target.order = null;
+      this.showNotice(tr('{name}: la Schivata annulla l\'attacco mirato', { name: target.name }), 'tactic');
+    }
+    let canDodge = dodging && target.order === 'dodge';
+    if (aimed) await this.announceEvent(tr('Mirare'), tr('{name} fa un attacco mirato: ripete i dadi che non servono.', { name: monster.name }), 'swords');
+    const plan = planAttack(this.state, monster, target, option);
+    const breathDir = plan.area.breath ? breathDirTo(this.state, this.board!, monster, target) : null;
+    await this.announceAttack(monster, target, plan, breathDir);
+    if (!plan.area.breath) await this.attackIntro(monster, target, option); // il Soffio non ha scatto né tratteggio di tiro
+    this.attackSession.set({ attackerId: monster.id, targetId: target.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, auto: true, breathDir });
+    await this.sleep(700);
+    // Il Maligno a mano: se ha Mirare e può pagarla, il tiro aspetta la sua scelta (contro un eroe in Schivata la mira e la Schivata si annullano).
+    if (manual && !weakening(this.state, monster).noAim && (await this.evilPlays('aim', tr('Mirare · {hatred:{n}}')))) {
+      if (dodging) {
+        target.order = null;
+        canDodge = false;
+        this.showNotice(tr('{name}: la Schivata annulla l\'attacco mirato', { name: target.name }), 'tactic');
+      } else {
+        aimed = true;
+        await this.announceEvent(tr('Mirare'), tr('{name} fa un attacco mirato: ripete i dadi che non servono.', { name: monster.name }), 'swords');
+      }
+    }
+    const cur = this.attackSession();
+    if (!cur || this.destroyed) return;
+    this.attackSession.set({ ...cur, step: 'rolling' });
+    let rolls = await this.dice.rollFaces(option.dice);
+    if (!rolls) {
+      this.attackSession.set(null);
+      return;
+    }
+    if (aimed) {
+      await this.sleep(1700);
+      const bad = rolls.map((_, i) => i).filter((i) => { const f = rolls![i].face; return f.miss || isBlank(f) || (!f.slash && !f.hearts && !f.spark); });
+      rolls = await this.rerollDice(rolls, bad);
+    }
+    // Schivata: l'eroe sceglie quali dadi dell'attacco far ripetere (una sola volta; l'ordine resta fino al suo prossimo turno).
+    if (canDodge) {
+      await this.sleep(1400);
+      const picked = await this.pickDice({ title: tr('Schivata'), text: tr('Scegli i dadi di {name} da far ripetere: varrà il secondo risultato.', { name: monster.name }), dice: rolls, confirm: tr('Ripeti i dadi scelti'), skip: tr('Tieni il tiro') });
+      if (picked?.length) rolls = await this.rerollDice(rolls, picked);
+    }
+    // Sulle facce multivalenti del dado competenza sceglie lo script: la gittata se serve per arrivare, altrimenti il cuore.
+    const choices: Record<number, 'range' | 'heart'> = {};
+    let range = plan.bonusRange + rolls.reduce((n, r) => n + (r.face.slash ? 0 : r.face.range), 0);
+    rolls.forEach((r, i) => {
+      if (!r.face.slash) return;
+      choices[i] = plan.needsRange && range < plan.distance ? 'range' : 'heart';
+      if (choices[i] === 'range') range += r.face.range;
+    });
+    // Stregoneria: lo script porta la gittata fino alla distanza e mette il resto sul danno.
+    const need = plan.needsRange ? Math.max(0, plan.distance - range) : 0;
+    const sr = Math.min(plan.sorcery, need);
+    const spent = plan.effects.length ? scriptSparks(this.state, target, plan, rolls, choices) : []; // chi attacca con un'arma a scintille (`useItem`): lo script le paga
+    this.attackSession.update((se) => (se ? { ...se, step: 'rolled', rolls, choices, spent, sorcery: { range: sr, damage: plan.sorcery - sr } } : se));
+    await this.waitUntil(() => !this.attackSession() && !this.applyingAttack, 120000); // il pannello si chiude da solo quando finisce la sua barra (ferma con il mouse sopra o con un tocco)
+    await this.sleep(500);
+  }
+
+  /** Una voce del menu dell'app. */
+  protected onMenu(id: string) {
+    if (id === 'components') {
+      void loadAllHeroSheets().then((heroes) => {
+        this.catalog.set(this.buildCatalog(heroes));
+        this.componentsOpen.set(true);
+      });
+    } else if (id === 'quit') this.confirmQuit.set(true);
+  }
+
+  /** Concludi partita, confermato: si cancella il salvataggio e si torna alla home. */
+  protected quitGame() {
+    this.confirmQuit.set(false);
+    this.saves.clear(this.mapName);
+    void this.router.navigateByUrl('/');
+  }
+
+  /** Il catalogo dei componenti, dai cataloghi caricati: oggetti del negozio, i tre mazzi dei tesori, le reliquie e le carte abilità dei tre rami. */
+  private buildCatalog(heroes: HeroSheet[]): CatalogCategory[] {
+    const s = this.state;
+    const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'it');
+    const itemEntry = (d: ItemDef, count: number | null): CatalogEntry => {
+      const detail = itemDetail(d);
+      return { kind: 'item', id: d.id, name: d.name, def: d, icon: d.icon ?? 'inventory_2', detail, count, search: [d.name, detail, d.offHand ?? '', ...(d.rules ?? []), ...(d.spark ?? []).map((x) => x.effect)].join(' ') };
+    };
+    const items = [...s.items.values()];
+    const itemsOf = (pick: (d: ItemDef) => boolean, count: (d: ItemDef) => number | null) => items.filter(pick).map((d) => itemEntry(d, count(d))).sort(byName);
+    const skillEntries = (school: string): CatalogEntry[] =>
+      [...s.skills.values()].filter((k) => k.school === school).map((k): CatalogEntry => ({ kind: 'skill', id: k.id, name: k.name, def: k, search: `${k.name} ${k.text}` })).sort(byName);
+    // Le pozioni non sono oggetti del catalogo (ogni eroe ne porta fino a 3 nel suo set) e altri consumabili potranno aggiungersi: hanno la loro categoria, con il prezzo del negozio.
+    const potion = (id: string, name: string, kind: PotionKind, rules: string[]): CatalogEntry => {
+      const def: ItemDef = { id, name, kind: 'other', hands: 0, price: POTION_PRICES[kind], rules };
+      return { kind: 'item', id, name, def, icon: 'tokens/potion', detail: tr('Pozione'), count: null, search: [name, tr('pozione'), ...rules].join(' ') };
+    };
+    const potionEntries: CatalogEntry[] = [
+      potion('potion-heal', tr('Pozione curativa'), 'heal', [tr('Recupera {potionHeal} ferite. Berla costa {potionDrinkCos} punto movimento.', { potionHeal: POTION_HEAL, potionDrinkCos: POTION_DRINK_COST }), tr('Si porta fino a 3 pozioni.')]),
+      potion('potion-energy', tr('Pozione dell\'Energia'), 'energy', [tr('Riporta l\'energia {energy} al massimo. Berla costa {mov:1}.'), tr('Si porta fino a 3 pozioni.')]),
+    ];
+    const heroEntries = heroes.map((h): CatalogEntry => ({
+      kind: 'hero', id: h.id, name: h.name, sheet: h, search: [h.name, h.class].join(' '),
+    })).sort(byName);
+    const monsterEntries = [...this.monsterDefs.values()].map((m): CatalogEntry => ({
+      kind: 'monster', id: m.id, name: m.name, def: m, search: [m.name, ...m.normal.abilities, ...m.enhanced.abilities].join(' '),
+    })).sort(byName);
+    const familiarEntries = [...s.familiarDefs.values()].map((d): CatalogEntry => ({ kind: 'familiar', id: d.id, name: d.name, def: d, search: [d.name, tr('Famiglio'), d.ability ?? ''].join(' ') })).sort(byName);
+    return [
+      { id: 'heroes', group: tr('Personaggi'), name: tr('Eroi'), entries: heroEntries },
+      { id: 'familiars', group: tr('Personaggi'), name: tr('Famigli'), entries: familiarEntries },
+      { id: 'monsters', group: tr('Personaggi'), name: tr('Mostri'), entries: monsterEntries },
+      { id: 'shop', group: tr('Oggetti'), name: tr('Negozio'), entries: itemsOf((d) => d.id in s.shop, (d) => s.shop[d.id] ?? 0) },
+      { id: 'potions', group: tr('Consumabili'), name: tr('Pozioni'), entries: potionEntries },
+      { id: 'copper', group: tr('Tesori'), name: tr('Rame'), entries: itemsOf((d) => d.deck === 'copper', (d) => d.copies ?? 1) },
+      { id: 'silver', group: tr('Tesori'), name: tr('Argento'), entries: itemsOf((d) => d.deck === 'silver', (d) => d.copies ?? 1) },
+      { id: 'gold', group: tr('Tesori'), name: tr('Oro'), entries: itemsOf((d) => d.deck === 'gold', (d) => d.copies ?? 1) },
+      { id: 'relics', group: tr('Reliquie'), name: tr('Reliquie'), entries: itemsOf((d) => !!d.tags?.includes('relic'), () => null) },
+      { id: 'combat', group: tr('Abilità'), name: tr('Combattimento'), entries: skillEntries('combat') },
+      { id: 'cunning', group: tr('Abilità'), name: tr('Astuzia'), entries: skillEntries('cunning') },
+      { id: 'magic', group: tr('Abilità'), name: tr('Magia'), entries: skillEntries('magic') },
+    ];
+  }
+
+  /** Quali mostri si vedono: quelli scoperti dagli eroi (o tutti, se non c'è la nebbia); nella vista del Maligno tutti. */
+  private syncMonsterVisibility(fog = this.fogOn()) {
+    this.pieces?.setVisibleMonsters(fog && !this.evilView() ? this.exploration.monsters : null);
+    // Vista del Maligno: i mostri di un'area non ancora scoperta (inattivi) si vedono senza colore.
+    const board = this.board;
+    const dormant = fog && this.evilView() && board ? new Set(this.state.pieces.filter((p) => p.team === 'monster' && !p.awake && !!board.areaAt(p.cell) && !this.state.exploration.areas.has(board.areaAt(p.cell)!)).map((p) => p.id)) : null;
+    this.pieces?.setGrayMonsters(dormant);
+  }
+
+  /** Accende e spegne la vista del Maligno (provvisorio, dal tab del Maligno). */
+  protected toggleEvilView() {
+    this.evilView.update((v) => !v);
+    this.monsterPanel.set(null);
+    this.applyVisibility(); // ciò che non è scoperto compare (o sparisce) per intero: mostri, aree, scale, porte, oggetti
+    this.showNotice(this.evilView() ? tr('Vista del Maligno: tocca un mostro per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'evil');
+  }
+
+  /** Un clic sul pallino di un eroe nella barra. */
+  protected selectFromBar(id: string) {
+    const picked = this.evilPick?.candidates.find((p) => p.id === id); // scegliendo un eroe, anche il suo tab vale come tocco
+    if (picked) {
+      this.finishPick(picked);
+      return;
+    }
+    if (this.evilMode) {
+      // Il Maligno sceglie quale eroe guardare: solo la barra cambia, la partita (chi è di turno, i suoi punti) non si tocca.
+      const wasOpen = this.panel()?.id === id;
+      this.viewedHero.set(id);
+      this.members.update((list) => list.map((m) => ({ ...m, active: m.id === id })));
+      if (this.narrow()) {
+        // Telefono: gli avatar non si allargano, un tocco apre (o chiude) la scheda dell'eroe.
+        this.monsterPanel.set(null);
+        this.panel.set(wasOpen ? null : { id, kind: 'info' });
+      } else this.panel.set(null);
+      return;
+    }
+    this.pieces?.selectHero(id);
+  }
+
+  /** `/evil/<map>`: l'eroe che il Maligno sta guardando (senza scelta, quello di turno). */
+  private readonly viewedHero = signal<string | null>(null);
+
+  /** L'azione scelta dall'eroe attivo, per i pallini dei comandi. */
+  protected readonly activeAction = computed(() => this.members().find((m) => m.kind === 'hero' && m.active)?.action ?? 'advance');
+
+  /** Ora i comandi non si possono usare: durante l'attacco, il turno del Maligno o la finestra dei componenti. */
+  protected readonly commandsBusy = computed(() => !!this.evilSummonInfo() || !!this.evilTrapInfo() || !!this.evilPickInfo() || !!this.attackSession() || !!this.familiarMove() || this.evilBusy() || this.glyphSequence() || this.componentsOpen() || this.settingUp() || !!this.adventureDialog() || !!this.telekinesis() || !!this.choiceView() || !!this.dicePickView());
+
+  /** Un comando scelto con un pallino o con il bottone Passa (gli stessi dei tasti R, C, S e Invio). */
+  protected tapCommand(c: 'run' | 'fight' | 'prepare' | 'pass') {
+    if (c === 'pass' && this.familiarMove()) {
+      this.familiarSkip(); // Invio passa anche per un famiglio
+      return;
+    }
+    if (c === 'pass' && this.evilMode) {
+      void this.evilPass(); // Invio: il tasto Avanti/Passa del Maligno
+      return;
+    }
+    if (this.evilMode || this.commandsBusy()) return; // il Maligno non comanda gli eroi
+    if (c === 'pass') this.pass();
+    else this.command(c);
+  }
+
+  /** Correre o Combattere per l'eroe attivo (tasti R e C). */
+  private command(requested: 'run' | 'fight' | 'prepare') {
+    const hero = this.pieces?.active;
+    // Prepararsi senza ordine: premerlo di nuovo non annulla l'azione ma riapre la scelta dell'ordine.
+    if (requested === 'prepare' && hero?.action === 'prepare' && !hero.order && !hero.orderPlaced && canActOnMap(this.state, hero)) {
+      void this.chooseOrder();
+      return;
+    }
+    const r = this.pieces?.setAction(requested);
+    if (r && !r.ok) this.showNotice(this.deniedText(r, requested), 'warning');
+    else if (r?.ok && r.action === 'prepare') void this.chooseOrder();
+  }
+
+  /** Prepararsi: si sceglie l'ordine da piazzare (Mira, Schivata, Guardia): uno solo alla volta, finché non è usato o perso non se ne piazza un altro. */
+  private async chooseOrder() {
+    const hero = this.pieces?.active;
+    if (!hero || hero.action !== 'prepare') return;
+    if (hero.order) {
+      this.showNotice(tr('Hai già l\'ordine {order}: finché non lo usi o lo perdi non ne piazzi un altro', { order: ORDER_NAMES[hero.order] }), 'info');
+      return;
+    }
+    const answer = await this.askChoice({
+      title: tr('Prepararsi: piazza un ordine'),
+      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o sei ferito. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'energia torna al massimo, se non sei ferito. Guardia: interrompi il turno del Maligno con un attacco, fino al tuo prossimo turno.'),
+      choices: [
+        { id: 'aim', label: tr('Mira'), primary: true }, { id: 'dodge', label: tr('Schivata'), primary: true }, { id: 'rest', label: tr('Riposo'), primary: true }, { id: 'guard', label: tr('Guardia'), primary: true },
+        { id: 'no', label: tr('Nessuno per ora') },
+      ],
+    });
+    if (answer !== 'aim' && answer !== 'dodge' && answer !== 'rest' && answer !== 'guard') return;
+    const r = placeOrder(this.state, hero, answer);
+    if (!r.ok) {
+      this.showNotice(r.reason === 'has' ? tr('Hai già un ordine') : tr('Non puoi piazzare un ordine adesso'), 'warning');
+      return;
+    }
+    this.showNotice(tr('Ordine piazzato: {name}', { name: ORDER_NAMES[answer] }), 'tactic');
+    this.pieces?.refreshActive();
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  private deniedText(r: Extract<ActionChange, { ok: false }>, requested: 'run' | 'fight' | 'prepare'): string {
+    if (r.reason === 'turn') return tr('Ora non puoi cambiare azione');
+    if (r.reason === 'ordered') return tr('Hai già piazzato un ordine: non puoi cambiare azione');
+    if (requested === 'prepare') return tr('Per prepararti non devi aver già mosso e attaccato');
+    if (r.reason === 'toad') return tr('Sei un rospo: niente correre né combattere');
+    if (r.reason === 'stunned') return tr('Sei stordito: puoi solo muoverti o attaccare');
+    if (r.reason === 'attacked') return tr('Hai già attaccato: non puoi correre');
+    return requested === 'fight' ? tr('Hai già speso punti movimento: non puoi combattere') : tr('Hai già speso troppi punti movimento per cambiare azione');
+  }
+
+  /** L'eroe attivo passa (tasto Invio). */
+  // --- I famigli (docs/REGOLE.md, sezione 2g) ---
+  private familiarsView: FamiliarsView | null = null;
+  private readonly familiarsLayer = new Container();
+  /** Lo spostamento di un famiglio in corso: chi è, quanti spazi, e dove può andare. */
+  protected readonly familiarMove = signal<{ id: string; name: string; speed: number; points: number } | null>(null);
+  /** Il menu contestuale del famiglio che porta oggetti (Raccogli, Dai a, Lascia a terra) e dove sta sullo schermo. */
+  protected readonly familiarActions = signal<ContextAction[]>([]);
+  protected readonly familiarAnchor = signal<{ x: number; y: number } | null>(null);
+  /** I punti spesi dall'ultima mossa o azione del famiglio. */
+  private familiarSpent = 0;
+  private familiarReachNow: ReturnType<typeof familiarReach> | null = null;
+  private familiarDone: ((r: 'moved' | 'acted' | 'skip') => void) | null = null;
+
+  /** Chi occupa la casella e si vede: un eroe, un mostro già rivelato, o nessuno (per mettere il famiglio in un angolo). */
+  private familiarCohabitant(cell: Cell): 'hero' | 'monster' | null {
+    if (this.state.pieces.some((p) => p.team === 'hero' && !p.city && occupies(p, cell))) return 'hero';
+    if (this.state.pieces.some((p) => p.team === 'monster' && occupies(p, cell) && (!this.fogOn() || this.exploration.monsters.has(p.id)))) return 'monster';
+    return null;
+  }
+
+  /**
+   * Dopo il turno di un eroe, ognuno dei suoi famigli può spostarsi (fino alla sua velocità, in punti): il giocatore tocca una casella evidenziata o lo lascia dov'è. Chi porta oggetti
+   * (Ying e Yang) ha anche il menu contestuale: Raccogli (gratis), Dai a un eroe vicino e Lascia a terra (1 punto del famiglio), e può continuare finché ha punti.
+   */
+  private async familiarPhase(hero: Piece) {
+    for (const fam of familiarsOf(this.state, hero.id)) {
+      const def = this.state.familiarDefs.get(fam.id);
+      if (!def || !this.board || this.destroyed) continue;
+      const carry = familiarHas(def, 'carry');
+      let points = def.speed;
+      for (let turns = 0; turns < 40 && this.board && !this.destroyed; turns++) {
+        let reach = points > 0 ? familiarReach(this.state, this.board, def, fam, points) : new Map();
+        if (this.fogOn()) reach = new Map([...reach].filter(([k]) => this.exploration.cells.has(k)));
+        const actions = carry ? familiarContextActions(this.state, this.board, fam, points) : [];
+        if (!reach.size && !actions.some((a) => a.enabled)) break;
+        if (turns === 0) this.focusCell(fam.cell); // tocca a lui: la camera va sul famiglio (solo il pan), come segue un eroe che cammina
+        this.familiarReachNow = reach;
+        this.familiarActions.set(actions);
+        this.familiarMove.set({ id: fam.id, name: def.name, speed: def.speed, points });
+        this.familiarsView?.showReach(reach, fam.cell, this.board);
+        this.updateContextAnchor();
+        this.familiarSpent = 0;
+        const result = await new Promise<'moved' | 'acted' | 'skip'>((resolve) => (this.familiarDone = resolve));
+        this.familiarsView?.clearReach();
+        if (result === 'skip') break;
+        points -= this.familiarSpent;
+        if (result === 'moved' && !carry) break;
+      }
+      this.familiarMove.set(null);
+      this.familiarActions.set([]);
+      this.familiarAnchor.set(null);
+      this.familiarReachNow = null;
+      this.familiarDone = null;
+    }
+  }
+
+  /** Un tocco durante lo spostamento di un famiglio: se è una casella evidenziata ci va (camminando). */
+  private familiarClick(cell: Cell) {
+    const move = this.familiarMove();
+    const reach = this.familiarReachNow;
+    const fam = this.state.familiars.find((f) => f.id === move?.id);
+    if (!move || !reach || !fam) return;
+    const path = familiarPath(reach, cell);
+    if (!path) return; // fuori dall'area: non succede niente
+    this.familiarSpent = familiarCost(reach, cell);
+    const from = { ...fam.cell };
+    fam.cell = { x: cell.x, y: cell.y };
+    this.familiarsView?.clearReach();
+    const done = this.familiarDone;
+    this.familiarDone = null;
+    void (this.familiarsView?.walk(fam, from, path) ?? Promise.resolve()).then(() => done?.('moved'));
+  }
+
+  /** Il famiglio resta dov'è (e finisce il suo spostamento). */
+  protected familiarSkip() {
+    const done = this.familiarDone;
+    this.familiarDone = null;
+    done?.('skip');
+  }
+
+  /** Un'azione del menu del famiglio: raccogliere, dare a un eroe o lasciare a terra. */
+  protected runFamiliarAction(id: string) {
+    const move = this.familiarMove();
+    const fam = this.state.familiars.find((f) => f.id === move?.id);
+    const board = this.board;
+    if (!move || !fam || !board) return;
+    let notice: string | null = null;
+    if (id === 'fpick') {
+      const what = familiarPickUp(this.state, board, fam);
+      if (what) {
+        notice = tr('{name} raccoglie: {what}', { name: move.name, what: what.toLowerCase() });
+        this.pickupView?.redraw(board, (m) => !this.fogOn() || this.exploration.markers.has(m));
+      }
+    } else if (id.startsWith('fgive:')) {
+      const hero = this.state.pieces.find((p) => p.id === id.slice(6));
+      const given = hero ? familiarGive(this.state, hero, fam) : null;
+      if (given && hero) {
+        this.familiarSpent = FAMILIAR_CARRY_COST;
+        notice = tr('{name} dà a {name2}: {what}', { name: move.name, name2: hero.name, what: given });
+        this.showHud(this.pieces?.active ?? null);
+      }
+    } else if (id === 'fdrop' && familiarDrop(this.state, fam)) {
+      this.familiarSpent = FAMILIAR_CARRY_COST;
+      this.state.events.groundItems = false;
+      this.rebuildBoard();
+      notice = tr('{name} lascia a terra l\'oggetto', { name: move.name });
+    }
+    if (!notice) return;
+    this.showNotice(notice, 'pets');
+    const done = this.familiarDone;
+    this.familiarDone = null;
+    done?.('acted');
+  }
+
+  private async pass() {
+    if (this.returnMode() && this.returnOptions().length) {
+      this.showNotice(tr('Devi tornare nel dungeon: scegli un glifo'), 'warning');
+      return;
+    }
+    if (this.evilBusy() || this.choiceView() || this.familiarMove()) return;
+    // Al termine del turno si può usare un oggetto che lo prevede (il Flauto del riposo: stordisce i mostri vicini e si scarta).
+    const hero = this.pieces?.active;
+    if (hero && hero.team === 'hero' && !hero.city && this.state.phase === 'heroes') {
+      for (const item of turnEndItems(this.state, hero)) {
+        const answer = await this.askChoice({
+          title: item.name,
+          text: item.amount === 1 ? tr('Scartarlo per mettere 1 segnalino stordito su ogni mostro entro {range} spazi da {name}?', { range: item.range, name: hero.name }) : tr('Scartarlo per mettere {n} segnalini storditi su ogni mostro entro {range} spazi da {name}?', { n: item.amount, range: item.range, name: hero.name }),
+          choices: [{ id: 'use', label: tr('Usa {name}', { name: item.name }), primary: true }, { id: 'no', label: tr('Non ora') }],
+        });
+        if (answer !== 'use') continue;
+        const used = useTurnEndItem(this.state, hero, item.id);
+        if (!used) continue;
+        const seen = (m: Piece) => !this.fogOn() || this.exploration.monsters.has(m.id);
+        const names = used.stunned.filter(seen).map((m) => m.name);
+        this.showNotice(names.length ? tr('{name}: storditi {names}', { name: item.name, names: names.join(', ') }) : tr('{name}: nessun mostro in vista è stato stordito', { name: item.name }), 'stun');
+        for (const m of used.stunned) this.pieces?.redraw(m);
+        this.pieces?.refreshActive();
+      }
+    }
+    // Dopo il turno del padrone, i suoi famigli si spostano (a scelta del giocatore).
+    if (hero && hero.team === 'hero' && hero.wounds > 0 && !hero.city && this.state.phase === 'heroes' && this.board) await this.familiarPhase(hero);
+    const r = this.pieces?.passTurn();
+    if (!r) return;
+    this.tellCurses(r.curses);
+    if (r.evil) {
+      void this.runEvilTurn();
+      return;
+    }
+    if (r.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'evil');
+    this.autosave(); // un eroe ha passato: la partita è in un punto tranquillo
+    const next = this.state.pieces.find((p) => p.id === r.nextActive);
+    this.showNotice(r.roundStarted ? tr('Round {n}: tocca agli eroi', { n: this.state.round }) : tr('Tocca a {name}', { name: next?.name ?? '—' }), 'autorenew', 'game');
+  }
+
+  /** Le maledizioni di fine turno (`ItemDef.curse`): quante ferite ha preso chi porta l'oggetto e, se è morto, svanisce in rosso. */
+  private tellCurses(curses: CurseHit[] | undefined) {
+    for (const c of curses ?? []) {
+      this.showNotice(c.wounds === 1 ? tr('{name} subisce 1 ferita per la maledizione di {item}', { name: c.hero.name, item: c.item.name }) : tr('{name} subisce {wounds} ferite per la maledizione di {item}', { name: c.hero.name, item: c.item.name, wounds: c.wounds }), 'skull', 'evil');
+      if (c.died) {
+        this.pieces?.heroDied(c.hero, c.slain);
+        this.showNotice(this.fallenNotice(c.hero), 'skull');
+      }
+    }
+    if (curses?.length) this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** Un evento consegna un oggetto a un eroe scelto dal gruppo (effetto `giveChosen`): una dialog chiede chi (con un solo eroe lo riceve lui) e poi lo riceve. */
+  private async giveChosenItem(itemId: string) {
+    const item = this.state.items.get(itemId);
+    const heroes = this.state.pieces.filter((p) => p.team === 'hero' && !p.city && p.wounds > 0);
+    if (!item || !heroes.length) return;
+    let hero = heroes[0];
+    if (heroes.length > 1) {
+      const answer = await this.askChoice({
+        title: tr('Chi porta {item}?', { item: item.name }),
+        text: tr('Il gruppo sceglie chi comincia la partita con {item}.', { item: item.name }),
+        choices: heroes.map((h, i) => ({ id: h.id, label: h.name, primary: i === 0 })),
+      });
+      hero = heroes.find((h) => h.id === answer) ?? heroes[0];
+    }
+    handItem(this.state, hero, itemId);
+    this.pieces?.refreshActive();
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** Un bottone spento è stato toccato: il motivo per cui non si può, come notifica. */
+  protected showReason(text: string) {
+    this.showNotice(text, 'warning');
+  }
+
+  /**
+   * Una notifica in alto a destra: autore (di solito l'eroe attivo, oppure il Maligno o il gioco), titolo (la categoria, dall'icona), icona e testo.
+   * Sparisce da sola quando la sua barra del tempo finisce (`expireToast`).
+   */
+  private showNotice(text: string, icon = 'info', by: 'hero' | 'evil' | 'game' = 'hero', markdown = false) {
+    const toast: Toast = { id: ++this.toastId, icon, title: noticeTitle(icon), author: this.noticeAuthor(by), text, ...(markdown ? { markdown } : {}) };
+    this.toasts.update((list) => [...list, toast].slice(-4));
+  }
+
+  /** Chi firma la notifica. */
+  private noticeAuthor(by: 'hero' | 'evil' | 'game'): ToastAuthor {
+    if (by === 'evil') return { name: tr('Maligno'), portrait: 'characters/evil-token.webp' };
+    const hero = by === 'hero' ? this.state.pieces.find((p) => p.id === this.state.activeId && p.team === 'hero') : undefined;
+    return hero ? { name: hero.name, portrait: hero.portrait } : { name: tr('Gioco') };
+  }
+
+  /** La barra del tempo di una notifica è finita: parte la dissolvenza, poi sparisce. */
+  protected expireToast(id: number) {
+    this.toasts.update((list) => list.map((x) => (x.id === id ? { ...x, leaving: true } : x)));
+    const timer = setTimeout(() => {
+      this.toastTimers.delete(timer);
+      this.toasts.update((list) => list.filter((x) => x.id !== id));
+    }, 260);
+    this.toastTimers.add(timer);
+  }
+
+  /** L'icona della notifica per un segnalino toccato. */
+  private markerIcon(m: Marker): string {
+    if (m.type === 'item') return this.state.items.get(m.itemId)?.icon ?? 'inventory_2';
+    return { glyph: 'brightness_empty', potion: 'tokens/potion', coins: 'tokens/gold_pile', key: 'tokens/little_key', rune: 'tokens/rune_key', chest: 'inventory_2', stairs: 'stairs', encounter: 'lightning_stand' }[m.type];
+  }
+
+  /** Clic in modalità "gioco": si muove la pedina (porte e scrigni si usano dal bottone contestuale). */
+  private playClick(p: Point) {
+    if (this.evilBusy()) return; // gioca il Maligno
+    const c = this.toCells(p);
+    if (this.evilMode) {
+      const tool = this.areaLabelView.hitTool({ x: c.x * CELL_SIZE, y: c.y * CELL_SIZE }, 6 / this.zoom);
+      if (tool) {
+        this.useAreaTool(tool.id, tool.tool);
+        return;
+      }
+      if (this.evilPick) {
+        this.pickClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // si sta scegliendo una miniatura: sono evidenziate
+        return;
+      }
+      if (this.evilTrap) {
+        this.trapClick(c, { x: Math.floor(c.x), y: Math.floor(c.y) }); // si sta armando una trappola: i bersagli evidenziati sono suoi
+        return;
+      }
+      if (this.evilSummon) {
+        void this.summonClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // si sta piazzando un'Evocazione: le caselle evidenziate sono sue
+        return;
+      }
+      if (this.evilSel) {
+        void this.evilActivationClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // un mostro è in attivazione: le caselle sono sue
+        return;
+      }
+    }
+    const cell = { x: Math.floor(c.x), y: Math.floor(c.y) };
+    if (this.state.setup) {
+      this.placementClick(cell); // preparazione: si sceglie la casella di partenza
+      return;
+    }
+    if (this.familiarMove()) {
+      this.familiarClick(cell); // lo spostamento di un famiglio
+      return;
+    }
+    if (this.telekinesis()) {
+      void this.telekinesisClick(cell); // Telecinesi: si sceglie il modello e dove spostarlo
+      return;
+    }
+    if (this.knockback()) {
+      this.chooseKnockback(cell); // Contraccolpo: si sceglie dove spostare il bersaglio
+      return;
+    }
+    if (this.returnMode()) {
+      this.returnClick(cell);
+      return;
+    }
+    this.pieces?.click(cell);
+  }
+
+  // --- Inizio della partita (state/setup.ts) ---
+
+  /** Mette da parte gli eroi e apre la preparazione (prima che nasca la grafica delle pedine). */
+  private setUpAdventure() {
+    const s = this.state;
+    this.pendingHeroes = s.pieces.map((piece, index) => ({ piece, index })).filter((x) => x.piece.team === 'hero');
+    this.heroSlots.set(this.pendingHeroes.length);
+    for (const { piece } of this.pendingHeroes) s.pieces.splice(s.pieces.indexOf(piece), 1);
+    s.activeId = null;
+    s.setup = startSetup(s);
+    this.settingUp.set(true);
+    this.barsIn.set(false);
+  }
+
+  /** Mostra il passo di preparazione in corso: una dialog di lettura oppure la scelta delle caselle. */
+  private nextSetupStep() {
+    const s = this.state;
+    const setup = s.setup;
+    if (!setup) return;
+    const title = s.title ?? tr('Avventura');
+    if (setup.step === 'intro') this.adventureDialog.set({ kicker: tr('Introduzione'), title, text: s.intro ?? '', action: tr('Ho letto'), dismissible: false });
+    else if (setup.step === 'objective') this.adventureDialog.set({ kicker: tr('Obiettivo'), title, text: objectiveText(s), action: tr('Ho letto'), dismissible: false });
+    else if (setup.step === 'rules') this.adventureDialog.set({ kicker: tr('Regole speciali'), title, text: s.rules ?? '', action: tr('Ho letto'), dismissible: false, ...this.rulesPortrait() });
+    else this.beginPlacement();
+  }
+
+  /** Scegliere dei dadi da ripetere (Mira, Schivata): si aspetta la scelta (le posizioni dei dadi, o null se si rinuncia). */
+  protected readonly dicePickView = signal<DicePickView | null>(null);
+  private dicePickResolve: ((picked: number[] | null) => void) | null = null;
+  private pickDice(view: DicePickView): Promise<number[] | null> {
+    return new Promise((resolve) => {
+      this.dicePickResolve = resolve;
+      this.dicePickView.set(view);
+    });
+  }
+  protected onDicePicked(picked: number[] | null) {
+    this.dicePickView.set(null);
+    const resolve = this.dicePickResolve;
+    this.dicePickResolve = null;
+    resolve?.(picked);
+  }
+
+  /** Una domanda con dei bottoni (Vigilanza...): si aspetta la scelta. */
+  protected readonly choiceView = signal<ChoiceView | null>(null);
+  private choiceResolve: ((id: string) => void) | null = null;
+  private askChoice(view: ChoiceView): Promise<string> {
+    return new Promise((resolve) => {
+      this.choiceResolve = resolve;
+      this.choiceView.set(view);
+    });
+  }
+  protected onChoice(id: string) {
+    this.choiceView.set(null);
+    const resolve = this.choiceResolve;
+    this.choiceResolve = null;
+    resolve?.(id);
+  }
+
+  /** Il tasto della dialog: durante la preparazione conferma la lettura (e passa al passo dopo), altrimenti chiude. */
+  protected onAdventureDialog() {
+    if (this.eventResolve) {
+      // Un messaggio di evento: chiude e lascia passare al prossimo della coda.
+      const resolve = this.eventResolve;
+      this.eventResolve = null;
+      this.adventureDialog.set(null);
+      resolve();
+      return;
+    }
+    const setup = this.state.setup;
+    this.adventureDialog.set(null);
+    if (!setup) return;
+    confirmReading(this.state, SETUP_PLAYERS);
+    this.nextSetupStep();
+  }
+
+  /** La carta che accompagna le regole speciali (l'immagine scelta nell'avventura, se ha un ritratto a figura intera). */
+  private rulesPortrait(): { portrait?: { src: string; name: string } } {
+    const img = this.state.rulesImage ? tokenImage(this.state.rulesImage) : undefined;
+    const src = img ? tokenPortraitUrl(img) : null;
+    return img && src ? { portrait: { src, name: img.name } } : {};
+  }
+
+  /** Il tasto Obiettivo in alto: rilegge il testo dell'obiettivo in qualunque momento. */
+  protected showObjective() {
+    if (this.adventureDialog() || !this.state.objective) return;
+    const rules = this.state.rules?.trim();
+    this.adventureDialog.set({ kicker: tr('Obiettivo'), title: this.state.title ?? tr('Avventura'), text: objectiveText(this.state) + (rules ? `\n\n### ${tr('Regole speciali')}\n\n${rules}` : ''), action: tr('Chiudi'), dismissible: true, ...(rules ? this.rulesPortrait() : {}) }); // l'obiettivo e, sotto, le regole speciali
+  }
+
+  /** Le caselle di partenza si illuminano e la camera si porta lì; gli eroi scelgono uno alla volta. */
+  private beginPlacement() {
+    this.pieces?.setEnabled(false); // niente area di movimento finché gli eroi non sono in campo
+    const cells = startCells(this.state, this.board!);
+    this.drawStartCells(cells);
+    const next = this.pendingHeroes[0];
+    if (!next || !cells.length) {
+      this.finishSetup();
+      return;
+    }
+    this.setupPrompt.set(tr('Scegli la casella di partenza di {name}', { name: next.piece.name }));
+    const app = this.app;
+    if (app) {
+      const cx = cells.reduce((a, c) => a + c.x + 0.5, 0) / cells.length;
+      const cy = cells.reduce((a, c) => a + c.y + 0.5, 0) / cells.length;
+      this.camTween = {
+        fromZoom: this.zoom,
+        toZoom: Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, CAMERA_FOCUS_ZOOM)),
+        from: { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom },
+        to: { x: cx * CELL_SIZE, y: cy * CELL_SIZE },
+        elapsed: 0,
+      };
+    }
+  }
+
+  /** Le caselle fra cui scegliere: un cerchio giallo a trattini, senza riempimento, che lampeggia piano (`tickStartLayer`). */
+  private drawStartCells(cells: Cell[]) {
+    const g = this.startLayer;
+    if (!g) return;
+    g.clear();
+    const m = START_MARK;
+    const r = m.radius * CELL_SIZE;
+    const step = (Math.PI * 2) / m.dashes;
+    for (const c of cells) {
+      const cx = (c.x + 0.5) * CELL_SIZE;
+      const cy = (c.y + 0.5) * CELL_SIZE;
+      for (let i = 0; i < m.dashes; i++) {
+        const a = i * step;
+        g.moveTo(cx + r * Math.cos(a), cy + r * Math.sin(a));
+        g.arc(cx, cy, r, a, a + step * m.dashFill);
+      }
+    }
+    if (cells.length) g.stroke({ width: m.line, color: theme.color.accentReach, cap: 'round' });
+  }
+
+  /** Fa lampeggiare di rosso le caselle di un attacco ad area per un paio di secondi, e aspetta la fine. */
+  private async flashCells(cells: Cell[]) {
+    const g = this.warnLayer;
+    if (!g || !cells.length) return;
+    g.clear();
+    for (const c of cells) g.rect(c.x * CELL_SIZE + 1, c.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
+    g.fill({ color: theme.color.danger });
+    this.warnMs = AREA_WARNING.ms;
+    await this.waitUntil(() => this.warnMs <= 0, AREA_WARNING.ms + 500);
+    g.clear();
+    this.warnMs = 0;
+  }
+
+  /** L'onda del Soffio: le caselle si accendono di rosso una fila dopo l'altra, dalla casella di partenza alla fila più larga. */
+  private async waveCells(cells: Cell[], breath: Breath) {
+    const g = this.warnLayer;
+    if (!g || !cells.length) return;
+    const along = (c: Cell) => ({ N: breath.start.y - c.y, S: c.y - breath.start.y, W: breath.start.x - c.x, E: c.x - breath.start.x })[breath.dir];
+    const rows = cells.map((cell) => ({ cell, k: Math.max(0, along(cell)) }));
+    const last = Math.max(...rows.map((r) => r.k));
+    this.warnMs = 0;
+    this.wave = { rows, t: 0, total: this.reduceMotion ? AREA_WAVE.fadeMs : last * AREA_WAVE.rowMs + AREA_WAVE.fadeMs };
+    await this.waitUntil(() => !this.wave, this.wave.total + 500);
+    this.wave = null;
+    g.clear();
+  }
+
+  private tickWarnLayer(dtMs: number) {
+    const g = this.warnLayer;
+    if (g && this.wave) {
+      const w = this.wave;
+      w.t += dtMs;
+      g.clear();
+      g.alpha = 1;
+      for (const r of w.rows) {
+        const age = w.t - (this.reduceMotion ? 0 : r.k * AREA_WAVE.rowMs);
+        if (age < 0 || age > AREA_WAVE.fadeMs) continue;
+        g.rect(r.cell.x * CELL_SIZE + 1, r.cell.y * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2).fill({ color: theme.color.danger, alpha: AREA_WAVE.alpha * (1 - age / AREA_WAVE.fadeMs) });
+      }
+      if (w.t >= w.total) this.wave = null;
+      return;
+    }
+    if (!g || this.warnMs <= 0) return;
+    this.warnMs -= dtMs;
+    const wave = this.reduceMotion ? 1 : (1 - Math.cos(((AREA_WARNING.ms - this.warnMs) / AREA_WARNING.pulseMs) * Math.PI * 2)) / 2;
+    g.alpha = AREA_WARNING.alphaMin + (AREA_WARNING.alphaMax - AREA_WARNING.alphaMin) * wave;
+  }
+
+  private startPulse = 0;
+  private readonly reduceMotion = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Il lampeggio lento dei cerchi di partenza. */
+  private tickStartLayer(dtMs: number) {
+    const g = this.startLayer;
+    if (!g || !this.state?.setup) return;
+    this.startPulse = (this.startPulse + dtMs) % START_MARK.pulseMs;
+    const wave = this.reduceMotion ? 1 : (1 - Math.cos((this.startPulse / START_MARK.pulseMs) * Math.PI * 2)) / 2;
+    g.alpha = START_MARK.alphaMin + (START_MARK.alphaMax - START_MARK.alphaMin) * wave;
+  }
+
+  /** Un clic sulla mappa durante la scelta: l'eroe di turno parte da quella casella (o da una libera vicina se è già presa). */
+  private placementClick(cell: Cell) {
+    const s = this.state;
+    const board = this.board;
+    const next = this.pendingHeroes[0];
+    if (s.setup?.step !== 'placement' || !board || !next) return;
+    if (!startCells(s, board).some((c) => c.x === cell.x && c.y === cell.y)) {
+      this.showNotice(tr('Scegli una delle caselle evidenziate'), 'warning', 'game');
+      return;
+    }
+    const final = placeHero(s, board, next.piece, cell);
+    if (!final) {
+      this.showNotice(tr('Non c’è una casella libera'), 'warning', 'game');
+      return;
+    }
+    this.pendingHeroes.shift();
+    s.pieces.splice(Math.min(next.index, s.pieces.length), 0, next.piece);
+    this.pieces?.addPiece(next.piece);
+    this.showHud(null); // la barra degli eroi si riempie man mano che entrano
+    if (final.x !== cell.x || final.y !== cell.y) this.showNotice(tr('La casella era occupata: {name} parte lì accanto', { name: next.piece.name }), 'info', 'game');
+    this.drawStartCells(startCells(s, board));
+    const after = this.pendingHeroes[0];
+    if (after) this.setupPrompt.set(tr('Scegli la casella di partenza di {name}', { name: after.piece.name }));
+    else this.finishSetup();
+  }
+
+  /**
+   * Provvisorio, `/evil/<map>`: il turno degli eroi è automatico. Passano tutti, uno dopo l'altro, senza muoversi e senza la fase dei famigli
+   * (che quindi restano dov'erano); dopo l'ultimo comincia il turno del Maligno.
+   */
+  private async evilHeroesPass() {
+    while (!this.destroyed && this.state.status === 'playing' && this.state.phase === 'heroes') {
+      const r = this.pieces?.passTurn();
+      if (!r) return;
+      if (r.evil) await this.beginEvilTurn();
+    }
+  }
+
+  /** Comincia il turno del Maligno che gioca: riceve l'Odio e pesca (come lo script), la dialog lo dice e si chiude solo con OK. Poi tocca a lui. */
+  private async beginEvilTurn() {
+    const from = this.state.evil.hatred;
+    const up = evilUpkeep(this.state, false); // la mano può restare oltre il limite: scarta il Maligno, senza Odio
+    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'evil');
+    await new Promise<void>((resolve) => {
+      this.evilTurnDone = resolve;
+      this.evilTurnDialog.set({ from, to: this.state.evil.hatred });
+    });
+    this.evilStep.set('hand'); // primo passo: scarto fino al limite, consumo e carte a inizio turno
+    this.hatredAnimated.set(false); // la dialog ha già mostrato il conteggio: il footer si aggiorna di colpo
+    this.showHud(this.pieces?.active ?? null); // il footer mostra l'Odio nuovo e la mano
+    setTimeout(() => this.hatredAnimated.set(true), 150);
+    const excess = this.handExcess();
+    if (excess > 0) this.showNotice(tr('Hai più di {max} carte: scartane {n}', { max: EVIL_HAND_MAX, n: excess }), 'warning', 'evil');
+  }
+
+  /** Quante carte ha il Maligno oltre il limite della mano. */
+  private handExcess(): number {
+    return Math.max(0, this.state.evil.hand.length - EVIL_HAND_MAX);
+  }
+
+  protected closeEvilTurnDialog() {
+    this.evilTurnDialog.set(null);
+    this.evilTurnDone?.();
+    this.evilTurnDone = null;
+  }
+
+  /**
+   * Il tasto del footer del Maligno (`/evil/<map>`): "Avanti" nei primi due passi del turno (Mano, poi Evocazione; dalla Mano non si esce con più carte del limite), "Passa" nell'ultimo
+   * (Attivazione): finisce il turno, comincia il round dopo e gli eroi passano da soli. Entrando nell'Attivazione, con "Mostri automatici" acceso i mostri giocano da soli.
+   */
+  protected async evilPass() {
+    if (!this.evilMode || this.state.phase !== 'evil' || this.state.status !== 'playing' || this.commandsBusy() || this.evilTurnDialog() || this.evilAreaInfo()) return;
+    const step = this.evilStep();
+    if (!step) return; // non è (ancora) il suo turno: la dialog "Inizia il tuo turno" è ancora aperta
+    if (step === 'hand' || step === 'summon') {
+      const excess = this.handExcess();
+      if (step === 'hand' && excess > 0) {
+        this.showNotice(tr('Hai più di {max} carte: scartane {n}', { max: EVIL_HAND_MAX, n: excess }), 'warning', 'evil');
+        return;
+      }
+      const next = step === 'hand' ? 'summon' : 'activate';
+      this.evilStep.set(next);
+      this.showHud(this.pieces?.active ?? null);
+      if (next === 'activate' && this.monstersAuto()) await this.autoMonstersTurn();
+      return;
+    }
+    if (this.evilSel) this.endEvilActivation(); // un mostro in attivazione: la chiude
+    this.evilStep.set(null);
+    this.showHud(this.pieces?.active ?? null);
+    this.evilBusy.set(true);
+    try {
+      const energyBefore = new Map(this.state.pieces.map((p) => [p.id, p.energy] as const));
+        const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
+      const revived = endEvilTurn(this.state);
+      snapshotSeen(this.state);
+      for (const h of this.state.pieces) {
+        const gained = h.energy - (energyBefore.get(h.id) ?? h.energy);
+        if (h.team === 'hero' && gained > 0 && ruleAmount(this.state, h, 'energyAtStart') > 0) this.showNotice(tr('{name} recupera {energy:{n}}', { name: h.name, n: gained }), 'water_drop', 'hero');
+          const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
+          if (h.team === 'hero' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'hero');
+      }
+      await this.flushEvents(); // messaggi e avvisi degli eventi di fine turno
+      this.pieces?.roundStarted();
+      if (revived.length) await this.presentSpawned(revived, tr('Ritorno in vita'), (revived.length === 1 ? tr('{join} torna in vita.', { join: revived[0].name }) : tr('{join} tornano in vita.', { join: revived.map((m) => m.name).join(', ') })));
+      // Gli stati degli eroi si risolvono a inizio round (uno alla volta, con i dadi competenza), come con lo script.
+      for (const hero of this.state.pieces.filter((p) => p.team === 'hero' && !p.city)) if (!this.destroyed) await this.resolveTurnStart(hero);
+    } finally {
+      this.evilBusy.set(false);
+    }
+    this.showHud(this.pieces?.active ?? null);
+    await this.evilHeroesPass();
+  }
+
+  // --- La mano del Maligno (`/evil/<map>`): consumo, scarto e carte da giocare nel passo giusto ---
+
+  /** Il passo del turno del Maligno che gioca (`null` = non è il suo turno). */
+  protected readonly evilStep = signal<EvilStep | null>(null);
+  /** Il contatore dell'Odio nel footer scorre fino al valore nuovo; falso solo a inizio turno. */
+  protected readonly hatredAnimated = signal(true);
+  protected readonly handExcessN = signal(0);
+  /** Il round in cui ha già giocato un'Evocazione (una sola per round). */
+  private summonedRound = -1;
+  protected readonly stepName = computed(() => {
+    const step = this.evilStep();
+    return step === 'hand' ? tr('Mano') : step === 'summon' ? tr('Evocazione') : step === 'activate' ? tr('Attivazione') : '';
+  });
+  protected readonly passLabel = computed(() => (this.evilStep() === 'hand' || this.evilStep() === 'summon' ? tr('Avanti') : ''));
+
+  /** Le carte della mano come le mostra la mano: costo di adesso, valore e, se si possono giocare in questo passo, il tasto Gioca (spento col motivo se adesso no). */
+  private refreshHand() {
+    const s = this.state;
+    const step = this.evilStep();
+    this.handExcessN.set(this.handExcess());
+    this.handCards.set(s.evil.hand.flatMap((id) => {
+      const c = cardOf(s, id);
+      return c ? [{ id, name: c.name, kind: c.kind, text: c.text, cost: this.playCost(c), value: c.value, play: this.handPlay(c, step) }] : [];
+    }));
+    this.drawTraps();
+  }
+
+  /** Quanto Odio costa giocare la carta adesso: le Trappole costano meno con Signore delle trappole. */
+  private playCost(c: EvilCardDef): number {
+    return c.kind === 'trap' ? trapCost(this.state, c) : cardCost(this.state, c);
+  }
+
+  /** Una carta Trappola da armare su una casella, una porta o uno scrigno (non Seduzione oscura, che si gioca a inizio turno). */
+  private isArmable(c: EvilCardDef): boolean {
+    return c.kind === 'trap' && !!c.target && c.target !== 'hero';
+  }
+
+  private handPlay(c: EvilCardDef, step: EvilStep | null): { enabled: boolean; reason?: string } | null {
+    const s = this.state;
+    const atStart = c.kind === 'power' || c.id === 'gust' || c.id === 'dark-allure'; // i Poteri e le carte "all'inizio del tuo turno"
+    if (!(step === 'hand' ? atStart : step === 'summon' ? c.kind === 'summon' || this.isArmable(c) : false)) return null;
+    if (this.playCost(c) > s.evil.hatred) return { enabled: false, reason: tr('Odio insufficiente') };
+    if (this.isArmable(c) && trapLimitReached(s, c)) return { enabled: false, reason: tr('Troppe trappole armate di questo tipo') };
+    if ((c.kind === 'power' && s.evil.inPlay.includes(c.id)) || (c.id === 'gust' && s.evil.gust)) return { enabled: false, reason: tr('Già in gioco') };
+    if (c.kind === 'summon' && this.summonedRound === s.round) return { enabled: false, reason: tr('Una sola Evocazione per round') };
+    return { enabled: true };
+  }
+
+  /** Il +X di una carta: consumarla (passo Mano) dà il suo Odio. */
+  protected consumeAt(index: number) {
+    if (this.evilStep() !== 'hand' || this.commandsBusy()) return;
+    const name = cardOf(this.state, this.state.evil.hand[index])?.name ?? '';
+    const gained = consumeCard(this.state, index);
+    if (gained === null) return;
+    this.showNotice(tr('{name} consumata: +{n} Odio', { name, n: gained }), 'skull', 'evil');
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** "Scarta" con la mano oltre il limite: la carta va negli scarti, senza Odio. */
+  protected discardAt(index: number) {
+    if (this.commandsBusy() || !discardCard(this.state, index)) return;
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** "Gioca" su una carta: un Potere, Raffica di vento o Seduzione oscura nel passo Mano; un'Evocazione (una per round) nel passo Evocazione. */
+  protected async playAt(index: number) {
+    const s = this.state;
+    const c = cardOf(s, s.evil.hand[index]);
+    const step = this.evilStep();
+    if (!c || !this.board || this.commandsBusy() || !this.handPlay(c, step)?.enabled) return;
+    if (c.kind === 'summon') {
+      this.startSummon(c); // i mostri si piazzano a mano sulla mappa
+      return;
+    }
+    if (this.isArmable(c)) {
+      this.startTrap(c); // una trappola si arma in segreto sul bersaglio scelto
+      return;
+    }
+    if (c.id === 'dark-allure') {
+      await this.seductionManual(); // sceglie lui l'eroe, toccandolo (sulla mappa o sul suo tab)
+      this.showHud(this.pieces?.active ?? null);
+      return;
+    }
+    await this.evilScripted(async () => {
+      if (c.kind === 'power') {
+        const power = playPowerAt(s, index);
+        if (power) await this.announce(power.name, catalogText(power.text.replace(/^Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te\.\s*/, '')));
+      } else if (c.id === 'gust') {
+        if (!s.evil.gust && playEvent(s, 'gust')) {
+          s.evil.gust = true;
+          await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno gli eroi non vedono oltre 5 spazi.'), 'warning');
+        }
+      }
+    });
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  // --- Evocazione a mano: le caselle valide si evidenziano e si tocca dove mettere ogni mostro ---
+
+  /** L'evocazione in corso: la carta, i mostri ancora da piazzare e se la carta è già stata pagata (si paga al primo mostro: senza mostri piazzati si può rinunciare gratis). */
+  private evilSummon: {
+    /** La carta Evocazione (null per l'Orda di Creature, un Potere già in gioco che non si paga) e il titolo della barra. */
+    card: EvilCardDef | null;
+    title: string;
+    queue: { monster: string; enhanced: boolean }[];
+    paid: boolean;
+    /** Solo per l'Orda: le caselle valide per un mostro (accanto a un mostro dell'area), e i nuovi mostri nascono svegli. */
+    anchors?: (def: { size: { w: number; h: number } }) => Cell[];
+    /** Chi aspetta la fine del piazzamento. */
+    done?: () => void;
+  } | null = null;
+  /** Per la barra dell'evocazione: il titolo, quale mostro tocca piazzare e quanti ne restano. */
+  protected readonly evilSummonInfo = signal<{ name: string; next: string; left: number } | null>(null);
+
+  private startSummon(card: EvilCardDef) {
+    if (!this.board) return;
+    const queue = summonQueue(this.state, card);
+    if (!queue.length) {
+      this.showNotice(tr('Nessuna miniatura rimasta'), 'warning', 'evil');
+      return;
+    }
+    if (!summonCells(this.state, this.board).length) {
+      this.showNotice(tr('Nessun posto per evocare'), 'warning', 'evil');
+      return;
+    }
+    this.panel.set(null);
+    this.monsterPanel.set(null);
+    this.evilSummon = { card, title: tr('Evoca {name}', { name: card.name }), queue, paid: false };
+    this.refreshSummon();
+  }
+
+  /** Orda di Creature: il Maligno ha scelto il tipo; piazza 2 mostri (meno se le miniature non bastano) accanto a un mostro dell'area rivelata. Finisce quando ha piazzato tutto o con "Termina". */
+  private startHorde(monster: string, inArea: Piece[]): Promise<void> {
+    const queue = Array.from({ length: Math.min(2, miniaturesLeft(this.state, monster, false)) }, () => ({ monster, enhanced: false }));
+    if (!queue.length || !this.board) return Promise.resolve();
+    return new Promise<void>((resolve) => {
+      this.panel.set(null);
+      this.monsterPanel.set(null);
+      this.evilSummon = { card: null, title: tr('Orda di Creature'), queue, paid: true, anchors: (def) => hordeAnchors(this.state, this.board!, def.size, inArea.filter((m) => this.state.pieces.includes(m))), done: resolve };
+      this.refreshSummon();
+    });
+  }
+
+  /** Le caselle dove si può ancora piazzare (ricalcolate: i mostri messi cambiano chi vede cosa e cosa è occupato) e la barra; senza più mostri o caselle, l'evocazione finisce. */
+  private refreshSummon() {
+    const sel = this.evilSummon;
+    if (!sel || !this.board) return;
+    const nextDef = sel.queue[0] ? this.state.monsters.get(sel.queue[0].monster) : undefined;
+    const free = sel.anchors ? (nextDef ? sel.anchors(nextDef) : []) : summonCells(this.state, this.board);
+    if (!sel.queue.length || !free.length) {
+      this.endSummon();
+      return;
+    }
+    this.pieces?.showMonsterReach(free);
+    const next = sel.queue[0];
+    const name = nextDef?.name ?? next.monster;
+    this.evilSummonInfo.set({ name: sel.title, next: next.enhanced ? tr('{name} (potenziato)', { name }) : name, left: sel.queue.length });
+  }
+
+  /** Una casella toccata durante l'evocazione: il prossimo mostro si mette lì (con tutta la sua sagoma, la casella è quella in alto a sinistra) se tutte le sue caselle sono valide. */
+  private async summonClick(cell: Cell) {
+    const sel = this.evilSummon;
+    if (!sel || !this.board || this.evilBusy()) return;
+    const next = sel.queue[0];
+    const def = this.state.monsters.get(next.monster);
+    if (!def) return;
+    const valid = sel.anchors
+      ? sel.anchors(def).some((a) => a.x === cell.x && a.y === cell.y)
+      : (() => { const free = new Set(summonCells(this.state, this.board!).map(cellKey)); return footprint({ cell, size: def.size }).every((c) => free.has(cellKey(c))); })();
+    if (!valid) {
+      this.showNotice(tr('Qui non si può evocare'), 'warning', 'evil');
+      return;
+    }
+    if (!sel.paid && sel.card) {
+      if (!paySummon(this.state, sel.card)) {
+        this.showNotice(tr('Odio insufficiente'), 'warning', 'evil');
+        this.endSummon();
+        return;
+      }
+      sel.paid = true;
+      this.showHud(this.pieces?.active ?? null); // l'Odio speso e la carta che lascia la mano
+      await this.announce(sel.card.name, tr('Evoca: {names}', { names: sel.queue.map((q) => this.state.monsters.get(q.monster)?.name ?? q.monster).join(', ') }));
+    }
+    sel.queue.shift();
+    const piece = spawnMonster(this.state, next.monster, next.enhanced, cell);
+    if (sel.anchors) piece.awake = true; // l'Orda arriva in un'area già rivelata: i mostri sono svegli
+    this.pieces?.showMonsterReach(null);
+    await this.evilScripted(async () => {
+      const textures = await loadPortraits([piece.portrait]);
+      this.exploration.monsters.add(piece.id);
+      this.syncMonsterVisibility(true);
+      this.pieces?.addPiece(piece, textures);
+      await this.pieces?.enter(piece);
+    });
+    this.refreshSummon();
+  }
+
+  // --- Trappole armate a mano: si sceglie il bersaglio (casella, porta o scrigno) e la carta resta coperta finché un eroe non la fa scattare ---
+
+  private readonly trapLayer = new Container();
+  private trapKey = '';
+  /** La trappola che si sta armando e i bersagli validi. */
+  private evilTrap: { card: EvilCardDef; spots: TrapSpot[] } | null = null;
+  /** Per la barra: cosa si sta piazzando e cosa toccare. */
+  protected readonly evilTrapInfo = signal<string | null>(null);
+
+  private startTrap(card: EvilCardDef) {
+    if (!this.board) return;
+    const spots = trapSpots(this.state, this.board, card);
+    if (!spots.length) {
+      this.showNotice(tr('Nessun bersaglio valido'), 'warning', 'evil');
+      return;
+    }
+    this.panel.set(null);
+    this.monsterPanel.set(null);
+    this.evilTrap = { card, spots };
+    const what = card.target === 'door' ? tr('Piazza {name}: tocca una porta evidenziata', { name: card.name }) : card.target === 'chest' ? tr('Piazza {name}: tocca uno scrigno evidenziato', { name: card.name }) : tr('Piazza {name}: tocca una casella evidenziata', { name: card.name });
+    this.evilTrapInfo.set(what);
+    this.pieces?.showMonsterReach(spots.flatMap((s) => this.spotCells(s)));
+  }
+
+  /** Le caselle da evidenziare per un bersaglio: la casella o lo scrigno, o i due lati di una porta. */
+  private spotCells(spot: TrapSpot): Cell[] {
+    if (spot.kind !== 'door') return [{ x: spot.x, y: spot.y }];
+    const rd = this.board?.doors.find((d) => this.state.doors.indexOf(d.door) === spot.index);
+    return rd && this.board ? this.board.doorSideCells(rd).filter((c) => this.board!.isWalkable(c)) : [];
+  }
+
+  /** Un tocco mentre si arma una trappola: sul bersaglio (la casella, lo scrigno, una casella accanto alla porta) la arma; altrove dice che non si può. */
+  private trapClick(point: { x: number; y: number }, cell: Cell) {
+    const sel = this.evilTrap;
+    if (!sel || !this.board) return;
+    let spot: TrapSpot | undefined;
+    if (sel.card.target === 'door') {
+      // La porta valida più vicina al tocco fra quelle che hanno la casella toccata da un lato.
+      const dist = (rd: { horizontal: boolean; line: number; from: number; to: number }) => {
+        const along = rd.horizontal ? point.x : point.y;
+        const across = rd.horizontal ? point.y : point.x;
+        return Math.hypot(across - rd.line, Math.max(rd.from - along, 0, along - rd.to));
+      };
+      const found = sel.spots
+        .filter((s): s is Extract<TrapSpot, { kind: 'door' }> => s.kind === 'door')
+        .flatMap((s) => { const rd = this.board!.doors.find((d) => this.state.doors.indexOf(d.door) === s.index); return rd && this.board!.doorSideCells(rd).some((c) => c.x === cell.x && c.y === cell.y) ? [{ s, d: dist(rd) }] : []; })
+        .sort((a, b) => a.d - b.d)[0];
+      spot = found?.s;
+    } else {
+      spot = sel.spots.find((s) => s.kind !== 'door' && s.x === cell.x && s.y === cell.y);
+    }
+    if (!spot) {
+      this.showNotice(tr('Qui non si può armare'), 'warning', 'evil');
+      return;
+    }
+    const armed = armTrapAt(this.state, sel.card, spot);
+    this.endTrap();
+    if (!armed) {
+      this.showNotice(tr('Odio insufficiente'), 'warning', 'evil');
+      return;
+    }
+    this.showNotice(tr('Trappola armata: {name}', { name: sel.card.name }), 'warning', 'evil'); // solo il Maligno lo sa: i giocatori non vedono niente
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  /** "Annulla" (o fatto): niente più bersagli da scegliere. */
+  protected endTrap() {
+    this.evilTrap = null;
+    this.evilTrapInfo.set(null);
+    this.pieces?.showMonsterReach(null);
+  }
+
+  /** Le trappole armate, solo per il Maligno: un segnale rosso sul bersaglio (casella o scrigno: in alto a destra; porta: a metà). Si ridisegna solo quando cambiano. */
+  private drawTraps() {
+    if (!this.evilMode || !this.board) return;
+    const traps = this.state.evil.traps;
+    const key = JSON.stringify(traps);
+    if (key === this.trapKey) return;
+    this.trapKey = key;
+    for (const child of this.trapLayer.removeChildren()) child.destroy({ children: true });
+    for (const t of traps) {
+      let at: { x: number; y: number } | null = null;
+      if (t.at.kind === 'door') {
+        const door = this.state.doors[t.at.index];
+        const rd = this.board.doors.find((d) => d.door === door);
+        if (rd) at = rd.horizontal ? { x: ((rd.from + rd.to) / 2) * CELL_SIZE, y: rd.line * CELL_SIZE } : { x: rd.line * CELL_SIZE, y: ((rd.from + rd.to) / 2) * CELL_SIZE };
+      } else {
+        at = { x: (t.at.x + 0.78) * CELL_SIZE, y: (t.at.y + 0.22) * CELL_SIZE };
+      }
+      if (!at) continue;
+      const badge = new Container();
+      badge.addChild(new Graphics().circle(0, 0, 11).fill(theme.color.token.fill).stroke({ width: 1.5, color: theme.color.danger }), createFilledIcon('warning', 14, theme.color.danger));
+      badge.position.set(at.x, at.y);
+      this.trapLayer.addChild(badge);
+    }
+  }
+
+  // --- Scelte sulla mappa: il Maligno tocca una miniatura evidenziata (Seduzione oscura, Abile comandante) o dalla barra degli eroi ---
+
+  private evilPick: { candidates: Piece[]; resolve: (piece: Piece | null) => void } | null = null;
+  protected readonly evilPickInfo = signal<{ prompt: string; cancellable: boolean } | null>(null);
+
+  /** Evidenzia le miniature fra cui scegliere e aspetta il tocco (sulla mappa o, per gli eroi, sul loro tab). Con `cancellable` c'è "Annulla" e può tornare null. */
+  private pickPiece(prompt: string, candidates: Piece[], cancellable: boolean): Promise<Piece | null> {
+    return new Promise((resolve) => {
+      this.panel.set(null);
+      this.monsterPanel.set(null);
+      this.evilPick = { candidates, resolve };
+      this.evilPickInfo.set({ prompt, cancellable });
+      this.pieces?.showMonsterReach(candidates.flatMap((p) => footprint(p)));
+    });
+  }
+
+  private finishPick(piece: Piece | null) {
+    const sel = this.evilPick;
+    if (!sel) return;
+    this.evilPick = null;
+    this.evilPickInfo.set(null);
+    this.pieces?.showMonsterReach(null);
+    sel.resolve(piece);
+  }
+
+  protected cancelPick() {
+    this.finishPick(null);
+  }
+
+  private pickClick(cell: Cell) {
+    const hit = this.evilPick?.candidates.find((p) => footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
+    if (hit) this.finishPick(hit);
+    else this.showNotice(tr('Tocca una miniatura evidenziata'), 'warning', 'evil');
+  }
+
+  /**
+   * Seduzione oscura a mano: il Maligno sceglie l'eroe che deve tirare un dado competenza (solo fra quelli che hanno qualcuno da colpire: altrimenti la carta sarebbe sprecata);
+   * se non esce una faccia vuota sceglie anche chi colpisce, e l'attacco (sotto il controllo del Maligno) usa l'arma con più dadi. Annullando prima della scelta, la carta resta in mano.
+   */
+  private async seductionManual() {
+    const s = this.state;
+    const board = this.board;
+    const card = cardOf(s, 'dark-allure');
+    const heroes = s.pieces.filter((p) => p.team === 'hero' && !p.city);
+    if (!card || !board || !inHand(s, card.id) || cardCost(s, card) > s.evil.hatred) return;
+    const optionsOf = (h: Piece, t: Piece) => controlledAttackOptions(s, board, h, t).filter((o) => o.enabled);
+    const candidates = heroes.filter((h) => heroes.some((t) => t !== h && optionsOf(h, t).length));
+    if (!candidates.length) {
+      this.showNotice(tr('Nessun eroe può colpirne un altro'), 'warning', 'evil');
+      return;
+    }
+    const hero = await this.pickPiece(tr('Seduzione oscura: scegli l\'eroe che deve tirare'), candidates, true);
+    if (!hero) return;
+    playEvent(s, card.id);
+    this.showHud(this.pieces?.active ?? null);
+    let hit = false;
+    await this.evilScripted(async () => {
+      await this.announceEvent(tr('Seduzione oscura'), tr('{name} deve tirare un dado competenza.', { name: hero.name }), 'warning');
+      const [face] = await this.proficiencyDice(1);
+      hit = !!face && !isBlank(face);
+      if (!hit) this.showNotice(tr('{name} resiste alla seduzione', { name: hero.name }), 'shield', 'evil');
+    });
+    if (!hit) return;
+    const targets = heroes.filter((t) => t !== hero && optionsOf(hero, t).length);
+    const target = targets.length === 1 ? targets[0] : await this.pickPiece(tr('Seduzione oscura: scegli chi colpisce'), targets, false);
+    if (!target) return;
+    const option = optionsOf(hero, target).sort((a, b) => b.dice.length - a.dice.length)[0];
+    this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: hero.name, name2: target.name }), 'swords', 'evil');
+    await this.evilScripted(async () => this.monsterAttack(hero, target, option));
+  }
+
+  /**
+   * I Poteri che scattano quando gli eroi rivelano un'area, con il Maligno a mano: Abile comandante (sceglie lui quale mostro dell'area diventa potenziato, toccandolo sulla mappa)
+   * e Orda di Creature (un avviso dice cosa fare, sceglie il tipo e poi piazza i 2 mostri accanto a un altro mostro dell'area). La camera inquadra i mostri dell'area.
+   */
+  private async manualAreaPowers(area: string) {
+    const s = this.state;
+    const board = this.board;
+    if (!board) return;
+    const inArea = monstersIn(s, board, area);
+    if (!inArea.length) return;
+    const where = inArea.flatMap((m) => footprint(m));
+    if (s.evil.inPlay.includes('able-commander')) {
+      const options = upgradeOptions(s, inArea);
+      if (options.length) {
+        await this.frameCells(where);
+        const pick = await this.pickPiece(tr('Abile comandante: scegli il mostro da potenziare'), options, false);
+        if (pick) {
+          upgradeMonster(s, pick);
+          this.pieces?.redraw(pick);
+          await this.announce(tr('Abile comandante'), tr('{names} diventa potenziato.', { names: pick.name }));
+        }
+      }
+    }
+    if (s.evil.inPlay.includes('horde')) {
+      const types = HORDE_TYPES.filter((t) => s.monsters.has(t) && miniaturesLeft(s, t, false) > 0);
+      if (types.length) {
+        await this.frameCells(where);
+        const answer = await this.askChoice({
+          title: tr('Orda di Creature'),
+          text: tr('Hai rivelato una nuova area: aggiungi 2 mostri a tua scelta accanto a un altro mostro dell\'area. Quali?'),
+          choices: types.map((t) => ({ id: t, label: s.monsters.get(t)!.name, primary: true })),
+        });
+        await this.startHorde(answer, inArea);
+      }
+    }
+  }
+
+  /** "Termina" (o niente più da piazzare): se almeno un mostro è stato messo, la carta conta come l'Evocazione del round. */
+  protected endSummon() {
+    const sel = this.evilSummon;
+    this.evilSummon = null;
+    this.evilSummonInfo.set(null);
+    this.pieces?.showMonsterReach(null);
+    if (sel?.paid && sel.card) this.summonedRound = this.state.round; // l'Orda non conta come Evocazione del round
+    this.showHud(this.pieces?.active ?? null);
+    sel?.done?.();
+  }
+
+  /** Le aree della mappa nell'ordine dei dati, con quale è quella di partenza. */
+  private areaOrder: { id: string; start: boolean }[] = [];
+
+  /** Provvisorio, `/evil/<map>`: le porte che toccano l'area di partenza si aprono (e le serrature si considerano aperte), così gli eroi hanno strada libera. */
+  private openStartAreaDoors(board: Board) {
+    const start = this.areaOrder.find((a) => a.start)?.id;
+    if (!start) return;
+    board.doors.forEach((rd, index) => {
+      let touches = false;
+      for (let u = rd.from; u < rd.to; u++) {
+        const a = rd.horizontal ? { x: u, y: rd.line - 1 } : { x: rd.line - 1, y: u };
+        const b = rd.horizontal ? { x: u, y: rd.line } : { x: rd.line, y: u };
+        touches ||= board.areaAt(a) === start || board.areaAt(b) === start;
+      }
+      if (!touches) return;
+      if (rd.door.lock) rd.door.unlocked = true;
+      if (!rd.door.open) board.toggleDoor(index);
+    });
+  }
+
+  /** Provvisorio, `/evil/<map>`: le caselle di "Area 1" (la prima area dopo quella di partenza) dove mettere gli eroi, dal centro verso fuori. Vuoto se la mappa non ha aree. */
+  private firstAreaCells(board: Board): Cell[] {
+    const id = this.areaOrder.find((a) => !a.start)?.id;
+    if (!id) return [];
+    const cells = board.walkableCells().filter((c) => board.areaAt(c) === id);
+    if (!cells.length) return [];
+    const cx = cells.reduce((n, c) => n + c.x, 0) / cells.length;
+    const cy = cells.reduce((n, c) => n + c.y, 0) / cells.length;
+    return cells.sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
+  }
+
+  /** `/evil/<map>`: niente introduzione né scelta delle caselle; gli eroi si mettono in "Area 1" (le porte dell'area di partenza sono aperte) e la partita comincia. */
+  private autoPlaceHeroes() {
+    const s = this.state;
+    const board = this.board;
+    if (!board) return;
+    this.openStartAreaDoors(board);
+    const spots = this.firstAreaCells(board);
+    while (this.pendingHeroes.length) {
+      const next = this.pendingHeroes[0];
+      const cells = startCells(s, board);
+      const free = spots.find((c) => !s.pieces.some((p) => p.cell.x === c.x && p.cell.y === c.y));
+      const target = free ?? cells[0];
+      const final = target ? placeHero(s, board, next.piece, target) : null;
+      if (!final) break;
+      this.pendingHeroes.shift();
+      s.pieces.splice(Math.min(next.index, s.pieces.length), 0, next.piece);
+      this.pieces?.addPiece(next.piece);
+    }
+    this.finishSetup();
+    this.syncMonsterVisibility(); // vista del Maligno: tutti i mostri
+  }
+
+  /** Tutti gli eroi sono in campo: la preparazione finisce, si scopre ciò che vedono e comincia il primo turno. */
+  private finishSetup() {
+    const s = this.state;
+    s.setup = null;
+    this.settingUp.set(false);
+    this.setupPrompt.set(null);
+    this.startLayer?.clear();
+    s.activeId = s.pieces.find((p) => p.team === 'hero')?.id ?? null;
+    this.pieces?.setEnabled(true);
+    const revealed = this.rebuildBoard(); // le aree che gli eroi vedono già appena piazzati (anche senza una porta da aprire) risultano rivelate qui
+    snapshotSeen(s); // chi vedeva chi all'inizio del primo round (Colpo a tradimento)
+    this.showHud(this.pieces?.active ?? null); // l'eroe attivo e i suoi valori nella barra
+    // A partita pronta la camera torna alla vista intera, con lo scorrimento di sempre, senza tener conto dell'inquadratura salvata; solo dopo entrano le barre.
+    this.showWholeMap();
+    void this.waitUntil(() => !this.camTween, 5000).then(() => {
+      this.barsIn.set(true);
+      // Le aree viste fin dal piazzamento (l'area di partenza, o una collegata senza porta) si presentano come tutte le altre: la descrizione da leggere e i poteri dei mostri; solo dopo il turno degli eroi (o la sua passata automatica).
+      if (revealed.areas.length) void this.areasRevealed(revealed.areas).then(() => (this.evilMode ? this.evilHeroesPass() : undefined));
+      else if (this.evilMode) void this.evilHeroesPass();
+    });
+    const first = s.pieces.find((p) => p.id === s.activeId);
+    if (first && !this.evilMode) this.showNotice(tr('Tocca a {name}', { name: first.name }), 'autorenew', 'game');
+  }
+
+  /** L'eroe attivo usa la porta `index` (dal bottone contestuale). */
+  private useDoorAt(index: number) {
+    const r = this.pieces?.useDoor(index);
+    if (!r) return;
+    if (r.code === 'opened' || r.code === 'closed' || r.code === 'unlocked' || r.code === 'picked') {
+      this.doorView?.redraw(this.board!, (d) => this.exploration.doors.has(d)); // parte l'animazione dell'anta
+      this.exploreAndNotify(); // aprire una porta può far vedere cose nuove
+      if (r.code === 'unlocked') this.showNotice(tr('Serratura aperta con la chiave'), 'lock_open');
+      else if (r.code === 'picked') this.showNotice(tr('Serratura scassinata ({mov:{cost}})', { cost: r.cost }), 'lock_open');
+      const hero = this.pieces?.active;
+      if (r.trap && hero) void this.resolveTrap(hero, r.trap);
+    } else if (r.code === 'cost') this.showNotice(tr('Servono {mov:{cost}}', { cost: r.cost }), 'warning');
+    else if (r.code === 'blocked') this.showNotice(tr('Una creatura è nel varco: la porta non si può chiudere'), 'warning');
+    else if (r.code === 'needs-key') this.showNotice(tr('Porta chiusa a chiave: serve la chiave giusta'), 'lock');
+    else if (r.code === 'needs-rune') this.showNotice(tr('Serve la chiave runica {color}', { color: RUNE_NAMES[r.color!] }), 'lock');
+    else if (r.code === 'needs-event') this.showNotice(tr('La porta è sigillata: si aprirà quando succederà qualcosa'), 'lock');
+  }
+
+  /** Un mostro ha aperto delle porte lungo la strada: si ridisegnano (parte l'animazione dell'anta) e, se i giocatori le vedono, lo si dice. */
+  private monsterOpenedDoors(monster: Piece, indexes: number[]) {
+    if (!this.board) return;
+    this.doorView?.redraw(this.board, (d) => !this.fogOn() || this.exploration.doors.has(d));
+    const seen = indexes.some((i) => !this.fogOn() || this.exploration.doors.has(this.board!.doors[i].door));
+    if (seen) this.showNotice(`${monster.name} apre ${indexes.length > 1 ? 'delle porte' : 'una porta'}`, 'door_front', 'evil');
+    this.exploreAndNotify(); // una porta aperta può far vedere cose nuove agli eroi
+  }
+
+  /** L'eroe attivo usa il segnalino Incontro della sua casella (dal bottone contestuale): sparisce dalla mappa e scattano gli eventi. */
+  private useEncounterHere(at?: Cell) {
+    const r = this.pieces?.useEncounter(at);
+    if (!r) return;
+    if (r.code === 'cost') {
+      this.showNotice(tr('Non hai abbastanza punti movimento'), 'warning');
+      return;
+    }
+    if (r.code !== 'used') return;
+    this.pickupView?.redraw(this.board!, (m) => !this.fogOn() || this.exploration.markers.has(m));
+    this.refreshContext();
+    void this.flushEvents(); // gli eventi "usa un incontro" e "gli incontri non ci sono più"
+  }
+
+  /** L'eroe attivo usa una zona d'azione (dal bottone contestuale): scattano gli eventi "usa una zona". */
+  private useZoneHere(zoneId: string) {
+    const r = this.pieces?.useZone(zoneId);
+    if (!r) return;
+    if (r.code === 'cost') {
+      this.showNotice(tr('Non hai abbastanza punti movimento'), 'warning');
+      return;
+    }
+    if (r.code !== 'used') return;
+    this.refreshContext();
+    void this.flushEvents();
+  }
+
+  /** L'eroe attivo raccoglie l'oggetto a terra nella sua casella (dal bottone contestuale, senza costo). */
+  private pickUpHere() {
+    const event = this.pieces?.pickUp();
+    if (!event) return;
+    this.showNotice(event.notice, event.kind === 'picked-up' ? this.markerIcon(event.marker) : 'warning');
+    if (event.kind === 'picked-up') {
+      this.pickupView?.redraw(this.board!, (m) => !this.fogOn() || this.exploration.markers.has(m));
+      this.refreshContext();
+      void this.flushEvents(); // gli eventi "un eroe raccoglie un oggetto"
+    }
+  }
+
+  /** L'eroe attivo apre lo scrigno su cui sta (dal bottone contestuale). */
+  private openChestHere() {
+    const r = this.pieces?.useChest();
+    if (!r) return;
+    if (r.code === 'opened') {
+      this.showNotice([r.ticket ? tr('Scrigno aperto ({ticket})', { ticket: r.ticket }) : tr('Scrigno aperto'), ...(r.found ?? [])].join(' · '), 'inventory_2');
+      const hero = this.pieces?.active;
+      if (r.trap && hero) void this.resolveTrap(hero, r.trap);
+    }
+    else if (r.code === 'mimic' && r.trap) {
+      if (r.found?.length) this.showNotice(r.found.join(' · '), 'inventory_2'); // le Maledizioni dello scrigno, risolte prima
+      const hero = this.pieces?.active;
+      if (hero) void this.resolveTrap(hero, r.trap);
+    } else if (r.code === 'curse') void this.offerChestTrap(r.found ?? []);
+    else if (r.code === 'already') this.showNotice(tr('Lo scrigno è già aperto'), 'inventory_2');
+    else if (r.code === 'cost') this.showNotice(tr('Servono {mov:{cost}}', { cost: r.cost }), 'warning');
+    else if (r.code === 'full') this.showNotice(tr('Non hai posto per ciò che contiene lo scrigno'), 'warning');
+  }
+
+  /**
+   * Un eroe apre uno scrigno con una Maledizione e il Maligno a mano ha già ricevuto l'Odio: può spenderlo subito armando una trappola da scrigno su quello scrigno
+   * (anche oltre il tetto per categoria: scatta all'istante). Poi lo scrigno si apre davvero, e la trappola armata scatta con l'apertura.
+   */
+  private async offerChestTrap(found: string[]) {
+    const hero = this.pieces?.active;
+    if (!hero) return;
+    if (found.length) this.showNotice(found.join(' · '), 'inventory_2'); // la Maledizione, risolta per prima
+    this.showHud(hero); // l'Odio nuovo
+    const s = this.state;
+    const cards = s.evil.hand.flatMap((id) => { const c = cardOf(s, id); return c && c.kind === 'trap' && c.target === 'chest' && trapCost(s, c) <= s.evil.hatred ? [c] : []; });
+    const unique = cards.filter((c, i) => cards.findIndex((o) => o.id === c.id) === i);
+    if (unique.length) {
+      const answer = await this.askChoice({
+        title: tr('Maledizione!'),
+        text: tr('Gli eroi hanno aperto uno scrigno con una Maledizione: ricevi Odio. Vuoi spenderlo armando subito una trappola su questo scrigno?'),
+        choices: [...unique.map((c) => ({ id: c.id, label: tr('{name} · {hatred:{cost}}', { name: c.name, cost: trapCost(s, c) }), primary: true })), { id: 'no', label: tr('No') }],
+      });
+      const card = unique.find((c) => c.id === answer);
+      if (card && armTrapAt(s, card, { kind: 'chest', x: hero.cell.x, y: hero.cell.y })) this.showHud(hero);
+    }
+    this.openChestHere(); // le Maledizioni sono risolte: adesso lo scrigno si apre
+  }
+
+  /** Usa un'abilità dal bottone sulla sua carta. */
+  protected useSkillAction(id: string) {
+    const hero = this.pieces?.active;
+    if (!hero || this.evilBusy()) return;
+    const action = skillActions(this.state, hero).find((a) => a.id === id);
+    if (action?.kind === 'active') {
+      this.beginTelekinesis(hero, action);
+      return;
+    }
+    const r = useSkill(this.state, hero, id);
+    if (!r.ok) {
+      this.showNotice(r.reason, 'warning');
+      return;
+    }
+    this.pieces?.refreshActive();
+    this.showNotice(r.notice, 'bolt');
+  }
+
+  // --- Telecinesi: si sceglie un modello in vista e dove spostarlo di 1 spazio ---
+
+  protected readonly telekinesis = signal<{ cost: number; step: 'model' | 'cell'; model?: string; moves?: Reach[] } | null>(null);
+  private telekinesisOptions: Piece[] = [];
+
+  private beginTelekinesis(hero: Piece, action: SkillAction) {
+    if (!this.board || this.attackSession() || this.telekinesis()) return;
+    if (!action.enabled) {
+      this.showNotice(action.reason ?? tr('Non è possibile'), 'warning');
+      return;
+    }
+    const known = (p: Piece) => p.team === 'hero' || !this.fogOn() || this.exploration.monsters.has(p.id);
+    const targets = telekinesisTargets(this.state, this.board, hero, known);
+    if (!targets.length) {
+      this.showNotice(tr('Nessun modello in vista che si possa spostare'), 'warning');
+      return;
+    }
+    const card = this.state.skills.get(action.cardId);
+    this.telekinesisOptions = targets;
+    this.panel.set(null); // la scheda non deve coprire la mappa
+    this.pieces?.setEnabled(false); // niente area di movimento mentre si sceglie
+    this.pieces?.showCells(targets.flatMap((p) => footprint(p)));
+    this.telekinesis.set({ cost: card?.effects.reduce((n, e) => n + (((e as { cost?: { energy?: number } }).cost?.energy) ?? 0), 0) ?? 1, step: 'model' });
+  }
+
+  protected cancelTelekinesis() {
+    this.telekinesis.set(null);
+    this.pieces?.showCells(null);
+    this.pieces?.setEnabled(true);
+  }
+
+  private async telekinesisClick(cell: Cell) {
+    const t = this.telekinesis();
+    const hero = this.pieces?.active;
+    if (!t || !hero || !this.board) return;
+    if (t.step === 'model') {
+      const model = this.telekinesisOptions.find((p) => footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
+      if (!model) {
+        this.showNotice(tr('Tocca uno dei modelli evidenziati'), 'warning');
+        return;
+      }
+      const moves = telekinesisMoves(this.state, this.board, model);
+      this.telekinesis.set({ ...t, step: 'cell', model: model.id, moves });
+      this.pieces?.showCells(moveCells(moves));
+      return;
+    }
+    const move = t.moves?.find((m) => m.cell.x === cell.x && m.cell.y === cell.y);
+    const model = this.state.pieces.find((p) => p.id === t.model);
+    if (!move || !model) {
+      this.showNotice(tr('Tocca una delle caselle evidenziate'), 'warning');
+      return;
+    }
+    hero.energy = Math.max(0, hero.energy - t.cost); // si paga quando si sposta
+    this.telekinesis.set(null);
+    this.pieces?.showCells(null);
+    this.pieces?.setEnabled(true);
+    this.showNotice(tr('Telecinesi: {name} si sposta di 1 spazio ({energy:{cost}})', { name: model.name, cost: t.cost }), 'bolt');
+    await this.pieces?.walk(model, [move]);
+    this.pieces?.refreshActive();
+    this.exploreAndNotify();
+    this.refreshContext();
+  }
+
+  /** Spende 1 energia per 1 punto movimento in più (dal valore dell'energia nel tab dell'eroe attivo). */
+  protected spendEnergyForMove() {
+    const hero = this.pieces?.active;
+    if (!hero || this.evilBusy()) return;
+    const r = energyForMovement(this.state, hero);
+    if (r.code === 'ok') {
+      this.pieces?.refreshActive();
+      this.showNotice(tr('Spesa {energy:1}: +{mov:1}'), 'water_drop');
+    } else if (r.code === 'none') this.showNotice(tr('Non hai più energia'), 'warning');
+    else this.showNotice(tr('Ora non puoi spendere energia'), 'warning');
+  }
+
+  /** L'eroe attivo beve una pozione (dal bottone contestuale). */
+  private drinkPotion(kind: PotionKind) {
+    const r = this.pieces?.drinkPotion(kind);
+    if (!r) return;
+    const name = POTION_NAMES[kind];
+    if (r.code === 'drunk') this.showNotice(kind === 'energy' ? tr('{name} bevuta: energia al massimo', { name }) : tr('{name} bevuta: +{healed} ferite', { name, healed: r.healed }), 'tokens/potion');
+    else if (r.code === 'full-health') this.showNotice(tr('Sei già in piena salute'), 'warning');
+    else if (r.code === 'full-energy') this.showNotice(tr('Hai già l\'energia al massimo'), 'warning');
+    else if (r.code === 'cost') this.showNotice(tr('Serve {mov:1}'), 'warning');
+  }
+
+  /** L'eroe attivo interagisce con una pedina (dal bottone contestuale): scattano gli eventi, e i loro messaggi si leggono quando la scena si aggiorna. */
+  private interactWith(targetId: string) {
+    const r = this.pieces?.interact(targetId);
+    if (!r) return;
+    if (r.code === 'cost') this.showNotice(tr('Non hai abbastanza punti movimento'), 'warning');
+    else if (r.code === 'far') this.showNotice(tr('Sei troppo lontano'), 'warning');
+    else if (r.code === 'ok') void this.flushEvents();
+  }
+
+  /** L'eroe attivo viaggia in città dal glifo su cui si trova (dal bottone contestuale): spende tutto il movimento e si apre il pannello Città. */
+  private travelToCity() {
+    const active = this.pieces?.active;
+    const r = this.pieces?.cityDo((s, b, p) => cityRules.travelToCity(s, b, p));
+    if (!r || !active) return;
+    if (r.code === 'ok') {
+      this.showNotice(tr('{name} è in città', { name: active.name }), 'castle');
+      this.exploreAndNotify(); // la pedina non c'è più: la vista del gruppo cambia
+      this.panel.set({ id: active.id, kind: 'city' });
+    } else this.showNotice(r.code === 'cost' ? tr('Serve almeno {mov:1}') : tr('Serve un glifo acceso'), 'warning');
+  }
+
+  /** Un'azione in città, dal pannello Città: servizi, acquisti, vendite, concludere la visita o tornare nel dungeon. */
+  protected onCityAction(e: CityEvent) {
+    if (e.kind === 'conclude') {
+      this.pass();
+      return;
+    }
+    const r = this.pieces?.cityDo((s, _b, p) => {
+      switch (e.kind) {
+        case 'service': return cityRules.chooseService(s, p, e.service);
+        case 'potion': return cityRules.buyPotion(s, p, e.id);
+        case 'treasure': return cityRules.buyTreasure(s, p, e.id);
+        case 'item': return cityRules.buyItem(s, p, e.id);
+        case 'sell': return cityRules.sellItem(s, p, e.id);
+        case 'skill': return cityRules.buySkill(s, p, e.id);
+        case 'train': return cityRules.trainDice(s, p, e.id);
+        case 'heal': return cityRules.templeHeal(s, p);
+      }
+    });
+    if (!r) return;
+    if (r.code === 'ok') {
+      if (r.notice) this.showNotice(r.notice, 'castle');
+    } else this.showNotice(CITY_TEXTS[r.code] ?? tr('Non è possibile'), r.code === 'soon' ? 'info' : 'warning');
+  }
+
+  /** I glifi su cui l'eroe attivo (in città) può tornare adesso: quelli che può pagare. */
+  private returnOptions(): cityRules.ReturnChoice[] {
+    const active = this.pieces?.active;
+    if (!active?.city || !this.board) return [];
+    return cityRules.returnChoices(this.state, this.board, active).filter((c) => c.coins <= active.coins);
+  }
+
+  /**
+   * Quando tocca a un eroe che è in città dal turno scorso, la scelta del glifo su cui tornare parte da sola (il pannello Città non c'è più): i glifi
+   * possibili brillano e si clicca quello scelto. Non si annulla: deve tornare. Se nessun glifo è libero, lo dice e può solo passare.
+   */
+  private maybeStartReturn() {
+    const active = this.pieces?.active;
+    if (!active?.city || !this.board || this.returnMode() || !cityRules.canReturn(this.state, active)) return;
+    const choices = this.returnOptions();
+    if (!choices.length) {
+      const key = `${active.id}:${this.state.round}`;
+      if (this.noGlyphFor !== key) {
+        this.noGlyphFor = key;
+        this.showNotice(tr('Nessun glifo acceso è libero: puoi solo passare il turno'), 'warning');
+      }
+      return;
+    }
+    this.returnMode.set(true);
+    this.panel.set(null);
+    this.hint.set(tr('Scegli il glifo su cui tornare: clic su uno di quelli che brillano'));
+    this.showNotice(tr('{name} torna nel dungeon: il glifo di partenza è gratis, gli altri costano {cityTeleportCo} monete', { name: active.name, cityTeleportCo: cityRules.CITY_TELEPORT_COST_TEXT }), 'castle');
+    this.focusCell(choices.find((c) => c.coins === 0)?.cell ?? choices[0].cell);
+  }
+
+  private endReturn() {
+    this.returnMode.set(false);
+    this.hint.set(HINTS[this.mode]);
+  }
+
+  /** Sposta la camera (solo il pan, con uno scorrimento) su una casella. */
+  private focusCell(cell: Cell) {
+    const app = this.app;
+    if (!app) return;
+    this.camTween = {
+      fromZoom: this.zoom, toZoom: this.zoom,
+      from: { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom },
+      to: { x: (cell.x + 0.5) * CELL_SIZE, y: (cell.y + 0.5) * CELL_SIZE },
+      elapsed: 0,
+    };
+  }
+
+  /** Clic su una casella mentre si sceglie il glifo di ritorno. */
+  private returnClick(cell: Cell) {
+    const active = this.pieces?.active;
+    if (!active || !this.board) return;
+    const choice = this.returnOptions().find((c) => c.cell.x === cell.x && c.cell.y === cell.y);
+    if (!choice) {
+      this.showNotice(tr('Scegli uno dei glifi accesi che brillano'), 'warning');
+      return;
+    }
+    const r = this.pieces?.cityDo((s, b, p) => cityRules.returnFromCity(s, b, p, choice.cell));
+    if (r?.code === 'ok') {
+      this.endReturn();
+      this.exploreAndNotify();
+      this.showNotice(r.notice ?? tr('{name} è tornato nel dungeon', { name: active.name }), 'brightness_empty');
+    } else if (r) this.showNotice(CITY_TEXTS[r.code] ?? tr('Non è possibile'), 'warning');
+  }
+
+  /** Le azioni sull'inventario dalla scheda completa: equipaggiare, mettere nello zaino, scartare. */
+  /** L'inventario dell'eroe con, per ogni oggetto equipaggiato che si usa (Cura minore, Cristallo di Tival...), il suo uso: costo e se si può adesso. */
+  private inventoryWithUses(s: GameState, p: Piece) {
+    const inv = inventoryOf(s, p);
+    for (const e of inv.equipped) e.use = itemUse(s, this.board ?? null, p, e.id) ?? undefined;
+    return inv;
+  }
+
+  /** Usa un oggetto dell'eroe attivo (dal bottone "Usa" della sua card): se può curare un adiacente, l'eroe sceglie chi. */
+  private async useItemAction(itemId: string) {
+    const hero = this.pieces?.active;
+    if (!hero || this.evilBusy() || !this.board) return;
+    const use = itemUse(this.state, this.board, hero, itemId);
+    if (!use?.enabled) {
+      this.showNotice(use?.reason ?? tr('Non è possibile'), 'warning');
+      return;
+    }
+    let target: string | undefined;
+    if (use.pickTarget) {
+      const needs = (h: Piece) => h.wounds < h.maxWounds || h.status.poison > 0;
+      const options = [hero, ...adjacentHeroes(this.state, this.board, hero)].filter(needs);
+      if (options.length > 1) {
+        const answer = await this.askChoice({
+          title: this.state.items.get(itemId)?.name ?? tr('Oggetto'),
+          text: tr('Chi vuoi curare?'),
+          choices: [...options.map((h) => ({ id: h.id, label: h.id === hero.id ? tr('Te stesso') : h.name, primary: true })), { id: 'no', label: tr('Annulla') }],
+        });
+        if (answer === 'no') return;
+        target = answer;
+      } else target = options[0]?.id;
+    }
+    const r = useItem(this.state, this.board, hero, itemId, target);
+    if (!r.ok) {
+      this.showNotice(r.reason, 'warning');
+      return;
+    }
+    this.showNotice(r.notice, this.state.items.get(itemId)?.icon ?? 'bolt');
+    for (const h of r.healed) this.pieces?.redraw(h);
+    this.pieces?.refreshActive();
+    this.showHud(this.pieces?.active ?? null);
+  }
+
+  protected onItemAction(e: { action: 'equip' | 'stow' | 'drop' | 'use'; itemId: string }) {
+    if (e.action === 'use') {
+      void this.useItemAction(e.itemId);
+      return;
+    }
+    const r = this.pieces?.itemAction(e.action, e.itemId);
+    if (!r) return;
+    const name = this.state.items.get(e.itemId)?.name ?? tr('Oggetto');
+    const icon = this.state.items.get(e.itemId)?.icon ?? 'inventory_2';
+    if (r.code === 'ok') {
+      const carried = !!this.state.items.get(e.itemId)?.carried;
+      this.showNotice({ equip: tr('{name} equipaggiato', { name }), stow: tr('{name} nello zaino', { name }), drop: carried ? tr('{name} posata a terra', { name }) : tr('{name} scartato: è perso', { name }) }[e.action], icon);
+      if (carried && e.action === 'drop') this.rebuildBoard(); // l'oggetto è comparso a terra
+    }
+    else if (r.code === 'cost') this.showNotice(tr('Servono {mov:2} per ri-equipaggiarsi'), 'warning');
+    else if (r.code === 'full') this.showNotice(tr('Non c\'è posto nello zaino'), 'warning');
+    else if (r.code === 'conflict') this.showNotice(tr('Incompatibile con un oggetto equipaggiato'), 'warning');
+    else if (r.code === 'carried') this.showNotice(tr('Si porta in braccio: si posa a terra'), 'warning');
+    else if (r.code === 'cursed') this.showNotice(tr('È maledetta: non si può togliere, solo cedere'), 'warning');
+  }
+
+  /** L'eroe attivo dà un oggetto a un eroe adiacente (dal bottone contestuale). */
+  private giveItem(receiverId: string, itemId: string) {
+    const r = this.pieces?.giveItem(receiverId, itemId);
+    if (!r) return;
+    const to = this.state.pieces.find((p) => p.id === receiverId)?.name ?? '';
+    const item = this.state.items.get(itemId);
+    if (r.code === 'ok') this.showNotice(tr('{item} dato a {to}', { item: item?.name ?? tr('Oggetto'), to }), item?.icon ?? 'inventory_2');
+    else if (r.code === 'full') this.showNotice(tr('{to} non ha posto', { to }), 'warning');
+    else if (r.code === 'cost') this.showNotice(tr('Serve {mov:1}'), 'warning');
+    else if (r.code === 'far') this.showNotice(tr('{to} non è abbastanza vicino', { to }), 'warning');
+  }
+
+  /** L'eroe attivo dà una pozione a un eroe adiacente (dal bottone contestuale). */
+  private givePotion(receiverId: string, kind: PotionKind) {
+    const r = this.pieces?.givePotion(receiverId, kind);
+    if (!r) return;
+    const to = this.state.pieces.find((p) => p.id === receiverId)?.name ?? '';
+    if (r.code === 'given') this.showNotice(tr('{item} data a {to}', { item: POTION_NAMES[kind], to }), 'tokens/potion');
+    else if (r.code === 'full') this.showNotice(tr('{to} porta già troppe pozioni', { to }), 'warning');
+    else if (r.code === 'cost') this.showNotice(tr('Serve {mov:1}'), 'warning');
+    else if (r.code === 'far') this.showNotice(tr('{to} non è abbastanza vicino', { to }), 'warning');
+  }
+
+  /** Un'azione scelta dal bottone contestuale sopra la pedina. */
+  protected runContext(id: string) {
+    const active = this.pieces?.active;
+    if (id === 'chest') this.openChestHere();
+    else if (id === 'pickup') this.pickUpHere();
+    else if (id.startsWith('encounter:')) {
+      const [x, y] = id.slice(10).split(',').map(Number);
+      this.useEncounterHere({ x, y });
+    }
+    else if (id === 'stairs') {
+      const partner = active ? this.board?.stairsPartnerAt(active.cell) : undefined;
+      if (partner) this.pieces?.click({ x: partner.x, y: partner.y });
+    } else if (id === 'city') this.travelToCity();
+    else if (id.startsWith('door:')) this.useDoorAt(Number(id.slice(5)));
+    else if (id.startsWith('giveitem:')) {
+      const [, target, itemId] = id.split(':');
+      this.giveItem(target, itemId);
+    }
+    else if (id.startsWith('zone:')) this.useZoneHere(id.slice(5));
+    else if (id.startsWith('interact:')) this.interactWith(id.slice(9));
+    else if (id.startsWith('drink:')) this.drinkPotion(id.slice(6) as PotionKind);
+    else if (id.startsWith('give:')) {
+      const [, target, kind] = id.split(':');
+      this.givePotion(target, kind as PotionKind);
+    }
+  }
+
+  /** Ricalcola le azioni del bottone contestuale per l'eroe attivo (solo giocando). */
+  private refreshContext() {
+    const active = this.pieces?.active;
+    const next = !this.board || !active || this.mode !== 'play' || this.evilMode ? [] : contextActions(this.state, this.board, active, this.fogOn() ? this.exploration.doors : null);
+    // Si aggiorna solo se è cambiato qualcosa: il menu aperto si richiude a ogni cambio.
+    if (JSON.stringify(next) !== JSON.stringify(this.contextActions())) this.contextActions.set(next);
+  }
+
+  /** Tiene il bottone contestuale sopra la pedina attiva (anche mentre si muove, o quando la camera cambia). */
+  private updateContextAnchor() {
+    const pos = this.mode === 'play' && !this.evilMode ? this.pieces?.activeWorldPos() : null;
+    const next = pos
+      ? { x: Math.round(this.camX + pos.x * this.zoom), y: Math.round(this.camY + pos.y * this.zoom - CELL_SIZE * PAWN_RADIUS_RATIO * this.zoom) }
+      : null;
+    const cur = this.contextAnchor();
+    if (next?.x !== cur?.x || next?.y !== cur?.y) this.contextAnchor.set(next);
+    // Il menu del famiglio sta sopra il suo segnalino.
+    const fm = this.familiarMove();
+    const fam = fm ? this.state.familiars.find((f) => f.id === fm.id) : undefined;
+    const fNext = fam && this.mode === 'play' ? { x: Math.round(this.camX + (fam.cell.x + 0.5) * CELL_SIZE * this.zoom), y: Math.round(this.camY + (fam.cell.y + 0.5) * CELL_SIZE * this.zoom - CELL_SIZE * PAWN_RADIUS_RATIO * this.zoom) } : null;
+    const fCur = this.familiarAnchor();
+    if (fNext?.x !== fCur?.x || fNext?.y !== fCur?.y) this.familiarAnchor.set(fNext);
+    // Il menu delle armi sta sopra il nemico toccato (sopra tutte le sue caselle, se è grande).
+    const t = this.state?.pieces.find((p) => p.id === this.attackTarget());
+    const tNext = t && this.mode === 'play'
+      ? { x: Math.round(this.camX + (t.cell.x + t.size.w / 2) * CELL_SIZE * this.zoom), y: Math.round(this.camY + (t.cell.y * CELL_SIZE + CELL_SIZE * (0.5 - PAWN_RADIUS_RATIO)) * this.zoom) }
+      : null;
+    const tCur = this.attackAnchor();
+    if (tNext?.x !== tCur?.x || tNext?.y !== tCur?.y) this.attackAnchor.set(tNext);
+  }
+
+  /** Clic in modalità "porte": toglie la porta che c'è, oppure ne mette una nuova. */
+  private doorsClick(p: Point) {
+    const cand = this.doorCandidate(this.toCells(p));
+    if (!cand) return;
+    if (cand.index >= 0) {
+      this.doors.splice(this.doors.indexOf(this.board!.doors[cand.index].door), 1);
+    } else {
+      const { span, unit } = cand;
+      this.doors.push({ x: span.horizontal ? unit : span.line, y: span.horizontal ? span.line : unit, horizontal: span.horizontal, open: false });
+    }
+    this.rebuildBoard();
+    this.refreshHover();
+  }
+
+  /** Inquadra un'area (in pixel del mondo) al centro dello schermo, senza ingrandire oltre lo zoom iniziale. */
+  private fitToBounds(b: MapBounds) {
+    const app = this.app!;
+    const fit = Math.min((app.screen.width * MAP_FIT_FILL) / b.w, (app.screen.height * MAP_FIT_FILL) / b.h);
+    this.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(fit, ZOOM_START)));
+    this.camX = app.screen.width / 2 - (b.x + b.w / 2) * this.zoom;
+    this.camY = app.screen.height / 2 - (b.y + b.h / 2) * this.zoom;
+    this.applyCamera();
+  }
+
+  /** Il tasto "mostra tutta la mappa": scorrimento unico di pan e zoom fino all'inquadratura iniziale. */
+  protected showWholeMap() {
+    if (this.mapBox) this.frameBounds(this.mapBox, ZOOM_START);
+  }
+
+  /** Scorrimento di pan e zoom fino a inquadrare un'area (pixel del mondo); lo zoom non supera `maxZoom`. */
+  private frameBounds(b: MapBounds, maxZoom: number, stepsBack = 0) {
+    const app = this.app;
+    if (!app) return;
+    const fit = Math.min((app.screen.width * MAP_FIT_FILL) / b.w, (app.screen.height * MAP_FIT_FILL) / b.h);
+    this.camTween = {
+      fromZoom: this.zoom,
+      toZoom: Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Math.min(fit, maxZoom) / ZOOM_BUTTON_FACTOR ** stepsBack)), // `stepsBack`: quanti click su − più indietro dell'inquadratura giusta
+      from: { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom },
+      to: { x: b.x + b.w / 2, y: b.y + b.h / 2 },
+      elapsed: 0,
+    };
+  }
+
+  /** Le icone accanto all'etichetta di un'area (vista del Maligno): inquadra l'area a tutto schermo, o ne apre la descrizione. */
+  private useAreaTool(id: string, tool: 'zoom' | 'info') {
+    const info = this.areaInfo.get(id);
+    if (tool === 'info') {
+      this.evilAreaInfo.set({ name: info?.name ?? id, subtitle: info?.subtitle, text: info?.text, discovered: this.state.exploration.areas.has(id) });
+      return;
+    }
+    const cells = this.labelPlaces.find((l) => l.id === id)?.cells;
+    if (!cells?.length) return;
+    const x0 = Math.min(...cells.map((c) => c.x));
+    const y0 = Math.min(...cells.map((c) => c.y));
+    const x1 = Math.max(...cells.map((c) => c.x)) + 1;
+    const y1 = Math.max(...cells.map((c) => c.y)) + 1;
+    this.frameBounds({ x: x0 * CELL_SIZE, y: y0 * CELL_SIZE, w: (x1 - x0) * CELL_SIZE, h: (y1 - y0) * CELL_SIZE }, ZOOM_MAX, 1); // un click su − in meno dell'inquadratura esatta: un po' di aria intorno all'area
+  }
+
+  /** Zoom mantenendo fermo il punto sotto (px, py): è quello che "senti" sotto il dito o il mouse. */
+  private zoomAt(px: number, py: number, newZoom: number) {
+    const z = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, newZoom));
+    const k = z / this.zoom;
+    this.camX = px - (px - this.camX) * k;
+    this.camY = py - (py - this.camY) * k;
+    this.zoom = z;
+    this.applyCamera();
+  }
+
+  /**
+   * Il tasto "centra": porta l'eroe attivo al centro dello schermo e lo zoom a quello di 4 click su + dallo zoom iniziale (`CAMERA_FOCUS_ZOOM`),
+   * con uno scorrimento unico di pan e zoom. Mentre scorre, il punto al centro dello schermo si sposta dal vecchio all'eroe e lo zoom cambia in
+   * modo geometrico, come uno zoom vero.
+   */
+  protected centerOnActive() {
+    const app = this.app;
+    const hero = this.pieces?.active;
+    if (!app || !hero) return;
+    this.camTween = {
+      fromZoom: this.zoom,
+      toZoom: Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, CAMERA_FOCUS_ZOOM)),
+      from: { x: (app.screen.width / 2 - this.camX) / this.zoom, y: (app.screen.height / 2 - this.camY) / this.zoom },
+      to: { x: (hero.cell.x + 0.5) * CELL_SIZE, y: (hero.cell.y + 0.5) * CELL_SIZE },
+      elapsed: 0,
+    };
+  }
+
+  /**
+   * Mentre un eroe si muove la camera lo segue, solo con il pan (lo zoom resta quello che è), con un inseguimento morbido. Se durante
+   * il movimento l'utente trascina o zooma, smette di seguirlo fino alla fine di quel movimento.
+   */
+  private followMovingPawn(deltaMs: number) {
+    const pos = this.pieces?.movingWorldPos() ?? this.familiarsView?.movingWorldPos();
+    const app = this.app;
+    if (!pos || !app) {
+      this.followSuppressed = false;
+      return;
+    }
+    if (this.followSuppressed || this.camTween) return;
+    const k = 1 - Math.exp(-deltaMs / CAMERA_FOLLOW_SMOOTH_MS);
+    this.camX += (app.screen.width / 2 - pos.x * this.zoom - this.camX) * k;
+    this.camY += (app.screen.height / 2 - pos.y * this.zoom - this.camY) * k;
+    this.applyCamera();
+  }
+
+  /** Avanza lo scorrimento della camera (se c'è), con una frenata dolce alla fine. */
+  private tickCameraTween(deltaMs: number) {
+    const tw = this.camTween;
+    const app = this.app;
+    if (!tw || !app) return;
+    tw.elapsed += deltaMs;
+    const k = Math.min(1, tw.elapsed / (tw.ms ?? CAMERA_CENTER_MS));
+    const e = 1 - Math.pow(1 - k, 3);
+    this.zoom = tw.fromZoom * Math.pow(tw.toZoom / tw.fromZoom, e);
+    const cx = tw.from.x + (tw.to.x - tw.from.x) * e;
+    const cy = tw.from.y + (tw.to.y - tw.from.y) * e;
+    this.camX = app.screen.width / 2 - cx * this.zoom;
+    this.camY = app.screen.height / 2 - cy * this.zoom;
+    this.applyCamera();
+    if (k >= 1) this.camTween = undefined;
+  }
+
+  /** Tasti + e −: zoom attorno al centro dello schermo. */
+  protected zoomByButton(direction: 1 | -1) {
+    if (!this.app) return;
+    const f = direction === 1 ? ZOOM_BUTTON_FACTOR : 1 / ZOOM_BUTTON_FACTOR;
+    this.zoomAt(this.app.screen.width / 2, this.app.screen.height / 2, this.zoom * f);
+  }
+
+  private bindInput(canvas: HTMLCanvasElement) {
+    const local = (e: PointerEvent | WheelEvent): Point => {
+      const r = canvas.getBoundingClientRect();
+      return { x: e.clientX - r.left, y: e.clientY - r.top };
+    };
+    const listen = <K extends keyof HTMLElementEventMap>(
+      type: K,
+      fn: (e: HTMLElementEventMap[K]) => void,
+      options?: AddEventListenerOptions,
+    ) => {
+      canvas.addEventListener(type, fn as EventListener, options);
+      this.cleanup.push(() => canvas.removeEventListener(type, fn as EventListener));
+    };
+
+    // Rotella (e pinch del trackpad, che arriva come rotella + ctrl).
+    listen('wheel', (e) => {
+      this.camTween = undefined;
+      this.followSuppressed = true;
+      e.preventDefault();
+      const p = local(e);
+      const boost = e.ctrlKey ? ZOOM_TRACKPAD_PINCH_BOOST : 1;
+      this.zoomAt(p.x, p.y, this.zoom * Math.exp(-e.deltaY * ZOOM_WHEEL_SENSITIVITY * boost));
+    }, { passive: false });
+
+    listen('pointerdown', (e) => {
+      this.camTween = undefined;
+      if (this.pieces?.movingWorldPos()) this.followSuppressed = true;
+      canvas.setPointerCapture(e.pointerId);
+      this.pointers.set(e.pointerId, local(e));
+      this.downPos = this.pointers.size === 1 ? local(e) : null;
+      if (this.pointers.size === 2) this.lastPinchDistance = this.pinchDistance();
+    });
+
+    listen('pointermove', (e) => {
+      const prev = this.pointers.get(e.pointerId);
+      if (!prev) return;
+      const cur = local(e);
+
+      if (this.pointers.size === 1) {
+        // Un dito (o il mouse): trascina la mappa.
+        this.camX += cur.x - prev.x;
+        this.camY += cur.y - prev.y;
+        this.pointers.set(e.pointerId, cur);
+        this.applyCamera();
+      } else if (this.pointers.size === 2) {
+        // Due dita: zoom in base a quanto si allontanano, pan in base a come si spostano.
+        const before = this.pinchCenter();
+        this.pointers.set(e.pointerId, cur);
+        const after = this.pinchCenter();
+        this.camX += after.x - before.x;
+        this.camY += after.y - before.y;
+        const dist = this.pinchDistance();
+        if (this.lastPinchDistance > 0) this.zoomAt(after.x, after.y, this.zoom * (dist / this.lastPinchDistance));
+        else this.applyCamera();
+        this.lastPinchDistance = dist;
+      }
+    });
+
+    // Il mouse che passa sopra la scena: serve a mostrare il tile da agganciare.
+    listen('pointermove', (e) => {
+      if (e.pointerType !== 'mouse') return;
+      this.mouse = local(e);
+      this.refreshHover();
+    });
+    listen('pointerleave', () => {
+      this.mouse = null;
+      this.refreshHover();
+    });
+
+    const release = (e: PointerEvent) => {
+      // Un clic (senza trascinare): muove la pedina, oppure piazza il tile agganciato.
+      const p = local(e);
+      const isClick =
+        e.type === 'pointerup' && e.button === 0 && this.pointers.size === 1 &&
+        this.downPos !== null && Math.hypot(p.x - this.downPos.x, p.y - this.downPos.y) < CLICK_SLOP_PX;
+      this.pointers.delete(e.pointerId);
+      this.lastPinchDistance = 0;
+      this.downPos = null;
+      if (e.pointerType === 'mouse') this.mouse = p;
+      this.refreshHover(); // il tile da agganciare torna visibile appena il tasto è rilasciato
+      if (isClick) {
+        if (this.mode === 'play') this.playClick(p);
+        else if (this.mode === 'doors') this.doorsClick(p);
+        else if (this.mode === 'obstacles') this.obstaclesClick(p);
+        else if (e.pointerType === 'mouse') this.placer?.place();
+      }
+    };
+    listen('pointerup', release);
+    listen('pointercancel', release);
+
+    // Tastiera: P cambia modalità; poi i tasti dipendono dalla modalità.
+    // Sul tocco non c'è il passaggio del mouse: un tocco su un elemento che ha un suggerimento (le icone delle statistiche, le pozioni, i cubi dei dadi...) lo
+    // mostra come notifica. I bottoni no: hanno già il loro nome e (se spenti) il motivo, che si mostra da sé.
+    const onTap = (e: PointerEvent) => {
+      if (e.pointerType !== 'touch') return;
+      const el = (e.target as Element | null)?.closest<HTMLElement>('[title]');
+      if (!el?.title || el.matches('button, a, [role=tab]') || el.closest('button')) return;
+      this.showNotice(el.title, 'info');
+    };
+    document.addEventListener('pointerup', onTap);
+    this.cleanup.push(() => document.removeEventListener('pointerup', onTap));
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const key = e.key.toLowerCase();
+      if (key === 'escape' && this.telekinesis()) this.cancelTelekinesis();
+      if (key === 'p') this.setMode('tiles');
+      else if (key === 'd') this.setMode('doors');
+      else if (key === 'o') this.setMode('obstacles');
+      else if (key === 'z' && !e.repeat) this.showWholeMap();
+      else if (key === 'f' && !e.repeat) this.centerOnActive();
+      else if (key === 'a' && !e.repeat && this.evilMode) this.monstersAuto.update((v) => !v); // "Mostri automatici"
+      else if (this.mode === 'obstacles') {
+        if (key === 'r') this.obstacleVertical = !this.obstacleVertical;
+        else if (key === 't') this.obstacleVariant = (this.obstacleVariant + 1) % OBSTACLE_VARIANTS.length;
+        this.refreshHover();
+      } else if (this.mode === 'tiles') {
+        if (key === 'r') this.placer?.rotate();
+        else if (key === 't') this.placer?.nextTile();
+        else if (key === 'backspace') this.placer?.undo();
+      } else if (!e.repeat) {
+        // Giocando: i comandi dell'eroe attivo (non mentre c'è la finestra dell'attacco).
+        if (key === 'r') this.tapCommand('run');
+        else if (key === 'c') this.tapCommand('fight');
+        else if ((key === 's' || key === 'i') && this.barsIn() && !this.commandsBusy() && this.state.activeId) this.togglePanel(this.state.activeId, key === 's' ? 'info' : 'inventory');
+        else if (key === 'e') this.tapCommand('prepare');
+        else if (key === 'enter') {
+          // Nella vista del Maligno Invio è il tasto Avanti/Passa; se il fuoco è su un bottone (o un campo) Invio è già suo: niente doppio scatto.
+          const onControl = this.evilMode && !!(e.target as Element | null)?.closest?.('button, input, textarea, select, a, [role="button"]');
+          if (!onControl) this.tapCommand('pass');
+        }
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    this.cleanup.push(() => window.removeEventListener('keydown', onKey));
+  }
+
+  private pinchDistance(): number {
+    const [a, b] = [...this.pointers.values()];
+    return Math.hypot(a.x - b.x, a.y - b.y);
+  }
+
+  private pinchCenter(): Point {
+    const [a, b] = [...this.pointers.values()];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  ngOnDestroy() {
+    this.destroyed = true;
+    this.toastTimers.forEach(clearTimeout);
+    this.cleanup.forEach((fn) => fn());
+    this.areaLabelView.dispose();
+    this.app?.destroy(true, { children: true });
+  }
+}

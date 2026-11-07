@@ -1,0 +1,36 @@
+{
+  "id": "emeraldine",
+  "name": "Emeraldine",
+  "class": "arcidruida",
+  "portrait": "characters/emeraldine-token.webp",
+  "portraitFull": "characters/emeraldine-portrait.webp",
+  "wounds": 12,
+  "energy": 4,
+  "armor": 2,
+  "speed": 4,
+  "value": 3,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 1,
+    "cunning": 0,
+    "magic": 2
+  },
+  "dice": {
+    "melee": 1,
+    "ranged": 0,
+    "magic": 2
+  },
+  "abilityName": "Francor, Coniglio fedele",
+  "ability": "**Francor il Coniglio fedele** è il tuo famiglio. Ti seguirà da inizio avventura.",
+  "effects": [
+    {
+      "kind": "familiar",
+      "ids": [
+        "francor"
+      ],
+      "name": "Francor, Coniglio fedele"
+    }
+  ]
+}

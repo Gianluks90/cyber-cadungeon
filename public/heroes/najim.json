@@ -1,0 +1,35 @@
+{
+  "id": "najim",
+  "name": "Najim",
+  "class": "guerriero profeta",
+  "portrait": "characters/najim-token.webp",
+  "portraitFull": "characters/najim-portrait.webp",
+  "wounds": 16,
+  "energy": 4,
+  "armor": 2,
+  "speed": 3,
+  "value": 4,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 2,
+    "cunning": 1,
+    "magic": 0
+  },
+  "dice": {
+    "melee": 2,
+    "ranged": 1,
+    "magic": 0
+  },
+  "abilityName": "Ritmo costante",
+  "ability": "All'inizio del tuo turno recuperi {energy:1}.",
+  "effects": [
+    {
+      "kind": "rule",
+      "rule": "energyAtStart",
+      "amount": 1,
+      "name": "Ritmo costante"
+    }
+  ]
+}

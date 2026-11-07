@@ -1,0 +1,43 @@
+{
+  "id": "ferdinand",
+  "name": "Ferdinand",
+  "class": "druido",
+  "portrait": "characters/ferdinand-token.webp",
+  "portraitFull": "characters/ferdinand-portrait.webp",
+  "wounds": 12,
+  "energy": 4,
+  "armor": 1,
+  "speed": 4,
+  "value": 3,
+  "coins": 300,
+  "items": [
+    "sword",
+    "shield",
+    "chain-mail"
+  ],
+  "potions": [],
+  "skills": {
+    "combat": 2,
+    "cunning": 0,
+    "magic": 1
+  },
+  "dice": {
+    "melee": 2,
+    "ranged": 0,
+    "magic": 1
+  },
+  "abilityName": "Pelle di corteccia",
+  "ability": "Quando subisci una ferita, puoi ridurla di 1 una volta per round.",
+  "effects": [
+    {
+      "kind": "react",
+      "on": "wounds",
+      "name": "Pelle di corteccia",
+      "cost": {
+        "exhaust": true
+      },
+      "cancel": 1,
+      "maxCancel": 1
+    }
+  ]
+}

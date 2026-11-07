@@ -1,0 +1,35 @@
+{
+  "id": "anarien",
+  "name": "Anarien",
+  "class": "Cacciatrice di mostri",
+  "portrait": "characters/anarien-token.webp",
+  "portraitFull": "characters/anarien-portrait.webp",
+  "wounds": 12,
+  "energy": 5,
+  "armor": 1,
+  "speed": 5,
+  "value": 3,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 0,
+    "cunning": 3,
+    "magic": 0
+  },
+  "dice": {
+    "melee": 0,
+    "ranged": 3,
+    "magic": 0
+  },
+  "abilityName": "Pianificatrice",
+  "ability": "Dopo aver scelto di **Prepararsi**, in qualsiasi momento, puoi spendere {energy:2} per cambiare l'ordine dichiarato con uno diverso.",
+  "effects": [
+    {
+      "kind": "rule",
+      "rule": "changeOrder",
+      "amount": 2,
+      "name": "Ordini flessibili"
+    }
+  ]
+}
