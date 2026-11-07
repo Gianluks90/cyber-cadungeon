@@ -1,0 +1,35 @@
+{
+  "id": "bastion",
+  "name": "Bastion",
+  "class": "Soldato corazzato",
+  "portrait": "characters/bastion-token.webp",
+  "portraitFull": "characters/bastion-portrait.webp",
+  "wounds": 20,
+  "energy": 3,
+  "armor": 3,
+  "speed": 3,
+  "value": 4,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 3,
+    "cunning": 0,
+    "magic": 0
+  },
+  "dice": {
+    "melee": 3,
+    "ranged": 0,
+    "magic": 0
+  },
+  "abilityName": "Assorbitori cinetici",
+  "ability": "Ogni volta che subisci ferite da un attacco recuperi {energy:1}.",
+  "effects": [
+    {
+      "kind": "rule",
+      "rule": "energyOnWounded",
+      "amount": 1,
+      "name": "Assorbitori cinetici"
+    }
+  ]
+}

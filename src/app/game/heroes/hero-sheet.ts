@@ -95,4 +95,4 @@ export async function loadAllHeroSheets(): Promise<HeroSheet[]> {
 }
 
 /** La squadra di una partita su un'avventura senza eroi nei dati (quelle fatte con l'editor): gli id delle schede in `public/heroes/`, nell'ordine in cui entrano in campo. */
-export const DEFAULT_PARTY: readonly string[] = ['gjoffrid', 'anarien'];
+export const DEFAULT_PARTY: readonly string[] = ['vesper', 'bastion'];

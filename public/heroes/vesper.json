@@ -1,0 +1,40 @@
+{
+  "id": "vesper",
+  "name": "Vesper",
+  "class": "Cecchino",
+  "portrait": "characters/vesper-token.webp",
+  "portraitFull": "characters/vesper-portrait.webp",
+  "wounds": 8,
+  "energy": 4,
+  "armor": 1,
+  "speed": 5,
+  "value": 2,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 1,
+    "cunning": 2,
+    "magic": 0
+  },
+  "dice": {
+    "melee": 1,
+    "ranged": 2,
+    "magic": 0
+  },
+  "abilityName": "Colpo dall'ombra",
+  "ability": "I tuoi attacchi infliggono +2 danni contro un nemico che non vedevi all'inizio del turno.",
+  "effects": [
+    {
+      "kind": "attack",
+      "on": [
+        "melee",
+        "ranged",
+        "magic"
+      ],
+      "damage": 2,
+      "ifUnseenAtStart": true,
+      "name": "Colpo dall'ombra"
+    }
+  ]
+}

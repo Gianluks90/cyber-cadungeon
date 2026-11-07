@@ -53,6 +53,8 @@ interface GoalData {
         } @else {
           <div class="card off" aria-disabled="true" [style.--i]="$index"><span class="n">{{ number($index) }}</span><span class="t">{{ 'common.soon' | t }}</span></div>
         }
+      } @empty {
+        <p class="empty">{{ 'adventures.empty' | t }}</p>
       }
     </section>
     <a class="square back" routerLink="/" [attr.aria-label]="'adventures.backHome' | t" [title]="'adventures.backHome' | t"><app-icon name="logo/logoipsum-419" [size]="20" /></a>
@@ -92,6 +94,7 @@ interface GoalData {
     .status { color: var(--c-text-dim); opacity: 0.25; transition: color 0.3s, opacity 0.3s; }
     .status.done { color: var(--c-ok); opacity: 1; }
     @media (pointer: coarse) { .flag, .status { width: 36px; height: 36px; } }
+    .empty { grid-column: 1 / -1; margin: 0; text-align: center; color: var(--c-text-dim); font: 400 14px/1.4 var(--font-ui); }
     .card.off { opacity: 0.4; }
     .card.off .t { font: 400 13px/1.3 var(--font-ui); letter-spacing: 0; color: var(--c-text-dim); }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }

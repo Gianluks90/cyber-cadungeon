@@ -1,0 +1,34 @@
+{
+  "id": "halo",
+  "name": "Halo",
+  "class": "Tecnico di supporto",
+  "portrait": "characters/halo-token.webp",
+  "portraitFull": "characters/halo-portrait.webp",
+  "wounds": 12,
+  "energy": 4,
+  "armor": 1,
+  "speed": 3,
+  "value": 3,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "skills": {
+    "combat": 1,
+    "cunning": 1,
+    "magic": 1
+  },
+  "dice": {
+    "melee": 1,
+    "ranged": 1,
+    "magic": 1
+  },
+  "abilityName": "Rete tattica",
+  "ability": "Guadagni l'abilità **Comando**: quando un eroe entro 3 spazi da te (te compreso) attacca, ottiene **+1 danno** e **+1 gittata**.",
+  "effects": [
+    {
+      "kind": "grant",
+      "keyword": "command",
+      "name": "Rete tattica"
+    }
+  ]
+}

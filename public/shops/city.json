@@ -2,16 +2,10 @@
   "id": "city",
   "name": "Negozio della città",
   "stock": {
-    "magic-staff": 3,
-    "light-armor": 3,
-    "chain-mail": 2,
-    "crossbow": 2,
-    "sword": 3,
-    "dagger": 2,
-    "bow": 2,
-    "rune-sacrifice": 2,
-    "axe": 2,
-    "rune-ghost-armor": 1,
+    "mono-blade": 3,
+    "pulse-pistol": 2,
+    "hack-deck": 2,
+    "ballistic-vest": 3,
     "shield": 2
   }
 }

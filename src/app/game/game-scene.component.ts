@@ -608,7 +608,7 @@ export class GameSceneComponent implements OnDestroy {
       const hasHeroes = (data.pieces ?? []).some((p) => p.team === 'hero');
       // Una partita multiplayer porta la squadra scelta nella sala d'attesa (`?party=a,b`); senza, quella di base.
       const chosen = (this.route.snapshot.queryParamMap.get('party') ?? '').split(',').filter((id) => /^[a-z0-9-]+$/.test(id));
-      const partyIds = chosen.length ? chosen : this.evilMode ? ['najim', 'gjoffrid', 'sporin', 'thael'] : DEFAULT_PARTY; // `/evil/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
+      const partyIds = chosen.length ? chosen : this.evilMode ? ['bastion', 'vesper', 'halo'] : DEFAULT_PARTY; // `/evil/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
       // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
       const setup = partySetupStore.take();
       const party: PieceData[] = hasHeroes ? [] : partyIds.map((hero, i) => ({ id: `h${i + 1}`, team: 'hero', hero, x: start.x, y: start.y, ...(setup[hero] ? { items: setup[hero].items, potions: setup[hero].potions, coins: setup[hero].coins, skillCards: setup[hero].skillCards } : {}) }));

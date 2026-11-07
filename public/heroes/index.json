@@ -1,1 +1,7 @@
-{"heroes": ["anarien", "emeraldine", "gjoffrid", "grumshar", "krag", "najim", "sporin", "thael", "bravis", "frubb"]}
+{
+  "heroes": [
+    "bastion",
+    "vesper",
+    "halo"
+  ]
+}

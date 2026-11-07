@@ -1,0 +1,476 @@
+{
+  "seed": 20261021,
+  "tiles": [
+    {
+      "tile": "room-6x6",
+      "x": 0,
+      "y": 0,
+      "rot": 0
+    },
+    {
+      "tile": "corridor-2x6",
+      "x": 6,
+      "y": 2,
+      "rot": 270
+    },
+    {
+      "tile": "corridor-cross",
+      "x": 12,
+      "y": 1,
+      "rot": 0
+    },
+    {
+      "tile": "room-4x6",
+      "x": 12,
+      "y": -5,
+      "rot": 0
+    },
+    {
+      "tile": "corridor-elbow",
+      "x": 13,
+      "y": 5,
+      "rot": 0
+    },
+    {
+      "tile": "room-4x4",
+      "x": 17,
+      "y": 6,
+      "rot": 0
+    },
+    {
+      "tile": "corridor-2x4",
+      "x": 16,
+      "y": 2,
+      "rot": 270
+    },
+    {
+      "tile": "corridor-t",
+      "x": 20,
+      "y": 2,
+      "rot": 90
+    },
+    {
+      "tile": "room-4x4",
+      "x": 24,
+      "y": 1,
+      "rot": 0
+    },
+    {
+      "tile": "corridor-2x2",
+      "x": 2,
+      "y": 6,
+      "rot": 0
+    },
+    {
+      "tile": "room-4x6",
+      "x": 1,
+      "y": 8,
+      "rot": 0
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 2,
+      "y": -1,
+      "rot": 0
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": -1,
+      "y": 2,
+      "rot": 270
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 13,
+      "y": -6,
+      "rot": 0
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 11,
+      "y": -3,
+      "rot": 270
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 16,
+      "y": -3,
+      "rot": 90
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 18,
+      "y": 5,
+      "rot": 0
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 18,
+      "y": 10,
+      "rot": 180
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 21,
+      "y": 7,
+      "rot": 90
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 21,
+      "y": 6,
+      "rot": 180
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 25,
+      "y": 0,
+      "rot": 0
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 25,
+      "y": 5,
+      "rot": 180
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 28,
+      "y": 2,
+      "rot": 90
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 2,
+      "y": 14,
+      "rot": 180
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 0,
+      "y": 10,
+      "rot": 270
+    },
+    {
+      "tile": "dead-end-2x1",
+      "x": 5,
+      "y": 10,
+      "rot": 90
+    }
+  ],
+  "doors": [
+    {
+      "x": 9,
+      "y": 2,
+      "horizontal": false,
+      "open": false
+    },
+    {
+      "x": 13,
+      "y": 1,
+      "horizontal": true,
+      "open": false,
+      "lock": {
+        "kind": "rune",
+        "color": "red"
+      }
+    },
+    {
+      "x": 13,
+      "y": 7,
+      "horizontal": true,
+      "open": false,
+      "lock": {
+        "kind": "key",
+        "keyId": "k1"
+      }
+    },
+    {
+      "x": 17,
+      "y": 7,
+      "horizontal": false,
+      "open": false,
+      "lock": {
+        "kind": "rune",
+        "color": "blue"
+      }
+    },
+    {
+      "x": 18,
+      "y": 2,
+      "horizontal": false,
+      "open": false,
+      "lock": {
+        "kind": "key",
+        "keyId": "k2"
+      }
+    },
+    {
+      "x": 24,
+      "y": 2,
+      "horizontal": false,
+      "open": false,
+      "lock": {
+        "kind": "rune",
+        "color": "green"
+      }
+    },
+    {
+      "x": 2,
+      "y": 7,
+      "horizontal": true,
+      "open": false,
+      "lock": {
+        "kind": "key",
+        "keyId": "k3",
+        "pickable": false
+      }
+    }
+  ],
+  "obstacles": [
+    {
+      "type": "water",
+      "x": 0,
+      "y": 0,
+      "length": 2
+    },
+    {
+      "type": "rock",
+      "x": 5,
+      "y": 0,
+      "length": 1
+    },
+    {
+      "type": "pit",
+      "x": 1,
+      "y": 3,
+      "length": 3,
+      "vertical": true
+    },
+    {
+      "type": "rock",
+      "x": 4,
+      "y": 5,
+      "length": 2
+    },
+    {
+      "type": "water",
+      "x": 5,
+      "y": 4,
+      "length": 1
+    },
+    {
+      "type": "rock",
+      "x": 12,
+      "y": -5,
+      "length": 1
+    },
+    {
+      "type": "water",
+      "x": 15,
+      "y": -4,
+      "length": 3,
+      "vertical": true
+    },
+    {
+      "type": "pit",
+      "x": 12,
+      "y": -1,
+      "length": 1
+    },
+    {
+      "type": "rock",
+      "x": 13,
+      "y": -2,
+      "length": 2
+    },
+    {
+      "type": "water",
+      "x": 18,
+      "y": 9,
+      "length": 3
+    },
+    {
+      "type": "rock",
+      "x": 20,
+      "y": 6,
+      "length": 1
+    },
+    {
+      "type": "pit",
+      "x": 20,
+      "y": 7,
+      "length": 2,
+      "vertical": true
+    },
+    {
+      "type": "pit",
+      "x": 27,
+      "y": 1,
+      "length": 3,
+      "vertical": true
+    },
+    {
+      "type": "water",
+      "x": 26,
+      "y": 4,
+      "length": 1
+    },
+    {
+      "type": "rock",
+      "x": 25,
+      "y": 1,
+      "length": 1
+    },
+    {
+      "type": "rock",
+      "x": 2,
+      "y": 10,
+      "length": 2
+    },
+    {
+      "type": "pit",
+      "x": 1,
+      "y": 12,
+      "length": 2,
+      "vertical": true
+    },
+    {
+      "type": "water",
+      "x": 4,
+      "y": 12,
+      "length": 2,
+      "vertical": true
+    }
+  ],
+  "pieces": [
+    {
+      "id": "h1",
+      "team": "hero",
+      "x": 2,
+      "y": 2,
+      "hero": "ferdinand"
+    },
+    {
+      "id": "h2",
+      "team": "hero",
+      "x": 3,
+      "y": 3,
+      "hero": "anarien"
+    },
+    {"id": "m1", "team": "monster", "monster": "skeleton", "x": 13, "y": 3}
+  ],
+  "party": {
+    "runeKeys": [
+      "blue"
+    ],
+    "keys": [
+      "k1"
+    ]
+  },
+  "markers": [
+    {
+      "type": "glyph",
+      "x": 4,
+      "y": 1
+    },
+    {
+      "type": "glyph",
+      "x": 14,
+      "y": -4
+    },
+    {
+      "type": "glyph",
+      "x": 18,
+      "y": 7,
+      "active": true
+    },
+    {
+      "type": "glyph",
+      "x": 25,
+      "y": 3
+    },
+    {
+      "type": "chest",
+      "x": 4,
+      "y": 3,
+      "tier": "copper",
+      "contents": [
+        {
+          "kind": "progress",
+          "amount": 2
+        }
+      ]
+    },
+    {
+      "type": "chest",
+      "x": 12,
+      "y": -4,
+      "tier": "silver",
+      "rotation": 90,
+      "contents": [
+        {
+          "kind": "progress",
+          "amount": 3
+        },
+        {
+          "kind": "rune",
+          "color": "red"
+        }
+      ]
+    },
+    {
+      "type": "chest",
+      "x": 26,
+      "y": 2,
+      "tier": "gold",
+      "contents": [
+        {
+          "kind": "progress",
+          "amount": 4
+        },
+        {
+          "kind": "coins"
+        },
+        {
+          "kind": "item",
+          "itemId": "light-sword"
+        }
+      ]
+    },
+    {
+      "type": "potion",
+      "kind": "heal",
+      "x": 3,
+      "y": 1
+    },
+    {
+      "type": "potion",
+      "kind": "energy",
+      "x": 2,
+      "y": 4
+    },
+    {
+      "type": "coins",
+      "x": 3,
+      "y": 5
+    },
+    {
+      "type": "rune",
+      "color": "green",
+      "x": 14,
+      "y": 0
+    },
+    {
+      "type": "coins",
+      "x": 25,
+      "y": 4
+    },
+    {
+      "type": "key",
+      "keyId": "k3",
+      "x": 4,
+      "y": 0
+    }
+  ]
+}
