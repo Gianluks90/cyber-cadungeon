@@ -125,6 +125,7 @@
   /* ---------- Forme: stile tecnico, angoli secchi ---------- */
   --radius-0: 0;
   --radius-1: 2px;     /* pannelli, pill, bottoni */
+  --radius-2: 10px;    /* solo gli angoli smussati del logo */
   --radius-round: 50%; /* SOLO token/pedine */
   --stroke-thin: 1px;
   --stroke-base: 1.5px;

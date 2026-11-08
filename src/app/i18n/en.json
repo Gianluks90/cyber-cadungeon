@@ -2037,5 +2037,6 @@
   "worldMap.nav.view3d": "Turn 3D on or off",
   "worldMap.nav.resetNorth": "Reset north to the top",
   "worldMap.nav.zoomIn": "Zoom in",
-  "worldMap.nav.zoomOut": "Zoom out"
+  "worldMap.nav.zoomOut": "Zoom out",
+  "worldMap.logo": "CyberCadungeon"
 }

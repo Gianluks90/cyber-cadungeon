@@ -2037,5 +2037,6 @@
   "worldMap.nav.view3d": "Attiva o disattiva il 3D",
   "worldMap.nav.resetNorth": "Riporta il nord in alto",
   "worldMap.nav.zoomIn": "Avvicina",
-  "worldMap.nav.zoomOut": "Allontana"
+  "worldMap.nav.zoomOut": "Allontana",
+  "worldMap.logo": "CyberCadungeon"
 }

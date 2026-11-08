@@ -40,6 +40,7 @@ const USER_ZOOM = 16;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
+    <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <button type="button" class="logout" [attr.aria-label]="'worldMap.logout' | t" [title]="'worldMap.logout' | t" (click)="logout()">
       <app-icon name="logout" [size]="20" />
@@ -63,6 +64,9 @@ const USER_ZOOM = 16;
     :host { display: block; position: relative; width: 100%; height: 100%; }
     .map { position: absolute; inset: 0; }
     /* In alto a destra, a spigoli secchi come le altre cornici del progetto. */
+    /* In alto a sinistra, nel box come il logout; il logo è un SVG usato come maschera, quindi lo colora il testo. */
+    .logo { position: absolute; top: 10px; left: 10px; z-index: 1; box-sizing: border-box; height: 36px; width: 82px; border: 1px solid var(--c-line-strong); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: none; }
+    .logo::after { content: ''; position: absolute; inset: 0; margin: auto; width: 62px; height: 20px; background-color: var(--c-text); -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
     .logout { position: absolute; top: 10px; right: 10px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     /* Lo stato della ricerca della posizione: in basso a sinistra, identico all'attribuzione di MapLibre (che sta in basso a destra). */
     .status { position: absolute; left: 0; bottom: 0; z-index: 2; margin: 0; padding: 0 5px; max-width: calc(100% - 10px); box-sizing: border-box; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; pointer-events: none; }
@@ -84,6 +88,7 @@ export class WorldMapComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   protected readonly location = inject(LocationService);
+  protected readonly logoUrl = `url("${new URL('logo/logoipsum-421.svg', document.baseURI).href}")`;
   /** Se la posizione è poco precisa, di quanti metri (altrimenti niente). */
   protected readonly lowAccuracy = computed(() => {
     const a = this.location.position()?.accuracy;
