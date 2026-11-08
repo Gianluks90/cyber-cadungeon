@@ -1,3 +1,5 @@
+/* CSS di MapLibre (la mappa del mondo): gli @import vanno in cima. */
+@import 'maplibre-gl/dist/maplibre-gl.css';
 html, body { margin: 0; height: 100%; overflow: hidden; background: var(--c-bg); color: var(--c-text); font-family: var(--font-ui); }
 /* Niente zoom della pagina con il doppio tocco (il pinch resta). */
 html, body { touch-action: manipulation; }
@@ -62,3 +64,6 @@ app-dialog ::placeholder { color: var(--c-text-dim); opacity: 0.7; }
 .tok-energy i { --tok-icon: var(--ico-water-drop); }
 .tok-hatred { color: var(--c-hatred); }
 .tok-hatred i { --tok-icon: var(--ico-skull); }
+/* Mappa del mondo (MapLibre): il suo CSS e l'attribuzione di Protomaps/OpenStreetMap, obbligatoria per licenza, leggibile su fondo scuro con i token del progetto. */
+.maplibregl-ctrl-attrib { background: var(--c-surface) !important; color: var(--c-text-dim) !important; font-size: 12px; border: 1px solid var(--c-line); border-radius: var(--radius-1); }
+.maplibregl-ctrl-attrib a { color: var(--c-text) !important; }
