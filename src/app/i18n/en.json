@@ -724,7 +724,7 @@
   "obstacle.pit": "Pit",
   "obstacle.water": "Water",
   "import.invalidJson": "The file is not valid JSON.",
-  "import.notAdventure": "The file is not a CADungeon adventure (the seed or the tile list is missing).",
+  "import.notAdventure": "The file is not a CyberCadungeon adventure (the seed or the tile list is missing).",
   "import.unknownTiles": "The file uses tiles the editor does not know: {list}.",
   "die.red": "Red",
   "die.green": "Green",

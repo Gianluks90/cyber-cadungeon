@@ -201,7 +201,7 @@ def write_theme(color, faces, mesh):
     specular_map(mask).save(out / 'specular.jpg', quality=90)
     (out / 'd6.json').write_text(json.dumps(mesh, separators=(',', ':')))
     config = {
-        'name': f'CADungeon {color}', 'systemName': color, 'author': 'CADungeon', 'version': 1, 'meshFile': 'd6.json',
+        'name': f'CyberCadungeon {color}', 'systemName': color, 'author': 'CyberCadungeon', 'version': 1, 'meshFile': 'd6.json',
         'material': {
             'type': 'color',
             'diffuseTexture': {'light': 'diffuse-light.png', 'dark': 'diffuse-dark.png'},

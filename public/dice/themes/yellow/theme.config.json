@@ -1,7 +1,7 @@
 {
-  "name": "CADungeon yellow",
+  "name": "CyberCadungeon yellow",
   "systemName": "yellow",
-  "author": "CADungeon",
+  "author": "CyberCadungeon",
   "version": 1,
   "meshFile": "d6.json",
   "material": {

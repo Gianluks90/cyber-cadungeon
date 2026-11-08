@@ -724,7 +724,7 @@
   "obstacle.pit": "Buca",
   "obstacle.water": "Acqua",
   "import.invalidJson": "Il file non è un JSON valido.",
-  "import.notAdventure": "Il file non è un'avventura di CADungeon (mancano il seme o l'elenco delle tessere).",
+  "import.notAdventure": "Il file non è un'avventura di CyberCadungeon (mancano il seme o l'elenco delle tessere).",
   "import.unknownTiles": "Il file usa tessere che l'editor non conosce: {list}.",
   "die.red": "Rosso",
   "die.green": "Verde",

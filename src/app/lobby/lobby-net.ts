@@ -44,7 +44,7 @@ type ToClient = { t: 'state'; state: LobbyState } | { t: 'full' };
 /** Come sta la connessione, visto da chi la usa. */
 export type NetStatus = 'connecting' | 'online' | 'taken' | 'offline' | 'notfound' | 'full';
 
-const PREFIX = 'cadungeon-lobby-';
+const PREFIX = 'cyber-cadungeon-lobby-';
 export const peerIdOf = (code: string) => PREFIX + code;
 const RETRY_MS = 2500;
 

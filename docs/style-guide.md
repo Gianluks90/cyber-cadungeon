@@ -1,4 +1,4 @@
-# Guida di stile di CADungeon
+# Guida di stile di CyberCadungeon
 
 Questa guida descrive lo stile **come è oggi nel codice**. I valori vengono da `src/app/game/theme.ts`
 (colori e opacità per ruolo, spessori di linea) e da `src/app/game/constants.ts` (misure e regole).

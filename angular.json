@@ -6,7 +6,7 @@
   },
   "newProjectRoot": "projects",
   "projects": {
-    "cadungeon": {
+    "cyber-cadungeon": {
       "projectType": "application",
       "schematics": {
         "@schematics/angular:class": {
@@ -87,10 +87,10 @@
           "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
-              "buildTarget": "cadungeon:build:production"
+              "buildTarget": "cyber-cadungeon:build:production"
             },
             "development": {
-              "buildTarget": "cadungeon:build:development"
+              "buildTarget": "cyber-cadungeon:build:development"
             }
           },
           "defaultConfiguration": "development"

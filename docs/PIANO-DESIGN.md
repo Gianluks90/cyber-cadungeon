@@ -1,4 +1,4 @@
-# CADungeon — Piano di design e fix UI
+# CyberCadungeon — Piano di design e fix UI
 
 Obiettivo: dare al gioco un'identità riconoscibile ("tavola tecnica da dungeon CAD") e renderlo coerente.
 Principi del progetto da rispettare: **un colore = un solo significato**, stile lineare con contorni sottili, **niente campiture piene**, UI minimale e contestuale.
