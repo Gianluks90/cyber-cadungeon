@@ -9,6 +9,16 @@
  */
 export const PMTILES_URL = 'https://data.source.coop/protomaps/openstreetmap/v4.pmtiles';
 
+/**
+ * Le altezze del terreno (Terrarium, AWS Terrain Tiles): servono al rilievo della vista 3D.
+ * SOLO SVILUPPO, come il file dei tile: in produzione serve un file proprio di quote (stesso formato) sul nostro hosting.
+ */
+export const DEM_TILES_URL = 'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png';
+export const DEM_SOURCE_ID = 'terrain-dem';
+export const DEM_ATTRIBUTION_HTML = '<a href="https://github.com/tilezen/joerd/blob/master/docs/attribution.md" target="_blank" rel="noopener">Terrain: Mapzen, AWS</a>';
+/** Quanto si esagerano le altezze (1 = vere): la città è ripida, meglio poco. */
+export const TERRAIN_EXAGGERATION = 1.2;
+
 /** Id della sorgente nello stile: lo stesso va dato a `layers()` di `@protomaps/basemaps`. */
 export const BASEMAP_SOURCE_ID = 'protomaps';
 

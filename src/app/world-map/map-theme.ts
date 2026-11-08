@@ -9,7 +9,7 @@ export interface MapTheme {
   id: 'cyberpunk';
   flavor: Flavor;
   spriteName: 'dark' | 'light';
-  extras: { buildingOutline: string };
+  extras: { buildingOutline: string; building: string };
 }
 
 /** Legge un ruolo della palette da `src/styles/tokens.css` (la fonte dei colori). Se manca, errore subito: uno stile con un colore vuoto non si disegna. */
@@ -142,6 +142,6 @@ export function createCyberpunkTheme(): MapTheme {
     id: 'cyberpunk',
     flavor: buildCyberpunkFlavor(palette),
     spriteName: 'dark',
-    extras: { buildingOutline: palette.buildingOutline },
+    extras: { buildingOutline: palette.buildingOutline, building: palette.building },
   };
 }

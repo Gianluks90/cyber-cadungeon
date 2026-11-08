@@ -41,7 +41,7 @@ export const FILTER_GROUPS: readonly FilterGroup[] = [
     ],
   },
   { id: 'railways', section: 'map', label: 'worldMap.filter.railways', essential: true, layers: ['roads_rail'] },
-  { id: 'buildings', section: 'map', label: 'worldMap.filter.buildings', essential: true, layers: ['buildings', 'buildings-outline'] },
+  { id: 'buildings', section: 'map', label: 'worldMap.filter.buildings', essential: true, layers: ['buildings', 'buildings-outline', 'buildings-3d'] },
   { id: 'parks', section: 'map', label: 'worldMap.filter.parks', essential: true, layers: ['landcover', 'landuse_park', 'landuse_urban_green', 'landuse_zoo'] },
   { id: 'water', section: 'map', label: 'worldMap.filter.water', essential: true, layers: ['water', 'water_stream', 'water_river'] },
   {
@@ -122,13 +122,13 @@ export function saveCustomFilters(custom: ReadonlySet<string>): void {
  * Applica i filtri allo stile in uso. Va rifatto a ogni `style.load` (il cambio di tema ricrea lo stile e azzera le visibilità).
  * Se lo stile non è pronto MapLibre lancia un errore: basta ignorarlo, perché `style.load` riapplica tutto.
  */
-export function applyMapFilters(map: MapLibreMap, enabled: ReadonlySet<string>): void {
+export function applyMapFilters(map: MapLibreMap, enabled: ReadonlySet<string>, threeD = false): void {
   try {
     const poiKinds: string[] = [];
     for (const group of FILTER_GROUPS) {
       const on = enabled.has(group.id);
       for (const id of group.layers) {
-        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on ? 'visible' : 'none');
+        if (map.getLayer(id)) map.setLayoutProperty(id, 'visibility', on && (threeD || id !== 'buildings-3d') ? 'visible' : 'none');
       }
       if (on && group.poiKinds) poiKinds.push(...group.poiKinds);
     }

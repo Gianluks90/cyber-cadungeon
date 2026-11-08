@@ -37,6 +37,7 @@
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
   --c-loot:          #c9b88c;  /* monete, chiavi, tesori (sabbia spenta, NON oro) */
   --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
+  --c-you:           #2bff88;  /* SOLO: la posizione del giocatore sulla mappa del mondo (verde neon, con glow) */
   --c-ok:            #6cc08a;  /* verifica dell'avventura: tutto a posto */
   --c-warn:           var(--px-amber);  /* verifica dell'avventura: va bene ma manca qualcosa */
   --c-error:         var(--c-danger);  /* verifica dell'avventura: qualcosa è sbagliato */
