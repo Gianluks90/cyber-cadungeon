@@ -20,6 +20,8 @@
   "home.language": "Language",
   "worldMap.label": "World map",
   "worldMap.logout": "Log out",
+  "worldMap.day": "Day",
+  "worldMap.night": "Night",
   "worldMap.filter.title": "Filters",
   "worldMap.filter.open": "Open filters",
   "worldMap.filter.close": "Close filters",

@@ -12,7 +12,7 @@ import { GOOD_ACCURACY_M, LocationService, type UserPosition } from './location.
 import { applyTerrain, buildMapStyle } from './map-style';
 import { MapNavComponent } from './map-nav.component';
 import { MapFilterPanelComponent } from './map-filter-panel.component';
-import { applyMapFilters, enabledFor, loadCustomFilters, loadPreset, saveCustomFilters, savePreset, type FilterPreset } from './map-filters';
+import { FILTER_GROUPS, applyMapFilters, enabledFor, loadCustomFilters, loadPreset, saveCustomFilters, savePreset, type FilterPreset } from './map-filters';
 import { createCyberpunkTheme, type MapTheme } from './map-theme';
 
 /** Inclinazione fissa della vista 3D, in gradi: non si regola a mano. */
@@ -42,9 +42,16 @@ const USER_ZOOM = 16;
     <div #container class="map" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
     <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
+    <button type="button" class="fullscreen" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
+      <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="20" />
+    </button>
     <button type="button" class="logout" [attr.aria-label]="'worldMap.logout' | t" [title]="'worldMap.logout' | t" (click)="logout()">
       <app-icon name="logout" [size]="20" />
     </button>
+    <p class="clock" role="timer" [attr.aria-label]="(isNight() ? 'worldMap.night' : 'worldMap.day') | t">
+      <app-icon [name]="isNight() ? 'bedtime' : 'light_mode'" [size]="20" />
+      {{ time() }}
+    </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     @if (location.searching()) {
       <p class="status">{{ 'location.searching' | t }}</p>
@@ -69,10 +76,14 @@ const USER_ZOOM = 16;
     .logo::after { content: ''; position: absolute; inset: 0; margin: auto; width: 62px; height: 20px; background-color: var(--c-text); -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
     .logout { position: absolute; top: 10px; right: 10px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     /* Lo stato della ricerca della posizione: in basso a sinistra, identico all'attribuzione di MapLibre (che sta in basso a destra). */
-    .status { position: absolute; left: 0; bottom: 0; z-index: 2; margin: 0; padding: 0 5px; max-width: calc(100% - 10px); box-sizing: border-box; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; pointer-events: none; }
+    .status { position: absolute; left: 10px; bottom: 10px; z-index: 2; margin: 0; padding: 0 5px; max-width: calc(100% - 20px); box-sizing: border-box; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; pointer-events: none; }
     .status { display: flex; align-items: center; gap: 4px; }
     .halo-toggle { pointer-events: auto; width: 20px; height: 20px; margin-right: -5px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast); }
     .halo-toggle:hover, .halo-toggle:focus-visible { color: var(--c-interact); outline: none; }
+    .fullscreen { position: absolute; top: 10px; right: 54px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
+    .fullscreen:hover, .fullscreen:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    /* L'orologio: un riquadro come i tasti (36px di altezza), in basso a sinistra sopra il piè di pagina. */
+    .clock { position: absolute; left: 10px; bottom: 40px; z-index: 1; margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
     .logout:hover, .logout:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
   `,
 })
@@ -96,6 +107,16 @@ export class WorldMapComponent {
   });
   /** Mostra l'alone dell'incertezza attorno alla freccia (scelta ricordata nel browser). */
   protected readonly showHalo = signal(loadHaloShown());
+  /** Schermo intero attivo. */
+  protected readonly fullscreen = signal(!!document.fullscreenElement);
+  /** L'ora corrente, aggiornata ogni secondo. */
+  private readonly now = signal(new Date());
+  protected readonly time = computed(() => this.now().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  /** Notte dalle 18 alle 6, giorno nelle altre ore. */
+  protected readonly isNight = computed(() => {
+    const h = this.now().getHours();
+    return h >= 18 || h < 6;
+  });
   /** Vista 3D accesa (scelta ricordata nel browser). */
   protected readonly view3d = signal(readFlag(VIEW3D_KEY));
   /** Di quanto è ruotata la mappa, in gradi interi. */
@@ -116,6 +137,14 @@ export class WorldMapComponent {
   private protocolRegistered = false;
 
   constructor() {
+    const tick = setInterval(() => this.now.set(new Date()), 1000);
+    const onFullscreen = () => this.fullscreen.set(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onFullscreen);
+    this.destroyRef.onDestroy(() => {
+      clearInterval(tick);
+      document.removeEventListener('fullscreenchange', onFullscreen);
+    });
+
     // Il DOM esiste solo dopo il primo disegno; tutto fuori da NgZone.
     afterNextRender(() => this.ngZone.runOutsideAngular(() => this.createMap()));
 
@@ -164,12 +193,12 @@ export class WorldMapComponent {
   }
 
   protected toggle(id: string): void {
-    if (this.preset() !== 'custom') return; // "Tutto" ed "Essenziale" non si modificano
-    this.custom.update((current) => {
-      const next = new Set(current);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+    if (FILTER_GROUPS.some((g) => g.id === id && (g.fixed || g.locked))) return;
+    // Toccare una voce da "Tutto" o "Essenziale" parte da quel filtro e passa a "Personalizzato".
+    const next = new Set(this.enabled());
+    if (!next.delete(id)) next.add(id);
+    this.custom.set(next);
+    this.preset.set('custom');
   }
 
   protected choosePreset(preset: FilterPreset): void {
@@ -213,6 +242,11 @@ export class WorldMapComponent {
   protected toggleHalo(): void {
     this.showHalo.update((v) => !v);
     try { localStorage.setItem(HALO_KEY, this.showHalo() ? '1' : '0'); } catch { /* vale solo per questa visita */ }
+  }
+
+  protected toggleFullscreen(): void {
+    const result = document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+    result.catch(() => { /* il browser può rifiutare: resta com'è */ });
   }
 
   protected async logout(): Promise<void> {

@@ -20,6 +20,8 @@
   "home.language": "Lingua",
   "worldMap.label": "Mappa del mondo",
   "worldMap.logout": "Esci",
+  "worldMap.day": "Giorno",
+  "worldMap.night": "Notte",
   "worldMap.filter.title": "Filtri",
   "worldMap.filter.open": "Apri i filtri",
   "worldMap.filter.close": "Chiudi i filtri",

@@ -63,7 +63,7 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
           @for (section of sections; track section.id) {
             <p class="label">{{ section.label | t }}</p>
             @for (group of groupsOf(section.id); track group.id) {
-              <button type="button" class="row" role="checkbox" [class.on]="enabled().has(group.id)" [class.locked]="group.locked" [attr.aria-checked]="enabled().has(group.id)" [disabled]="group.locked || preset() !== 'custom'" (click)="toggled.emit(group.id)">
+              <button type="button" class="row" role="checkbox" [class.on]="enabled().has(group.id)" [class.locked]="group.locked" [attr.aria-checked]="enabled().has(group.id)" [disabled]="group.locked" (click)="toggled.emit(group.id)">
                 <span class="box"></span>
                 <span class="name">{{ group.label | t }}</span>
               </button>
@@ -83,7 +83,7 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* Il pannello si apre accanto al container, scivolando da sinistra. */
-    .sheet { position: absolute; left: var(--rail); top: 10px; bottom: 10px; width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet { position: absolute; left: var(--rail); top: 56px; bottom: 86px; /* tra il logo (10+36px dall'alto) e l'orologio (40+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
     .wrap.open .sheet { transform: none; }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
@@ -127,7 +127,7 @@ export class MapFilterPanelComponent {
   protected readonly presetLabel = computed<MessageKey>(() => PRESETS.find((p) => p.id === this.preset())!.label);
 
   protected groupsOf(section: FilterSection) {
-    return FILTER_GROUPS.filter((g) => g.section === section);
+    return FILTER_GROUPS.filter((g) => g.section === section && !g.fixed);
   }
 
   /** Passa alla configurazione precedente (-1) o successiva (+1), in giro; "Personalizzato" è l'ultimo. */

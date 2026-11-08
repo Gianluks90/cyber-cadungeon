@@ -19,13 +19,15 @@ export interface FilterGroup {
   essential: boolean;
   /** Voce non ancora disponibile: si vede spenta e non si può toccare; non entra in nessun filtro. */
   locked?: boolean;
+  /** Punto di riferimento essenziale: sempre acceso, in ogni filtro, e non si può spegnere. (La terra è lo sfondo della mappa e non è mai un filtro.) */
+  fixed?: boolean;
 }
 
 export const FILTER_GROUPS: readonly FilterGroup[] = [
   { id: 'fixer-contracts', section: 'fixer', label: 'worldMap.filter.fixerContracts', essential: false, locked: true, layers: [] },
   { id: 'fixer-hangouts', section: 'fixer', label: 'worldMap.filter.fixerHangouts', essential: false, locked: true, layers: [] },
   {
-    id: 'roads-main', section: 'map', label: 'worldMap.filter.roadsMain', essential: true,
+    id: 'roads-main', section: 'map', label: 'worldMap.filter.roadsMain', essential: true, fixed: true,
     layers: [
       'roads_highway', 'roads_highway_casing_early', 'roads_highway_casing_late', 'roads_major', 'roads_major_casing_early', 'roads_major_casing_late', 'roads_link', 'roads_link_casing',
       'roads_bridges_highway', 'roads_bridges_highway_casing', 'roads_bridges_major', 'roads_bridges_major_casing', 'roads_bridges_link', 'roads_bridges_link_casing',
@@ -41,9 +43,9 @@ export const FILTER_GROUPS: readonly FilterGroup[] = [
     ],
   },
   { id: 'railways', section: 'map', label: 'worldMap.filter.railways', essential: true, layers: ['roads_rail'] },
-  { id: 'buildings', section: 'map', label: 'worldMap.filter.buildings', essential: true, layers: ['buildings', 'buildings-outline', 'buildings-3d'] },
+  { id: 'buildings', section: 'map', label: 'worldMap.filter.buildings', essential: true, fixed: true, layers: ['buildings', 'buildings-outline', 'buildings-3d'] },
   { id: 'parks', section: 'map', label: 'worldMap.filter.parks', essential: true, layers: ['landcover', 'landuse_park', 'landuse_urban_green', 'landuse_zoo'] },
-  { id: 'water', section: 'map', label: 'worldMap.filter.water', essential: true, layers: ['water', 'water_stream', 'water_river'] },
+  { id: 'water', section: 'map', label: 'worldMap.filter.water', essential: true, fixed: true, layers: ['water', 'water_stream', 'water_river'] },
   {
     id: 'land-use', section: 'map', label: 'worldMap.filter.landUse', essential: false,
     layers: ['landuse_hospital', 'landuse_industrial', 'landuse_school', 'landuse_beach', 'landuse_pedestrian', 'landuse_pier'],
@@ -69,12 +71,14 @@ export type FilterPreset = 'all' | 'essential' | 'custom';
 
 const ALL_IDS = FILTER_GROUPS.filter((g) => !g.locked).map((g) => g.id);
 const ESSENTIAL_IDS = FILTER_GROUPS.filter((g) => g.essential && !g.locked).map((g) => g.id);
+const FIXED_IDS = FILTER_GROUPS.filter((g) => g.fixed).map((g) => g.id);
 const PRESET_KEY = 'cad-map-preset';
 const CUSTOM_KEY = 'cad-map-filters-custom';
 
 /** Le voci accese da un filtro: quelle di "Tutto" o "Essenziale", oppure la scelta a mano (`custom`). */
 export function enabledFor(preset: FilterPreset, custom: ReadonlySet<string>): ReadonlySet<string> {
-  return preset === 'custom' ? custom : new Set(preset === 'all' ? ALL_IDS : ESSENTIAL_IDS);
+  const base = preset === 'custom' ? custom : new Set(preset === 'all' ? ALL_IDS : ESSENTIAL_IDS);
+  return new Set([...base, ...FIXED_IDS]); // i punti di riferimento restano sempre accesi
 }
 
 /** Il filtro su cui eravamo, salvato nel browser; di base "Essenziale". */

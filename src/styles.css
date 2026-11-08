@@ -324,6 +324,7 @@ app-dialog ::placeholder {
 
 /* Mappa del mondo (MapLibre): il suo CSS e l'attribuzione di Protomaps/OpenStreetMap, obbligatoria per licenza, leggibile su fondo scuro con i token del progetto. */
 .maplibregl-ctrl-attrib {
+  margin: 0 10px 10px 0 !important; /* stessa distanza dai bordi di tasti e orologio */
   background: var(--c-surface) !important;
   color: var(--c-text-dim) !important;
   font-size: 12px;
