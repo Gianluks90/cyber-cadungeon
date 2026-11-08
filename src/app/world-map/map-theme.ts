@@ -2,8 +2,8 @@ import { namedFlavor, type Flavor } from '@protomaps/basemaps';
 
 /**
  * Un tema della mappa: i colori del disegno (`flavor`), lo sprite delle icone e i colori nostri (`extras`).
- * I colori sono stringhe già risolte, perché MapLibre non legge `var(--x)`. Per ora esiste un solo tema; per aggiungerne un altro
- * basta un nuovo oggetto `MapTheme`, registrato in `THEMES`, con lo sprite giusto (`dark` per fondi scuri, `light` per chiari).
+ * I colori sono stringhe già risolte, lette da `src/styles/tokens.css` (la fonte), perché MapLibre non legge `var(--x)`. Per ora esiste un solo tema; per aggiungerne un altro
+ * basta una nuova funzione `create…Theme()` che legga i suoi token, con lo sprite giusto (`dark` per fondi scuri, `light` per chiari).
  */
 export interface MapTheme {
   id: 'cyberpunk';
@@ -12,30 +12,42 @@ export interface MapTheme {
   extras: { buildingOutline: string };
 }
 
-/** Un colore = un ruolo. Si ritocca solo qui. */
-const palette = {
-  background: '#03060f',
-  land: '#070c1c',
-  landUse: '#0b1226',
-  water: '#050e24',
-  waterLabel: '#2f6f9f',
-  park: '#08181f',
-  wood: '#07151b',
-  roadMain: '#2ad4ff',
-  roadSecondary: '#1a8fb0',
-  roadMinor: '#12566d',
-  roadCasing: '#03060f',
-  roadTunnel: '#0e3a4a',
-  railway: '#5a2a3a',
-  building: '#4a0e18',
-  buildingOutline: '#ff3b3b',
-  boundary: '#ff5a1f',
-  label: '#6fe6ff',
-  labelHalo: '#03060f',
-};
+/** Legge un ruolo della palette da `src/styles/tokens.css` (la fonte dei colori). Se manca, errore subito: uno stile con un colore vuoto non si disegna. */
+function token(style: CSSStyleDeclaration, name: string): string {
+  const value = style.getPropertyValue(name).trim();
+  if (!value) throw new Error(`Token mancante in tokens.css: ${name}`);
+  return value;
+}
 
-function buildCyberpunkFlavor(): Flavor {
-  const p = palette;
+/** I ruoli della mappa, letti dal CSS al momento di costruire il tema (mai in costanti di modulo). */
+function readPalette() {
+  const style = getComputedStyle(document.documentElement);
+  const t = (name: string) => token(style, `--map-${name}`);
+  return {
+    background: t('background'),
+    land: t('land'),
+    landUse: t('land-use'),
+    water: t('water'),
+    waterLabel: t('water-label'),
+    park: t('park'),
+    wood: t('wood'),
+    roadMain: t('road-main'),
+    roadSecondary: t('road-secondary'),
+    roadMinor: t('road-minor'),
+    roadCasing: t('road-casing'),
+    roadTunnel: t('road-tunnel'),
+    railway: t('railway'),
+    building: t('building'),
+    buildingOutline: t('building-outline'),
+    boundary: t('boundary'),
+    label: t('label'),
+    labelHalo: t('label-halo'),
+  };
+}
+
+type Palette = ReturnType<typeof readPalette>;
+
+function buildCyberpunkFlavor(p: Palette): Flavor {
   return {
     // Si parte dal tema scuro ufficiale: nessun campo obbligatorio manca.
     ...namedFlavor('dark'),
@@ -123,11 +135,13 @@ function buildCyberpunkFlavor(): Flavor {
   };
 }
 
-export const CYBERPUNK_THEME: MapTheme = {
-  id: 'cyberpunk',
-  flavor: buildCyberpunkFlavor(),
-  spriteName: 'dark',
-  extras: { buildingOutline: palette.buildingOutline },
-};
-
-export const THEMES: Record<MapTheme['id'], MapTheme> = { cyberpunk: CYBERPUNK_THEME };
+/** Il tema cyberpunk, con i colori letti ora da `tokens.css`. */
+export function createCyberpunkTheme(): MapTheme {
+  const palette = readPalette();
+  return {
+    id: 'cyberpunk',
+    flavor: buildCyberpunkFlavor(palette),
+    spriteName: 'dark',
+    extras: { buildingOutline: palette.buildingOutline },
+  };
+}

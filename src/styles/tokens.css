@@ -57,6 +57,51 @@
   --fog-hatch-color: var(--c-line);   /* tratteggio diagonale, niente campiture piene */
   --fog-explored-line: var(--c-line-strong);
 
+  /* ==========================================================
+     Palette cyberpunk: LA fonte dei colori della mappa del mondo (e, a breve, dell'interfaccia).
+     Primitivi (`--px-*`, i valori) e ruoli (`--map-*`, chi li usa). Si ritocca solo qui: il codice legge i ruoli con
+     getComputedStyle (MapLibre non legge `var(--x)`), mai esadecimali scritti a mano.
+     ========================================================== */
+  --px-ink-0:    #03060f;  /* il più scuro: sfondo, alone delle etichette */
+  --px-ink-1:    #070c1c;  /* terra */
+  --px-ink-2:    #0b1226;  /* usi del suolo */
+  --px-navy:     #050e24;  /* acqua */
+  --px-pine-0:   #08181f;  /* parchi */
+  --px-pine-1:   #07151b;  /* boschi, macchia, campi */
+  --px-steel:    #2f6f9f;  /* etichette dell'oceano */
+  --px-cyan-1:   #6fe6ff;  /* etichette */
+  --px-cyan-2:   #2ad4ff;  /* strade principali */
+  --px-cyan-3:   #1a8fb0;  /* strade secondarie */
+  --px-cyan-4:   #12566d;  /* strade minori */
+  --px-cyan-5:   #0e3a4a;  /* strade in galleria */
+  --px-plum:     #5a2a3a;  /* ferrovia */
+  --px-wine:     #4a0e18;  /* edifici */
+  --px-red:      #ff3b3b;  /* contorno degli edifici */
+  --px-orange:   #ff5a1f;  /* confini */
+
+  /* Puntatore del mouse (un quadrato con un puntino): colore e contorno scuro che lo tiene visibile sopra le strade ciano. */
+  --c-cursor:       var(--px-cyan-2);
+  --c-cursor-halo:  var(--px-ink-0);
+
+  --map-background:        var(--px-ink-0);
+  --map-land:              var(--px-ink-1);
+  --map-land-use:          var(--px-ink-2);
+  --map-water:             var(--px-navy);
+  --map-water-label:       var(--px-steel);
+  --map-park:              var(--px-pine-0);
+  --map-wood:              var(--px-pine-1);
+  --map-road-main:         var(--px-cyan-2);
+  --map-road-secondary:    var(--px-cyan-3);
+  --map-road-minor:        var(--px-cyan-4);
+  --map-road-casing:       var(--px-ink-0);
+  --map-road-tunnel:       var(--px-cyan-5);
+  --map-railway:           var(--px-plum);
+  --map-building:          var(--px-wine);
+  --map-building-outline:  var(--px-red);
+  --map-boundary:          var(--px-orange);
+  --map-label:             var(--px-cyan-1);
+  --map-label-halo:        var(--px-ink-0);
+
   /* ---------- Tipografia ---------- */
   --font-display: "Metamorphous", "Cinzel", Georgia, serif;   /* nomi, titoli (prova: Metamorphous; per tornare a Cinzel basta rimettere "Cinzel:wght@400..700" in index.html e in testa a questa lista) */
   --font-ui:      "Inter", system-ui, -apple-system, sans-serif;

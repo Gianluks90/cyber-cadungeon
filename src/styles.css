@@ -67,3 +67,5 @@ app-dialog ::placeholder { color: var(--c-text-dim); opacity: 0.7; }
 /* Mappa del mondo (MapLibre): il suo CSS e l'attribuzione di Protomaps/OpenStreetMap, obbligatoria per licenza, leggibile su fondo scuro con i token del progetto. */
 .maplibregl-ctrl-attrib { background: var(--c-surface) !important; color: var(--c-text-dim) !important; font-size: 12px; border: 1px solid var(--c-line); border-radius: var(--radius-1); }
 .maplibregl-ctrl-attrib a { color: var(--c-text) !important; }
+/* Il puntatore del mouse è sempre il quadrato con il puntino (`--cursor`, costruito da `ui/cursor.ts` con i colori dei token), anche sopra ciò che si preme. Fanno eccezione i campi di testo (resta il cursore a barra) e gli elementi a cui il codice dà un cursore suo (per esempio il mirino dell'editor). `!important` perché gli stili dei componenti scrivono `cursor: pointer`. */
+html, html *:not(input, textarea, [contenteditable], [style*='cursor']) { cursor: var(--cursor, auto) !important; }
