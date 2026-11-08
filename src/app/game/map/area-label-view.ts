@@ -49,6 +49,9 @@ interface Node {
   width: number;
 }
 
+/** Il carattere dei titoli, letto dal token `--font-display` di tokens.css (la fonte): niente nomi di font scritti qui. */
+const displayFont = () => getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim() || 'sans-serif';
+
 /**
  * Le etichette delle aree sulla mappa: il nome dell'area, nel carattere dei titoli, sullo sfondo accanto all'area (`placeAreaLabels` dice dove). Se l'etichetta è lontana dall'area, una
  * sola linea del colore dei muri, al centro dell'etichetta, che parte dal muro esterno dell'area e sfuma verso l'etichetta, le collega. Compaiono con una dissolvenza la prima volta che si
@@ -75,7 +78,7 @@ export class AreaLabelView {
     this.container.eventMode = 'none';
     this.container.addChild(this.lines);
     // Il carattere dei titoli è un font del sito: appena è pronto si rifanno i testi con quello vero.
-    void document.fonts?.load(`${LABEL_FONT_PX}px Metamorphous`).then(() => {
+    void document.fonts?.load(`${LABEL_FONT_PX}px ${displayFont()}`).then(() => {
       for (const n of this.nodes.values()) n.root.destroy({ children: true });
       this.nodes.clear();
       this.layout();
@@ -143,7 +146,7 @@ export class AreaLabelView {
     const root = new Container();
     const text = new Text({
       text: place.text,
-      style: { fontFamily: 'Metamorphous, Cinzel, Georgia, serif', fontSize: LABEL_FONT_PX, letterSpacing: 1.5, fill: theme.color.ui.text, stroke: { color: theme.color.token.fill, width: 5, join: 'round' } },
+      style: { fontFamily: displayFont(), fontSize: LABEL_FONT_PX, letterSpacing: 1.5, fill: theme.color.ui.text, stroke: { color: theme.color.token.fill, width: 5, join: 'round' } },
     });
     text.anchor.set(0.5);
     root.addChild(text);

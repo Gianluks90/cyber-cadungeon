@@ -20,7 +20,7 @@ export const SPRITE_BASE_URL = 'https://protomaps.github.io/basemaps-assets/spri
 export const LABEL_LANGUAGE = 'it';
 
 /** Vista iniziale: MapLibre vuole [longitudine, latitudine]. */
-export const START_VIEW: { center: [number, number]; zoom: number } = { center: [8.9463, 44.4056], zoom: 13 };
+export const START_VIEW: { center: [number, number]; zoom: number } = { center: [8.91791924698207, 44.4091624226706], zoom: 14 };
 
 /** Attribuzione obbligatoria per licenza (ODbL): non toglierla. */
 export const ATTRIBUTION_HTML =

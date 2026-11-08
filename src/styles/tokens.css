@@ -6,28 +6,28 @@
 
 :root {
   /* ---------- Superfici e linee (neutri) ---------- */
-  --c-bg:            #0b0b0c;  /* sfondo con puntini */
-  --c-dot:           #2b2b30;  /* puntini sfondo */
-  --c-surface:       #121214;  /* pannelli, pill HUD */
-  --c-tile:          #151517;  /* pavimento tile (opaco sopra i puntini) */
-  --c-line:          #2f2f35;  /* griglia, divisori */
-  --c-wall:          #6b6b73;  /* muro a doppia linea */
-  --c-line-strong:   #8a8a93;  /* cornici pannelli */
+  --c-bg:             var(--px-ink-0); /* sfondo con puntini */
+  --c-dot:            var(--px-cyan-5);  /* puntini sfondo */
+  --c-surface:        var(--px-ink-2);  /* pannelli, pill HUD */
+  --c-tile:           var(--px-ink-1);  /* pavimento tile (opaco sopra i puntini) */
+  --c-line:           var(--px-cyan-4);  /* griglia, divisori */
+  --c-wall:           var(--px-cyan-3);  /* muro a doppia linea */
+  --c-line-strong:    var(--px-cyan-3);  /* cornici pannelli */
 
   /* ---------- Testo (contrasto >= 4.5:1 su --c-bg) ---------- */
-  --c-text:          #ece9e2;
-  --c-text-dim:      #a09d95;  /* etichette secondarie */
-  --c-text-faint:    #7d7a73;  /* solo decorativo / disabilitato */
+  --c-text:           var(--px-ice);
+  --c-text-dim:       var(--px-slate);  /* etichette secondarie */
+  --c-text-faint:     var(--px-cyan-4);  /* solo decorativo / disabilitato */
 
   /* ---------- Colori semantici (un solo significato ciascuno) ---------- */
-  --c-interact:      #f0b84a;  /* SOLO: eroe attivo, token "!", ciò che posso fare ora, glow torce */
+  --c-interact:       var(--px-cyan-2); /* SOLO: eroe attivo, token "!", ciò che posso fare ora (il ciano delle strade principali) */
   --c-life:          #d2504a;  /* cuori / danno */
   --c-familiar:      #5aa9ff;  /* contorno dei famigli */
-  --c-move:          var(--c-interact);  /* movimento / velocità: lo stesso giallo del perimetro di movimento */
+  --c-move:           var(--c-interact); /* movimento / velocità: lo stesso colore del perimetro di movimento */
   --c-speed:         #6cc08a;  /* dado distanza */
   --c-energy:       #6cc08a;  /* energia: il verde della pozione dell'Energia */
   --c-hatred:        var(--c-danger);  /* Odio del Maligno: il teschio rosso */
-  --c-missing:       #e2703a;  /* avviso dell'editor: cosa manca */
+  --c-missing:        var(--px-orange);  /* avviso dell'editor: cosa manca */
   --c-burn:          #ff5a36;  /* stato: fiamma */
   --c-web:           #cfd4de;  /* stato: rete (ragnatela) */
   --c-stun:          #8f9bff;  /* stato: stordimento */
@@ -36,15 +36,15 @@
   --c-magic:         #a98bf0;  /* magia / pozioni magiche */
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
   --c-loot:          #c9b88c;  /* monete, chiavi, tesori (sabbia spenta, NON oro) */
-  --c-danger:        #ff5c5c;  /* angoli pericolosi, minacce (solo overlay/avvisi) */
+  --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
   --c-ok:            #6cc08a;  /* verifica dell'avventura: tutto a posto */
-  --c-warn:          #e8c547;  /* verifica dell'avventura: va bene ma manca qualcosa */
+  --c-warn:           var(--px-amber);  /* verifica dell'avventura: va bene ma manca qualcosa */
   --c-error:         var(--c-danger);  /* verifica dell'avventura: qualcosa è sbagliato */
 
   /* ---------- Fazioni (anello token e ordine di turno) ---------- */
   --c-faction-hero:      var(--c-interact);
   --c-faction-ally:      var(--c-line-strong);
-  --c-faction-evil:  #c4472f;  /* rosso brace */
+  --c-faction-evil:   var(--px-red); /* rosso della Megacorp */
 
   /* ---------- Dadi (stesso colore = stesso significato ovunque) ---------- */
   --c-die-melee:     var(--c-life);
@@ -58,7 +58,7 @@
   --fog-explored-line: var(--c-line-strong);
 
   /* ==========================================================
-     Palette cyberpunk: LA fonte dei colori della mappa del mondo (e, a breve, dell'interfaccia).
+     Palette cyberpunk: LA fonte dei colori della mappa del mondo e dell'interfaccia (i `--c-*` qui sopra puntano ai primitivi).
      Primitivi (`--px-*`, i valori) e ruoli (`--map-*`, chi li usa). Si ritocca solo qui: il codice legge i ruoli con
      getComputedStyle (MapLibre non legge `var(--x)`), mai esadecimali scritti a mano.
      ========================================================== */
@@ -69,6 +69,8 @@
   --px-pine-0:   #08181f;  /* parchi */
   --px-pine-1:   #07151b;  /* boschi, macchia, campi */
   --px-steel:    #2f6f9f;  /* etichette dell'oceano */
+  --px-ice:      #d8f6ff;  /* testo */
+  --px-slate:    #7fb8c9;  /* testo secondario */
   --px-cyan-1:   #6fe6ff;  /* etichette */
   --px-cyan-2:   #2ad4ff;  /* strade principali */
   --px-cyan-3:   #1a8fb0;  /* strade secondarie */
@@ -78,6 +80,7 @@
   --px-wine:     #4a0e18;  /* edifici */
   --px-red:      #ff3b3b;  /* contorno degli edifici */
   --px-orange:   #ff5a1f;  /* confini */
+  --px-amber:    #ffc933;  /* avvisi */
 
   /* Puntatore del mouse (un quadrato con un puntino): colore e contorno scuro che lo tiene visibile sopra le strade ciano. */
   --c-cursor:       var(--px-cyan-2);
@@ -103,7 +106,7 @@
   --map-label-halo:        var(--px-ink-0);
 
   /* ---------- Tipografia ---------- */
-  --font-display: "Metamorphous", "Cinzel", Georgia, serif;   /* nomi, titoli (prova: Metamorphous; per tornare a Cinzel basta rimettere "Cinzel:wght@400..700" in index.html e in testa a questa lista) */
+  --font-display: "Oxanium", system-ui, sans-serif;   /* nomi, titoli: tecnico e squadrato (Google Fonts, caricato in index.html) */
   --font-ui:      "Inter", system-ui, -apple-system, sans-serif;
   --font-mono:    "JetBrains Mono", ui-monospace, monospace;  /* numeri HUD */
 
@@ -162,30 +165,6 @@
   padding: var(--sp-4);
   position: relative;
 }
-/* "quote" CAD agli angoli: segno distintivo del gioco */
-.panel::before,
-.panel::after {
-  content: "";
-  position: absolute;
-  width: 8px; height: 8px;
-  border: var(--stroke-base) solid var(--corner-color, var(--c-interact));
-  pointer-events: none;
-}
-.panel::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-.panel::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
-
-/* Solo gli angoli "quota" (per i contenitori che hanno già il loro stile): serve position: relative */
-.corners::before,
-.corners::after {
-  content: "";
-  position: absolute;
-  width: 8px; height: 8px;
-  border: var(--stroke-base) solid var(--corner-color, var(--c-interact));
-  pointer-events: none;
-}
-.corners::before { top: -1px; left: -1px; border-right: 0; border-bottom: 0; }
-.corners::after  { bottom: -1px; right: -1px; border-left: 0; border-top: 0; }
-
 .pill {
   display: inline-flex; align-items: center; gap: var(--sp-2);
   padding: var(--sp-1) var(--sp-3);

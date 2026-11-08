@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { AttributionControl, Map as MapLibreMap, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
@@ -8,6 +8,8 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
 import { START_VIEW } from './map-config';
 import { buildMapStyle } from './map-style';
+import { MapFilterPanelComponent } from './map-filter-panel.component';
+import { applyMapFilters, enabledFor, loadCustomFilters, loadPreset, saveCustomFilters, savePreset, type FilterPreset } from './map-filters';
 import { createCyberpunkTheme, type MapTheme } from './map-theme';
 
 /**
@@ -17,10 +19,11 @@ import { createCyberpunkTheme, type MapTheme } from './map-theme';
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe],
+  imports: [IconComponent, TranslatePipe, MapFilterPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
+    <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <button type="button" class="logout" [attr.aria-label]="'worldMap.logout' | t" [title]="'worldMap.logout' | t" (click)="logout()">
       <app-icon name="logout" [size]="20" />
     </button>
@@ -44,6 +47,11 @@ export class WorldMapComponent {
   private readonly destroyRef = inject(DestroyRef);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
+  /** I gruppi di filtri accesi (il pannello li mostra, la mappa li applica). */
+  protected readonly preset = signal<FilterPreset>(loadPreset());
+  /** Le voci scelte a mano, che il filtro "Personalizzato" ricorda. */
+  private readonly custom = signal<ReadonlySet<string>>(loadCustomFilters());
+  protected readonly enabled = computed(() => enabledFor(this.preset(), this.custom()));
   private map: MapLibreMap | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private protocolRegistered = false;
@@ -58,6 +66,14 @@ export class WorldMapComponent {
       this.ngZone.runOutsideAngular(() => this.map?.setStyle(buildMapStyle(theme), { diff: false }));
     });
 
+    // Ogni cambio dei filtri si salva e si applica subito; all'avvio e dopo un cambio di tema ci pensa `style.load`.
+    effect(() => {
+      const enabled = this.enabled();
+      savePreset(this.preset());
+      saveCustomFilters(this.custom());
+      this.ngZone.runOutsideAngular(() => { if (this.map) applyMapFilters(this.map, enabled); });
+    });
+
     this.destroyRef.onDestroy(() => {
       this.resizeObserver?.disconnect();
       this.resizeObserver = null;
@@ -68,6 +84,19 @@ export class WorldMapComponent {
         this.protocolRegistered = false;
       }
     });
+  }
+
+  protected toggle(id: string): void {
+    if (this.preset() !== 'custom') return; // "Tutto" ed "Essenziale" non si modificano
+    this.custom.update((current) => {
+      const next = new Set(current);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
+
+  protected choosePreset(preset: FilterPreset): void {
+    this.preset.set(preset);
   }
 
   protected async logout(): Promise<void> {
@@ -91,6 +120,8 @@ export class WorldMapComponent {
       locale: this.controlTexts(),
     });
     this.map = map;
+    // Lo stile si ricrea al cambio di tema e azzera le visibilità: i filtri si riapplicano a ogni caricamento.
+    map.on('style.load', () => applyMapFilters(map, this.enabled()));
     map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
 
     // Se cambia la misura del contenitore senza che cambi la finestra, la mappa si ridisegna.

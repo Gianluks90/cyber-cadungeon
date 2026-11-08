@@ -1,71 +1,342 @@
 /* CSS di MapLibre (la mappa del mondo): gli @import vanno in cima. */
 @import 'maplibre-gl/dist/maplibre-gl.css';
-html, body { margin: 0; height: 100%; overflow: hidden; background: var(--c-bg); color: var(--c-text); font-family: var(--font-ui); }
-/* Niente zoom della pagina con il doppio tocco (il pinch resta). */
-html, body { touch-action: manipulation; }
-/* Nessuna barra di scorrimento in tutta l'app, su qualunque schermo (si scorre con il dito, la rotella o il trackpad). `!important` perché gli stili dei componenti non la rimettano. */
-* { scrollbar-width: none !important; }
-*::-webkit-scrollbar { display: none !important; }
-/* Su iPhone (e sui dispositivi touch in generale) un campo di testo con meno di 16px fa zoomare la pagina quando ci si tocca: sul tocco i campi sono almeno 16px. Non si usa il blocco dello zoom nel viewport, che toglierebbe l'ingrandimento a chi ne ha bisogno. `!important` perché gli stili dei componenti scrivono il corpo con la scorciatoia `font`. */
-@media (pointer: coarse) { input, textarea, select { font-size: 16px !important; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
-/* Il bottone delle dialog (nel piede di `app-dialog`): piccolo, a spigoli secchi; `.primary` ha il bordo acceso. */
-.dlg-btn { padding: 6px 16px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 600 13px/1.2 var(--font-ui); transition: color 0.15s, border-color 0.15s; }
-.dlg-btn.primary { border-color: var(--c-interact); }
-.dlg-btn:hover, .dlg-btn:focus-visible { border-color: var(--c-interact); color: var(--c-interact); outline: none; }
-.dlg-btn.off { opacity: 0.45; cursor: default; }
-/* Nelle dialog del Maligno i tasti d'azione sono grigi e si accendono di rosso. */
-.dlg-btn.evil { border-color: var(--c-line-strong); color: var(--c-text-dim); }
-.dlg-btn.evil:hover, .dlg-btn.evil:focus-visible { border-color: var(--c-faction-evil); color: var(--c-faction-evil); }
-/* Campi delle dialog: un solo aspetto per tutti (stessa altezza, stesso riempimento, stesso carattere). La casella da spuntare è `app-checkbox`, l'etichetta sopra il campo `app-field`. La ricerca del catalogo (`.search`) ha il suo stile. */
-app-dialog :is(input:not([type='checkbox']):not([type='file']):not(.search), textarea) { box-sizing: border-box; width: 100%; min-width: 0; padding: 8px 10px; border-radius: var(--radius-1); background: var(--c-bg); color: var(--c-text); border: 1px solid var(--c-line-strong); font: 13px/1.4 var(--font-ui); }
-app-dialog input:not([type='checkbox']):not([type='file']):not(.search) { height: 36px; }
-app-dialog textarea { resize: vertical; }
-app-dialog input[type='number'] { font-family: var(--font-mono); }
-app-dialog :is(input:not([type='checkbox']):not(.search), textarea):focus { border-color: var(--c-interact); outline: none; }
-app-dialog :is(input, textarea).bad { border-color: var(--c-danger); }
-app-dialog ::placeholder { color: var(--c-text-dim); opacity: 0.7; }
-@media (pointer: coarse) { app-dialog input:not([type='checkbox']):not([type='file']):not(.search) { height: 42px; } }
-/* Righe di campi: affiancati su schermi larghi (`--cols` colonne), in colonna sul telefono. */
-.dlg-cols { display: grid; grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr)); gap: 8px; align-items: start; }
-.dlg-cols.three { --cols: 3; }
-/* Un campo con il suo bottone ("Aggiungi"): il bottone a destra, sul telefono sotto. */
-.dlg-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; align-items: center; }
-@media (max-width: 600px) {
-  .dlg-cols, .dlg-cols.three { grid-template-columns: minmax(0, 1fr); }
-  .dlg-add { grid-template-columns: minmax(0, 1fr); }
-  .dlg-add > .dlg-btn { justify-self: start; }
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-ui);
 }
+
+/* Niente zoom della pagina con il doppio tocco (il pinch resta). */
+html,
+body {
+  touch-action: manipulation;
+}
+
+/* Nessuna barra di scorrimento in tutta l'app, su qualunque schermo (si scorre con il dito, la rotella o il trackpad). `!important` perché gli stili dei componenti non la rimettano. */
+* {
+  scrollbar-width: none !important;
+}
+
+*::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Su iPhone (e sui dispositivi touch in generale) un campo di testo con meno di 16px fa zoomare la pagina quando ci si tocca: sul tocco i campi sono almeno 16px. Non si usa il blocco dello zoom nel viewport, che toglierebbe l'ingrandimento a chi ne ha bisogno. `!important` perché gli stili dei componenti scrivono il corpo con la scorciatoia `font`. */
+@media (pointer: coarse) {
+
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Il bottone delle dialog (nel piede di `app-dialog`): piccolo, a spigoli secchi; `.primary` ha il bordo acceso. */
+.dlg-btn {
+  padding: 6px 16px;
+  border-radius: var(--radius-1);
+  background: none;
+  color: var(--c-text);
+  cursor: pointer;
+  border: 1px solid var(--c-line-strong);
+  font: 600 13px/1.2 var(--font-ui);
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.dlg-btn.primary {
+  border-color: var(--c-interact);
+}
+
+.dlg-btn:hover,
+.dlg-btn:focus-visible {
+  border-color: var(--c-interact);
+  color: var(--c-interact);
+  outline: none;
+}
+
+.dlg-btn.off {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Nelle dialog del Maligno i tasti d'azione sono grigi e si accendono di rosso. */
+.dlg-btn.evil {
+  border-color: var(--c-line-strong);
+  color: var(--c-text-dim);
+}
+
+.dlg-btn.evil:hover,
+.dlg-btn.evil:focus-visible {
+  border-color: var(--c-faction-evil);
+  color: var(--c-faction-evil);
+}
+
+/* Campi delle dialog: un solo aspetto per tutti (stessa altezza, stesso riempimento, stesso carattere). La casella da spuntare è `app-checkbox`, l'etichetta sopra il campo `app-field`. La ricerca del catalogo (`.search`) ha il suo stile. */
+app-dialog :is(input:not([type='checkbox']):not([type='file']):not(.search), textarea) {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-1);
+  background: var(--c-bg);
+  color: var(--c-text);
+  border: 1px solid var(--c-line-strong);
+  font: 13px/1.4 var(--font-ui);
+}
+
+app-dialog input:not([type='checkbox']):not([type='file']):not(.search) {
+  height: 36px;
+}
+
+app-dialog textarea {
+  resize: vertical;
+}
+
+app-dialog input[type='number'] {
+  font-family: var(--font-mono);
+}
+
+app-dialog :is(input:not([type='checkbox']):not(.search), textarea):focus {
+  border-color: var(--c-interact);
+  outline: none;
+}
+
+app-dialog :is(input, textarea).bad {
+  border-color: var(--c-danger);
+}
+
+app-dialog ::placeholder {
+  color: var(--c-text-dim);
+  opacity: 0.7;
+}
+
+@media (pointer: coarse) {
+  app-dialog input:not([type='checkbox']):not([type='file']):not(.search) {
+    height: 42px;
+  }
+}
+
+/* Righe di campi: affiancati su schermi larghi (`--cols` colonne), in colonna sul telefono. */
+.dlg-cols {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.dlg-cols.three {
+  --cols: 3;
+}
+
+/* Un campo con il suo bottone ("Aggiungi"): il bottone a destra, sul telefono sotto. */
+.dlg-add {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 600px) {
+
+  .dlg-cols,
+  .dlg-cols.three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dlg-add {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dlg-add>.dlg-btn {
+    justify-self: start;
+  }
+}
+
 /* Pezzi che tornano in più dialog: nota, chip con la X, tasto per togliere una riga. */
-.dlg-hint { margin: 0; color: var(--c-text-dim); font-size: 12px; }
-.dlg-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.dlg-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 4px 3px 9px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); font-size: 12px; }
-.dlg-chip button, .dlg-rm { border: 0; background: none; color: var(--c-text-dim); cursor: pointer; font-size: 18px; line-height: 1; padding: 0 4px; display: inline-flex; align-items: center; }
-.dlg-chip button:hover, .dlg-rm:hover { color: var(--c-danger); }
+.dlg-hint {
+  margin: 0;
+  color: var(--c-text-dim);
+  font-size: 12px;
+}
+
+.dlg-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.dlg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 4px 3px 9px;
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--radius-1);
+  font-size: 12px;
+}
+
+.dlg-chip button,
+.dlg-rm {
+  border: 0;
+  background: none;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dlg-chip button:hover,
+.dlg-rm:hover {
+  color: var(--c-danger);
+}
+
 /* Il testo scritto in markdown e reso dal pipe `markdown` (`[innerHTML]` con la classe `md`). */
-.md { display: flex; flex-direction: column; gap: 10px; }
-.md > * { margin: 0; }
-.md h1, .md h2, .md h3 { font-family: var(--font-display); letter-spacing: 0.03em; line-height: 1.2; }
-.md h1 { font-size: var(--fs-xl); }
-.md h2 { font-size: var(--fs-lg); }
-.md h3 { font-size: var(--fs-md); }
-.md ul, .md ol { padding-left: 1.4em; display: flex; flex-direction: column; gap: 3px; }
-.md blockquote { padding: 2px 0 2px 12px; border-left: 2px solid var(--c-line-strong); color: var(--c-text-dim); }
-.md hr { width: 100%; border: 0; border-top: 1px solid var(--c-line-strong); }
-.md code { padding: 1px 5px; border-radius: var(--radius-1); background: var(--c-bg); font-family: var(--font-mono); font-size: 0.92em; }
-.md a { color: var(--c-interact); }
-.md del { color: var(--c-text-dim); }
+.md {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.md>* {
+  margin: 0;
+}
+
+.md h1,
+.md h2,
+.md h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+}
+
+.md h1 {
+  font-size: var(--fs-xl);
+}
+
+.md h2 {
+  font-size: var(--fs-lg);
+}
+
+.md h3 {
+  font-size: var(--fs-md);
+}
+
+.md ul,
+.md ol {
+  padding-left: 1.4em;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.md blockquote {
+  padding: 2px 0 2px 12px;
+  border-left: 2px solid var(--c-line-strong);
+  color: var(--c-text-dim);
+}
+
+.md hr {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--c-line-strong);
+}
+
+.md code {
+  padding: 1px 5px;
+  border-radius: var(--radius-1);
+  background: var(--c-bg);
+  font-family: var(--font-mono);
+  font-size: 0.92em;
+}
+
+.md a {
+  color: var(--c-interact);
+}
+
+.md del {
+  color: var(--c-text-dim);
+}
+
 /* Valore + icona dentro una frase (`{energy:3}`, `{mov:2}` nei testi in markdown): sulla linea del testo, nel colore del parametro. Le icone arrivano da main.ts (--ico-*). */
-.tok { display: inline-flex; align-items: center; gap: 2px; vertical-align: -2px; white-space: nowrap; font-weight: 600; font-variant-numeric: tabular-nums; }
-.tok i { display: inline-block; flex: none; width: 14px; height: 14px; background-color: currentColor; -webkit-mask: var(--tok-icon) center / contain no-repeat; mask: var(--tok-icon) center / contain no-repeat; }
-.tok-mov { color: var(--c-move); }
-.tok-mov i { --tok-icon: var(--ico-footprint); }
-.tok-energy { color: var(--c-energy); }
-.tok-energy i { --tok-icon: var(--ico-water-drop); }
-.tok-hatred { color: var(--c-hatred); }
-.tok-hatred i { --tok-icon: var(--ico-skull); }
+.tok {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  vertical-align: -2px;
+  white-space: nowrap;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tok i {
+  display: inline-block;
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background-color: currentColor;
+  -webkit-mask: var(--tok-icon) center / contain no-repeat;
+  mask: var(--tok-icon) center / contain no-repeat;
+}
+
+.tok-mov {
+  color: var(--c-move);
+}
+
+.tok-mov i {
+  --tok-icon: var(--ico-footprint);
+}
+
+.tok-energy {
+  color: var(--c-energy);
+}
+
+.tok-energy i {
+  --tok-icon: var(--ico-water-drop);
+}
+
+.tok-hatred {
+  color: var(--c-hatred);
+}
+
+.tok-hatred i {
+  --tok-icon: var(--ico-skull);
+}
+
 /* Mappa del mondo (MapLibre): il suo CSS e l'attribuzione di Protomaps/OpenStreetMap, obbligatoria per licenza, leggibile su fondo scuro con i token del progetto. */
-.maplibregl-ctrl-attrib { background: var(--c-surface) !important; color: var(--c-text-dim) !important; font-size: 12px; border: 1px solid var(--c-line); border-radius: var(--radius-1); }
-.maplibregl-ctrl-attrib a { color: var(--c-text) !important; }
+.maplibregl-ctrl-attrib {
+  background: var(--c-surface) !important;
+  color: var(--c-text-dim) !important;
+  font-size: 12px;
+  border: 1px solid var(--c-line);
+  border-radius: var(--radius-1);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--c-text) !important;
+}
+
 /* Il puntatore del mouse è sempre il quadrato con il puntino (`--cursor`, costruito da `ui/cursor.ts` con i colori dei token), anche sopra ciò che si preme. Fanno eccezione i campi di testo (resta il cursore a barra) e gli elementi a cui il codice dà un cursore suo (per esempio il mirino dell'editor). `!important` perché gli stili dei componenti scrivono `cursor: pointer`. */
-html, html *:not(input, textarea, [contenteditable], [style*='cursor']) { cursor: var(--cursor, auto) !important; }
+html,
+html *:not(input, textarea, [contenteditable], [style*='cursor']) {
+  cursor: var(--cursor, auto) !important;
+}
