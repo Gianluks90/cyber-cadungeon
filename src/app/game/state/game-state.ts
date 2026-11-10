@@ -61,7 +61,7 @@ export class GameState {
   /** Il catalogo delle carte abilità (si ricarica dai file: non si salva). */
   skills: ReadonlyMap<string, SkillDef> = new Map();
   /** I tre mazzi delle carte abilità (id, in ordine di pesca): una carta in mano a un eroe non torna e un mazzo finito non si rimescola. */
-  skillDecks: Record<SkillSchool, string[]> = { combat: [], cunning: [], magic: [] };
+  skillDecks: Record<SkillSchool, string[]> = { combat: [], cunning: [], hacking: [] };
   /** Le scorte del negozio della città: quante copie restano di ogni oggetto in vendita (id -> numero). */
   shop: Record<string, number> = {};
   /** Il catalogo dei mostri (si ricarica dai file: non si salva): serve a far apparire mostri durante la partita. */
@@ -170,7 +170,7 @@ export class GameState {
 
   /** Mescola i mazzi delle carte abilità (una copia per carta) e dà a ogni eroe le sue abilità secondarie: tante per ramo quante dice la sua scheda. */
   buildSkillDecks(): void {
-    const decks: Record<SkillSchool, string[]> = { combat: [], cunning: [], magic: [] };
+    const decks: Record<SkillSchool, string[]> = { combat: [], cunning: [], hacking: [] };
     for (const s of this.skills.values()) decks[s.school].push(s.id);
     for (const school of SKILL_SCHOOLS) {
       const cards = decks[school];
@@ -416,7 +416,7 @@ export class GameState {
     state.decks = copy(s.decks);
     state.chestTable = copy(s.chestTable ?? {});
     state.chestDeal = copy(s.chestDeal ?? { copper: [], silver: [], gold: [] });
-    state.skillDecks = copy(s.skillDecks ?? { combat: [], cunning: [], magic: [] });
+    state.skillDecks = copy(s.skillDecks ?? { combat: [], cunning: [], hacking: [] });
     state.shop = { ...s.shop };
     state.rngState = s.rngState;
     return state;

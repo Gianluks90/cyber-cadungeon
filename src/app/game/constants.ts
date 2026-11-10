@@ -411,7 +411,7 @@ export const FX = {
   lungeMs: 260,
   strikeMs: 160,
   returnMs: 320,
-  /** Attacco a distanza o magico: la linea compare, il proiettile corre a metà strada, poi arriva (o la linea svanisce). */
+  /** Attacco a distanza o di Intrusione: la linea compare, il proiettile corre a metà strada, poi arriva (o la linea svanisce). */
   lineMs: 450,
   shotMs: 420,
   shotFinishMs: 260,
@@ -453,5 +453,5 @@ export const TORCH = { bracketPx: 9, bracketWidthPx: 2, cupPx: 5.5, glowRadiusCe
  */
 export const SCENERY = { webChance: 0.3, webMax: 34, salt: 0x5ce9e, pebbleChance: 0.55, pebbleMax: 3, debrisMax: 4, pebbleSalt: 0x9eb81e, pebbleMinPx: 1.4, pebbleMaxPx: 2.8, debrisMinPx: 0.5, debrisMaxPx: 1, pebbleAlpha: 0.5, boneChance: 0, /* ossa spente per ora: il codice resta, si riaccendono alzando questo valore (0,035 era la prova) */ boneSalt: 0xb04e5, boneMinPx: 15, boneMaxPx: 24, boneBrokenChance: 0.4, boneFragmentAlone: 0.65, skullChance: 0 /* teschi spenti per ora: si riaccendono alzando questo valore (0,015 era la prova) */ };
 
-/** La distanza massima a cui un mostro con un attacco a distanza o magico cerca di stare dal bersaglio (si ferma prima se la sua gittata di solito è minore). */
+/** La distanza massima a cui un mostro con un attacco a distanza o di Intrusione cerca di stare dal bersaglio (si ferma prima se la sua gittata di solito è minore). */
 export const SHOOTER_DISTANCE_CAP = 5;

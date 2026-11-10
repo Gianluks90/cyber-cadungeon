@@ -33,7 +33,7 @@
   --c-stun:          #8f9bff;  /* stato: stordimento */
   --c-poison:        #7ed957;  /* stato: veleno (i cuori verdi accanto alle ferite) */
   --c-armor:         #b7bcc6;  /* armatura / difesa */
-  --c-magic:         #a98bf0;  /* magia / pozioni magiche */
+  --c-intrusion:         #a98bf0;  /* Intrusione / pozioni di Intrusione */
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
   --c-loot:          #c9b88c;  /* monete, chiavi, tesori (sabbia spenta, NON oro) */
   --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
@@ -50,7 +50,7 @@
   /* ---------- Dadi (stesso colore = stesso significato ovunque) ---------- */
   --c-die-melee:     var(--c-life);
   --c-die-ranged:    var(--c-speed);
-  --c-die-magic:     var(--c-magic);
+  --c-die-intrusion:     var(--c-intrusion);
   --c-die-proficiency:     var(--c-interact);
   --c-die-neutral:   var(--c-text-dim);
 

@@ -47,7 +47,7 @@
       "id": "hack-deck",
       "name": "Deck di intrusione",
       "kind": "weapon",
-      "attack": "magic",
+      "attack": "intrusion",
       "hands": 2,
       "price": 150,
       "dice": [

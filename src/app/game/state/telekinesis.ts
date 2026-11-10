@@ -6,7 +6,7 @@ import { canSeeTarget } from './combat';
 import type { GameState } from './game-state';
 
 /**
- * Telecinesi (docs/cards/skill-magic.md): spendi 1 overclock durante il tuo turno per muovere di 1 spazio un modello (amico o nemico, ma non te) che sta nella
+ * Telecinesi (docs/cards/skill-intrusion.md): spendi 1 overclock durante il tuo turno per muovere di 1 spazio un modello (amico o nemico, ma non te) che sta nella
  * tua linea di vista, seguendo le normali regole del movimento. Qui ci sono le regole: chi si può spostare e dove; la scelta e l'animazione stanno nella scena.
  */
 

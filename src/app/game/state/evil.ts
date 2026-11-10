@@ -101,7 +101,7 @@ function canAttackFrom(state: GameState, board: Board, monster: Piece, spot: Pic
   return heroes.some((h) => monsterAttackOption(state, board, at, h)?.enabled);
 }
 
-/** Un tiratore (distanza o magia) da `spot` colpisce bene: può attaccare un eroe che sta a una distanza entro la sua gittata di solito. */
+/** Un tiratore (distanza o Intrusione) da `spot` colpisce bene: può attaccare un eroe che sta a una distanza entro la sua gittata di solito. */
 function shootsWell(state: GameState, board: Board, monster: Piece, spot: Pick<Spot, 'cell' | 'size'>, heroes: readonly Piece[]): boolean {
   const at = { ...monster, cell: spot.cell, size: spot.size };
   const { likely } = monsterRange(state, monster);
@@ -118,7 +118,7 @@ export function planMonsterMove(state: GameState, board: Board, monster: Piece):
   if (!heroes.length || monster.points < 1) return [];
   const big = monster.size.w > 1 || monster.size.h > 1;
   const type = monsterAttackType(state, monster);
-  const shooter = type === 'ranged' || type === 'magic';
+  const shooter = type === 'ranged' || type === 'intrusion';
   const here: Spot = { cell: monster.cell, size: monster.size, cost: 0, path: () => [] };
   const hereOk = monsterMayStop(state, board, monster, here); // con un comportamento la casella di adesso può non essere lecita (non è accanto all'ostacolo)
   // Chi sa trasportare e ha un oggetto trasportabile a terra lo va a prendere, se lo raggiunge in questo turno (anche a costo di non attaccare).

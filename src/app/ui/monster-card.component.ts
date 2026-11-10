@@ -7,7 +7,7 @@ import { MonsterDef, MonsterTier } from '../game/monsters/monster';
 import { IconComponent } from './icon.component';
 import { PictureComponent } from './picture.component';
 
-const ATTACK = { get melee() { return tr('Mischia'); }, get ranged() { return tr('Distanza'); }, get magic() { return tr('Magia'); } } as const;
+const ATTACK = { get melee() { return tr('Mischia'); }, get ranged() { return tr('Distanza'); }, get intrusion() { return tr('Intrusione'); } } as const;
 
 /** La card di un mostro nel catalogo: immagine, nome, dimensione, attacco, e le due versioni (normale e potenziata) una sotto l'altra. */
 @Component({

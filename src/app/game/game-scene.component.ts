@@ -463,7 +463,7 @@ export class GameSceneComponent implements OnDestroy {
       attacker: side(attacker),
       target: { ...side(target), armor: target.team === 'hero' ? armorOf(this.state, target, se.option.attack) : target.armor, invincible: !!target.invincible },
       auto: !!se.auto,
-      weapon: { lead: attacker.team === 'monster' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), magic: tr('magico') }[se.option.attack], dice: se.option.dice },
+      weapon: { lead: attacker.team === 'monster' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), intrusion: tr('di Intrusione') }[se.option.attack], dice: se.option.dice },
       distance: se.plan.distance, needsRange: se.plan.needsRange, bonuses: se.plan.sources, step: se.step,
       overclock: attacker.overclock, blackDice: se.rolls.filter((r) => r.color === 'black').length,
       sweep: se.step === 'preview' && !se.auto && attacker.team === 'hero' && se.option.attack === 'melee' && ruleAmount(this.state, attacker, 'sweepAttack') > 0 && (!se.plan.area.sweep || !!se.sweepPaid) // un'arma che ha già Spazzata non ne ha bisogno
@@ -490,7 +490,7 @@ export class GameSceneComponent implements OnDestroy {
     void this.members(); // si ricalcola a ogni cambio dello stato (ferite, ecc.)
     const p = this.state?.pieces.find((q) => q.id === this.monsterPanel() && q.team === 'monster');
     if (!p) return null; // le carte dei mostri sono pubbliche: la scheda si apre anche nella vista dei giocatori
-    const attack = p.attackType ? { melee: tr('Mischia'), ranged: tr('Distanza'), magic: tr('Magia') }[p.attackType] : '—';
+    const attack = p.attackType ? { melee: tr('Mischia'), ranged: tr('Distanza'), intrusion: tr('Intrusione') }[p.attackType] : '—';
     return {
       id: p.id, name: p.name, heroClass: p.enhanced ? tr('Mostro potenziato') : tr('Mostro'), enhanced: p.enhanced, portrait: p.portrait, portraitFull: p.portraitFull,
       wounds: p.wounds, maxWounds: p.maxWounds, speed: p.speed, armor: p.armor, invincible: !!p.invincible, attack, dice: p.attackDice, abilities: p.traits, size: `${p.size.w}×${p.size.h}`, states: describeStatus(p.status), poison: p.status.poison,
@@ -1725,7 +1725,7 @@ export class GameSceneComponent implements OnDestroy {
     const hero = this.state.pieces.find((p) => p.id === check.heroId);
     if (!hero) return;
     const base = Math.min(checkDiceCount(this.state, check), CHECK_MAX_DICE);
-    const kind = { melee: tr('Mischia'), ranged: tr('Distanza'), magic: tr('Magia') }[check.dice];
+    const kind = { melee: tr('Mischia'), ranged: tr('Distanza'), intrusion: tr('Intrusione') }[check.dice];
     // Prima del tiro l'eroe può comprare dadi competenza con l'overclock (1 per dado), a meno che l'evento lo vieti; l'overclock si spende subito e torna se rinuncia.
     let extra = 0;
     let answer = '';
@@ -1932,7 +1932,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   private writeSave(auto: boolean): boolean {
-    const ok = this.saves.save({ version: 2, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
+    const ok = this.saves.save({ version: 3, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
     if (ok) {
       this.justSaved.set(true);
       setTimeout(() => !this.destroyed && this.justSaved.set(false), 1400);
@@ -2683,7 +2683,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * L'inizio di un attacco, prima del dialogo: in mischia l'attaccante scatta verso il bersaglio e si ferma a metà strada; a distanza o con la magia
+   * L'inizio di un attacco, prima del dialogo: in mischia l'attaccante scatta verso il bersaglio e si ferma a metà strada; a distanza o con l'Intrusione
    * compare la linea (azzurra o viola) e un proiettile corre a metà strada.
    */
   private async attackIntro(attacker: Piece, target: Piece, option: AttackOption) {
@@ -2691,7 +2691,7 @@ export class GameSceneComponent implements OnDestroy {
     if (option.attack === 'melee') {
       if (option.via) await this.pieces.pulse(attacker); // attraverso una scala il bersaglio è lontano: niente scatto, solo un guizzo
       else await this.pieces.lunge(attacker, target);
-    } else await this.pieces.beginShot(attacker, target, option.attack === 'magic' ? 'magic' : 'ranged', option.via);
+    } else await this.pieces.beginShot(attacker, target, option.attack === 'intrusion' ? 'intrusion' : 'ranged', option.via);
   }
 
   /** Prima del tiro: il nome delle abilità dell'attacco sopra chi attacca (Soffio, Spazzata, Esplosione, Contraccolpo) e, per un attacco ad area, le caselle che colpirà lampeggiano di rosso, così si sa già cosa sta per succedere. */
@@ -2867,7 +2867,7 @@ export class GameSceneComponent implements OnDestroy {
       { id: 'relics', group: tr('Reliquie'), name: tr('Reliquie'), entries: itemsOf((d) => !!d.tags?.includes('relic'), () => null) },
       { id: 'combat', group: tr('Abilità'), name: tr('Combattimento'), entries: skillEntries('combat') },
       { id: 'cunning', group: tr('Abilità'), name: tr('Astuzia'), entries: skillEntries('cunning') },
-      { id: 'magic', group: tr('Abilità'), name: tr('Magia'), entries: skillEntries('magic') },
+      { id: 'hacking', group: tr('Abilità'), name: tr('Hacking'), entries: skillEntries('hacking') },
     ];
   }
 

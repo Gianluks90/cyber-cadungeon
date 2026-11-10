@@ -15,12 +15,12 @@
   "skills": {
     "combat": 1,
     "cunning": 2,
-    "magic": 0
+    "hacking": 0
   },
   "dice": {
     "melee": 1,
     "ranged": 2,
-    "magic": 0
+    "intrusion": 0
   },
   "abilityName": "Colpo dall'ombra",
   "ability": "I tuoi attacchi infliggono +2 danni contro un nemico che non vedevi all'inizio del turno.",
@@ -30,7 +30,7 @@
       "on": [
         "melee",
         "ranged",
-        "magic"
+        "intrusion"
       ],
       "damage": 2,
       "ifUnseenAtStart": true,

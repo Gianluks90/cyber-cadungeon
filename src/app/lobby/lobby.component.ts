@@ -233,7 +233,7 @@ export class LobbyComponent {
   }
   private readonly skillCatalog = signal<ReadonlyMap<string, SkillDef>>(new Map());
   protected readonly host: LobbyHost | undefined = this.isHost
-    ? new LobbyHost(this.code, this.lobby!.heroes, () => ({ heroIds: this.heroes().map((h) => h.id), coins: (id) => this.heroes().find((h) => h.id === id)?.coins ?? 0, shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), heroSkills: (id) => this.heroes().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, magic: 0 } }))
+    ? new LobbyHost(this.code, this.lobby!.heroes, () => ({ heroIds: this.heroes().map((h) => h.id), coins: (id) => this.heroes().find((h) => h.id === id)?.coins ?? 0, shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), heroSkills: (id) => this.heroes().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
     : undefined;
   private readonly client: LobbyClient | undefined = this.isHost ? undefined : new LobbyClient(this.code);
 

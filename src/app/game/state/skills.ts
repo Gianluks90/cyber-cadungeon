@@ -80,7 +80,7 @@ export function skillActions(state: GameState, piece: Piece): SkillAction[] {
       else if (piece.pointsUsed > 0 || piece.attacksUsed > 0) reason = tr('Va usata prima di muoverti o attaccare');
       else if (piece.usedSkills?.includes(id)) reason = tr('Già usata in questo turno');
     } else if (t.on === 'attackDone') {
-      if (!piece.lastAttack || (t.attack && piece.lastAttack.type !== t.attack)) reason = tr('Serve un attacco {kind} appena fatto', { kind: ({ ranged: tr('a distanza'), magic: tr('magico'), melee: tr('in mischia') } as Record<string, string>)[String(t.attack)] ?? '' });
+      if (!piece.lastAttack || (t.attack && piece.lastAttack.type !== t.attack)) reason = tr('Serve un attacco {kind} appena fatto', { kind: ({ ranged: tr('a distanza'), intrusion: tr('di Intrusione'), melee: tr('in mischia') } as Record<string, string>)[String(t.attack)] ?? '' });
     } else if (t.on === 'kill') {
       if (!piece.lastKill) reason = tr('Serve un nemico appena ucciso in mischia');
     }

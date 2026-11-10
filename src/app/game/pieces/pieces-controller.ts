@@ -632,10 +632,10 @@ export class PiecesController {
   }
 
   /**
-   * Attacco a distanza o magico, prima parte: la linea di mira (grigia, tratteggiata e quasi trasparente, uguale per distanza e magia) si allunga verso
+   * Attacco a distanza o di Intrusione, prima parte: la linea di mira (grigia, tratteggiata e quasi trasparente, uguale per distanza e Intrusione) si allunga verso
    * il bersaglio; poi parte il dardo (azzurro o viola) dall'attaccante e si ferma ai 3/4 del percorso (poi compare il dialogo).
    */
-  async beginShot(attacker: Piece, target: Piece, kind: 'ranged' | 'magic', via?: { from: Cell; to: Cell }): Promise<void> {
+  async beginShot(attacker: Piece, target: Piece, kind: 'ranged' | 'intrusion', via?: { from: Cell; to: Cell }): Promise<void> {
     this.clearShot();
     const a = this.centerOf(attacker);
     const t = this.centerOf(target);
@@ -644,7 +644,7 @@ export class PiecesController {
     const pairs = via ? [[a, mid(via.from)], [mid(via.to), t]] : [[a, t]];
     const segs = pairs.map(([p, q]) => ({ a: p, b: q, len: Math.hypot(q.x - p.x, q.y - p.y) })).filter((sg) => sg.len > 1);
     const total = segs.reduce((n, sg) => n + sg.len, 0);
-    const color = kind === 'magic' ? theme.color.fx.magic : theme.color.fx.ranged;
+    const color = kind === 'intrusion' ? theme.color.fx.intrusion : theme.color.fx.ranged;
     const g = new Graphics();
     const proj = new Graphics();
     this.fx.addChild(g, proj);

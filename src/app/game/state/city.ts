@@ -158,7 +158,7 @@ export function sellItem(state: GameState, piece: Piece, id: string): CityResult
 }
 
 /** I tre attacchi, con il nome per l'interfaccia. */
-export const ATTACK_NAMES: Record<keyof AttackDice, string> = { get melee() { return tr('Mischia'); }, get ranged() { return tr('Distanza'); }, get magic() { return tr('Magia'); } };
+export const ATTACK_NAMES: Record<keyof AttackDice, string> = { get melee() { return tr('Mischia'); }, get ranged() { return tr('Distanza'); }, get intrusion() { return tr('Intrusione'); } };
 
 /** Campo di addestramento: compra una nuova carta abilità del ramo `school` (pescata a caso dal mazzo). */
 export function buySkill(state: GameState, piece: Piece, school: SkillSchool): CityResult {

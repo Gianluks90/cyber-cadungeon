@@ -10,7 +10,7 @@ export type ItemKind = 'weapon' | 'shield' | 'armor' | 'other' | 'event';
 /** I colori dei dadi delle armi. */
 export type DieColor = 'red' | 'green' | 'blue' | 'yellow' | 'white' | 'black';
 
-export type AttackType = 'melee' | 'ranged' | 'magic';
+export type AttackType = 'melee' | 'ranged' | 'intrusion';
 
 /**
  * Una carta oggetto (public/items/<id>.json). Le regole stanno in docs/REGOLE.md, sezione 3c. I dadi e gli effetti restano dati finché non
@@ -176,7 +176,7 @@ export function itemsToDisplace(equipped: readonly ItemDef[], item: ItemDef): It
 /** Una riga che descrive l'oggetto: il tipo e le mani, per esempio "Arma · mischia · 1 mano". */
 export function itemDetail(item: ItemDef): string {
   const kind = { weapon: tr('Arma'), shield: tr('Scudo'), armor: tr('Armatura'), other: tr('Oggetto'), event: tr('Evento') }[item.kind];
-  const attack = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), magic: tr('magia') }[item.attack] : null;
+  const attack = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
   const hands = item.hands ? (item.hands === 1 ? tr('1 mano') : tr('{n} mani', { n: item.hands })) : null;
   const armor = item.armor ? tr('armatura +{n}', { n: item.armor }) : null;
   const relic = item.tags?.includes('relic') ? tr('Reliquia') : null;

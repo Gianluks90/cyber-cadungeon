@@ -22,7 +22,7 @@ export interface MonsterDetails {
   armor: number;
   /** Invincibile: al posto dell'armatura compare ∞. */
   invincible?: boolean;
-  /** Il tipo di attacco a parole (Mischia, Distanza, Magia) e i dadi che tira. */
+  /** Il tipo di attacco a parole (Mischia, Distanza, Intrusione) e i dadi che tira. */
   attack: string;
   dice: DieColor[];
   /** Le abilità speciali, a parole. */

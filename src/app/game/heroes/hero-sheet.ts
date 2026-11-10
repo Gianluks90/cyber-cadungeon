@@ -5,14 +5,14 @@ import type { SkillEffect } from '../skills/skill';
 export interface AttackDice {
   melee: number;
   ranged: number;
-  magic: number;
+  intrusion: number;
 }
 
 /** Punti di abilità iniziali, nei tre rami. */
 export interface StartingSkills {
   combat: number;
   cunning: number;
-  magic: number;
+  hacking: number;
 }
 
 /**

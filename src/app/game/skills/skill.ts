@@ -1,12 +1,12 @@
 import { tr } from '../../i18n/catalog-text';
 import { localizeName } from '../../i18n/catalog-text';
 /** I tre rami delle carte abilità (gli stessi di `StartingSkills` nelle schede degli eroi). */
-export type SkillSchool = 'combat' | 'cunning' | 'magic';
+export type SkillSchool = 'combat' | 'cunning' | 'hacking';
 
-export const SKILL_SCHOOLS: readonly SkillSchool[] = ['combat', 'cunning', 'magic'];
+export const SKILL_SCHOOLS: readonly SkillSchool[] = ['combat', 'cunning', 'hacking'];
 
 /** I nomi dei rami, per l'interfaccia. */
-export const SKILL_SCHOOL_NAMES: Record<SkillSchool, string> = { get combat() { return tr('Combattimento'); }, get cunning() { return tr('Astuzia'); }, get magic() { return tr('Magia'); } };
+export const SKILL_SCHOOL_NAMES: Record<SkillSchool, string> = { get combat() { return tr('Combattimento'); }, get cunning() { return tr('Astuzia'); }, get hacking() { return tr('Hacking'); } };
 
 /** Un effetto di una carta, nel vocabolario di docs/cards/abilities.md (sezione 9). Per ora sono solo dati: nessuno li legge ancora. */
 export interface SkillEffect {

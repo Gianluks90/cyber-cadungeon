@@ -123,7 +123,7 @@ export type EventEffect =
    * altrimenti quelli di `onFail`. Di base l'eroe può spendere 1 overclock per ogni dado competenza in più prima di tirare (massimo `CHECK_MAX_DICE` dadi); con `noOverclock` non può. Con `refusable` l'eroe può anche rinunciare: non succede niente, e se la prova veniva da un'interazione il costo si restituisce e l'interazione
    * resta disponibile.
    */
-  | { kind: 'check'; title?: string; text: string; dice: 'melee' | 'ranged' | 'magic'; needs?: number; refusable?: boolean; noOverclock?: boolean; onSuccess: EventEffect[]; onFail: EventEffect[] }
+  | { kind: 'check'; title?: string; text: string; dice: 'melee' | 'ranged' | 'intrusion'; needs?: number; refusable?: boolean; noOverclock?: boolean; onSuccess: EventEffect[]; onFail: EventEffect[] }
   /** Si apre una porta evento (`lock: {kind:'event', id}`): da ora è una porta aperta e libera come le altre. */
   | { kind: 'openDoor'; doorId: string }
   /** Un nemico inattivo si attiva: perde il flag `inactive` e da ora agisce come un nemico qualunque (con i suoi valori normali). */

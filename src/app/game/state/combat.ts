@@ -291,7 +291,7 @@ function supportBonus(state: GameState, attacker: Piece, weapon: ItemDef): numbe
 /** I modi in cui `attacker` può attaccare `target` adesso. La mischia compare solo se è adiacente; le altre armi se c'è linea di vista. Vuoto se non c'è niente da proporre. */
 export function attackOptions(state: GameState, board: Board, attacker: Piece, target: Piece): AttackOption[] {
   if (attacker.team === target.team || !canActOnMap(state, attacker) || target.city || attacker.toad) return []; // il rospo non attacca
-  // Tiratore scelto e Precisione cambiano come si traccia la linea di vista, ma solo per distanza e magia.
+  // Tiratore scelto e Precisione cambiano come si traccia la linea di vista, ma solo per distanza e Intrusione.
   const directSees = canSeeTarget(state, board, attacker, target);
   const directSeesAtRange = directSees || canSeeTarget(state, board, attacker, target, { fromAdjacent: hasRule(state, attacker, 'sightFromAdjacent'), ignore: ruleAmount(state, attacker, 'sightIgnore') });
   // Se non si vede direttamente ma c'è una scala fra i due, l'attacco passa di lì (la mischia solo fra i due capi).
@@ -301,7 +301,7 @@ export function attackOptions(state: GameState, board: Board, attacker: Piece, t
   const seesAtRange = route ? true : directSeesAtRange;
   const through = route ? { distance: route.distance, via: { from: route.from, to: route.to } } : {};
   const noAttacks = attacker.attacks < 1 ? tr('Non hai più attacchi in questo turno') : undefined;
-  // Un attacco a distanza non si fa a una creatura adiacente (tendere un arco a chi è vicinissimo non ha senso); la magia sì.
+  // Un attacco a distanza non si fa a una creatura adiacente (tendere un arco a chi è vicinissimo non ha senso); l'Intrusione sì.
   const tooClose = (type: AttackType) => (type === 'ranged' && distance <= 1 ? tr('Troppo vicino per un attacco a distanza') : undefined);
   const blockedFor = (type: AttackType) => noAttacks ?? tooClose(type) ?? ((type === 'melee' ? sees : seesAtRange) ? undefined : tr('Non hai linea di vista'));
   const extra = (type: AttackType) => Array.from({ length: attacker.dice[type] }, () => 'black' as DieColor);
@@ -322,7 +322,7 @@ export function attackOptions(state: GameState, board: Board, attacker: Piece, t
 }
 
 /**
- * Come un mostro può attaccare `target` adesso: il suo tipo di attacco e i suoi dadi. La mischia solo se il bersaglio è adiacente; distanza e magia se lo vede.
+ * Come un mostro può attaccare `target` adesso: il suo tipo di attacco e i suoi dadi. La mischia solo se il bersaglio è adiacente; distanza e Intrusione se lo vede.
  * Null se non può (non ha un attacco, è troppo lontano per la mischia o non lo vede).
  */
 /** Il tipo di attacco di un mostro: quello dell'arma se attacca con un oggetto (`useItem`), altrimenti quello della sua carta. */
@@ -349,7 +349,7 @@ export function monsterAttackOption(state: GameState, board: Board, monster: Pie
   if (attackType === 'melee' && (route ? route.distance !== 1 : dist > (keywordLevel(state, monster, 'Raggiungimento') > 0 ? 2 : 1))) return null;
   // Stessa regola degli eroi: un mostro con un attacco a distanza non spara a chi gli è adiacente. E non annuncia un tiro impossibile: oltre la gittata massima dei suoi dadi non attacca.
   if (attackType === 'ranged' && dist <= 1) return null;
-  if ((attackType === 'ranged' || attackType === 'magic') && dist > monsterRange(state, monster).max) return null;
+  if ((attackType === 'ranged' || attackType === 'intrusion') && dist > monsterRange(state, monster).max) return null;
   const reason = monster.attacks < 1 ? tr('Ha già attaccato') : !direct && !route ? tr('Non vede il bersaglio') : undefined;
   return { id: 'monster', name: monster.name, icon: 'skull', attack: attackType, dice: monsterDice(state, monster), ...(used ? { itemId: used.itemId, id: `weapon:${used.itemId}`, name: state.items.get(used.itemId)!.name, icon: state.items.get(used.itemId)!.icon ?? 'skull' } : {}), enabled: !reason, reason, ...(route ? { distance: route.distance, via: { from: route.from, to: route.to } } : {}) };
 }
@@ -379,7 +379,7 @@ const DIE_RANGE: Record<DieColor, { avg: number; max: number }> = {
 };
 
 /**
- * Quanto lontano può colpire un mostro con un attacco a distanza o magico: `likely` è la gittata che i suoi dadi danno di solito (la media, arrotondata
+ * Quanto lontano può colpire un mostro con un attacco a distanza o di Intrusione: `likely` è la gittata che i suoi dadi danno di solito (la media, arrotondata
  * per eccesso, fra 2 e `SHOOTER_DISTANCE_CAP`): è la distanza a cui lo script cerca di stare; `max` è il massimo possibile (la somma delle facce migliori
  * e del Comando): oltre non attacca, perché il tiro sarebbe impossibile.
  */
@@ -413,7 +413,7 @@ export function monsterDice(state: GameState, monster: Piece): DieColor[] {
   if (used) {
     // Come un eroe: i dadi dell'oggetto più i dadi competenza che il comportamento dà a quel tipo di attacco.
     const weapon = state.items.get(used.itemId)!;
-    const key = weapon.attack === 'melee' ? 'melee' : weapon.attack === 'ranged' ? 'ranged' : 'magic';
+    const key = weapon.attack === 'melee' ? 'melee' : weapon.attack === 'ranged' ? 'ranged' : 'intrusion';
     const dice: DieColor[] = [...(weapon.dice ?? []), ...Array.from({ length: used.dice[key] }, () => 'black' as DieColor)];
     return state.evil.inPlay.includes('destruction') ? [...dice, 'black'] : dice;
   }

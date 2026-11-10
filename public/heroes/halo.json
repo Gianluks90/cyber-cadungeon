@@ -15,12 +15,12 @@
   "skills": {
     "combat": 1,
     "cunning": 1,
-    "magic": 1
+    "hacking": 1
   },
   "dice": {
     "melee": 1,
     "ranged": 1,
-    "magic": 1
+    "intrusion": 1
   },
   "abilityName": "Rete tattica",
   "ability": "Guadagni l'abilità **Comando**: quando un eroe entro 3 spazi da te (te compreso) attacca, ottiene **+1 danno** e **+1 gittata**.",

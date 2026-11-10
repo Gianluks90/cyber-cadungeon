@@ -16,7 +16,7 @@ import { SelectComponent, SelectOption } from '../ui/select.component';
 
 type EffectKind = EventEffect['kind'];
 type Side = 'then' | 'else';
-type CheckDice = 'melee' | 'ranged' | 'magic';
+type CheckDice = 'melee' | 'ranged' | 'intrusion';
 
 /** Dove sta una lista di effetti: in "Allora" o "Altrimenti" e, se è dentro una Prova, in quale effetto e in quale dei suoi due rami (`ok` superata, `ko` fallita). */
 interface Loc {
@@ -141,7 +141,7 @@ interface FormCondition {
   not: boolean;
 }
 
-const blank = (kind: EffectKind): FormEffect => ({ kind, dice: 'magic', needs: '1', refusable: false, noOverclock: false, endText: '', endPoints: '', ok: [], ko: [], title: '', text: '', amount: '1', variable: '', on: 'on', pieceIds: [], immunity: 'all', look: '', behavior: '', behaviorTarget: '', behaviorItem: '', reward: 'rune', rewardColor: 'red', rewardKeyId: '', rewardItem: '', rewardAmount: '1', markerId: '', areaId: '', zoneId: '', doorId: '', cell: '', state: '', wounds: '', speed: '', armor: '', turns: '2', distance: '8' });
+const blank = (kind: EffectKind): FormEffect => ({ kind, dice: 'intrusion', needs: '1', refusable: false, noOverclock: false, endText: '', endPoints: '', ok: [], ko: [], title: '', text: '', amount: '1', variable: '', on: 'on', pieceIds: [], immunity: 'all', look: '', behavior: '', behaviorTarget: '', behaviorItem: '', reward: 'rune', rewardColor: 'red', rewardKeyId: '', rewardItem: '', rewardAmount: '1', markerId: '', areaId: '', zoneId: '', doorId: '', cell: '', state: '', wounds: '', speed: '', armor: '', turns: '2', distance: '8' });
 
 const num = (s: string): number => {
   const n = Number(s.trim());
@@ -744,7 +744,7 @@ export class EventDialogComponent {
   ];
   protected readonly lookOptions: SelectOption[] = PAWN_LOOKS.map((l) => ({ value: l.value, label: l.label }));
   protected readonly diceOptions: SelectOption[] = [
-    { value: 'magic', get label() { return t('eventDialog.attackMagic'); } },
+    { value: 'intrusion', get label() { return t('eventDialog.attackIntrusion'); } },
     { value: 'melee', get label() { return t('eventDialog.attackMelee'); } },
     { value: 'ranged', get label() { return t('eventDialog.attackRanged'); } },
   ];

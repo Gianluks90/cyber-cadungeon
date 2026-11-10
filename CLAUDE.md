@@ -64,7 +64,7 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Allarme**: la sua risorsa (era "Odio"; nel codice ancora `hatred`, `{hatred:N}`, `--c-hatred`; diventerà `alarm`).
 - **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice ancora `hero`, `heroes/`; diventerà `mercenary`). Li modella l'utente: `bastion`, `vesper`, `halo` sono solo di test e si ignorano.
 - **Picchiatore** (mischia), **Artigliere** (distanza), **Incursore** (Intrusione, ramo `hacking`): i tre archetipi.
-- **Intrusione**: attacco dell'Incursore (nei dati ancora `magic`; diventerà `intrusion`).
+- **Intrusione**: attacco dell'Incursore (nei dati `intrusion`; il ramo abilità è `hacking`, "Hacking").
 - **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nei dati ancora `energy`, `{energy:N}`; diventerà `overclock`).
 - **Fama**: nome provvisorio di "Conquista" (nel codice `progress`).
 - **Da rinominare ancora**: "glifo"→Terminale, "runa/chiave runica", "scrigno", "dadi competenza", "scintille", "città/Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro". I nomi dei dati e del codice cambiano a passi piccoli (TODO L1.9), ogni nuova chiave sostituisce per intero la vecchia, senza alias.

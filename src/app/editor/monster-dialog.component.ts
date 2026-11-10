@@ -324,12 +324,12 @@ export class MonsterDialogComponent {
   protected readonly behaviorTarget = signal('');
   /** Solo per "Raccoglie gli oggetti trasportabili": l'oggetto scelto ('' = qualsiasi). */
   protected readonly behaviorItem = signal('');
-  /** Solo per "Attacca con un oggetto": i dadi competenza (neri) per mischia, distanza e magia. */
-  protected readonly useDice = signal<Record<'melee' | 'ranged' | 'magic', string>>({ melee: '', ranged: '', magic: '' });
-  protected readonly useDiceFields: { key: 'melee' | 'ranged' | 'magic'; label: string }[] = [
+  /** Solo per "Attacca con un oggetto": i dadi competenza (neri) per mischia, distanza e Intrusione. */
+  protected readonly useDice = signal<Record<'melee' | 'ranged' | 'intrusion', string>>({ melee: '', ranged: '', intrusion: '' });
+  protected readonly useDiceFields: { key: 'melee' | 'ranged' | 'intrusion'; label: string }[] = [
     { key: 'melee', get label() { return t('monsterDialog.diceMelee'); } },
     { key: 'ranged', get label() { return t('monsterDialog.diceRanged'); } },
-    { key: 'magic', get label() { return t('monsterDialog.diceMagic'); } },
+    { key: 'intrusion', get label() { return t('monsterDialog.diceIntrusion'); } },
   ];
   protected readonly useMode = signal<'' | 'alternate' | 'random'>('');
   protected readonly useModeOptions: SelectOption[] = [
@@ -339,7 +339,7 @@ export class MonsterDialogComponent {
   ];
   protected readonly tab = signal<'general' | 'advanced'>('general');
   protected readonly weaponOptions = computed<SelectOption[]>(() => this.items().filter((i) => i.weapon).map((i) => ({ value: i.id, label: i.name })));
-  protected setUseDice(key: 'melee' | 'ranged' | 'magic', value: string) {
+  protected setUseDice(key: 'melee' | 'ranged' | 'intrusion', value: string) {
     this.useDice.update((d) => ({ ...d, [key]: value }));
   }
   protected readonly carriedOptions = computed<SelectOption[]>(() => [{ value: '', get label() { return t('monsterDialog.anyCarriable'); } }, ...this.items().filter((i) => i.carried).map((i) => ({ value: i.id, label: i.name }))]);

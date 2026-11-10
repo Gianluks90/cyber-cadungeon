@@ -46,7 +46,7 @@ export interface PendingRevival {
 export interface PendingCheck {
   title?: string;
   text: string;
-  dice: 'melee' | 'ranged' | 'magic';
+  dice: 'melee' | 'ranged' | 'intrusion';
   needs: number;
   refusable: boolean;
   /** L'eroe non può spendere overclock per tirare dadi competenza in più. */

@@ -51,7 +51,7 @@ export interface DecisionView {
 export interface AttackView {
   attacker: AttackSide;
   target: AttackSide;
-  /** `attackLabel` completa "Attacco …": in mischia, a distanza o magico. */
+  /** `attackLabel` completa "Attacco …": in mischia, a distanza o di Intrusione. */
   /** Lo gioca lo script del Maligno: niente tasti per tirare o annullare, e le scelte sono già fatte. */
   auto: boolean;
   weapon: { lead: string; name: string; icon: string; attackLabel: string; dice: DieColor[] };

@@ -87,13 +87,13 @@
     {
       "id": "power-spike",
       "name": "Picco di tensione",
-      "school": "magic",
-      "text": "Quando esegui un attacco magico, guadagni 2 scintille bonus.",
+      "school": "hacking",
+      "text": "Quando esegui un attacco di Intrusione, guadagni 2 scintille bonus.",
       "effects": [
         {
           "kind": "attack",
           "on": [
-            "magic"
+            "intrusion"
           ],
           "sparks": 2
         }
@@ -102,28 +102,28 @@
     {
       "id": "firewall",
       "name": "Firewall",
-      "school": "magic",
-      "text": "Ricevi +1 armatura contro gli attacchi magici.",
+      "school": "hacking",
+      "text": "Ricevi +1 armatura contro gli attacchi di Intrusione.",
       "effects": [
         {
           "kind": "stat",
           "stat": "armor",
           "amount": 1,
-          "vs": "magic"
+          "vs": "intrusion"
         }
       ]
     },
     {
       "id": "signal-booster",
       "name": "Amplificatore di segnale",
-      "school": "magic",
-      "text": "Quando esegui attacchi a distanza o magici, guadagni +2 gittata e +1 danno.",
+      "school": "hacking",
+      "text": "Quando esegui attacchi a distanza o di Intrusione, guadagni +2 gittata e +1 danno.",
       "effects": [
         {
           "kind": "attack",
           "on": [
             "ranged",
-            "magic"
+            "intrusion"
           ],
           "range": 2,
           "damage": 1

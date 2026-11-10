@@ -15,12 +15,12 @@
   "skills": {
     "combat": 3,
     "cunning": 0,
-    "magic": 0
+    "hacking": 0
   },
   "dice": {
     "melee": 3,
     "ranged": 0,
-    "magic": 0
+    "intrusion": 0
   },
   "abilityName": "Assorbitori cinetici",
   "ability": "Ogni volta che subisci ferite da un attacco recuperi {overclock:1}.",
