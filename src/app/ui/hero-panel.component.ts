@@ -118,7 +118,7 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
       border: 1px solid var(--c-line-strong); background: var(--c-tile); transform: rotate(4deg); transform-origin: 30% 100%;
       box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
     }
-    .art.enhanced { border-color: var(--c-faction-evil); }
+    .art.enhanced { border-color: var(--c-faction-adversary); }
     /* La card del famiglio sta dal lato opposto all'immagine (a sinistra), specchiata: inclinata di -4°, infilata sotto il bordo sinistro del pannello. Il pannello non si restringe e resta allineato alla barra: si sposta a destra solo di quanto serve perché la card stia nello schermo; sotto i 1000 px la card non c'è. */
     .fam { display: none; }
     @media (min-width: 1000px) {

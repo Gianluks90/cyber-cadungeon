@@ -24,7 +24,7 @@ export interface ActivationView {
  * Sopra movimento e attacchi, in verticale come nome e vita, le abilità del mostro come pillole.
  */
 @Component({
-  selector: 'app-evil-activation',
+  selector: 'app-adversary-activation',
   host: { '[style.width]': "'min(calc(320px + ' + (slots() - 1) * 76 + 'px), calc(100vw - 24px))'" }, // come la barra degli eroi: il tab aperto da 320 px e 76 px per ogni altro
   imports: [CatalogTextPipe, TrPipe, HeartsComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -60,7 +60,7 @@ export interface ActivationView {
     }
     .card {
       box-sizing: border-box; display: flex; align-items: center; gap: 12px; height: 76px; padding: 0 0 0 9px; overflow: hidden; /* alto come i tab degli eroi */
-      background: var(--c-surface); border: 1px solid var(--c-faction-evil); border-radius: var(--radius-1);
+      background: var(--c-surface); border: 1px solid var(--c-faction-adversary); border-radius: var(--radius-1);
     }
     .token { flex: none; width: 56px; height: 56px; overflow: hidden; border-radius: var(--radius-1); background: var(--c-tile); box-shadow: 0 0 0 2px var(--c-line); }
     img { display: block; width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
@@ -76,10 +76,10 @@ export interface ActivationView {
     /* Il tasto Termina è un pezzo del box: alto quanto lui, quindi quadrato (76 px meno i due bordi), diviso dal resto da una linea rossa (come Passa nel footer). */
     .end {
       align-self: stretch; flex: none; box-sizing: border-box; width: 74px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 0; cursor: pointer;
-      background: none; border: 0; border-left: 1px solid var(--c-faction-evil); border-radius: 0; color: var(--c-faction-evil);
+      background: none; border: 0; border-left: 1px solid var(--c-faction-adversary); border-radius: 0; color: var(--c-faction-adversary);
       font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; transition: background 0.15s;
     }
-    .end:hover, .end:focus-visible { background: color-mix(in srgb, var(--c-faction-evil) 12%, transparent); outline: none; }
+    .end:hover, .end:focus-visible { background: color-mix(in srgb, var(--c-faction-adversary) 12%, transparent); outline: none; }
     .abilities { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; margin: 0; padding: 0; list-style: none; }
     .pill { padding: 2px 8px; border-radius: 999px; border: 1px solid var(--c-line-strong); color: var(--c-text-dim); font: 11px/1.2 var(--font-ui); white-space: nowrap; }
     /* Schermi stretti: tutto un po' più piccolo e le pillole delle abilità in una riga che scorre di lato, perché il box resta alto 76 px. */
@@ -94,7 +94,7 @@ export interface ActivationView {
     }
   `,
 })
-export class EvilActivationComponent {
+export class AdversaryActivationComponent {
   readonly monster = input.required<ActivationView>();
   /** Quanti eroi ci sono: la box è larga quanto la barra degli eroi. */
   readonly slots = input(2);

@@ -26,7 +26,7 @@ import { PieceData } from '../game/pieces/piece';
 import { AdventureGoals, AdventureGoalsDialogComponent } from './adventure-goals-dialog.component';
 import { GlobalBehaviorsDialogComponent } from './global-behaviors-dialog.component';
 import { AdventureSetupDialogComponent, AdventureSetupForm, SetupCard } from './adventure-setup-dialog.component';
-import { loadEvilCatalog } from '../game/evil/card';
+import { loadAdversaryCatalog } from '../game/adversary/card';
 import type { AdventureSetup } from '../game/map/map-data';
 import { ItemMarkerDialogComponent, ItemMarkerEdits } from './item-marker-dialog.component';
 import { AdventureInfo, AdventureInfoDialogComponent } from './adventure-info-dialog.component';
@@ -148,7 +148,7 @@ import { DotWaveComponent } from '../ui/dot-wave.component';
     <app-validation-dialog [open]="dialog() === 'validation'" [checks]="checks()" (closed)="dialog.set(null)" />
     <app-adventure-info-dialog [open]="dialog() === 'info'" [value]="info()" (confirmed)="applyInfo($event)" (cancel)="dialog.set(null)" />
     <app-global-behaviors-dialog [open]="dialog() === 'behaviors'" [value]="behaviors()" [monsterTypes]="monsterTypes()" [items]="itemOptions()" (confirmed)="applyBehaviors($event)" (cancel)="dialog.set(null)" />
-    <app-adventure-setup-dialog [open]="dialog() === 'setup'" [value]="setupForm()" [portraits]="portraitOptions()" [cards]="evilCards()" (confirmed)="applySetup($event)" (cancel)="dialog.set(null)" />
+    <app-adventure-setup-dialog [open]="dialog() === 'setup'" [value]="setupForm()" [portraits]="portraitOptions()" [cards]="adversaryCards()" (confirmed)="applySetup($event)" (cancel)="dialog.set(null)" />
     <app-adventure-goals-dialog [open]="dialog() === 'goals'" [value]="goals()" [targets]="goalTargets()" (confirmed)="applyGoals($event)" (cancel)="dialog.set(null)" />
     <!-- Gli strumenti di costruzione sul bordo inferiore. -->
     <app-editor-tools [handActions]="handActions()" (handConfirm)="placeHand()" (handCancel)="dropHand()" [tiles]="palette()" [counts]="counts()" [carrying]="carrying()" [deleting]="deleting()" [openExits]="openExits()" [canUndo]="canUndo()" [canRedo]="canRedo()" (undo)="tileEditor?.undo()" (redo)="tileEditor?.redo()" [obstacleCounts]="obstacleCounts()" [carryingObstacle]="carryingObstacle()" (pickObstacle)="tileEditor?.pickObstacle($event)" [wallCounts]="wallCounts()" [carryingWall]="carryingWall()" (pickWall)="tileEditor?.pickWall($event)" [monsters]="monsterCatalog()" [monsterCounts]="monsterCounts()" [carryingMonster]="carryingMonster()" (pickMonster)="tileEditor?.pickMonster($event.id, $event.enhanced)" [markerImages]="markerImages()" [markerCounts]="markerCounts()" [carryingMarker]="carryingMarker()" (pickMarker)="onPickMarker($event)" (openChestTable)="dialog.set('chests')" (openItemMods)="dialog.set('itemMods')" [customizing]="customizing()" (toggleCustomize)="tileEditor?.setCustomizing(!customizing())" [separating]="separating()" (toggleSeparate)="tileEditor?.setSeparating(!separating())" [doorCounts]="doorCounts()" [carryingDoor]="carryingDoor()" (pick)="tileEditor?.pick($event)" (pickDoor)="tileEditor?.pickDoor($event)" (rotate)="tileEditor?.rotate()" (toggleDelete)="tileEditor?.setDeleting(!deleting())" (closeExits)="closeExits()" [areas]="areaList()" [creatingArea]="creatingArea()" [zonesView]="zonesView()" (toggleZonesView)="toggleZonesView()" [zoneCards]="zoneCards()" [creatingZone]="creatingZone()" [zoneSelected]="zoneSelected()" (createZone)="zoneTool?.startChoosing()" (confirmZone)="confirmZone()" (cancelZone)="zoneTool?.cancel()" (editZone)="editZoneProps($event)" [deletingZones]="deletingZones()" (toggleDeleteZones)="deletingZones.set(!deletingZones())" (editZoneCells)="zoneTool?.startChoosing($event)" (deleteZone)="tileEditor?.deleteZone($event)" (highlightZone)="zoneTool?.setHighlight($event)" (toggleCreateArea)="areaTool?.setCreating(!creatingArea())" (areaHighlight)="areaTool?.setHighlight($event)" [deletingAreas]="deletingAreas()" (toggleDeleteAreas)="toggleDeleteAreas()" [events]="eventCards()" [deletingEvents]="deletingEvents()" (toggleDeleteEvents)="toggleDeleteEvents()" (createEvent)="editingEvent.set({ event: null })" (editEvent)="editEvent($event)" (deleteEvent)="askDeleteEvent($event)" (duplicateEvent)="duplicateEvent($event)" (openVariables)="variablesOpen.set(true)" (setStartArea)="tileEditor?.toggleStart($event)" (editArea)="areaEditing.set($event)" (moveArea)="tileEditor?.moveArea($event.id, $event.to)" (deleteArea)="askDeleteArea($event)" (toolChange)="onToolChange($event)" />
@@ -248,7 +248,7 @@ export class EditorComponent implements OnDestroy {
   protected readonly info = signal<AdventureInfo>({ title: '', intro: '' });
   /** Le varianti di preparazione dell'avventura (monete, tesori in negozio, Mazzo del Male) e le carte del Male fra cui scegliere. */
   private readonly setupData = signal<AdventureSetup>({});
-  protected readonly evilCards = signal<SetupCard[]>([]);
+  protected readonly adversaryCards = signal<SetupCard[]>([]);
   protected readonly setupForm = computed<AdventureSetupForm>(() => ({ rules: this.goals().rules, rulesImage: this.goals().rulesImage, setup: this.setupData() }));
   protected readonly goals = signal<AdventureGoals>({ objective: '', progress: null, condition: '', target: '', rules: '', rulesImage: '', conclusion: '', reward: null });
   /** I nemici in mappa, per scegliere quello da sconfiggere (nome della carta o proprio, "unico" se ha un nome o "potenziato", e casella). */
@@ -402,8 +402,8 @@ export class EditorComponent implements OnDestroy {
         case 'areaRevealed': return t('editor.when.areaRevealed', { what: area.get(w.area) ?? '?' });
         case 'zoneUsed': return t('editor.when.zoneUsed', { what: this.eventZones().find((o) => o.value === w.zoneId)?.label ?? '?' });
         case 'zoneEntered': return t('editor.when.zoneEntered', { what: this.eventZones().find((o) => o.value === w.zoneId)?.label ?? '?' });
-        case 'evilTurnEnd': return t('editor.when.evilTurnEnd');
-        case 'evilTurnStart': return t('editor.when.evilTurnStart');
+        case 'adversaryTurnEnd': return t('editor.when.adversaryTurnEnd');
+        case 'adversaryTurnStart': return t('editor.when.adversaryTurnStart');
       }
     };
     return this.events().map((e, i) => {
@@ -697,12 +697,12 @@ export class EditorComponent implements OnDestroy {
           this.encounterEdits.set(editor.encounterEdits(index));
           this.encounterEditing.set(index);
         });
-      const evilCatalog = await loadEvilCatalog();
+      const adversaryCatalog = await loadAdversaryCatalog();
       const tokenImages = await loadTokenImages();
       const icons = itemCatalog ? [...new Map([...itemCatalog.values()].filter((i) => i.icon).map((i) => [i.icon!, i.name] as const)).entries()] : [];
       await preloadIcons([...new Set((this.map.markers ?? []).flatMap((m) => ('look' in m && m.look?.icon ? [m.look.icon] : [])))]);
       this.zone.run(() => {
-        this.evilCards.set([...evilCatalog.values()].filter((c) => c.ready).map((c) => ({ id: c.id, name: c.name, copies: c.copies, power: c.kind === 'power' })));
+        this.adversaryCards.set([...adversaryCatalog.values()].filter((c) => c.ready).map((c) => ({ id: c.id, name: c.name, copies: c.copies, power: c.kind === 'power' })));
         this.lookImageUrls.set(Object.fromEntries(tokenImages.map((img) => [img.id, tokenImageUrl(img)])));
         this.portraitOptions.set([{ value: '', label: t('editor.noneFeminine') }, ...tokenImages.filter((img) => img.portrait).map((img) => ({ value: img.id, label: catalogText(img.name) }))]);
         this.lookOptions.set([{ value: '', label: tr('Predefinito') }, ...tokenImages.map((img) => ({ value: `image:${img.id}`, label: tr('Immagine · {name}', { name: catalogText(img.name) }) })), ...icons.map(([icon, name]) => ({ value: `icon:${icon}`, label: tr('Icona · {name}', { name }) }))]);

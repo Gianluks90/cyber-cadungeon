@@ -26,7 +26,7 @@
   --c-move:           var(--c-interact); /* movimento / velocità: lo stesso colore del perimetro di movimento */
   --c-speed:         #6cc08a;  /* dado distanza */
   --c-overclock:       #6cc08a;  /* overclock: il verde della pozione dell'Overclock */
-  --c-hatred:        var(--c-danger);  /* Odio del Maligno: il teschio rosso */
+  --c-alarm:        var(--c-danger);  /* Odio del Maligno: il teschio rosso */
   --c-missing:        var(--px-orange);  /* avviso dell'editor: cosa manca */
   --c-burn:          #ff5a36;  /* stato: fiamma */
   --c-web:           #cfd4de;  /* stato: rete (ragnatela) */
@@ -45,7 +45,7 @@
   /* ---------- Fazioni (anello token e ordine di turno) ---------- */
   --c-faction-hero:      var(--c-interact);
   --c-faction-ally:      var(--c-line-strong);
-  --c-faction-evil:   var(--px-red); /* rosso della Megacorp */
+  --c-faction-adversary:   var(--px-red); /* rosso della Megacorp */
 
   /* ---------- Dadi (stesso colore = stesso significato ovunque) ---------- */
   --c-die-melee:     var(--c-life);
@@ -180,7 +180,7 @@
 /* Anello token per fazione */
 .token { border-radius: var(--radius-round); border: 2px solid var(--c-faction-ally); }
 .token--hero      { border-color: var(--c-faction-hero); }
-.token--evil  { border-color: var(--c-faction-evil); }
+.token--adversary  { border-color: var(--c-faction-adversary); }
 .token--active    { box-shadow: 0 0 14px color-mix(in srgb, var(--c-interact) 45%, transparent); }
 
 /* Il "!" compare solo se c'è davvero un'azione, con pulse discreto */

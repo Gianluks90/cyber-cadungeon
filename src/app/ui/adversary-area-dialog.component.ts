@@ -17,11 +17,11 @@ export interface AreaInfoView {
  * dice se gli eroi hanno già scoperto l'area.
  */
 @Component({
-  selector: 'app-evil-area-dialog',
+  selector: 'app-adversary-area-dialog',
   imports: [TrPipe, DialogComponent, MarkdownPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-dialog [title]="area().name" [kicker]="area().subtitle ?? ''" [evil]="true" (closed)="closed.emit()">
+    <app-dialog [title]="area().name" [kicker]="area().subtitle ?? ''" [adversary]="true" (closed)="closed.emit()">
       @if (area().text) {
         <div class="md" [innerHTML]="area().text! | markdown"></div>
       } @else {
@@ -34,11 +34,11 @@ export interface AreaInfoView {
     .none { margin: 0; color: var(--c-text-dim); }
     .state { display: inline-flex; align-items: center; gap: 8px; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .dot { width: 8px; height: 8px; border-radius: var(--radius-round); border: 1px solid currentColor; }
-    .state.on { color: var(--c-faction-evil); }
+    .state.on { color: var(--c-faction-adversary); }
     .state.on .dot { background: currentColor; }
   `,
 })
-export class EvilAreaDialogComponent {
+export class AdversaryAreaDialogComponent {
   readonly area = input.required<AreaInfoView>();
   readonly closed = output<void>();
 }

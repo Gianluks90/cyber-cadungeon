@@ -16,7 +16,7 @@ import { IconComponent } from './icon.component';
 export interface BarMember {
   id: string;
   name: string;
-  kind: 'hero' | 'evil';
+  kind: 'hero' | 'adversary';
   /** Percorso dell'immagine del ritratto (in public/). Senza, il pallino mostra un'icona. */
   portrait?: string;
   /** È il suo turno: il pallino si espande in scheda. */
@@ -163,7 +163,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
     .foot .v { color: var(--c-text); font: 700 13px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
     .foot.alert .v { color: var(--c-danger); }
     /* Tutti i tab sono alti uguale (niente gradini); chiusi, sono un quadrato: il ritratto al centro. */
-    .bar { --tab-size: 76px; /* il blocco del Maligno (app-evil-panel) ha le stesse misure del tab espanso */ --avatar-size: 56px; --avatar-radius: var(--radius-1); /* quadrato a spigoli secchi, come il resto dell'interfaccia */ --active-tab-width: 320px; margin-right: calc(var(--tab-size) - 1px); /* lo spazio del tasto Passa (fuori flusso): la barra si centra insieme a lui, come il blocco del Maligno */ position: relative; display: flex; align-items: flex-end; pointer-events: auto; font: 13px/1.2 var(--font-ui); user-select: none; color: var(--c-text); }
+    .bar { --tab-size: 76px; /* il blocco del Maligno (app-adversary-panel) ha le stesse misure del tab espanso */ --avatar-size: 56px; --avatar-radius: var(--radius-1); /* quadrato a spigoli secchi, come il resto dell'interfaccia */ --active-tab-width: 320px; margin-right: calc(var(--tab-size) - 1px); /* lo spazio del tasto Passa (fuori flusso): la barra si centra insieme a lui, come il blocco del Maligno */ position: relative; display: flex; align-items: flex-end; pointer-events: auto; font: 13px/1.2 var(--font-ui); user-select: none; color: var(--c-text); }
     .tab {
       position: relative; display: flex; align-items: center; box-sizing: border-box; height: var(--tab-size); min-width: var(--tab-size); padding: 0 calc((var(--tab-size) - var(--avatar-size) - 2px) / 2); /* 2px = i due bordi: il tab chiuso è esattamente quadrato */ margin: 0; text-align: left;
       background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1);
@@ -276,7 +276,7 @@ export class PartyBarComponent {
   /** Il bottone Passa in fondo ai tab. `passBusy`: ora non si può (turno del Maligno, finestra aperta). */
   readonly pass = output<void>();
   readonly passBusy = input(false);
-  /** Il Maligno guarda gli eroi (`/evil/<map>`): la barra sta in alto e mostra solo ciò che è pubblico, senza Passa, inventario, città né azioni. */
+  /** Il Maligno guarda gli eroi (`/adversary/<map>`): la barra sta in alto e mostra solo ciò che è pubblico, senza Passa, inventario, città né azioni. */
   readonly publicView = input(false);
   /** Telefono, vista del Maligno: gli eroi sono solo avatar (nessun tab si allarga) e un tocco apre la loro scheda. */
   readonly compact = input(false);

@@ -20,7 +20,7 @@ import { IconComponent } from './icon.component';
       <div class="frame" [style.width]="width()" [style.height]="height()">
       <!-- Facoltativo: una carta inclinata infilata sotto il bordo del pannello (dialogSide), come nella finestra dell'attacco. Sta nella cornice, sotto il pannello. -->
       <ng-content select="[dialogSide]" />
-      <section class="box" [class.evil]="evil()" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+      <section class="box" [class.adversary]="adversary()" role="dialog" aria-modal="true" [attr.aria-label]="title()">
         <header>
           <div class="heading">
             @if (kicker()) { <span class="kicker">{{ kicker() }}</span> }
@@ -50,7 +50,7 @@ import { IconComponent } from './icon.component';
       background: var(--c-surface); border: 1px solid var(--dlg-line); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.5 var(--font-ui);
     }
     /* Le dialog del Maligno: bordo e linee rossi. */
-    .box.evil { --dlg-line: var(--c-faction-evil); }
+    .box.adversary { --dlg-line: var(--c-faction-adversary); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--dlg-line); }
     .heading { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
     .kicker { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
@@ -86,7 +86,7 @@ export class DialogComponent {
   /** Un tocco fuori dalla finestra la chiude (se `closable`). Le dialog dell'editor lo spengono: un tocco sbagliato non deve far perdere ciò che si è scritto; restano la X ed Esc. */
   readonly closeOnBackdrop = input(true);
   /** Una dialog del Maligno: bordo e linee rossi. */
-  readonly evil = input(false);
+  readonly adversary = input(false);
   /** Nascosta senza chiuderla: il contenuto (e quello che l'utente ha scritto) resta com'è. */
   readonly hidden = input(false);
   private readonly mapPick = inject(MapPickService, { optional: true });

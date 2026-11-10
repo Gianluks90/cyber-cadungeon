@@ -1,7 +1,7 @@
 import { Board, Cell, cellKey } from '../board/board';
 import { Piece, createPieces, footprint } from '../pieces/piece';
 import { GameState } from './game-state';
-import { newMonsterId } from './evil-deck';
+import { newMonsterId } from './adversary-deck';
 
 /**
  * Le aree (docs/REGOLE.md, sezione 9): un'area è un gruppo di tile con lo stesso id `area` (una stanza, o i corridoi fra un gruppo di porte).
@@ -47,18 +47,18 @@ export function upgradeMonster(state: GameState, old: Piece): void {
   Object.assign(old, { ...fresh, cell: old.cell, size: old.size, awake: true, drop: old.drop, chestTier: old.chestTier, portrait: old.portrait, portraitFull: old.portraitFull });
 }
 
-/** Un'area si rivela: i suoi mostri si svegliano e agiscono le carte Potere in gioco (con il Maligno a mano, `evilManual`, le sceglie lui: la scena chiede). */
+/** Un'area si rivela: i suoi mostri si svegliano e agiscono le carte Potere in gioco (con il Maligno a mano, `adversaryManual`, le sceglie lui: la scena chiede). */
 export function revealArea(state: GameState, board: Board, area: string): AreaResult {
   const result: AreaResult = { spawned: [], upgraded: [] };
   const inArea = monstersIn(state, board, area);
   for (const m of inArea) m.awake = true;
-  if (!inArea.length || state.evilManual) return result;
+  if (!inArea.length || state.adversaryManual) return result;
   const heroes = state.pieces.filter((p) => p.team === 'hero').length;
   const make = (monster: string, enhanced: boolean, id: string, cell: Cell) =>
     createPieces([{ id, team: 'monster', monster, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.monsters, heroes)[0];
 
   // Abile comandante: un mostro qualunque dell'area (non unico, non già potenziato) diventa potenziato, dello stesso tipo.
-  if (state.evil.inPlay.includes('able-commander')) {
+  if (state.adversary.inPlay.includes('able-commander')) {
     const options = upgradeOptions(state, inArea);
     if (options.length) {
       const old = options[Math.floor(state.random() * options.length)];
@@ -68,7 +68,7 @@ export function revealArea(state: GameState, board: Board, area: string): AreaRe
   }
 
   // Orda di Creature: 2 mostri in più di un tipo a scelta, accanto a un mostro dell'area.
-  if (state.evil.inPlay.includes('horde')) {
+  if (state.adversary.inPlay.includes('horde')) {
     const monster = HORDE_TYPES[Math.floor(state.random() * HORDE_TYPES.length)];
     const def = state.monsters.get(monster);
     if (def) {

@@ -108,9 +108,9 @@ function toFormTrigger(t: EventTrigger): FormTrigger {
   else if (t.kind === 'cleared' || t.kind === 'encountersGone') {
     f.pieceIds = [...((t.kind === 'cleared' ? t.pieceIds : t.markerIds) ?? [])];
     f.whereArea = t.area ?? '*';
-  } else if (t.kind !== 'evilTurnEnd' && t.kind !== 'evilTurnStart') f.target = t.area;
+  } else if (t.kind !== 'adversaryTurnEnd' && t.kind !== 'adversaryTurnStart') f.target = t.area;
   if (t.kind === 'zoneEntered') f.everyStep = !!t.everyStep;
-  if ((t.kind === 'evilTurnEnd' || t.kind === 'evilTurnStart') && t.round !== undefined) f.round = String(t.round);
+  if ((t.kind === 'adversaryTurnEnd' || t.kind === 'adversaryTurnStart') && t.round !== undefined) f.round = String(t.round);
   if (t.kind === 'interact' && t.cost !== undefined) f.cost = String(t.cost);
   if (t.kind === 'interact') f.onlyInactive = !!t.onlyInactive;
   return f;
@@ -126,7 +126,7 @@ function toTrigger(f: FormTrigger): EventTrigger {
     : kind === 'zoneEntered' ? { kind, zoneId: f.target, ...(f.everyStep ? { everyStep: true } : {}) }
     : kind === 'encountersGone' ? { kind, ...(f.pieceIds.length ? { markerIds: [...f.pieceIds] } : {}), ...(f.whereArea !== '*' ? { area: f.whereArea } : {}) }
     : kind === 'cleared' ? { kind, ...(f.pieceIds.length ? { pieceIds: [...f.pieceIds] } : {}), ...(f.whereArea !== '*' ? { area: f.whereArea } : {}) }
-    : kind === 'evilTurnEnd' || kind === 'evilTurnStart' ? { kind, ...(f.round.trim() ? { round: num(f.round) } : {}) }
+    : kind === 'adversaryTurnEnd' || kind === 'adversaryTurnStart' ? { kind, ...(f.round.trim() ? { round: num(f.round) } : {}) }
     : { kind, area: f.target };
 }
 
@@ -177,7 +177,7 @@ function toForm(e: EventEffect): FormEffect {
     case 'removeImmunity': return { ...f, pieceIds: targetsOf(e), immunity: e.immunity };
     case 'openDoor': return { ...f, doorId: e.doorId };
     case 'check': return { ...f, title: e.title ?? '', text: e.text, dice: e.dice, needs: String(e.needs ?? 1), refusable: !!e.refusable, noOverclock: !!e.noOverclock, ok: e.onSuccess.map(toForm), ko: e.onFail.map(toForm) };
-    case 'hatred': return { ...f, amount: String(e.amount) };
+    case 'alarm': return { ...f, amount: String(e.amount) };
     case 'drawCard': return { ...f, amount: String(e.count ?? 1) };
     case 'addEnding': return { ...f, endText: e.text ?? '', endPoints: e.points ? String(e.points) : '' };
     case 'heal': return { ...f, pieceIds: targetsOf(e), amount: String(e.amount) };
@@ -217,7 +217,7 @@ function toEffect(f: FormEffect): EventEffect {
     case 'removeImmunity': return { kind: 'removeImmunity', ...targetFields(f), immunity: f.immunity };
     case 'openDoor': return { kind: 'openDoor', doorId: f.doorId };
     case 'check': return { kind: 'check', ...(f.title.trim() ? { title: f.title.trim() } : {}), text: f.text.trim(), dice: f.dice, needs: Math.max(1, num(f.needs)), ...(f.refusable ? { refusable: true } : {}), ...(f.noOverclock ? { noOverclock: true } : {}), onSuccess: f.ok.map(toEffect), onFail: f.ko.map(toEffect) };
-    case 'hatred': return { kind: 'hatred', amount: num(f.amount) };
+    case 'alarm': return { kind: 'alarm', amount: num(f.amount) };
     case 'drawCard': return { kind: 'drawCard', ...(num(f.amount) > 1 ? { count: num(f.amount) } : {}) };
     case 'addEnding': return { kind: 'addEnding', ...(f.endText.trim() ? { text: f.endText.trim() } : {}), ...(num(f.endPoints) !== 0 ? { points: num(f.endPoints) } : {}) };
     case 'heal': return { kind: 'heal', ...targetFields(f), amount: Math.max(0, num(f.amount)) };
@@ -240,8 +240,8 @@ const WHEN_OPTIONS: SelectOption[] = [
   { value: 'zoneUsed', get label() { return t('eventDialog.whenZoneUsed'); } },
   { value: 'zoneEntered', get label() { return t('eventDialog.whenZoneEntered'); } },
   { value: 'encountersGone', get label() { return t('eventDialog.whenEncountersGone'); } },
-  { value: 'evilTurnStart', get label() { return t('eventDialog.whenEvilTurnStart'); } },
-  { value: 'evilTurnEnd', get label() { return t('eventDialog.whenEvilTurnEnd'); } },
+  { value: 'adversaryTurnStart', get label() { return t('eventDialog.whenAdversaryTurnStart'); } },
+  { value: 'adversaryTurnEnd', get label() { return t('eventDialog.whenAdversaryTurnEnd'); } },
   { value: 'chestOpened', get label() { return t('eventDialog.whenChestOpened'); } },
   { value: 'areaRevealed', get label() { return t('eventDialog.whenAreaRevealed'); } },
 ];
@@ -275,7 +275,7 @@ const EFFECT_OPTIONS: SelectOption[] = [
   { value: 'killActor', get label() { return t('eventDialog.fxKillActor'); } },
   { value: 'setZone', get label() { return t('eventDialog.fxSetZone'); } },
   { value: 'check', get label() { return t('eventDialog.fxCheck'); } },
-  { value: 'hatred', get label() { return t('eventDialog.changeHatred'); } },
+  { value: 'alarm', get label() { return t('eventDialog.changeAlarm'); } },
   { value: 'drawCard', get label() { return t('eventDialog.fxDrawCard'); } },
   { value: 'addEnding', get label() { return t('eventDialog.fxEnding'); } },
   { value: 'win', get label() { return t('eventDialog.fxWin'); } },
@@ -339,7 +339,7 @@ const STATE_OPTIONS: SelectOption[] = [
               <div class="row">
                 <div class="dlg-cols">
                   <app-select class="block" [options]="whenOptions" [value]="t.kind" [label]="'eventDialog.when' | t" (changed)="setTriggerKind(ti, $event)" />
-                  @if (t.kind !== 'cleared' && t.kind !== 'encountersGone' && t.kind !== 'evilTurnEnd' && t.kind !== 'evilTurnStart') {
+                  @if (t.kind !== 'cleared' && t.kind !== 'encountersGone' && t.kind !== 'adversaryTurnEnd' && t.kind !== 'adversaryTurnStart') {
                     @if (triggerPickKind(t); as pk) {
                       <app-map-select [kind]="pk" [options]="targetOptionsOf(t)" [value]="t.target" [placeholder]="placeholderOf(t)" [label]="'eventDialog.whereOrWho' | t" (changed)="patchTrigger(ti, { target: $event })" />
                     }
@@ -371,12 +371,12 @@ const STATE_OPTIONS: SelectOption[] = [
                 <app-checkbox [checked]="t.everyStep" (changed)="patchTrigger(ti, { everyStep: $event })">{{ 'eventDialog.everyStep' | t }}</app-checkbox>
                 <small class="dlg-hint">{{ 'eventDialog.everyStepHint' | t }}</small>
               }
-              @if (t.kind === 'evilTurnEnd' || t.kind === 'evilTurnStart') {
+              @if (t.kind === 'adversaryTurnEnd' || t.kind === 'adversaryTurnStart') {
                 <app-field [label]="'eventDialog.onlyInRound' | t" [note]="'encounterDialog.optional' | t"><input type="number" min="1" step="1" [class.bad]="!roundOk(t.round)" [placeholder]="'eventDialog.everyRound' | t" [value]="t.round" (input)="patchTrigger(ti, { round: $any($event.target).value })" /></app-field>
               }
-              @if (t.kind === 'evilTurnEnd') { <small class="dlg-hint">{{ 'eventDialog.evilTurnEndHint' | t }}</small> }
-              @if (t.kind === 'evilTurnStart') { <small class="dlg-hint">{{ 'eventDialog.evilTurnStartHint' | t }}</small> }
-              @if (t.kind !== 'cleared' && t.kind !== 'encountersGone' && t.kind !== 'evilTurnEnd' && t.kind !== 'evilTurnStart' && !targetOptionsOf(t).length) { <small class="dlg-hint">{{ emptyHintOf(t) }}</small> }
+              @if (t.kind === 'adversaryTurnEnd') { <small class="dlg-hint">{{ 'eventDialog.adversaryTurnEndHint' | t }}</small> }
+              @if (t.kind === 'adversaryTurnStart') { <small class="dlg-hint">{{ 'eventDialog.adversaryTurnStartHint' | t }}</small> }
+              @if (t.kind !== 'cleared' && t.kind !== 'encountersGone' && t.kind !== 'adversaryTurnEnd' && t.kind !== 'adversaryTurnStart' && !targetOptionsOf(t).length) { <small class="dlg-hint">{{ emptyHintOf(t) }}</small> }
             </div>
           }
           <button type="button" class="dlg-btn small" (click)="addTrigger()">{{ 'eventDialog.addTrigger' | t }}</button>
@@ -470,7 +470,7 @@ const STATE_OPTIONS: SelectOption[] = [
                   }
                   @case ('revive') {
                     <div class="dlg-cols">
-                      <app-field [label]="'eventDialog.evilTurns' | t"><input type="number" min="1" step="1" [class.bad]="num(e.turns) < 1" [value]="e.turns" (input)="patch(loc, i, { turns: $any($event.target).value })" /></app-field>
+                      <app-field [label]="'eventDialog.adversaryTurns' | t"><input type="number" min="1" step="1" [class.bad]="num(e.turns) < 1" [value]="e.turns" (input)="patch(loc, i, { turns: $any($event.target).value })" /></app-field>
                       <app-field [label]="'eventDialog.minDistance' | t"><input type="number" min="0" step="1" [class.bad]="!isInt(e.distance)" [value]="e.distance" (input)="patch(loc, i, { distance: $any($event.target).value })" /></app-field>
                     </div>
                     <small class="dlg-hint">{{ 'eventDialog.removeHint' | t }}</small>
@@ -610,9 +610,9 @@ const STATE_OPTIONS: SelectOption[] = [
                       </div>
                     }
                   }
-                  @case ('hatred') {
-                    <app-field [label]="'eventDialog.hatredPoints' | t"><input type="number" step="1" [class.bad]="!isInt(e.amount) || num(e.amount) === 0" [value]="e.amount" (input)="patch(loc, i, { amount: $any($event.target).value })" /></app-field>
-                    <small class="dlg-hint">{{ 'eventDialog.hatredHint' | t }}</small>
+                  @case ('alarm') {
+                    <app-field [label]="'eventDialog.alarmPoints' | t"><input type="number" step="1" [class.bad]="!isInt(e.amount) || num(e.amount) === 0" [value]="e.amount" (input)="patch(loc, i, { amount: $any($event.target).value })" /></app-field>
+                    <small class="dlg-hint">{{ 'eventDialog.alarmHint' | t }}</small>
                   }
                   @case ('drawCard') {
                     <app-field [label]="'eventDialog.cardCount' | t"><input type="number" min="1" step="1" [class.bad]="!isInt(e.amount) || num(e.amount) < 1" [value]="e.amount" (input)="patch(loc, i, { amount: $any($event.target).value })" /></app-field>
@@ -952,7 +952,7 @@ export class EventDialogComponent {
         }
         return '';
       }
-      case 'hatred': return isInt(e.amount) && num(e.amount) !== 0 ? '' : translate('eventDialog.prob.hatred');
+      case 'alarm': return isInt(e.amount) && num(e.amount) !== 0 ? '' : translate('eventDialog.prob.alarm');
       case 'drawCard': return isInt(e.amount) && num(e.amount) >= 1 ? '' : translate('eventDialog.prob.drawCard');
       case 'addEnding': return !isInt(e.endPoints) ? translate('eventDialog.prob.endingPoints') : !e.endText.trim() && num(e.endPoints) === 0 ? translate('eventDialog.prob.endingEmpty') : '';
       case 'win': return '';
@@ -962,9 +962,9 @@ export class EventDialogComponent {
   /** Cosa manca per confermare (vuoto se tutto va bene). */
   protected readonly problem = computed(() => {
     for (const t of this.triggers()) {
-      if (t.kind !== 'cleared' && t.kind !== 'encountersGone' && t.kind !== 'evilTurnEnd' && t.kind !== 'evilTurnStart' && !t.target) return t.kind === 'pickedUp' ? translate('eventDialog.prob.pickObject') : t.kind === 'encounterUsed' ? translate('eventDialog.prob.pickEncounter') : this.onPiece(t) ? translate('eventDialog.prob.pickEnemy') : translate('eventDialog.prob.pickArea');
+      if (t.kind !== 'cleared' && t.kind !== 'encountersGone' && t.kind !== 'adversaryTurnEnd' && t.kind !== 'adversaryTurnStart' && !t.target) return t.kind === 'pickedUp' ? translate('eventDialog.prob.pickObject') : t.kind === 'encounterUsed' ? translate('eventDialog.prob.pickEncounter') : this.onPiece(t) ? translate('eventDialog.prob.pickEnemy') : translate('eventDialog.prob.pickArea');
       if (t.kind === 'interact' && (!isInt(t.cost) || num(t.cost) < 0)) return translate('eventDialog.prob.interactCost');
-      if ((t.kind === 'evilTurnEnd' || t.kind === 'evilTurnStart') && !this.roundOk(t.round)) return translate('eventDialog.prob.round');
+      if ((t.kind === 'adversaryTurnEnd' || t.kind === 'adversaryTurnStart') && !this.roundOk(t.round)) return translate('eventDialog.prob.round');
     }
     if (this.conditions().some((c) => c.kind === 'variable' && !c.variable)) return translate('eventDialog.prob.condNoVar');
     if (this.conditions().some((c) => c.kind === 'item' && !c.item)) return translate('eventDialog.prob.condNoItem');

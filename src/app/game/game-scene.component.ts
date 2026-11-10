@@ -44,7 +44,7 @@ import {
   ZOOM_TRACKPAD_PINCH_BOOST,
   ZOOM_WHEEL_SENSITIVITY,
   CHECK_MAX_DICE,
-  EVIL_HAND_MAX,
+  ADVERSARY_HAND_MAX,
   TREASURE_PRICES,
 } from './constants';
 import { onThemeChange, readTokens, theme } from './theme';
@@ -65,13 +65,13 @@ import { loadTokenImages, tokenImage, tokenPortraitUrl } from './markers/token-l
 import { monsterTakesItem } from './state/behaviors';
 import { PickupView } from './markers/pickup-view';
 import { handItem } from './state/events';
-import { ActionChange, ContextAction, CurseHit, drawTreasureFor, armorOf, killHero, transformToad, canActOnMap, contextActions, endEvilTurn, explore, overclockForMovement, inventoryOf, speedOf, adjacentHeroes, placeOrder, loseOrdersOnWounds, changeOrder, orderChangeCost } from './state/actions';
+import { ActionChange, ContextAction, CurseHit, drawTreasureFor, armorOf, killHero, transformToad, canActOnMap, contextActions, endAdversaryTurn, explore, overclockForMovement, inventoryOf, speedOf, adjacentHeroes, placeOrder, loseOrdersOnWounds, changeOrder, orderChangeCost } from './state/actions';
 import { snapshotSeen } from './state/ambush';
 import { FamiliarsView } from './familiars/familiars-view';
 import { loadFamiliarCatalog } from './familiars/familiar';
 import { familiarCost, familiarHas, familiarPath, familiarReach, familiarsOf, spawnFamiliars, weakening } from './state/familiars';
 import { FAMILIAR_CARRY_COST, familiarContextActions, familiarDrop, familiarGive, familiarPickUp } from './state/familiar-carry';
-import { Spot, chooseMonsterTarget, monsterStops, planMonsterMove, settleOverlap } from './state/evil';
+import { Spot, chooseMonsterTarget, monsterStops, planMonsterMove, settleOverlap } from './state/adversary';
 import { STATUS_NAMES, applyTurnStart, describeStatus, hasStatus, shedStatus, shedStatusCost } from './state/status';
 import { SkillAction, skillActions, useSkill } from './state/skills';
 import { RemovalResult, removeMonster } from './state/loot';
@@ -101,15 +101,15 @@ import { cancelAmount, markReactionUsed, reactionBlock, woundReactions } from '.
 import { moveCells, telekinesisMoves, telekinesisTargets } from './state/telekinesis';
 import { ChoiceDialogComponent, ChoiceView } from '../ui/choice-dialog.component';
 import { DicePickerComponent, DicePickView } from '../ui/dice-picker.component';
-import { EvilPanelComponent } from '../ui/evil-panel.component';
-import { EvilFooterComponent } from '../ui/evil-footer.component';
-import { EvilTurnDialogComponent } from '../ui/evil-turn-dialog.component';
-import { AreaInfoView, EvilAreaDialogComponent } from '../ui/evil-area-dialog.component';
-import { EvilActionsComponent } from '../ui/evil-actions.component';
-import { EvilDeckComponent } from '../ui/evil-deck.component';
-import { EvilHatredComponent } from '../ui/evil-hatred.component';
-import { EvilHandComponent, EvilStep, HandCardView } from '../ui/evil-hand.component';
-import { ActivationView, EvilActivationComponent } from '../ui/evil-activation.component';
+import { AdversaryPanelComponent } from '../ui/adversary-panel.component';
+import { AdversaryFooterComponent } from '../ui/adversary-footer.component';
+import { AdversaryTurnDialogComponent } from '../ui/adversary-turn-dialog.component';
+import { AreaInfoView, AdversaryAreaDialogComponent } from '../ui/adversary-area-dialog.component';
+import { AdversaryActionsComponent } from '../ui/adversary-actions.component';
+import { AdversaryDeckComponent } from '../ui/adversary-deck.component';
+import { AdversaryAlarmComponent } from '../ui/adversary-alarm.component';
+import { AdversaryHandComponent, AdversaryStep, HandCardView } from '../ui/adversary-hand.component';
+import { ActivationView, AdversaryActivationComponent } from '../ui/adversary-activation.component';
 import { activationOf } from './state/activation';
 import { ActionControlsComponent } from '../ui/action-controls.component';
 import { FamiliarBarComponent } from '../ui/familiar-bar.component';
@@ -134,15 +134,15 @@ import { DotWaveComponent } from '../ui/dot-wave.component';
 import { IconComponent } from '../ui/icon.component';
 import { LocalSaveStore } from './save-store';
 import type { SkillDef } from './skills/skill';
-import type { EvilCardDef } from './evil/card';
+import type { AdversaryCardDef } from './adversary/card';
 import { partySetupStore } from './heroes/party-setup';
 import { composeRules } from './state/setup-text';
 import { DEFAULT_PARTY, HeroSheet, loadAllHeroSheets, loadHeroSheets } from './heroes/hero-sheet';
 import { loadItemCatalog, loadShopStock } from './items/item';
 import { loadSkillCatalog } from './skills/skill';
 import { MonsterDef, loadMonsterCatalog } from './monsters/monster';
-import { loadEvilCatalog } from './evil/card';
-import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, evilUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnMonster, summonCells, summonQueue, hatredPerTurn } from './state/evil-deck';
+import { loadAdversaryCatalog } from './adversary/card';
+import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, adversaryUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnMonster, summonCells, summonQueue, alarmPerTurn } from './state/adversary-deck';
 import { ruleAmount } from './state/effects';
 import { DieColor } from './items/item';
 import { FaceRoll } from './dice/faces';
@@ -178,7 +178,7 @@ const HINTS: Record<Mode, string> = {
 
 @Component({
   selector: 'app-game-scene',
-  imports: [DotWaveComponent, ConfirmDialogComponent, IconComponent, TrPipe, PillComponent, LogoButtonComponent, ZoomControlsComponent, ActionControlsComponent, FamiliarBarComponent, AdventureDialogComponent, ChoiceDialogComponent, DicePickerComponent, EvilPanelComponent, EvilFooterComponent, EvilTurnDialogComponent, EvilAreaDialogComponent, EvilActionsComponent, EvilDeckComponent, EvilHandComponent, EvilHatredComponent, EvilActivationComponent, PartyBarComponent, ContextMenuComponent, ToastsComponent, AnnounceComponent, AttackDialogComponent, ComponentsDialogComponent, MarkdownPipe],
+  imports: [DotWaveComponent, ConfirmDialogComponent, IconComponent, TrPipe, PillComponent, LogoButtonComponent, ZoomControlsComponent, ActionControlsComponent, FamiliarBarComponent, AdventureDialogComponent, ChoiceDialogComponent, DicePickerComponent, AdversaryPanelComponent, AdversaryFooterComponent, AdversaryTurnDialogComponent, AdversaryAreaDialogComponent, AdversaryActionsComponent, AdversaryDeckComponent, AdversaryHandComponent, AdversaryAlarmComponent, AdversaryActivationComponent, PartyBarComponent, ContextMenuComponent, ToastsComponent, AnnounceComponent, AttackDialogComponent, ComponentsDialogComponent, MarkdownPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[style.--footer-height]': "hint() ? '30px' : '0px'" },
   template: `
@@ -188,8 +188,8 @@ const HINTS: Record<Mode, string> = {
     <app-announce [message]="announcement()" [durationMs]="announceMs" />
     <app-context-menu [anchor]="loaderGone() ? contextAnchor() : null" [actions]="contextActions()" (chosen)="runContext($event)" (denied)="showNotice($event, 'warning')" />
     <!-- Il menu dell'attacco: compare sopra il nemico toccato, già aperto, con le armi che si possono usare. -->
-    <app-context-menu [anchor]="loaderGone() ? attackAnchor() : null" [actions]="attackActions()" [autoOpen]="true" [evil]="evilMode" bangIcon="swords" (chosen)="startAttack($event)" (denied)="showNotice($event, 'warning')" (closed)="closeAttackMenu()" />
-    <app-attack-dialog [view]="attackView()" [decision]="evilDecision()" (decide)="decideEvil($event)" (aim)="aimChosen()" (reroll)="rerollChosen($event)" (roll)="rollAttack()" (apply)="applyAttackNow()" (autoDone)="applyAttackNow()" (addDie)="addProficiencyDie()" (sweep)="toggleSweep()" [adding]="addingDie()" (cancel)="cancelAttack()" (choose)="chooseFace($event)" (use)="useEffect($event)" (reset)="resetEffects()" (sorceryStep)="sorceryStep($event)" />
+    <app-context-menu [anchor]="loaderGone() ? attackAnchor() : null" [actions]="attackActions()" [autoOpen]="true" [adversary]="adversaryMode" bangIcon="swords" (chosen)="startAttack($event)" (denied)="showNotice($event, 'warning')" (closed)="closeAttackMenu()" />
+    <app-attack-dialog [view]="attackView()" [decision]="adversaryDecision()" (decide)="decideAdversary($event)" (aim)="aimChosen()" (reroll)="rerollChosen($event)" (roll)="rollAttack()" (apply)="applyAttackNow()" (autoDone)="applyAttackNow()" (addDie)="addProficiencyDie()" (sweep)="toggleSweep()" [adding]="addingDie()" (cancel)="cancelAttack()" (choose)="chooseFace($event)" (use)="useEffect($event)" (reset)="resetEffects()" (sorceryStep)="sorceryStep($event)" />
     <!-- I testi dell'avventura: introduzione e obiettivo all'inizio (si confermano), l'obiettivo si rilegge dal suo tasto. -->
     <app-confirm-dialog [open]="confirmQuit()" [title]="'Concludere la partita?' | tr" [text]="'Tornerai alla home e la partita in corso, con il suo salvataggio, sarà cancellata. L\\'azione è irreversibile.' | tr" [confirmLabel]="'Concludi' | tr" (confirmed)="quitGame()" (cancel)="confirmQuit.set(false)" />
     <app-adventure-dialog [view]="adventureDialog()" (confirm)="onAdventureDialog()" />
@@ -204,16 +204,16 @@ const HINTS: Record<Mode, string> = {
     @if (familiarMove(); as f) {
       <app-familiar-bar [slots]="heroSlots()" [text]="'Sposta {name}: tocca una casella evidenziata (fino a {n} spazi)' | tr: { name: f.name, n: f.points }" (pass)="familiarSkip()" />
     }
-    @if (evilSummonInfo(); as s) {
+    @if (adversarySummonInfo(); as s) {
       <div class="summon-bar" role="status"><span>{{ s.name }}: <strong>{{ s.next }}</strong> · {{ s.left }}</span><button type="button" (click)="endSummon()">{{ 'Termina' | tr }}</button></div>
     }
-    @if (evilPickInfo(); as p) {
+    @if (adversaryPickInfo(); as p) {
       <div class="summon-bar" role="status"><span>{{ p.prompt }}</span>@if (p.cancellable) { <button type="button" (click)="cancelPick()">{{ 'Annulla' | tr }}</button> }</div>
     }
-    @if (evilTrapInfo(); as t) {
+    @if (adversaryTrapInfo(); as t) {
       <div class="summon-bar" role="status"><span>{{ t }}</span><button type="button" (click)="endTrap()">{{ 'Annulla' | tr }}</button></div>
     }
-    @if (evilSelInfo(); as a) { <app-evil-activation [monster]="a" [slots]="heroSlots()" (done)="endEvilActivation()" /> }
+    @if (adversarySelInfo(); as a) { <app-adversary-activation [monster]="a" [slots]="heroSlots()" (done)="endAdversaryActivation()" /> }
     @if (knockback(); as k) {
       <div class="knockback" role="status">{{ 'Contraccolpo: tocca una casella evidenziata per spostare {name} (fino a 3 spazi)' | tr: { name: k.name } }}<button type="button" (click)="chooseKnockback(null)">{{ 'Resta fermo' | tr }}</button></div>
     }
@@ -230,33 +230,33 @@ const HINTS: Record<Mode, string> = {
         </div>
       </div>
     }
-    <div class="top" [class.evil]="evilMode">
+    <div class="top" [class.adversary]="adversaryMode">
       <app-logo-button [items]="menuItems" (chosen)="onMenu($event)" />
       <button type="button" class="save" [class.done]="justSaved()" [attr.aria-label]="'Salva la partita' | tr" [title]="'Salva la partita' | tr" (click)="save()"><app-icon [name]="justSaved() ? 'check' : 'save'" [size]="20" /><span class="label">{{ 'Salva' | tr }}</span></button>
       <!-- Telefono, vista del Maligno: lo strumento "Mostri automatici" sta nell'intestazione, con il logo e Salva. -->
-      @if (barsIn() && evilMode && narrow()) { <app-evil-actions [inline]="true" [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
+      @if (barsIn() && adversaryMode && narrow()) { <app-adversary-actions [inline]="true" [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
       @if (defeated()) { <app-pill icon="skull" [label]="'Sconfitta' | tr" class="alert" /> }
     </div>
     <!-- Contatori sul bordo sinistro (come i comandi della camera sul destro): solo icona e valore, l'etichetta si apre al passaggio. -->
-    @if (!evilMode) {
+    @if (!adversaryMode) {
       <div class="rail">
         <app-pill rail primary icon="brightness_empty" [label]="'Conquista' | tr" [value]="progress()" [class.alert]="defeated()" />
         <app-pill rail primary icon="autorenew" [label]="'Round' | tr" [value]="round()" />
         <app-pill rail icon="tokens/little_key" [label]="'Chiavi' | tr" [value]="keys()" />
       </div>
     }
-    @if (barsIn() && evilMode) { <app-evil-hatred [hatred]="hatred()" [animate]="hatredAnimated()" /> }
-    @if (barsIn() && evilMode) { <app-evil-footer [round]="round()" [phase]="stepName()" [passLabel]="passLabel()" [passBusy]="commandsBusy()" (pass)="evilPass()" /> }
-    @if (barsIn() && evilMode) { <app-evil-hand [cards]="handCards()" [step]="evilStep()" [discarding]="evilStep() === 'hand' && handExcessN() > 0" (consume)="consumeAt($event)" (play)="playAt($event)" (discard)="discardAt($event)" (denied)="showNotice($event, 'warning', 'evil')" /> }
-    @if (barsIn() && evilMode) { <app-evil-deck [count]="deckLeft()" /> }
-    @if (barsIn() && evilMode && !narrow()) { <app-evil-actions [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
-    @if (evilAreaInfo(); as a) { <app-evil-area-dialog [area]="a" (closed)="evilAreaInfo.set(null)" /> }
-    @if (evilTurnDialog(); as t) { <app-evil-turn-dialog [from]="t.from" [to]="t.to" (ok)="closeEvilTurnDialog()" /> }
-    @if (barsIn() && !evilMode) { <app-evil-panel [slots]="heroSlots()" [hasObjective]="hasObjective()" (objective)="showObjective()" [view]="evilView()" [playing]="evilBusy()" [hatred]="hatred()" [deck]="deckLeft()" [hand]="handCount()" (toggle)="toggleEvilView()" /> }
-    @if (barsIn()) { <app-party-bar [publicView]="evilMode" [compact]="evilMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [monster]="monsterInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendOverclock)="spendOverclockForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (monsterClosed)="monsterPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
+    @if (barsIn() && adversaryMode) { <app-adversary-alarm [alarm]="alarm()" [animate]="alarmAnimated()" /> }
+    @if (barsIn() && adversaryMode) { <app-adversary-footer [round]="round()" [phase]="stepName()" [passLabel]="passLabel()" [passBusy]="commandsBusy()" (pass)="adversaryPass()" /> }
+    @if (barsIn() && adversaryMode) { <app-adversary-hand [cards]="handCards()" [step]="adversaryStep()" [discarding]="adversaryStep() === 'hand' && handExcessN() > 0" (consume)="consumeAt($event)" (play)="playAt($event)" (discard)="discardAt($event)" (denied)="showNotice($event, 'warning', 'adversary')" /> }
+    @if (barsIn() && adversaryMode) { <app-adversary-deck [count]="deckLeft()" /> }
+    @if (barsIn() && adversaryMode && !narrow()) { <app-adversary-actions [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
+    @if (adversaryAreaInfo(); as a) { <app-adversary-area-dialog [area]="a" (closed)="adversaryAreaInfo.set(null)" /> }
+    @if (adversaryTurnDialog(); as t) { <app-adversary-turn-dialog [from]="t.from" [to]="t.to" (ok)="closeAdversaryTurnDialog()" /> }
+    @if (barsIn() && !adversaryMode) { <app-adversary-panel [slots]="heroSlots()" [hasObjective]="hasObjective()" (objective)="showObjective()" [view]="adversaryView()" [playing]="adversaryBusy()" [alarm]="alarm()" [deck]="deckLeft()" [hand]="handCount()" (toggle)="toggleAdversaryView()" /> }
+    @if (barsIn()) { <app-party-bar [publicView]="adversaryMode" [compact]="adversaryMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [monster]="monsterInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendOverclock)="spendOverclockForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (monsterClosed)="monsterPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
     <!-- Footer temporaneo: tiene i comandi a schermo fuori dalla barra degli eroi. -->
     @if (hint()) { <footer class="footer keyboard-hints"><p class="hint">{{ hint() }}</p></footer> }
-    @if (barsIn() && !settingUp() && !evilMode) { <app-action-controls [style.visibility]="familiarMove() ? 'hidden' : null" [slots]="heroSlots()" [runes]="runes()" [action]="activeAction()" [busy]="commandsBusy()" (chosen)="tapCommand($event)" /> }
+    @if (barsIn() && !settingUp() && !adversaryMode) { <app-action-controls [style.visibility]="familiarMove() ? 'hidden' : null" [slots]="heroSlots()" [runes]="runes()" [action]="activeAction()" [busy]="commandsBusy()" (chosen)="tapCommand($event)" /> }
     <app-zoom-controls (zoom)="zoomByButton($event)" (center)="centerOnActive()" (fit)="showWholeMap()" />
   `,
   styles: `
@@ -289,22 +289,22 @@ const HINTS: Record<Mode, string> = {
     /* La scelta della casella di partenza: la barra in alto al centro che dice cosa fare */
     .setup-prompt { position: absolute; z-index: 12; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-interact); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); text-align: center; pointer-events: none; }
     /* La barra dell'evocazione (vista del Maligno): sotto la barra degli eroi come la box del mostro in attivazione, bordo rosso. */
-    .summon-bar { position: absolute; z-index: 24; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top) + 76px + 26px + 8px); display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-faction-evil); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); }
+    .summon-bar { position: absolute; z-index: 24; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top) + 76px + 26px + 8px); display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-faction-adversary); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); }
     .summon-bar strong { font-weight: 600; }
-    .summon-bar button { padding: 4px 14px; border-radius: var(--radius-1); background: none; color: var(--c-faction-evil); cursor: pointer; border: 1px solid var(--c-faction-evil); font: 600 12px/1.2 var(--font-ui); text-transform: uppercase; letter-spacing: var(--label-tracking); }
-    .summon-bar button:hover { background: color-mix(in srgb, var(--c-faction-evil) 12%, transparent); }
+    .summon-bar button { padding: 4px 14px; border-radius: var(--radius-1); background: none; color: var(--c-faction-adversary); cursor: pointer; border: 1px solid var(--c-faction-adversary); font: 600 12px/1.2 var(--font-ui); text-transform: uppercase; letter-spacing: var(--label-tracking); }
+    .summon-bar button:hover { background: color-mix(in srgb, var(--c-faction-adversary) 12%, transparent); }
     .knockback { position: absolute; z-index: 12; bottom: calc(var(--footer-height, 0px) + env(safe-area-inset-bottom) + 12px + 76px + 28px); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-interact); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); }
     .knockback button { padding: 4px 12px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 12px/1.2 var(--font-ui); }
     .knockback button:hover { border-color: var(--c-interact); color: var(--c-interact); }
     @media (max-width: 720px) { .top { max-width: calc(100% - 232px) !important; } }
     /* Vista del Maligno su un telefono: un'intestazione sola in alto (logo, Salva e "Mostri automatici" in una riga, senza la scritta di Salva); sotto, la barra degli eroi e le barre delle scelte (44 px di intestazione + 8 di distanza + 56 della barra + 26 della Conquista). */
     @media (max-width: 760px) {
-      .top.evil { width: calc(100% - 24px); max-width: calc(100% - 24px) !important; flex-wrap: nowrap; align-items: center; }
-      .top.evil .save .label { display: none; }
-      .top.evil .save { gap: 0; padding: 6px; }
+      .top.adversary { width: calc(100% - 24px); max-width: calc(100% - 24px) !important; flex-wrap: nowrap; align-items: center; }
+      .top.adversary .save .label { display: none; }
+      .top.adversary .save { gap: 0; padding: 6px; }
     }
     @media (max-width: 760px) and (pointer: coarse) {
-      .top.evil .save { padding: 11px; }
+      .top.adversary .save { padding: 11px; }
       .summon-bar { top: calc(12px + env(safe-area-inset-top) + 44px + 8px + 56px + 26px + 8px); }
     }
     .rail { position: absolute; z-index: 22; left: 12px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
@@ -355,7 +355,7 @@ export class GameSceneComponent implements OnDestroy {
   protected readonly hint = signal(HINTS.play);
   protected readonly progress = signal(0);
   /** L'Odio del Maligno (si vede solo nella sua vista) e le carte che restano nel suo mazzo (si vedono sempre). */
-  protected readonly hatred = signal(0);
+  protected readonly alarm = signal(0);
   protected readonly deckLeft = signal(0);
   protected readonly handCount = signal(0);
   /** Le carte in mano al Maligno, per la mano in basso nella sua vista. */
@@ -387,21 +387,21 @@ export class GameSceneComponent implements OnDestroy {
   /** Il pannello aperto (informazioni o inventario) dal tab di un eroe, se ce n'è uno. */
   protected readonly panel = signal<{ id: string; kind: PanelKind } | null>(null);
   /** La vista del Maligno (provvisoria: toccando il tab del Maligno): si vedono tutti i mostri e toccandone uno si apre la sua scheda. I giocatori non conoscono i parametri dei nemici. */
-  protected readonly evilView = signal(false);
-  /** "Inizia il tuo turno" (`/evil/<map>`): l'Odio prima e dopo aver ricevuto quello del turno. Finché c'è, la dialog non si chiude se non con OK. */
-  protected readonly evilTurnDialog = signal<{ from: number; to: number } | null>(null);
-  private evilTurnDone: (() => void) | null = null;
-  /** "Mostri automatici" (`/evil/<map>`, tasto A): acceso, a inizio turno i mostri agiscono da soli. Parte spento. */
+  protected readonly adversaryView = signal(false);
+  /** "Inizia il tuo turno" (`/adversary/<map>`): l'Odio prima e dopo aver ricevuto quello del turno. Finché c'è, la dialog non si chiude se non con OK. */
+  protected readonly adversaryTurnDialog = signal<{ from: number; to: number } | null>(null);
+  private adversaryTurnDone: (() => void) | null = null;
+  /** "Mostri automatici" (`/adversary/<map>`, tasto A): acceso, a inizio turno i mostri agiscono da soli. Parte spento. */
   protected readonly monstersAuto = signal(false);
-  /** Il mostro che il Maligno sta attivando a mano (`/evil/<map>`) e dove può fermarsi, per casella. */
-  private evilSel: { monster: Piece; stops: Map<string, Spot> } | null = null;
+  /** Il mostro che il Maligno sta attivando a mano (`/adversary/<map>`) e dove può fermarsi, per casella. */
+  private adversarySel: { monster: Piece; stops: Map<string, Spot> } | null = null;
   /** Per la barra dell'attivazione: nome, punti movimento e attacchi che restano. */
-  protected readonly evilSelInfo = signal<ActivationView | null>(null);
+  protected readonly adversarySelInfo = signal<ActivationView | null>(null);
   /** La descrizione di un'area aperta con la `i` della sua etichetta (vista del Maligno). */
-  protected readonly evilAreaInfo = signal<AreaInfoView | null>(null);
-  /** Aperta da `/evil/<map>`: la partita parte subito, con gli eroi già in campo, la mappa tutta visibile (vista del Maligno accesa) e senza salvataggi. */
-  protected get evilMode(): boolean {
-    return (this.route.snapshot.routeConfig?.path ?? '').startsWith('evil/');
+  protected readonly adversaryAreaInfo = signal<AreaInfoView | null>(null);
+  /** Aperta da `/adversary/<map>`: la partita parte subito, con gli eroi già in campo, la mappa tutta visibile (vista del Maligno accesa) e senza salvataggi. */
+  protected get adversaryMode(): boolean {
+    return (this.route.snapshot.routeConfig?.path ?? '').startsWith('adversary/');
   }
   /** Il menu dell'app (dal logo). Le prime due voci sono segnaposto. */
   protected readonly menuItems: MenuItem[] = [
@@ -442,7 +442,7 @@ export class GameSceneComponent implements OnDestroy {
     sweepPaid?: number;
   } | null>(null);
   /** È il turno del Maligno (lo script): niente comandi per gli eroi. */
-  protected readonly evilBusy = signal(false);
+  protected readonly adversaryBusy = signal(false);
   /** Il loader a puntini: finché la mappa non è pronta (`loading`, e comunque per almeno un'onda intera) copre la scena, poi si dissolve e infine esce dalla pagina (`loaderGone`). */
   protected readonly loading = signal(true);
   protected readonly loaderGone = signal(false);
@@ -608,13 +608,13 @@ export class GameSceneComponent implements OnDestroy {
       const hasHeroes = (data.pieces ?? []).some((p) => p.team === 'hero');
       // Una partita multiplayer porta la squadra scelta nella sala d'attesa (`?party=a,b`); senza, quella di base.
       const chosen = (this.route.snapshot.queryParamMap.get('party') ?? '').split(',').filter((id) => /^[a-z0-9-]+$/.test(id));
-      const partyIds = chosen.length ? chosen : this.evilMode ? ['bastion', 'vesper', 'halo'] : DEFAULT_PARTY; // `/evil/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
+      const partyIds = chosen.length ? chosen : this.adversaryMode ? ['bastion', 'vesper', 'halo'] : DEFAULT_PARTY; // `/adversary/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
       // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
       const setup = partySetupStore.take();
       const party: PieceData[] = hasHeroes ? [] : partyIds.map((hero, i) => ({ id: `h${i + 1}`, team: 'hero', hero, x: start.x, y: start.y, ...(setup[hero] ? { items: setup[hero].items, potions: setup[hero].potions, coins: setup[hero].coins, skillCards: setup[hero].skillCards } : {}) }));
       const mapData = party.length ? { ...data, pieces: [...party, ...(data.pieces ?? [])] } : data;
       const sheets = await loadHeroSheets((mapData.pieces ?? []).map((p) => p.hero));
-      const [items, shopStock, skills, monsters, evilCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadMonsterCatalog(), loadEvilCatalog(), loadFamiliarCatalog()]);
+      const [items, shopStock, skills, monsters, adversaryCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadMonsterCatalog(), loadAdversaryCatalog(), loadFamiliarCatalog()]);
       this.monsterDefs = monsters;
       const names = areaNames(data.areas ?? []);
       this.areaInfo = new Map((data.areas ?? []).map((a) => [a.id, { ...a, name: names.get(a.id) }]));
@@ -624,9 +624,9 @@ export class GameSceneComponent implements OnDestroy {
         this.saves.clear(mapName);
         void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true }); // così un refresh riprende l'autosalvataggio
       }
-      const resumed = this.evilMode ? null : this.resumeGame(data, items, skills, monsters, evilCards);
+      const resumed = this.adversaryMode ? null : this.resumeGame(data, items, skills, monsters, adversaryCards);
       this.resumedGame = !!resumed;
-      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Eroe 1'), team: 'hero', x: start.x, y: start.y }], sheets, items, shopStock, skills, monsters, evilCards);
+      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Eroe 1'), team: 'hero', x: start.x, y: start.y }], sheets, items, shopStock, skills, monsters, adversaryCards);
       this.state.familiarDefs = familiarDefs;
       // I tesori comprati in preparazione: ora che i mazzi esistono si pesca la carta (come in città); a mazzo vuoto le monete tornano all'eroe.
       if (!resumed && !hasHeroes) {
@@ -668,11 +668,11 @@ export class GameSceneComponent implements OnDestroy {
       // Dopo ogni passo di un eroe si ricalcola cosa vede il gruppo; se compare un mostro, il movimento si ferma.
       this.markerView!.stateProvider = () => this.glyphState();
       this.pieces.onMonsterClick = (piece) => {
-        if (this.evilMode) {
-          this.evilMonsterClick(piece); // il Maligno: un mostro da attivare si attiva, gli altri aprono la scheda
+        if (this.adversaryMode) {
+          this.adversaryMonsterClick(piece); // il Maligno: un mostro da attivare si attiva, gli altri aprono la scheda
           return;
         }
-        if (!this.evilView()) {
+        if (!this.adversaryView()) {
           this.selectAttackTarget(piece); // i giocatori non vedono i parametri dei nemici: toccandolo si attacca
           return;
         }
@@ -707,11 +707,11 @@ export class GameSceneComponent implements OnDestroy {
         }
         return this.exploreAndNotify();
       };
-      if (this.evilMode) {
-        this.evilView.set(true);
+      if (this.adversaryMode) {
+        this.adversaryView.set(true);
         this.pieces?.setViewOnly(true); // il Maligno guarda gli eroi, non li comanda
         this.areaLabelView.setTools(true); // accanto a ogni etichetta d'area: inquadra e informazioni
-        this.state.evilManual = true; // le trappole le arma il Maligno, non lo script
+        this.state.adversaryManual = true; // le trappole le arma il Maligno, non lo script
         this.pieces?.setActivationDots((m) => activationOf(this.state, this.board ?? null, m)); // il pallino verde / giallo / grigio sui mostri
       }
       this.rebuildBoard();
@@ -720,7 +720,7 @@ export class GameSceneComponent implements OnDestroy {
       this.fitToBounds(this.mapBox);
       this.loadSavedCamera(); // l'inquadratura che il giocatore aveva l'ultima volta
       this.finishLoading();
-      if (this.state.setup && this.evilMode) this.autoPlaceHeroes();
+      if (this.state.setup && this.adversaryMode) this.autoPlaceHeroes();
       else if (this.state.setup) this.nextSetupStep();
       else this.barsIn.set(true); // senza preparazione la partita è già pronta
       if (this.resumedGame) {
@@ -921,7 +921,7 @@ export class GameSceneComponent implements OnDestroy {
     const g = this.ghosts;
     const board = this.board;
     if (!g || !board) return;
-    const on = this.fogOn() && this.evilView();
+    const on = this.fogOn() && this.adversaryView();
     this.ghostLayer.visible = on;
     const e = this.exploration;
     const hidden = (m: Marker) => !e.markers.has(m);
@@ -973,7 +973,7 @@ export class GameSceneComponent implements OnDestroy {
       this.labelPlaces = placeAreaLabels(areas, new Set(board.walkableCells().map((c) => `${c.x},${c.y}`)));
     }
     // Solo le aree già rivelate (giocando): le altre compaiono, con una dissolvenza, quando gli eroi le vedono.
-    this.areaLabelView.set(this.labelPlaces, fog && !this.evilView() ? new Set(this.state.exploration.areas) : null); // il Maligno le vede tutte
+    this.areaLabelView.set(this.labelPlaces, fog && !this.adversaryView() ? new Set(this.state.exploration.areas) : null); // il Maligno le vede tutte
   }
 
   private torchView?: TorchView;
@@ -984,7 +984,7 @@ export class GameSceneComponent implements OnDestroy {
   private syncTorches() {
     const board = this.board;
     if (!board || !this.torchView) return;
-    const fog = this.fogOn() && !this.evilView();
+    const fog = this.fogOn() && !this.adversaryView();
     const seen = (c: Cell) => !fog || this.exploration.cells.has(cellKey(c));
     const lit = board.walkableCells().filter(seen);
     const near = (t: Torch): Cell[] => {
@@ -1007,7 +1007,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /** I muri delle scale si disegnano insieme a quelli dei tile, ma solo per le scale scoperte (non svelano dove sono). */
   private syncStairsWalls(board: Board) {
-    const fog = this.fogOn() && !this.evilView(); // il Maligno vede tutte le scale e le porte
+    const fog = this.fogOn() && !this.adversaryView(); // il Maligno vede tutte le scale e le porte
     const shown = board.markers.filter((m): m is Stairs => m.type === 'stairs' && (!fog || this.exploration.markers.has(m)));
     const posts = board.looseDoorPosts((d) => !fog || this.exploration.doors.has(d)); // gli stipiti delle porte fuori dai varchi, solo per quelle già scoperte
     const key = shown.map((s) => `${s.x},${s.y},${s.rotation ?? 0}`).join('|') + `#${board.walls.length}#${JSON.stringify(posts)}`;
@@ -1051,7 +1051,7 @@ export class GameSceneComponent implements OnDestroy {
     if (r.monsters.length) {
       this.syncMonsterVisibility(true);
       this.pieces?.revealMonsters(r.monsters.map((m) => m.id));
-      this.showNotice(tr('Compare: {names}', { names: r.monsters.map((m) => m.name).join(', ') }), 'skull', 'evil');
+      this.showNotice(tr('Compare: {names}', { names: r.monsters.map((m) => m.name).join(', ') }), 'skull', 'adversary');
     }
     if (r.areas.length) {
       this.syncMonsterVisibility(); // i mostri dell'area rivelata riprendono i colori (vista del Maligno)
@@ -1078,7 +1078,7 @@ export class GameSceneComponent implements OnDestroy {
       }
       if (res.spawned.length) await this.presentSpawned(res.spawned, tr('Orda di Creature'), tr('Appaiono: {names}.', { names: res.spawned.map((m) => m.name).join(', ') }));
       if (res.spawned.length || res.upgraded.length) this.exploreAndNotify(); // i nuovi mostri possono essere in vista
-      if (this.state.evilManual) {
+      if (this.state.adversaryManual) {
         await this.manualAreaPowers(id); // Abile comandante e Orda di Creature: li sceglie il Maligno
         this.exploreAndNotify();
       }
@@ -1166,9 +1166,9 @@ export class GameSceneComponent implements OnDestroy {
     void this.flushEvents(); // i messaggi degli eventi scattati (una sconfitta, uno scrigno, un'area) si leggono appena la scena è aggiornata
     this.progress.set(s.progress);
     this.round.set(s.round);
-    this.hatred.set(s.evil.hatred);
+    this.alarm.set(s.adversary.alarm);
     this.deckLeft.set(cardsLeft(s));
-    this.handCount.set(s.evil.hand.length);
+    this.handCount.set(s.adversary.hand.length);
     this.refreshHand();
     this.defeated.set(s.status === 'defeat');
     this.victory.set(s.status === 'victory');
@@ -1184,7 +1184,7 @@ export class GameSceneComponent implements OnDestroy {
         kind: 'hero',
         portrait: p.portrait,
         current: p.id === s.activeId && s.phase === 'heroes',
-        active: this.evilMode ? p.id === (this.viewedHero() ?? s.activeId) : p.id === s.activeId && s.phase === 'heroes',
+        active: this.adversaryMode ? p.id === (this.viewedHero() ?? s.activeId) : p.id === s.activeId && s.phase === 'heroes',
         done: p.done,
         wounds: p.wounds,
         maxWounds: p.maxWounds,
@@ -1198,7 +1198,7 @@ export class GameSceneComponent implements OnDestroy {
         order: p.order ?? null,
         canChangeOrder: orderChangeCost(s, p) !== null,
         status: { ...p.status },
-        skillsReady: !this.evilMode && p.id === s.activeId && skillActions(s, p).some((a) => a.enabled),
+        skillsReady: !this.adversaryMode && p.id === s.activeId && skillActions(s, p).some((a) => a.enabled),
         details: {
           name: p.name, heroClass: p.heroClass, portrait: p.portrait, portraitFull: p.portraitFull, wounds: p.wounds, maxWounds: p.maxWounds, overclock: p.overclock,
           armor: armorOf(s, p), speed: speedOf(s, p), value: p.value, potions: [...p.potions], coins: p.coins, inventory: this.inventoryWithUses(s, p), inCity: !!p.city, cityPanel: !!p.city && !cityRules.cityView(s, p)?.mustReturn, city: cityRules.cityView(s, p), dice: p.dice, skillActions: skillActions(s, p), states: [...describeStatus(p.status), ...(p.toad ? [tr('Rospo ×{n}', { n: p.toad.tokens })] : [])], poison: p.status.poison, skills: p.skills, skillCards: p.skillCards.flatMap((id) => { const c = s.skills.get(id); return c ? [c] : []; }), ability: p.ability, abilityName: p.abilityName, familiars: [...[...s.familiarDefs.values()].filter((d) => d.item && p.equipped.includes(d.item)), ...familiarsOf(s, p.id).flatMap((f) => s.familiarDefs.get(f.id) ?? [])],
@@ -1206,7 +1206,7 @@ export class GameSceneComponent implements OnDestroy {
       }));
     this.members.set(heroes);
     this.heroSlots.set(heroes.length + this.pendingHeroes.length);
-    if (this.panel() && this.panel()!.id !== (this.evilMode ? (this.viewedHero() ?? s.activeId) : s.activeId)) this.panel.set(null); // il pannello è dell'eroe che agisce
+    if (this.panel() && this.panel()!.id !== (this.adversaryMode ? (this.viewedHero() ?? s.activeId) : s.activeId)) this.panel.set(null); // il pannello è dell'eroe che agisce
     const shown = this.panel();
     if (shown?.kind === 'city' && !(s.pieces.find((p) => p.id === shown.id)?.city && !cityRules.cityView(s, s.pieces.find((p) => p.id === shown.id)!)?.mustReturn)) this.panel.set(null); // la città c'è solo per chi ci si trova e non deve ancora tornare
     if (this.returnMode() && !this.pieces?.active?.city) this.endReturn();
@@ -1228,7 +1228,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Un nemico toccato nella vista dei giocatori: se si può attaccare compare il menu delle armi. */
   private selectAttackTarget(target: Piece) {
     const hero = this.pieces?.active;
-    if (!hero || hero.team !== 'hero' || !this.board || this.attackSession() || this.evilBusy()) return;
+    if (!hero || hero.team !== 'hero' || !this.board || this.attackSession() || this.adversaryBusy()) return;
     if (this.fogOn() && !this.exploration.monsters.has(target.id)) return; // un nemico non ancora scoperto non si può toccare
     if (target.inactive) return; // un nemico inattivo è come un ostacolo: non si attacca
     // Le carte dei mostri sono pubbliche (come sul tavolo, manuale 3B): oltre alle armi c'è sempre la voce Scheda; se non si può attaccare resta solo quella.
@@ -1258,7 +1258,7 @@ export class GameSceneComponent implements OnDestroy {
       }
       return;
     }
-    if (this.evilMode) {
+    if (this.adversaryMode) {
       // Il menu rosso di un mostro del Maligno: Avanza, Carica, Furore.
       const monster = this.state.pieces.find((p) => p.id === this.attackTarget());
       this.closeAttackMenu();
@@ -1326,7 +1326,7 @@ export class GameSceneComponent implements OnDestroy {
     const victim = this.state.pieces.find((p) => p.id === cur.targetId);
     // Schivare (non vale vicino a Nero il Corvo): lo script a caso, il Maligno a mano quando lo decide lui, dopo aver visto il tiro.
     const final = victim?.team === 'monster' && !weakening(this.state, victim).noDodge
-      ? this.evilMode ? ((await this.evilPlays('dodge', tr('Schivare · {hatred:{n}}'), tr('Non schivare'))) ? await this.dodgeReroll(rolls) : rolls) : await this.maybeDodge(rolls, cur.plan)
+      ? this.adversaryMode ? ((await this.adversaryPlays('dodge', tr('Schivare · {alarm:{n}}'), tr('Non schivare'))) ? await this.dodgeReroll(rolls) : rolls) : await this.maybeDodge(rolls, cur.plan)
       : rolls;
     if (!this.attackSession()) return;
     const attacker = this.state.pieces.find((p) => p.id === cur.attackerId);
@@ -1461,7 +1461,7 @@ export class GameSceneComponent implements OnDestroy {
     // Chi altro è colpito (Spazzata, Esplosione, Soffio): si calcola prima, perché il bersaglio può uscire dalla mappa.
     const hit = !outcome.miss && outcome.inRange && !outcome.feared;
     const shield = se.plan.effects.find((e) => e.blockedBy)?.blockedBy; // la Corazza runica contro il Tocco della morte
-    if (hit && shield) this.showNotice(tr('{name} protegge {target} dal {weapon}', { name: shield, target: target.name, weapon: se.option.name }), 'shield', attacker.team === 'monster' ? 'evil' : 'hero');
+    if (hit && shield) this.showNotice(tr('{name} protegge {target} dal {weapon}', { name: shield, target: target.name, weapon: se.option.name }), 'shield', attacker.team === 'monster' ? 'adversary' : 'hero');
     const victims = hit && this.board ? areaVictims(this.state, this.board, attacker, target, se.plan, se.spent, se.breathDir) : [];
     // Le scintille spese possono allargare un'Esplosione oltre la sagoma già mostrata: in quel caso si fa lampeggiare di nuovo.
     if (hit && this.board && areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir).length > areaCells(this.board, attacker, target, se.plan, [], se.breathDir).length) await this.flashCells(areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir));
@@ -1476,9 +1476,9 @@ export class GameSceneComponent implements OnDestroy {
     if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'water_drop', 'hero'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
     const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
-    const by = attacker.team === 'monster' ? 'evil' : 'hero';
-    if (outcome.hatredLoss) this.showHud(this.pieces?.active ?? null);
-    if (outcome.hatredLoss) this.showNotice(outcome.hatredLoss === 1 ? tr('Il Maligno perde 1 punto Odio') : tr('Il Maligno perde {n} punti Odio', { n: outcome.hatredLoss }), 'skull', 'evil');
+    const by = attacker.team === 'monster' ? 'adversary' : 'hero';
+    if (outcome.alarmLoss) this.showHud(this.pieces?.active ?? null);
+    if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('Il Maligno perde 1 punto Odio') : tr('Il Maligno perde {n} punti Odio', { n: outcome.alarmLoss }), 'skull', 'adversary');
     if (result.killed && target.team === 'hero') this.showNotice(this.fallenNotice(target), 'skull', by);
     else this.showNotice(text, result.killed ? 'skull' : 'swords', by);
     this.pieces?.afterCombat(attacker, target, result.killed);
@@ -1610,15 +1610,15 @@ export class GameSceneComponent implements OnDestroy {
    */
   private async endHeroesTurnNow() {
     const s = this.state;
-    if (s.phase !== 'heroes' || s.status !== 'playing' || this.evilBusy() || this.settingUp() || this.destroyed) return;
+    if (s.phase !== 'heroes' || s.status !== 'playing' || this.adversaryBusy() || this.settingUp() || this.destroyed) return;
     this.showNotice(tr('Il turno degli eroi finisce'), 'skip_next', 'game');
     await this.waitUntil(() => !this.pieces?.isMoving, 5000);
     await this.sleep(900); // il tempo di leggere l'avviso
     if (this.destroyed || s.phase !== 'heroes' || s.status !== 'playing') return;
     const r = this.pieces?.endHeroesTurn();
     this.tellCurses(r?.curses);
-    if (r?.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'evil');
-    if (r?.evil) void this.runEvilTurn();
+    if (r?.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'adversary');
+    if (r?.adversary) void this.runAdversaryTurn();
   }
 
   /** Mostra ciò che gli eventi hanno cambiato sulla mappa: gruppi di nemici svuotati ("non c'è più nessuno"), porte evento aperte, nemici attivati o tolti. */
@@ -1868,7 +1868,7 @@ export class GameSceneComponent implements OnDestroy {
     const burn = await sparksOf(s.burn);
     const web = await sparksOf(s.web);
     const r = applyTurnStart(piece, { burn, web });
-    const by = piece.team === 'hero' ? 'hero' : 'evil';
+    const by = piece.team === 'hero' ? 'hero' : 'adversary';
     if (r.burnBefore) this.showNotice(tr('{burn}: {done} su {total} spente', { burn: STATUS_NAMES.burn, done: r.burnBefore - r.burnLeft, total: r.burnBefore }) + (r.burnDamage ? (r.burnDamage === 1 ? tr(', {name} subisce 1 ferita', { name: piece.name }) : tr(', {name} subisce {n} ferite', { name: piece.name, n: r.burnDamage })) : ''), 'skull', by);
     if (r.webBefore) this.showNotice(r.webLeft ? tr('{web}: {name} resta impigliato e non può muoversi', { web: STATUS_NAMES.web, name: piece.name }) : tr('{web}: {name} si libera', { web: STATUS_NAMES.web, name: piece.name }), 'warning', by);
     if (r.stunned) this.showNotice((piece.team === 'hero' ? tr('{name} è stordito: può solo muoversi o attaccare', { name: piece.name }) : tr('{name} è stordito: perde il turno', { name: piece.name })), 'warning', by);
@@ -1928,11 +1928,11 @@ export class GameSceneComponent implements OnDestroy {
   /** Si può salvare solo a partita avviata, nel turno degli eroi, senza un attacco o una scelta a metà: lo stato è allora un insieme di dati completo. */
   private canSaveNow(): boolean {
     const s = this.state;
-    return !!s && !this.evilMode && !s.setup && s.status === 'playing' && s.phase === 'heroes' && !this.evilBusy() && !this.attackView() && !this.choiceView() && !this.adventureDialog();
+    return !!s && !this.adversaryMode && !s.setup && s.status === 'playing' && s.phase === 'heroes' && !this.adversaryBusy() && !this.attackView() && !this.choiceView() && !this.adventureDialog();
   }
 
   private writeSave(auto: boolean): boolean {
-    const ok = this.saves.save({ version: 3, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
+    const ok = this.saves.save({ version: 4, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
     if (ok) {
       this.justSaved.set(true);
       setTimeout(() => !this.destroyed && this.justSaved.set(false), 1400);
@@ -1955,7 +1955,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /** La partita salvata di questa avventura, ricostruita; `null` se non c'è o è di una versione che non si legge (allora si comincia da capo). I testi dell'avventura tornano dalla mappa. */
-  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, monsters: Map<string, MonsterDef>, cards: Map<string, EvilCardDef>): GameState | null {
+  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, monsters: Map<string, MonsterDef>, cards: Map<string, AdversaryCardDef>): GameState | null {
     const save = this.saves.load(this.mapName);
     if (!save) return null;
     try {
@@ -1972,29 +1972,29 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  private async runEvilTurn() {
-    if (this.evilBusy()) return;
-    this.evilBusy.set(true);
+  private async runAdversaryTurn() {
+    if (this.adversaryBusy()) return;
+    this.adversaryBusy.set(true);
     this.panel.set(null);
     this.monsterPanel.set(null);
     this.closeAttackMenu();
     this.cameraScripted = true; // da qui la camera la muove lo script: quella dell'utente resta quella di prima
     try {
-      const recharge = hatredPerTurn(this.state); // 1 Odio per eroe, meno Prudente (lo riceve `evilUpkeep`)
-      this.showNotice((recharge === 1 ? tr('Turno del Maligno: ricarica 1 punto Odio') : tr('Turno del Maligno: ricarica {recharge} punti Odio', { recharge })), 'skull', 'evil');
+      const recharge = alarmPerTurn(this.state); // 1 Odio per eroe, meno Prudente (lo riceve `adversaryUpkeep`)
+      this.showNotice((recharge === 1 ? tr('Turno del Maligno: ricarica 1 punto Odio') : tr('Turno del Maligno: ricarica {recharge} punti Odio', { recharge })), 'skull', 'adversary');
       await this.sleep(900);
       try {
-        await this.evilCards();
+        await this.adversaryCards();
       } catch (err) {
         console.error('Errore nelle Carte del Male', err); // un errore nelle carte non deve fermare il turno
       }
-      runEvents(this.state, { kind: 'evilTurnStart' }); // gli eventi "comincia il turno del Maligno" (dopo Odio e carte, prima dei mostri)
+      runEvents(this.state, { kind: 'adversaryTurnStart' }); // gli eventi "comincia il turno del Maligno" (dopo Odio e carte, prima dei mostri)
       await this.flushEvents();
       await this.playMonsters();
       if (!this.destroyed && this.state.status === 'playing') {
         const overclockBefore = new Map(this.state.pieces.map((p) => [p.id, p.overclock] as const));
         const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
-        const revived = endEvilTurn(this.state);
+        const revived = endAdversaryTurn(this.state);
         snapshotSeen(this.state); // chi vedeva chi all'inizio del round (Colpo a tradimento)
         for (const h of this.state.pieces) {
           const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
@@ -2022,16 +2022,16 @@ export class GameSceneComponent implements OnDestroy {
         this.cameraScripted = false;
         this.rememberCamera();
       }, FX.cameraPanMs + 100);
-      this.evilBusy.set(false);
+      this.adversaryBusy.set(false);
     }
   }
 
-  /** Ogni mostro gioca il suo turno, uno alla volta, con lo script (decisioni di `state/evil.ts`). */
+  /** Ogni mostro gioca il suo turno, uno alla volta, con lo script (decisioni di `state/adversary.ts`). */
   private async playMonsters() {
     for (const id of this.state.pieces.filter((p) => p.team === 'monster').map((p) => p.id)) {
       if (this.destroyed || this.state.status !== 'playing') break;
       const monster = this.state.pieces.find((p) => p.id === id);
-      if (monster?.done && this.evilMode) continue; // già attivato a mano
+      if (monster?.done && this.adversaryMode) continue; // già attivato a mano
       await this.waitUntil(() => !this.pieces?.isDying(), 6000);
       if (monster && this.board) await this.monsterTurn(monster);
       if (monster) monster.done = true; // attivazione completata (il pallino diventa grigio fino al round dopo)
@@ -2040,10 +2040,10 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  /** `/evil/<map>` con "Mostri automatici" acceso: i mostri giocano da soli, con la camera dello script; poi il turno torna al Maligno, che lo chiude con Passa. */
+  /** `/adversary/<map>` con "Mostri automatici" acceso: i mostri giocano da soli, con la camera dello script; poi il turno torna al Maligno, che lo chiude con Passa. */
   private async autoMonstersTurn() {
-    if (this.evilBusy()) return;
-    this.evilBusy.set(true);
+    if (this.adversaryBusy()) return;
+    this.adversaryBusy.set(true);
     this.panel.set(null);
     this.monsterPanel.set(null);
     this.closeAttackMenu();
@@ -2055,16 +2055,16 @@ export class GameSceneComponent implements OnDestroy {
         this.cameraScripted = false;
         this.rememberCamera();
       }, FX.cameraPanMs + 100);
-      this.evilBusy.set(false);
+      this.adversaryBusy.set(false);
     }
   }
 
-  // --- `/evil/<map>`: il Maligno attiva i mostri a mano ---
+  // --- `/adversary/<map>`: il Maligno attiva i mostri a mano ---
 
   /** Un mostro toccato dal Maligno: se è da attivare si attiva (con un menu rosso se ha le carte Carica o Furore e può pagarle), altrimenti si apre la sua scheda. */
-  private evilMonsterClick(monster: Piece) {
-    if (this.evilBusy() || this.evilSel || this.state.phase !== 'evil' || this.evilStep() !== 'activate') { // i mostri si attivano solo nel passo Attivazione
-      if (!this.evilSel && !this.evilBusy()) {
+  private adversaryMonsterClick(monster: Piece) {
+    if (this.adversaryBusy() || this.adversarySel || this.state.phase !== 'adversary' || this.adversaryStep() !== 'activate') { // i mostri si attivano solo nel passo Attivazione
+      if (!this.adversarySel && !this.adversaryBusy()) {
         this.panel.set(null);
         this.monsterPanel.set(monster.id);
       }
@@ -2079,8 +2079,8 @@ export class GameSceneComponent implements OnDestroy {
       const card = cardOf(this.state, id);
       if (!card || !inHand(this.state, id)) return [];
       const cost = cardCost(this.state, card);
-      const enough = cost <= this.state.evil.hatred;
-      const label = id === 'charge' ? tr('Carica · {hatred:{n}}', { n: cost }) : tr('Furore · {hatred:{n}}', { n: cost });
+      const enough = cost <= this.state.adversary.alarm;
+      const label = id === 'charge' ? tr('Carica · {alarm:{n}}', { n: cost }) : tr('Furore · {alarm:{n}}', { n: cost });
       return [{ id, kind: 'attack' as const, icon: id === 'charge' ? 'directions_run' : 'swords', label, cost: 0, enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }];
     });
     if (!cards.length) {
@@ -2101,10 +2101,10 @@ export class GameSceneComponent implements OnDestroy {
    * due attacchi, quattro con Colpo veloce) e mostra l'area dove può andare. Poi il Maligno lo muove, lo fa attaccare, e chiude l'attivazione con "Fine attivazione".
    */
   private async startActivation(monster: Piece, card?: 'charge' | 'fury') {
-    if (this.evilBusy() || this.evilSel || !this.board) return;
+    if (this.adversaryBusy() || this.adversarySel || !this.board) return;
     this.panel.set(null);
     this.monsterPanel.set(null);
-    this.evilBusy.set(true);
+    this.adversaryBusy.set(true);
     try {
       this.guardDeclined = new Set();
       if (await this.resolveTurnStart(monster)) {
@@ -2119,57 +2119,57 @@ export class GameSceneComponent implements OnDestroy {
         await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: monster.name }));
       }
       this.showHud(this.pieces?.active ?? null); // l'Odio speso
-      this.evilSel = { monster, stops: new Map() };
-      this.refreshEvilActivation();
+      this.adversarySel = { monster, stops: new Map() };
+      this.refreshAdversaryActivation();
     } finally {
-      this.evilBusy.set(false);
+      this.adversaryBusy.set(false);
     }
   }
 
   /** Ricalcola dove può andare il mostro in attivazione (con i punti movimento che gli restano), il contorno rosso e la barra; se non ha più né punti né attacchi, l'attivazione finisce. */
-  private refreshEvilActivation() {
-    const sel = this.evilSel;
+  private refreshAdversaryActivation() {
+    const sel = this.adversarySel;
     if (!sel || !this.board) return;
     const m = sel.monster;
     if (!this.state.pieces.includes(m) || m.wounds <= 0) {
-      this.endEvilActivation();
+      this.endAdversaryActivation();
       return;
     }
     const stops = m.points >= 1 ? monsterStops(this.state, this.board, m) : [];
     sel.stops = new Map(stops.map((s) => [cellKey(s.cell), s] as const));
     this.pieces?.showMonsterReach(stops.length ? [m.cell, ...stops.map((s) => s.cell)] : null);
-    this.evilSelInfo.set({ name: m.name, portrait: m.portrait, wounds: m.wounds, maxWounds: m.maxWounds, points: m.points, attacks: m.attacks, abilities: [...m.traits] });
-    if (m.points < 1 && m.attacks < 1) this.endEvilActivation();
+    this.adversarySelInfo.set({ name: m.name, portrait: m.portrait, wounds: m.wounds, maxWounds: m.maxWounds, points: m.points, attacks: m.attacks, abilities: [...m.traits] });
+    if (m.points < 1 && m.attacks < 1) this.endAdversaryActivation();
   }
 
   /** Una casella toccata mentre un mostro è in attivazione: un eroe che può colpire si attacca, una casella raggiungibile ci muove il mostro. */
-  private async evilActivationClick(cell: Cell) {
-    const sel = this.evilSel;
-    if (!sel || this.evilBusy() || !this.board) return;
+  private async adversaryActivationClick(cell: Cell) {
+    const sel = this.adversarySel;
+    if (!sel || this.adversaryBusy() || !this.board) return;
     const m = sel.monster;
     const hero = this.state.pieces.find((p) => p.team === 'hero' && !p.city && footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
     if (hero) {
       const option = monsterAttackOption(this.state, this.board, m, hero);
-      if (m.attacks < 1) this.showNotice(tr('Nessun attacco rimasto'), 'warning', 'evil');
-      else if (!option?.enabled) this.showNotice(option?.reason ?? tr('{name} non può attaccare {target}', { name: m.name, target: hero.name }), 'warning', 'evil');
-      else await this.evilScripted(async () => this.monsterAttack(m, hero, option));
-      this.refreshEvilActivation();
+      if (m.attacks < 1) this.showNotice(tr('Nessun attacco rimasto'), 'warning', 'adversary');
+      else if (!option?.enabled) this.showNotice(option?.reason ?? tr('{name} non può attaccare {target}', { name: m.name, target: hero.name }), 'warning', 'adversary');
+      else await this.adversaryScripted(async () => this.monsterAttack(m, hero, option));
+      this.refreshAdversaryActivation();
       return;
     }
     const spot = sel.stops.get(cellKey(cell));
     if (!spot) return;
     this.pieces?.showMonsterReach(null);
-    await this.evilScripted(async () => {
+    await this.adversaryScripted(async () => {
       await this.walkMonster(m, spot.path());
       if (this.state.pieces.includes(m) && settleOverlap(this.state, this.board!, m)) this.pieces?.redraw(m);
       this.monsterPicksUp(m);
     });
-    this.refreshEvilActivation();
+    this.refreshAdversaryActivation();
   }
 
   /** Fa qualcosa con la camera dello script e i comandi fermi (un passo, un attacco), come il turno automatico dei mostri. */
-  private async evilScripted(run: () => Promise<void>) {
-    this.evilBusy.set(true);
+  private async adversaryScripted(run: () => Promise<void>) {
+    this.adversaryBusy.set(true);
     this.cameraScripted = true;
     try {
       await run();
@@ -2178,27 +2178,27 @@ export class GameSceneComponent implements OnDestroy {
         this.cameraScripted = false;
         this.rememberCamera();
       }, FX.cameraPanMs + 100);
-      this.evilBusy.set(false);
+      this.adversaryBusy.set(false);
     }
   }
 
   /** "Fine attivazione" (o niente più da spendere): il mostro ha finito, il suo pallino diventa grigio. */
-  protected endEvilActivation() {
-    const sel = this.evilSel;
-    this.evilSel = null;
-    this.evilSelInfo.set(null);
+  protected endAdversaryActivation() {
+    const sel = this.adversarySel;
+    this.adversarySel = null;
+    this.adversarySelInfo.set(null);
     this.pieces?.showMonsterReach(null);
     if (sel) sel.monster.done = true;
     this.showHud(this.pieces?.active ?? null);
   }
 
   /** Il Mazzo del Male all'inizio del suo turno: raccoglie Odio, pesca e gioca le sue carte (Potere, Raffica di vento, Seduzione oscura, una trappola armata in segreto e una Evocazione). */
-  private async evilCards() {
+  private async adversaryCards() {
     if (!this.board) return;
-    const o = this.state.evil;
+    const o = this.state.adversary;
     o.gust = false; // la Raffica di vento dura fino all'inizio di questo turno
-    const up = evilUpkeep(this.state);
-    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'evil');
+    const up = adversaryUpkeep(this.state);
+    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'adversary');
     const power = playPowerCard(this.state);
     if (power) {
       await this.announce(power.name, catalogText(power.text.replace(/^Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te\.\s*/, '')));
@@ -2209,7 +2209,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     await this.seduction();
     const armed = armTrap(this.state, this.board); // le trappole si armano in segreto: i giocatori non lo sanno
-    if (armed && this.evilView()) this.showNotice(tr('Trappola armata: {name}', { name: cardOf(this.state, armed.card)?.name }), 'warning', 'evil');
+    if (armed && this.adversaryView()) this.showNotice(tr('Trappola armata: {name}', { name: cardOf(this.state, armed.card)?.name }), 'warning', 'adversary');
     const played = playSummonCard(this.state, this.board);
     if (played) await this.presentSpawned(played.spawned, played.card.name, tr('Evoca: {names}', { names: played.spawned.map((m) => m.name).join(', ') }));
     this.showHud(this.pieces?.active ?? null);
@@ -2217,10 +2217,10 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Seduzione oscura: un eroe tira un dado competenza; se non è vuoto attacca, sotto il controllo del Maligno, un altro eroe che può colpire. */
   private async seduction() {
-    const o = this.state.evil;
+    const o = this.state.adversary;
     const heroes = this.state.pieces.filter((p) => p.team === 'hero' && !p.city);
     const card = cardOf(this.state, 'dark-allure');
-    if (!card || heroes.length < 2 || !inHand(this.state, card.id) || cardCost(this.state, card) > o.hatred || !this.board) return;
+    if (!card || heroes.length < 2 || !inHand(this.state, card.id) || cardCost(this.state, card) > o.alarm || !this.board) return;
     // Lo script la gioca solo se l'eroe scelto ha qualcuno da colpire (altrimenti sarebbe sprecata).
     const options = heroes.flatMap((h) => heroes.filter((t) => t !== h).flatMap((t) => controlledAttackOptions(this.state, this.board!, h, t).map((option) => ({ h, t, option }))));
     if (!options.length) return;
@@ -2229,12 +2229,12 @@ export class GameSceneComponent implements OnDestroy {
     await this.announceEvent(tr('Seduzione oscura'), tr('{name} deve tirare un dado competenza.', { name: pick.h.name }), 'warning');
     const [face] = await this.proficiencyDice(1);
     if (!face || isBlank(face)) {
-      this.showNotice(tr('{name} resiste alla seduzione', { name: pick.h.name }), 'shield', 'evil');
+      this.showNotice(tr('{name} resiste alla seduzione', { name: pick.h.name }), 'shield', 'adversary');
       return;
     }
     // Fra le sue opzioni, l'attacco con più dadi contro il bersaglio più ferito.
     const mine = options.filter((x) => x.h === pick.h).sort((a, b) => b.option.dice.length - a.option.dice.length || a.t.wounds / a.t.maxWounds - b.t.wounds / b.t.maxWounds)[0];
-    this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: mine.h.name, name2: mine.t.name }), 'swords', 'evil');
+    this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: mine.h.name, name2: mine.t.name }), 'swords', 'adversary');
     await this.monsterAttack(mine.h, mine.t, mine.option);
   }
 
@@ -2272,38 +2272,38 @@ export class GameSceneComponent implements OnDestroy {
   // --- Scelte del Maligno a mano nella finestra dell'attacco ---
 
   /** La scelta aperta nella finestra dell'attacco (`null` = nessuna) e chi la aspetta. */
-  protected readonly evilDecision = signal<DecisionView | null>(null);
-  private evilDecided: ((id: string) => void) | null = null;
+  protected readonly adversaryDecision = signal<DecisionView | null>(null);
+  private adversaryDecided: ((id: string) => void) | null = null;
 
   /**
    * Il Maligno a mano ha una carta Evento da giocare adesso? Se ce l'ha in mano e l'Odio basta, nella finestra compaiono i tasti "<carta> · costo" e quello per non
    * giocarla, e il tiro aspetta. Giocandola paga l'Odio e scarta la carta. Restituisce vero se l'ha giocata. Senza la carta in mano non c'è nessuna scelta.
    */
-  private async evilPlays(id: 'aim' | 'dodge', label: string, skipLabel = tr('Tira i dadi')): Promise<boolean> {
+  private async adversaryPlays(id: 'aim' | 'dodge', label: string, skipLabel = tr('Tira i dadi')): Promise<boolean> {
     const card = cardOf(this.state, id);
     if (!card || !inHand(this.state, id)) return false;
     const cost = cardCost(this.state, card);
-    const enough = cost <= this.state.evil.hatred;
+    const enough = cost <= this.state.adversary.alarm;
     const picked = await new Promise<string>((resolve) => {
-      this.evilDecided = resolve;
-      this.evilDecision.set({ options: [{ id, label: label.replace('{n}', String(cost)), enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }, { id: 'skip', label: skipLabel, enabled: true }] });
+      this.adversaryDecided = resolve;
+      this.adversaryDecision.set({ options: [{ id, label: label.replace('{n}', String(cost)), enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }, { id: 'skip', label: skipLabel, enabled: true }] });
     });
-    this.evilDecision.set(null);
+    this.adversaryDecision.set(null);
     if (picked !== id || !playEvent(this.state, id)) return false;
     this.showHud(this.pieces?.active ?? null); // l'Odio speso
     return true;
   }
 
   /** Un tasto della scelta: se è spento dice perché, altrimenti la scelta è fatta. */
-  protected decideEvil(id: string) {
-    const option = this.evilDecision()?.options.find((o) => o.id === id);
+  protected decideAdversary(id: string) {
+    const option = this.adversaryDecision()?.options.find((o) => o.id === id);
     if (!option) return;
     if (!option.enabled) {
-      this.showNotice(option.reason ?? tr('Non è possibile'), 'warning', 'evil');
+      this.showNotice(option.reason ?? tr('Non è possibile'), 'warning', 'adversary');
       return;
     }
-    const done = this.evilDecided;
-    this.evilDecided = null;
+    const done = this.adversaryDecided;
+    this.adversaryDecided = null;
     done?.(id);
   }
 
@@ -2419,12 +2419,12 @@ export class GameSceneComponent implements OnDestroy {
   private hurtByTrap(hero: Piece, base: number): boolean {
     const amount = Math.max(0, base + ruleAmount(this.state, hero, 'trapWounds'));
     if (amount <= 0) {
-      this.showNotice(tr('{name} non subisce ferite', { name: hero.name }), 'shield', 'evil');
+      this.showNotice(tr('{name} non subisce ferite', { name: hero.name }), 'shield', 'adversary');
       return false;
     }
     const dead = woundIgnoringArmor(hero, amount);
     loseOrdersOnWounds(hero); // e perde la Mira e la Guardia
-    this.showNotice(`${hero.name} subisce ${amount} ${amount === 1 ? 'ferita' : 'ferite'}`, 'skull', 'evil');
+    this.showNotice(`${hero.name} subisce ${amount} ${amount === 1 ? 'ferita' : 'ferite'}`, 'skull', 'adversary');
     if (!dead) {
       this.pieces?.redraw(hero);
       return false;
@@ -2432,15 +2432,15 @@ export class GameSceneComponent implements OnDestroy {
     const slain = killHero(this.state, hero);
     this.pieces?.afterCombat(hero, hero, true);
     this.pieces?.monstersSlain(slain);
-    this.showNotice(this.fallenNotice(hero), 'skull', 'evil');
+    this.showNotice(this.fallenNotice(hero), 'skull', 'adversary');
     return true;
   }
 
-  /** Una trappola armata scatta su `hero`: la carta si scopre, si tirano i dadi competenza e si applica l'effetto (docs/cards/evil.md). */
+  /** Una trappola armata scatta su `hero`: la carta si scopre, si tirano i dadi competenza e si applica l'effetto (docs/cards/adversary.md). */
   private async resolveTrap(hero: Piece, trap: ArmedTrap) {
     const card = cardOf(this.state, trap.card);
-    if (!card || !this.board || this.evilBusy()) return;
-    this.evilBusy.set(true);
+    if (!card || !this.board || this.adversaryBusy()) return;
+    this.adversaryBusy.set(true);
     consumeTrap(this.state, trap);
     await this.announce(card.name, tr('{name} ha fatto scattare una trappola!', { name: hero.name }), 'warning');
     const bonus = trapDamageBonus(this.state);
@@ -2455,7 +2455,7 @@ export class GameSceneComponent implements OnDestroy {
         if (faces.some(isBlank)) { // basta una faccia vuota per schivare
           const out = freeAdjacentCell(this.state, board, cell);
           if (out) hero.cell = out;
-          this.showNotice(tr('{name} schiva la fossa e si sposta', { name: hero.name }), 'shield', 'evil');
+          this.showNotice(tr('{name} schiva la fossa e si sposta', { name: hero.name }), 'shield', 'adversary');
         } else if (this.hurtByTrap(hero, 2 + bonus)) fallen.push(hero);
         this.rebuildBoard();
         break;
@@ -2491,7 +2491,7 @@ export class GameSceneComponent implements OnDestroy {
         const chest = board.markerAt(hero.cell);
         const out = freeAdjacentCell(this.state, board, hero.cell);
         if (chest?.type !== 'chest' || !out) {
-          this.showNotice(tr('Lo scrigno resta immobile'), 'inventory_2', 'evil');
+          this.showNotice(tr('Lo scrigno resta immobile'), 'inventory_2', 'adversary');
           break;
         }
         this.markers.splice(this.markers.indexOf(chest), 1);
@@ -2511,25 +2511,25 @@ export class GameSceneComponent implements OnDestroy {
         const faces = await this.trapDice(hero, 1);
         if (faces.length && !faces.some(isBlank)) { // si resiste con almeno una faccia vuota
           transformToad(hero);
-          this.showNotice(tr('{name} è trasformato in un rospo: il suo turno finisce', { name: hero.name }), 'warning', 'evil');
+          this.showNotice(tr('{name} è trasformato in un rospo: il suo turno finisce', { name: hero.name }), 'warning', 'adversary');
           endTurn = true;
-        } else this.showNotice(tr('{name} resiste alla maledizione', { name: hero.name }), 'shield', 'evil');
+        } else this.showNotice(tr('{name} resiste alla maledizione', { name: hero.name }), 'shield', 'adversary');
         break;
       }
       case 'paralyzing-gas': {
         const faces = await this.trapDice(hero, 1);
         if (faces.length && !faces.some(isBlank)) { // si resiste con almeno una faccia vuota
           inflictStatus(this.state, hero, 'stun', 1);
-          this.showNotice(tr('{name} è paralizzato: il suo turno finisce', { name: hero.name }), 'stun', 'evil');
+          this.showNotice(tr('{name} è paralizzato: il suo turno finisce', { name: hero.name }), 'stun', 'adversary');
           endTurn = true;
-        } else this.showNotice(tr('{name} trattiene il fiato: il gas non ha effetto', { name: hero.name }), 'shield', 'evil');
+        } else this.showNotice(tr('{name} trattiene il fiato: il gas non ha effetto', { name: hero.name }), 'shield', 'adversary');
         break;
       }
     }
     this.pieces?.redraw(hero);
     this.exploreAndNotify();
     this.showHud(this.pieces?.active ?? null);
-    this.evilBusy.set(false);
+    this.adversaryBusy.set(false);
     if (fallen.includes(hero) || endTurn) this.pass();
   }
 
@@ -2679,7 +2679,7 @@ export class GameSceneComponent implements OnDestroy {
     if (!item) return;
     this.rebuildBoard();
     this.pieces?.redraw(monster);
-    this.showNotice(`${monster.name} afferra ${item.name}!`, item.icon ?? 'person', 'evil');
+    this.showNotice(`${monster.name} afferra ${item.name}!`, item.icon ?? 'person', 'adversary');
   }
 
   /**
@@ -2748,7 +2748,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     // Mirare: l'attacco è mirato, cioè i dadi che non servono si ripetono (resta il secondo risultato). Contro un eroe con Schivata si annullano a vicenda.
     const dodging = target.team === 'hero' && target.order === 'dodge' && monster.team === 'monster';
-    const manual = this.evilMode && monster.team === 'monster' && target.team === 'hero'; // il Maligno a mano decide lui, nella finestra dell'attacco
+    const manual = this.adversaryMode && monster.team === 'monster' && target.team === 'hero'; // il Maligno a mano decide lui, nella finestra dell'attacco
     let aimed = !manual && monster.team === 'monster' && !weakening(this.state, monster).noAim && this.state.random() < 0.8 && playEvent(this.state, 'aim'); // vicino a Nero il Corvo non si mira
     if (aimed && dodging) {
       aimed = false;
@@ -2764,7 +2764,7 @@ export class GameSceneComponent implements OnDestroy {
     this.attackSession.set({ attackerId: monster.id, targetId: target.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, auto: true, breathDir });
     await this.sleep(700);
     // Il Maligno a mano: se ha Mirare e può pagarla, il tiro aspetta la sua scelta (contro un eroe in Schivata la mira e la Schivata si annullano).
-    if (manual && !weakening(this.state, monster).noAim && (await this.evilPlays('aim', tr('Mirare · {hatred:{n}}')))) {
+    if (manual && !weakening(this.state, monster).noAim && (await this.adversaryPlays('aim', tr('Mirare · {alarm:{n}}')))) {
       if (dodging) {
         target.order = null;
         canDodge = false;
@@ -2873,29 +2873,29 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Quali mostri si vedono: quelli scoperti dagli eroi (o tutti, se non c'è la nebbia); nella vista del Maligno tutti. */
   private syncMonsterVisibility(fog = this.fogOn()) {
-    this.pieces?.setVisibleMonsters(fog && !this.evilView() ? this.exploration.monsters : null);
+    this.pieces?.setVisibleMonsters(fog && !this.adversaryView() ? this.exploration.monsters : null);
     // Vista del Maligno: i mostri di un'area non ancora scoperta (inattivi) si vedono senza colore.
     const board = this.board;
-    const dormant = fog && this.evilView() && board ? new Set(this.state.pieces.filter((p) => p.team === 'monster' && !p.awake && !!board.areaAt(p.cell) && !this.state.exploration.areas.has(board.areaAt(p.cell)!)).map((p) => p.id)) : null;
+    const dormant = fog && this.adversaryView() && board ? new Set(this.state.pieces.filter((p) => p.team === 'monster' && !p.awake && !!board.areaAt(p.cell) && !this.state.exploration.areas.has(board.areaAt(p.cell)!)).map((p) => p.id)) : null;
     this.pieces?.setGrayMonsters(dormant);
   }
 
   /** Accende e spegne la vista del Maligno (provvisorio, dal tab del Maligno). */
-  protected toggleEvilView() {
-    this.evilView.update((v) => !v);
+  protected toggleAdversaryView() {
+    this.adversaryView.update((v) => !v);
     this.monsterPanel.set(null);
     this.applyVisibility(); // ciò che non è scoperto compare (o sparisce) per intero: mostri, aree, scale, porte, oggetti
-    this.showNotice(this.evilView() ? tr('Vista del Maligno: tocca un mostro per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'evil');
+    this.showNotice(this.adversaryView() ? tr('Vista del Maligno: tocca un mostro per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'adversary');
   }
 
   /** Un clic sul pallino di un eroe nella barra. */
   protected selectFromBar(id: string) {
-    const picked = this.evilPick?.candidates.find((p) => p.id === id); // scegliendo un eroe, anche il suo tab vale come tocco
+    const picked = this.adversaryPick?.candidates.find((p) => p.id === id); // scegliendo un eroe, anche il suo tab vale come tocco
     if (picked) {
       this.finishPick(picked);
       return;
     }
-    if (this.evilMode) {
+    if (this.adversaryMode) {
       // Il Maligno sceglie quale eroe guardare: solo la barra cambia, la partita (chi è di turno, i suoi punti) non si tocca.
       const wasOpen = this.panel()?.id === id;
       this.viewedHero.set(id);
@@ -2910,14 +2910,14 @@ export class GameSceneComponent implements OnDestroy {
     this.pieces?.selectHero(id);
   }
 
-  /** `/evil/<map>`: l'eroe che il Maligno sta guardando (senza scelta, quello di turno). */
+  /** `/adversary/<map>`: l'eroe che il Maligno sta guardando (senza scelta, quello di turno). */
   private readonly viewedHero = signal<string | null>(null);
 
   /** L'azione scelta dall'eroe attivo, per i pallini dei comandi. */
   protected readonly activeAction = computed(() => this.members().find((m) => m.kind === 'hero' && m.active)?.action ?? 'advance');
 
   /** Ora i comandi non si possono usare: durante l'attacco, il turno del Maligno o la finestra dei componenti. */
-  protected readonly commandsBusy = computed(() => !!this.evilSummonInfo() || !!this.evilTrapInfo() || !!this.evilPickInfo() || !!this.attackSession() || !!this.familiarMove() || this.evilBusy() || this.glyphSequence() || this.componentsOpen() || this.settingUp() || !!this.adventureDialog() || !!this.telekinesis() || !!this.choiceView() || !!this.dicePickView());
+  protected readonly commandsBusy = computed(() => !!this.adversarySummonInfo() || !!this.adversaryTrapInfo() || !!this.adversaryPickInfo() || !!this.attackSession() || !!this.familiarMove() || this.adversaryBusy() || this.glyphSequence() || this.componentsOpen() || this.settingUp() || !!this.adventureDialog() || !!this.telekinesis() || !!this.choiceView() || !!this.dicePickView());
 
   /** Un comando scelto con un pallino o con il bottone Passa (gli stessi dei tasti R, C, S e Invio). */
   protected tapCommand(c: 'run' | 'fight' | 'prepare' | 'pass') {
@@ -2925,11 +2925,11 @@ export class GameSceneComponent implements OnDestroy {
       this.familiarSkip(); // Invio passa anche per un famiglio
       return;
     }
-    if (c === 'pass' && this.evilMode) {
-      void this.evilPass(); // Invio: il tasto Avanti/Passa del Maligno
+    if (c === 'pass' && this.adversaryMode) {
+      void this.adversaryPass(); // Invio: il tasto Avanti/Passa del Maligno
       return;
     }
-    if (this.evilMode || this.commandsBusy()) return; // il Maligno non comanda gli eroi
+    if (this.adversaryMode || this.commandsBusy()) return; // il Maligno non comanda gli eroi
     if (c === 'pass') this.pass();
     else this.command(c);
   }
@@ -3104,7 +3104,7 @@ export class GameSceneComponent implements OnDestroy {
       this.showNotice(tr('Devi tornare nel dungeon: scegli un glifo'), 'warning');
       return;
     }
-    if (this.evilBusy() || this.choiceView() || this.familiarMove()) return;
+    if (this.adversaryBusy() || this.choiceView() || this.familiarMove()) return;
     // Al termine del turno si può usare un oggetto che lo prevede (il Flauto del riposo: stordisce i mostri vicini e si scarta).
     const hero = this.pieces?.active;
     if (hero && hero.team === 'hero' && !hero.city && this.state.phase === 'heroes') {
@@ -3129,11 +3129,11 @@ export class GameSceneComponent implements OnDestroy {
     const r = this.pieces?.passTurn();
     if (!r) return;
     this.tellCurses(r.curses);
-    if (r.evil) {
-      void this.runEvilTurn();
+    if (r.adversary) {
+      void this.runAdversaryTurn();
       return;
     }
-    if (r.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'evil');
+    if (r.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'adversary');
     this.autosave(); // un eroe ha passato: la partita è in un punto tranquillo
     const next = this.state.pieces.find((p) => p.id === r.nextActive);
     this.showNotice(r.roundStarted ? tr('Round {n}: tocca agli eroi', { n: this.state.round }) : tr('Tocca a {name}', { name: next?.name ?? '—' }), 'autorenew', 'game');
@@ -3142,7 +3142,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Le maledizioni di fine turno (`ItemDef.curse`): quante ferite ha preso chi porta l'oggetto e, se è morto, svanisce in rosso. */
   private tellCurses(curses: CurseHit[] | undefined) {
     for (const c of curses ?? []) {
-      this.showNotice(c.wounds === 1 ? tr('{name} subisce 1 ferita per la maledizione di {item}', { name: c.hero.name, item: c.item.name }) : tr('{name} subisce {wounds} ferite per la maledizione di {item}', { name: c.hero.name, item: c.item.name, wounds: c.wounds }), 'skull', 'evil');
+      this.showNotice(c.wounds === 1 ? tr('{name} subisce 1 ferita per la maledizione di {item}', { name: c.hero.name, item: c.item.name }) : tr('{name} subisce {wounds} ferite per la maledizione di {item}', { name: c.hero.name, item: c.item.name, wounds: c.wounds }), 'skull', 'adversary');
       if (c.died) {
         this.pieces?.heroDied(c.hero, c.slain);
         this.showNotice(this.fallenNotice(c.hero), 'skull');
@@ -3179,14 +3179,14 @@ export class GameSceneComponent implements OnDestroy {
    * Una notifica in alto a destra: autore (di solito l'eroe attivo, oppure il Maligno o il gioco), titolo (la categoria, dall'icona), icona e testo.
    * Sparisce da sola quando la sua barra del tempo finisce (`expireToast`).
    */
-  private showNotice(text: string, icon = 'info', by: 'hero' | 'evil' | 'game' = 'hero', markdown = false) {
+  private showNotice(text: string, icon = 'info', by: 'hero' | 'adversary' | 'game' = 'hero', markdown = false) {
     const toast: Toast = { id: ++this.toastId, icon, title: noticeTitle(icon), author: this.noticeAuthor(by), text, ...(markdown ? { markdown } : {}) };
     this.toasts.update((list) => [...list, toast].slice(-4));
   }
 
   /** Chi firma la notifica. */
-  private noticeAuthor(by: 'hero' | 'evil' | 'game'): ToastAuthor {
-    if (by === 'evil') return { name: tr('Maligno'), portrait: 'characters/evil-token.webp' };
+  private noticeAuthor(by: 'hero' | 'adversary' | 'game'): ToastAuthor {
+    if (by === 'adversary') return { name: tr('Maligno'), portrait: 'characters/adversary-token.webp' };
     const hero = by === 'hero' ? this.state.pieces.find((p) => p.id === this.state.activeId && p.team === 'hero') : undefined;
     return hero ? { name: hero.name, portrait: hero.portrait } : { name: tr('Gioco') };
   }
@@ -3209,28 +3209,28 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Clic in modalità "gioco": si muove la pedina (porte e scrigni si usano dal bottone contestuale). */
   private playClick(p: Point) {
-    if (this.evilBusy()) return; // gioca il Maligno
+    if (this.adversaryBusy()) return; // gioca il Maligno
     const c = this.toCells(p);
-    if (this.evilMode) {
+    if (this.adversaryMode) {
       const tool = this.areaLabelView.hitTool({ x: c.x * CELL_SIZE, y: c.y * CELL_SIZE }, 6 / this.zoom);
       if (tool) {
         this.useAreaTool(tool.id, tool.tool);
         return;
       }
-      if (this.evilPick) {
+      if (this.adversaryPick) {
         this.pickClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // si sta scegliendo una miniatura: sono evidenziate
         return;
       }
-      if (this.evilTrap) {
+      if (this.adversaryTrap) {
         this.trapClick(c, { x: Math.floor(c.x), y: Math.floor(c.y) }); // si sta armando una trappola: i bersagli evidenziati sono suoi
         return;
       }
-      if (this.evilSummon) {
+      if (this.adversarySummon) {
         void this.summonClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // si sta piazzando un'Evocazione: le caselle evidenziate sono sue
         return;
       }
-      if (this.evilSel) {
-        void this.evilActivationClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // un mostro è in attivazione: le caselle sono sue
+      if (this.adversarySel) {
+        void this.adversaryActivationClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // un mostro è in attivazione: le caselle sono sue
         return;
       }
     }
@@ -3478,73 +3478,73 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * Provvisorio, `/evil/<map>`: il turno degli eroi è automatico. Passano tutti, uno dopo l'altro, senza muoversi e senza la fase dei famigli
+   * Provvisorio, `/adversary/<map>`: il turno degli eroi è automatico. Passano tutti, uno dopo l'altro, senza muoversi e senza la fase dei famigli
    * (che quindi restano dov'erano); dopo l'ultimo comincia il turno del Maligno.
    */
-  private async evilHeroesPass() {
+  private async adversaryHeroesPass() {
     while (!this.destroyed && this.state.status === 'playing' && this.state.phase === 'heroes') {
       const r = this.pieces?.passTurn();
       if (!r) return;
-      if (r.evil) await this.beginEvilTurn();
+      if (r.adversary) await this.beginAdversaryTurn();
     }
   }
 
   /** Comincia il turno del Maligno che gioca: riceve l'Odio e pesca (come lo script), la dialog lo dice e si chiude solo con OK. Poi tocca a lui. */
-  private async beginEvilTurn() {
-    const from = this.state.evil.hatred;
-    const up = evilUpkeep(this.state, false); // la mano può restare oltre il limite: scarta il Maligno, senza Odio
-    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'evil');
+  private async beginAdversaryTurn() {
+    const from = this.state.adversary.alarm;
+    const up = adversaryUpkeep(this.state, false); // la mano può restare oltre il limite: scarta il Maligno, senza Odio
+    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'adversary');
     await new Promise<void>((resolve) => {
-      this.evilTurnDone = resolve;
-      this.evilTurnDialog.set({ from, to: this.state.evil.hatred });
+      this.adversaryTurnDone = resolve;
+      this.adversaryTurnDialog.set({ from, to: this.state.adversary.alarm });
     });
-    this.evilStep.set('hand'); // primo passo: scarto fino al limite, consumo e carte a inizio turno
-    this.hatredAnimated.set(false); // la dialog ha già mostrato il conteggio: il footer si aggiorna di colpo
+    this.adversaryStep.set('hand'); // primo passo: scarto fino al limite, consumo e carte a inizio turno
+    this.alarmAnimated.set(false); // la dialog ha già mostrato il conteggio: il footer si aggiorna di colpo
     this.showHud(this.pieces?.active ?? null); // il footer mostra l'Odio nuovo e la mano
-    setTimeout(() => this.hatredAnimated.set(true), 150);
+    setTimeout(() => this.alarmAnimated.set(true), 150);
     const excess = this.handExcess();
-    if (excess > 0) this.showNotice(tr('Hai più di {max} carte: scartane {n}', { max: EVIL_HAND_MAX, n: excess }), 'warning', 'evil');
+    if (excess > 0) this.showNotice(tr('Hai più di {max} carte: scartane {n}', { max: ADVERSARY_HAND_MAX, n: excess }), 'warning', 'adversary');
   }
 
   /** Quante carte ha il Maligno oltre il limite della mano. */
   private handExcess(): number {
-    return Math.max(0, this.state.evil.hand.length - EVIL_HAND_MAX);
+    return Math.max(0, this.state.adversary.hand.length - ADVERSARY_HAND_MAX);
   }
 
-  protected closeEvilTurnDialog() {
-    this.evilTurnDialog.set(null);
-    this.evilTurnDone?.();
-    this.evilTurnDone = null;
+  protected closeAdversaryTurnDialog() {
+    this.adversaryTurnDialog.set(null);
+    this.adversaryTurnDone?.();
+    this.adversaryTurnDone = null;
   }
 
   /**
-   * Il tasto del footer del Maligno (`/evil/<map>`): "Avanti" nei primi due passi del turno (Mano, poi Evocazione; dalla Mano non si esce con più carte del limite), "Passa" nell'ultimo
+   * Il tasto del footer del Maligno (`/adversary/<map>`): "Avanti" nei primi due passi del turno (Mano, poi Evocazione; dalla Mano non si esce con più carte del limite), "Passa" nell'ultimo
    * (Attivazione): finisce il turno, comincia il round dopo e gli eroi passano da soli. Entrando nell'Attivazione, con "Mostri automatici" acceso i mostri giocano da soli.
    */
-  protected async evilPass() {
-    if (!this.evilMode || this.state.phase !== 'evil' || this.state.status !== 'playing' || this.commandsBusy() || this.evilTurnDialog() || this.evilAreaInfo()) return;
-    const step = this.evilStep();
+  protected async adversaryPass() {
+    if (!this.adversaryMode || this.state.phase !== 'adversary' || this.state.status !== 'playing' || this.commandsBusy() || this.adversaryTurnDialog() || this.adversaryAreaInfo()) return;
+    const step = this.adversaryStep();
     if (!step) return; // non è (ancora) il suo turno: la dialog "Inizia il tuo turno" è ancora aperta
     if (step === 'hand' || step === 'summon') {
       const excess = this.handExcess();
       if (step === 'hand' && excess > 0) {
-        this.showNotice(tr('Hai più di {max} carte: scartane {n}', { max: EVIL_HAND_MAX, n: excess }), 'warning', 'evil');
+        this.showNotice(tr('Hai più di {max} carte: scartane {n}', { max: ADVERSARY_HAND_MAX, n: excess }), 'warning', 'adversary');
         return;
       }
       const next = step === 'hand' ? 'summon' : 'activate';
-      this.evilStep.set(next);
+      this.adversaryStep.set(next);
       this.showHud(this.pieces?.active ?? null);
       if (next === 'activate' && this.monstersAuto()) await this.autoMonstersTurn();
       return;
     }
-    if (this.evilSel) this.endEvilActivation(); // un mostro in attivazione: la chiude
-    this.evilStep.set(null);
+    if (this.adversarySel) this.endAdversaryActivation(); // un mostro in attivazione: la chiude
+    this.adversaryStep.set(null);
     this.showHud(this.pieces?.active ?? null);
-    this.evilBusy.set(true);
+    this.adversaryBusy.set(true);
     try {
       const overclockBefore = new Map(this.state.pieces.map((p) => [p.id, p.overclock] as const));
         const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
-      const revived = endEvilTurn(this.state);
+      const revived = endAdversaryTurn(this.state);
       snapshotSeen(this.state);
       for (const h of this.state.pieces) {
         const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
@@ -3558,33 +3558,33 @@ export class GameSceneComponent implements OnDestroy {
       // Gli stati degli eroi si risolvono a inizio round (uno alla volta, con i dadi competenza), come con lo script.
       for (const hero of this.state.pieces.filter((p) => p.team === 'hero' && !p.city)) if (!this.destroyed) await this.resolveTurnStart(hero);
     } finally {
-      this.evilBusy.set(false);
+      this.adversaryBusy.set(false);
     }
     this.showHud(this.pieces?.active ?? null);
-    await this.evilHeroesPass();
+    await this.adversaryHeroesPass();
   }
 
-  // --- La mano del Maligno (`/evil/<map>`): consumo, scarto e carte da giocare nel passo giusto ---
+  // --- La mano del Maligno (`/adversary/<map>`): consumo, scarto e carte da giocare nel passo giusto ---
 
   /** Il passo del turno del Maligno che gioca (`null` = non è il suo turno). */
-  protected readonly evilStep = signal<EvilStep | null>(null);
+  protected readonly adversaryStep = signal<AdversaryStep | null>(null);
   /** Il contatore dell'Odio nel footer scorre fino al valore nuovo; falso solo a inizio turno. */
-  protected readonly hatredAnimated = signal(true);
+  protected readonly alarmAnimated = signal(true);
   protected readonly handExcessN = signal(0);
   /** Il round in cui ha già giocato un'Evocazione (una sola per round). */
   private summonedRound = -1;
   protected readonly stepName = computed(() => {
-    const step = this.evilStep();
+    const step = this.adversaryStep();
     return step === 'hand' ? tr('Mano') : step === 'summon' ? tr('Evocazione') : step === 'activate' ? tr('Attivazione') : '';
   });
-  protected readonly passLabel = computed(() => (this.evilStep() === 'hand' || this.evilStep() === 'summon' ? tr('Avanti') : ''));
+  protected readonly passLabel = computed(() => (this.adversaryStep() === 'hand' || this.adversaryStep() === 'summon' ? tr('Avanti') : ''));
 
   /** Le carte della mano come le mostra la mano: costo di adesso, valore e, se si possono giocare in questo passo, il tasto Gioca (spento col motivo se adesso no). */
   private refreshHand() {
     const s = this.state;
-    const step = this.evilStep();
+    const step = this.adversaryStep();
     this.handExcessN.set(this.handExcess());
-    this.handCards.set(s.evil.hand.flatMap((id) => {
+    this.handCards.set(s.adversary.hand.flatMap((id) => {
       const c = cardOf(s, id);
       return c ? [{ id, name: c.name, kind: c.kind, text: c.text, cost: this.playCost(c), value: c.value, play: this.handPlay(c, step) }] : [];
     }));
@@ -3592,33 +3592,33 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /** Quanto Odio costa giocare la carta adesso: le Trappole costano meno con Signore delle trappole. */
-  private playCost(c: EvilCardDef): number {
+  private playCost(c: AdversaryCardDef): number {
     return c.kind === 'trap' ? trapCost(this.state, c) : cardCost(this.state, c);
   }
 
   /** Una carta Trappola da armare su una casella, una porta o uno scrigno (non Seduzione oscura, che si gioca a inizio turno). */
-  private isArmable(c: EvilCardDef): boolean {
+  private isArmable(c: AdversaryCardDef): boolean {
     return c.kind === 'trap' && !!c.target && c.target !== 'hero';
   }
 
-  private handPlay(c: EvilCardDef, step: EvilStep | null): { enabled: boolean; reason?: string } | null {
+  private handPlay(c: AdversaryCardDef, step: AdversaryStep | null): { enabled: boolean; reason?: string } | null {
     const s = this.state;
     const atStart = c.kind === 'power' || c.id === 'gust' || c.id === 'dark-allure'; // i Poteri e le carte "all'inizio del tuo turno"
     if (!(step === 'hand' ? atStart : step === 'summon' ? c.kind === 'summon' || this.isArmable(c) : false)) return null;
-    if (this.playCost(c) > s.evil.hatred) return { enabled: false, reason: tr('Odio insufficiente') };
+    if (this.playCost(c) > s.adversary.alarm) return { enabled: false, reason: tr('Odio insufficiente') };
     if (this.isArmable(c) && trapLimitReached(s, c)) return { enabled: false, reason: tr('Troppe trappole armate di questo tipo') };
-    if ((c.kind === 'power' && s.evil.inPlay.includes(c.id)) || (c.id === 'gust' && s.evil.gust)) return { enabled: false, reason: tr('Già in gioco') };
+    if ((c.kind === 'power' && s.adversary.inPlay.includes(c.id)) || (c.id === 'gust' && s.adversary.gust)) return { enabled: false, reason: tr('Già in gioco') };
     if (c.kind === 'summon' && this.summonedRound === s.round) return { enabled: false, reason: tr('Una sola Evocazione per round') };
     return { enabled: true };
   }
 
   /** Il +X di una carta: consumarla (passo Mano) dà il suo Odio. */
   protected consumeAt(index: number) {
-    if (this.evilStep() !== 'hand' || this.commandsBusy()) return;
-    const name = cardOf(this.state, this.state.evil.hand[index])?.name ?? '';
+    if (this.adversaryStep() !== 'hand' || this.commandsBusy()) return;
+    const name = cardOf(this.state, this.state.adversary.hand[index])?.name ?? '';
     const gained = consumeCard(this.state, index);
     if (gained === null) return;
-    this.showNotice(tr('{name} consumata: +{n} Odio', { name, n: gained }), 'skull', 'evil');
+    this.showNotice(tr('{name} consumata: +{n} Odio', { name, n: gained }), 'skull', 'adversary');
     this.showHud(this.pieces?.active ?? null);
   }
 
@@ -3631,8 +3631,8 @@ export class GameSceneComponent implements OnDestroy {
   /** "Gioca" su una carta: un Potere, Raffica di vento o Seduzione oscura nel passo Mano; un'Evocazione (una per round) nel passo Evocazione. */
   protected async playAt(index: number) {
     const s = this.state;
-    const c = cardOf(s, s.evil.hand[index]);
-    const step = this.evilStep();
+    const c = cardOf(s, s.adversary.hand[index]);
+    const step = this.adversaryStep();
     if (!c || !this.board || this.commandsBusy() || !this.handPlay(c, step)?.enabled) return;
     if (c.kind === 'summon') {
       this.startSummon(c); // i mostri si piazzano a mano sulla mappa
@@ -3647,13 +3647,13 @@ export class GameSceneComponent implements OnDestroy {
       this.showHud(this.pieces?.active ?? null);
       return;
     }
-    await this.evilScripted(async () => {
+    await this.adversaryScripted(async () => {
       if (c.kind === 'power') {
         const power = playPowerAt(s, index);
         if (power) await this.announce(power.name, catalogText(power.text.replace(/^Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te\.\s*/, '')));
       } else if (c.id === 'gust') {
-        if (!s.evil.gust && playEvent(s, 'gust')) {
-          s.evil.gust = true;
+        if (!s.adversary.gust && playEvent(s, 'gust')) {
+          s.adversary.gust = true;
           await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno gli eroi non vedono oltre 5 spazi.'), 'warning');
         }
       }
@@ -3664,9 +3664,9 @@ export class GameSceneComponent implements OnDestroy {
   // --- Evocazione a mano: le caselle valide si evidenziano e si tocca dove mettere ogni mostro ---
 
   /** L'evocazione in corso: la carta, i mostri ancora da piazzare e se la carta è già stata pagata (si paga al primo mostro: senza mostri piazzati si può rinunciare gratis). */
-  private evilSummon: {
+  private adversarySummon: {
     /** La carta Evocazione (null per l'Orda di Creature, un Potere già in gioco che non si paga) e il titolo della barra. */
-    card: EvilCardDef | null;
+    card: AdversaryCardDef | null;
     title: string;
     queue: { monster: string; enhanced: boolean }[];
     paid: boolean;
@@ -3676,22 +3676,22 @@ export class GameSceneComponent implements OnDestroy {
     done?: () => void;
   } | null = null;
   /** Per la barra dell'evocazione: il titolo, quale mostro tocca piazzare e quanti ne restano. */
-  protected readonly evilSummonInfo = signal<{ name: string; next: string; left: number } | null>(null);
+  protected readonly adversarySummonInfo = signal<{ name: string; next: string; left: number } | null>(null);
 
-  private startSummon(card: EvilCardDef) {
+  private startSummon(card: AdversaryCardDef) {
     if (!this.board) return;
     const queue = summonQueue(this.state, card);
     if (!queue.length) {
-      this.showNotice(tr('Nessuna miniatura rimasta'), 'warning', 'evil');
+      this.showNotice(tr('Nessuna miniatura rimasta'), 'warning', 'adversary');
       return;
     }
     if (!summonCells(this.state, this.board).length) {
-      this.showNotice(tr('Nessun posto per evocare'), 'warning', 'evil');
+      this.showNotice(tr('Nessun posto per evocare'), 'warning', 'adversary');
       return;
     }
     this.panel.set(null);
     this.monsterPanel.set(null);
-    this.evilSummon = { card, title: tr('Evoca {name}', { name: card.name }), queue, paid: false };
+    this.adversarySummon = { card, title: tr('Evoca {name}', { name: card.name }), queue, paid: false };
     this.refreshSummon();
   }
 
@@ -3702,14 +3702,14 @@ export class GameSceneComponent implements OnDestroy {
     return new Promise<void>((resolve) => {
       this.panel.set(null);
       this.monsterPanel.set(null);
-      this.evilSummon = { card: null, title: tr('Orda di Creature'), queue, paid: true, anchors: (def) => hordeAnchors(this.state, this.board!, def.size, inArea.filter((m) => this.state.pieces.includes(m))), done: resolve };
+      this.adversarySummon = { card: null, title: tr('Orda di Creature'), queue, paid: true, anchors: (def) => hordeAnchors(this.state, this.board!, def.size, inArea.filter((m) => this.state.pieces.includes(m))), done: resolve };
       this.refreshSummon();
     });
   }
 
   /** Le caselle dove si può ancora piazzare (ricalcolate: i mostri messi cambiano chi vede cosa e cosa è occupato) e la barra; senza più mostri o caselle, l'evocazione finisce. */
   private refreshSummon() {
-    const sel = this.evilSummon;
+    const sel = this.adversarySummon;
     if (!sel || !this.board) return;
     const nextDef = sel.queue[0] ? this.state.monsters.get(sel.queue[0].monster) : undefined;
     const free = sel.anchors ? (nextDef ? sel.anchors(nextDef) : []) : summonCells(this.state, this.board);
@@ -3720,13 +3720,13 @@ export class GameSceneComponent implements OnDestroy {
     this.pieces?.showMonsterReach(free);
     const next = sel.queue[0];
     const name = nextDef?.name ?? next.monster;
-    this.evilSummonInfo.set({ name: sel.title, next: next.enhanced ? tr('{name} (potenziato)', { name }) : name, left: sel.queue.length });
+    this.adversarySummonInfo.set({ name: sel.title, next: next.enhanced ? tr('{name} (potenziato)', { name }) : name, left: sel.queue.length });
   }
 
   /** Una casella toccata durante l'evocazione: il prossimo mostro si mette lì (con tutta la sua sagoma, la casella è quella in alto a sinistra) se tutte le sue caselle sono valide. */
   private async summonClick(cell: Cell) {
-    const sel = this.evilSummon;
-    if (!sel || !this.board || this.evilBusy()) return;
+    const sel = this.adversarySummon;
+    if (!sel || !this.board || this.adversaryBusy()) return;
     const next = sel.queue[0];
     const def = this.state.monsters.get(next.monster);
     if (!def) return;
@@ -3734,12 +3734,12 @@ export class GameSceneComponent implements OnDestroy {
       ? sel.anchors(def).some((a) => a.x === cell.x && a.y === cell.y)
       : (() => { const free = new Set(summonCells(this.state, this.board!).map(cellKey)); return footprint({ cell, size: def.size }).every((c) => free.has(cellKey(c))); })();
     if (!valid) {
-      this.showNotice(tr('Qui non si può evocare'), 'warning', 'evil');
+      this.showNotice(tr('Qui non si può evocare'), 'warning', 'adversary');
       return;
     }
     if (!sel.paid && sel.card) {
       if (!paySummon(this.state, sel.card)) {
-        this.showNotice(tr('Odio insufficiente'), 'warning', 'evil');
+        this.showNotice(tr('Odio insufficiente'), 'warning', 'adversary');
         this.endSummon();
         return;
       }
@@ -3751,7 +3751,7 @@ export class GameSceneComponent implements OnDestroy {
     const piece = spawnMonster(this.state, next.monster, next.enhanced, cell);
     if (sel.anchors) piece.awake = true; // l'Orda arriva in un'area già rivelata: i mostri sono svegli
     this.pieces?.showMonsterReach(null);
-    await this.evilScripted(async () => {
+    await this.adversaryScripted(async () => {
       const textures = await loadPortraits([piece.portrait]);
       this.exploration.monsters.add(piece.id);
       this.syncMonsterVisibility(true);
@@ -3766,22 +3766,22 @@ export class GameSceneComponent implements OnDestroy {
   private readonly trapLayer = new Container();
   private trapKey = '';
   /** La trappola che si sta armando e i bersagli validi. */
-  private evilTrap: { card: EvilCardDef; spots: TrapSpot[] } | null = null;
+  private adversaryTrap: { card: AdversaryCardDef; spots: TrapSpot[] } | null = null;
   /** Per la barra: cosa si sta piazzando e cosa toccare. */
-  protected readonly evilTrapInfo = signal<string | null>(null);
+  protected readonly adversaryTrapInfo = signal<string | null>(null);
 
-  private startTrap(card: EvilCardDef) {
+  private startTrap(card: AdversaryCardDef) {
     if (!this.board) return;
     const spots = trapSpots(this.state, this.board, card);
     if (!spots.length) {
-      this.showNotice(tr('Nessun bersaglio valido'), 'warning', 'evil');
+      this.showNotice(tr('Nessun bersaglio valido'), 'warning', 'adversary');
       return;
     }
     this.panel.set(null);
     this.monsterPanel.set(null);
-    this.evilTrap = { card, spots };
+    this.adversaryTrap = { card, spots };
     const what = card.target === 'door' ? tr('Piazza {name}: tocca una porta evidenziata', { name: card.name }) : card.target === 'chest' ? tr('Piazza {name}: tocca uno scrigno evidenziato', { name: card.name }) : tr('Piazza {name}: tocca una casella evidenziata', { name: card.name });
-    this.evilTrapInfo.set(what);
+    this.adversaryTrapInfo.set(what);
     this.pieces?.showMonsterReach(spots.flatMap((s) => this.spotCells(s)));
   }
 
@@ -3794,7 +3794,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Un tocco mentre si arma una trappola: sul bersaglio (la casella, lo scrigno, una casella accanto alla porta) la arma; altrove dice che non si può. */
   private trapClick(point: { x: number; y: number }, cell: Cell) {
-    const sel = this.evilTrap;
+    const sel = this.adversaryTrap;
     if (!sel || !this.board) return;
     let spot: TrapSpot | undefined;
     if (sel.card.target === 'door') {
@@ -3813,30 +3813,30 @@ export class GameSceneComponent implements OnDestroy {
       spot = sel.spots.find((s) => s.kind !== 'door' && s.x === cell.x && s.y === cell.y);
     }
     if (!spot) {
-      this.showNotice(tr('Qui non si può armare'), 'warning', 'evil');
+      this.showNotice(tr('Qui non si può armare'), 'warning', 'adversary');
       return;
     }
     const armed = armTrapAt(this.state, sel.card, spot);
     this.endTrap();
     if (!armed) {
-      this.showNotice(tr('Odio insufficiente'), 'warning', 'evil');
+      this.showNotice(tr('Odio insufficiente'), 'warning', 'adversary');
       return;
     }
-    this.showNotice(tr('Trappola armata: {name}', { name: sel.card.name }), 'warning', 'evil'); // solo il Maligno lo sa: i giocatori non vedono niente
+    this.showNotice(tr('Trappola armata: {name}', { name: sel.card.name }), 'warning', 'adversary'); // solo il Maligno lo sa: i giocatori non vedono niente
     this.showHud(this.pieces?.active ?? null);
   }
 
   /** "Annulla" (o fatto): niente più bersagli da scegliere. */
   protected endTrap() {
-    this.evilTrap = null;
-    this.evilTrapInfo.set(null);
+    this.adversaryTrap = null;
+    this.adversaryTrapInfo.set(null);
     this.pieces?.showMonsterReach(null);
   }
 
   /** Le trappole armate, solo per il Maligno: un segnale rosso sul bersaglio (casella o scrigno: in alto a destra; porta: a metà). Si ridisegna solo quando cambiano. */
   private drawTraps() {
-    if (!this.evilMode || !this.board) return;
-    const traps = this.state.evil.traps;
+    if (!this.adversaryMode || !this.board) return;
+    const traps = this.state.adversary.traps;
     const key = JSON.stringify(traps);
     if (key === this.trapKey) return;
     this.trapKey = key;
@@ -3860,25 +3860,25 @@ export class GameSceneComponent implements OnDestroy {
 
   // --- Scelte sulla mappa: il Maligno tocca una miniatura evidenziata (Seduzione oscura, Abile comandante) o dalla barra degli eroi ---
 
-  private evilPick: { candidates: Piece[]; resolve: (piece: Piece | null) => void } | null = null;
-  protected readonly evilPickInfo = signal<{ prompt: string; cancellable: boolean } | null>(null);
+  private adversaryPick: { candidates: Piece[]; resolve: (piece: Piece | null) => void } | null = null;
+  protected readonly adversaryPickInfo = signal<{ prompt: string; cancellable: boolean } | null>(null);
 
   /** Evidenzia le miniature fra cui scegliere e aspetta il tocco (sulla mappa o, per gli eroi, sul loro tab). Con `cancellable` c'è "Annulla" e può tornare null. */
   private pickPiece(prompt: string, candidates: Piece[], cancellable: boolean): Promise<Piece | null> {
     return new Promise((resolve) => {
       this.panel.set(null);
       this.monsterPanel.set(null);
-      this.evilPick = { candidates, resolve };
-      this.evilPickInfo.set({ prompt, cancellable });
+      this.adversaryPick = { candidates, resolve };
+      this.adversaryPickInfo.set({ prompt, cancellable });
       this.pieces?.showMonsterReach(candidates.flatMap((p) => footprint(p)));
     });
   }
 
   private finishPick(piece: Piece | null) {
-    const sel = this.evilPick;
+    const sel = this.adversaryPick;
     if (!sel) return;
-    this.evilPick = null;
-    this.evilPickInfo.set(null);
+    this.adversaryPick = null;
+    this.adversaryPickInfo.set(null);
     this.pieces?.showMonsterReach(null);
     sel.resolve(piece);
   }
@@ -3888,9 +3888,9 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   private pickClick(cell: Cell) {
-    const hit = this.evilPick?.candidates.find((p) => footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
+    const hit = this.adversaryPick?.candidates.find((p) => footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
     if (hit) this.finishPick(hit);
-    else this.showNotice(tr('Tocca una miniatura evidenziata'), 'warning', 'evil');
+    else this.showNotice(tr('Tocca una miniatura evidenziata'), 'warning', 'adversary');
   }
 
   /**
@@ -3902,11 +3902,11 @@ export class GameSceneComponent implements OnDestroy {
     const board = this.board;
     const card = cardOf(s, 'dark-allure');
     const heroes = s.pieces.filter((p) => p.team === 'hero' && !p.city);
-    if (!card || !board || !inHand(s, card.id) || cardCost(s, card) > s.evil.hatred) return;
+    if (!card || !board || !inHand(s, card.id) || cardCost(s, card) > s.adversary.alarm) return;
     const optionsOf = (h: Piece, t: Piece) => controlledAttackOptions(s, board, h, t).filter((o) => o.enabled);
     const candidates = heroes.filter((h) => heroes.some((t) => t !== h && optionsOf(h, t).length));
     if (!candidates.length) {
-      this.showNotice(tr('Nessun eroe può colpirne un altro'), 'warning', 'evil');
+      this.showNotice(tr('Nessun eroe può colpirne un altro'), 'warning', 'adversary');
       return;
     }
     const hero = await this.pickPiece(tr('Seduzione oscura: scegli l\'eroe che deve tirare'), candidates, true);
@@ -3914,19 +3914,19 @@ export class GameSceneComponent implements OnDestroy {
     playEvent(s, card.id);
     this.showHud(this.pieces?.active ?? null);
     let hit = false;
-    await this.evilScripted(async () => {
+    await this.adversaryScripted(async () => {
       await this.announceEvent(tr('Seduzione oscura'), tr('{name} deve tirare un dado competenza.', { name: hero.name }), 'warning');
       const [face] = await this.proficiencyDice(1);
       hit = !!face && !isBlank(face);
-      if (!hit) this.showNotice(tr('{name} resiste alla seduzione', { name: hero.name }), 'shield', 'evil');
+      if (!hit) this.showNotice(tr('{name} resiste alla seduzione', { name: hero.name }), 'shield', 'adversary');
     });
     if (!hit) return;
     const targets = heroes.filter((t) => t !== hero && optionsOf(hero, t).length);
     const target = targets.length === 1 ? targets[0] : await this.pickPiece(tr('Seduzione oscura: scegli chi colpisce'), targets, false);
     if (!target) return;
     const option = optionsOf(hero, target).sort((a, b) => b.dice.length - a.dice.length)[0];
-    this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: hero.name, name2: target.name }), 'swords', 'evil');
-    await this.evilScripted(async () => this.monsterAttack(hero, target, option));
+    this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: hero.name, name2: target.name }), 'swords', 'adversary');
+    await this.adversaryScripted(async () => this.monsterAttack(hero, target, option));
   }
 
   /**
@@ -3940,7 +3940,7 @@ export class GameSceneComponent implements OnDestroy {
     const inArea = monstersIn(s, board, area);
     if (!inArea.length) return;
     const where = inArea.flatMap((m) => footprint(m));
-    if (s.evil.inPlay.includes('able-commander')) {
+    if (s.adversary.inPlay.includes('able-commander')) {
       const options = upgradeOptions(s, inArea);
       if (options.length) {
         await this.frameCells(where);
@@ -3952,7 +3952,7 @@ export class GameSceneComponent implements OnDestroy {
         }
       }
     }
-    if (s.evil.inPlay.includes('horde')) {
+    if (s.adversary.inPlay.includes('horde')) {
       const types = HORDE_TYPES.filter((t) => s.monsters.has(t) && miniaturesLeft(s, t, false) > 0);
       if (types.length) {
         await this.frameCells(where);
@@ -3968,9 +3968,9 @@ export class GameSceneComponent implements OnDestroy {
 
   /** "Termina" (o niente più da piazzare): se almeno un mostro è stato messo, la carta conta come l'Evocazione del round. */
   protected endSummon() {
-    const sel = this.evilSummon;
-    this.evilSummon = null;
-    this.evilSummonInfo.set(null);
+    const sel = this.adversarySummon;
+    this.adversarySummon = null;
+    this.adversarySummonInfo.set(null);
     this.pieces?.showMonsterReach(null);
     if (sel?.paid && sel.card) this.summonedRound = this.state.round; // l'Orda non conta come Evocazione del round
     this.showHud(this.pieces?.active ?? null);
@@ -3980,7 +3980,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Le aree della mappa nell'ordine dei dati, con quale è quella di partenza. */
   private areaOrder: { id: string; start: boolean }[] = [];
 
-  /** Provvisorio, `/evil/<map>`: le porte che toccano l'area di partenza si aprono (e le serrature si considerano aperte), così gli eroi hanno strada libera. */
+  /** Provvisorio, `/adversary/<map>`: le porte che toccano l'area di partenza si aprono (e le serrature si considerano aperte), così gli eroi hanno strada libera. */
   private openStartAreaDoors(board: Board) {
     const start = this.areaOrder.find((a) => a.start)?.id;
     if (!start) return;
@@ -3997,7 +3997,7 @@ export class GameSceneComponent implements OnDestroy {
     });
   }
 
-  /** Provvisorio, `/evil/<map>`: le caselle di "Area 1" (la prima area dopo quella di partenza) dove mettere gli eroi, dal centro verso fuori. Vuoto se la mappa non ha aree. */
+  /** Provvisorio, `/adversary/<map>`: le caselle di "Area 1" (la prima area dopo quella di partenza) dove mettere gli eroi, dal centro verso fuori. Vuoto se la mappa non ha aree. */
   private firstAreaCells(board: Board): Cell[] {
     const id = this.areaOrder.find((a) => !a.start)?.id;
     if (!id) return [];
@@ -4008,7 +4008,7 @@ export class GameSceneComponent implements OnDestroy {
     return cells.sort((a, b) => Math.hypot(a.x - cx, a.y - cy) - Math.hypot(b.x - cx, b.y - cy));
   }
 
-  /** `/evil/<map>`: niente introduzione né scelta delle caselle; gli eroi si mettono in "Area 1" (le porte dell'area di partenza sono aperte) e la partita comincia. */
+  /** `/adversary/<map>`: niente introduzione né scelta delle caselle; gli eroi si mettono in "Area 1" (le porte dell'area di partenza sono aperte) e la partita comincia. */
   private autoPlaceHeroes() {
     const s = this.state;
     const board = this.board;
@@ -4047,11 +4047,11 @@ export class GameSceneComponent implements OnDestroy {
     void this.waitUntil(() => !this.camTween, 5000).then(() => {
       this.barsIn.set(true);
       // Le aree viste fin dal piazzamento (l'area di partenza, o una collegata senza porta) si presentano come tutte le altre: la descrizione da leggere e i poteri dei mostri; solo dopo il turno degli eroi (o la sua passata automatica).
-      if (revealed.areas.length) void this.areasRevealed(revealed.areas).then(() => (this.evilMode ? this.evilHeroesPass() : undefined));
-      else if (this.evilMode) void this.evilHeroesPass();
+      if (revealed.areas.length) void this.areasRevealed(revealed.areas).then(() => (this.adversaryMode ? this.adversaryHeroesPass() : undefined));
+      else if (this.adversaryMode) void this.adversaryHeroesPass();
     });
     const first = s.pieces.find((p) => p.id === s.activeId);
-    if (first && !this.evilMode) this.showNotice(tr('Tocca a {name}', { name: first.name }), 'autorenew', 'game');
+    if (first && !this.adversaryMode) this.showNotice(tr('Tocca a {name}', { name: first.name }), 'autorenew', 'game');
   }
 
   /** L'eroe attivo usa la porta `index` (dal bottone contestuale). */
@@ -4077,7 +4077,7 @@ export class GameSceneComponent implements OnDestroy {
     if (!this.board) return;
     this.doorView?.redraw(this.board, (d) => !this.fogOn() || this.exploration.doors.has(d));
     const seen = indexes.some((i) => !this.fogOn() || this.exploration.doors.has(this.board!.doors[i].door));
-    if (seen) this.showNotice(`${monster.name} apre ${indexes.length > 1 ? 'delle porte' : 'una porta'}`, 'door_front', 'evil');
+    if (seen) this.showNotice(`${monster.name} apre ${indexes.length > 1 ? 'delle porte' : 'una porta'}`, 'door_front', 'adversary');
     this.exploreAndNotify(); // una porta aperta può far vedere cose nuove agli eroi
   }
 
@@ -4149,13 +4149,13 @@ export class GameSceneComponent implements OnDestroy {
     if (found.length) this.showNotice(found.join(' · '), 'inventory_2'); // la Maledizione, risolta per prima
     this.showHud(hero); // l'Odio nuovo
     const s = this.state;
-    const cards = s.evil.hand.flatMap((id) => { const c = cardOf(s, id); return c && c.kind === 'trap' && c.target === 'chest' && trapCost(s, c) <= s.evil.hatred ? [c] : []; });
+    const cards = s.adversary.hand.flatMap((id) => { const c = cardOf(s, id); return c && c.kind === 'trap' && c.target === 'chest' && trapCost(s, c) <= s.adversary.alarm ? [c] : []; });
     const unique = cards.filter((c, i) => cards.findIndex((o) => o.id === c.id) === i);
     if (unique.length) {
       const answer = await this.askChoice({
         title: tr('Maledizione!'),
         text: tr('Gli eroi hanno aperto uno scrigno con una Maledizione: ricevi Odio. Vuoi spenderlo armando subito una trappola su questo scrigno?'),
-        choices: [...unique.map((c) => ({ id: c.id, label: tr('{name} · {hatred:{cost}}', { name: c.name, cost: trapCost(s, c) }), primary: true })), { id: 'no', label: tr('No') }],
+        choices: [...unique.map((c) => ({ id: c.id, label: tr('{name} · {alarm:{cost}}', { name: c.name, cost: trapCost(s, c) }), primary: true })), { id: 'no', label: tr('No') }],
       });
       const card = unique.find((c) => c.id === answer);
       if (card && armTrapAt(s, card, { kind: 'chest', x: hero.cell.x, y: hero.cell.y })) this.showHud(hero);
@@ -4166,7 +4166,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Usa un'abilità dal bottone sulla sua carta. */
   protected useSkillAction(id: string) {
     const hero = this.pieces?.active;
-    if (!hero || this.evilBusy()) return;
+    if (!hero || this.adversaryBusy()) return;
     const action = skillActions(this.state, hero).find((a) => a.id === id);
     if (action?.kind === 'active') {
       this.beginTelekinesis(hero, action);
@@ -4247,7 +4247,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Spende 1 overclock per 1 punto movimento in più (dal valore dell'overclock nel tab dell'eroe attivo). */
   protected spendOverclockForMove() {
     const hero = this.pieces?.active;
-    if (!hero || this.evilBusy()) return;
+    if (!hero || this.adversaryBusy()) return;
     const r = overclockForMovement(this.state, hero);
     if (r.code === 'ok') {
       this.pieces?.refreshActive();
@@ -4387,7 +4387,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Usa un oggetto dell'eroe attivo (dal bottone "Usa" della sua card): se può curare un adiacente, l'eroe sceglie chi. */
   private async useItemAction(itemId: string) {
     const hero = this.pieces?.active;
-    if (!hero || this.evilBusy() || !this.board) return;
+    if (!hero || this.adversaryBusy() || !this.board) return;
     const use = itemUse(this.state, this.board, hero, itemId);
     if (!use?.enabled) {
       this.showNotice(use?.reason ?? tr('Non è possibile'), 'warning');
@@ -4492,14 +4492,14 @@ export class GameSceneComponent implements OnDestroy {
   /** Ricalcola le azioni del bottone contestuale per l'eroe attivo (solo giocando). */
   private refreshContext() {
     const active = this.pieces?.active;
-    const next = !this.board || !active || this.mode !== 'play' || this.evilMode ? [] : contextActions(this.state, this.board, active, this.fogOn() ? this.exploration.doors : null);
+    const next = !this.board || !active || this.mode !== 'play' || this.adversaryMode ? [] : contextActions(this.state, this.board, active, this.fogOn() ? this.exploration.doors : null);
     // Si aggiorna solo se è cambiato qualcosa: il menu aperto si richiude a ogni cambio.
     if (JSON.stringify(next) !== JSON.stringify(this.contextActions())) this.contextActions.set(next);
   }
 
   /** Tiene il bottone contestuale sopra la pedina attiva (anche mentre si muove, o quando la camera cambia). */
   private updateContextAnchor() {
-    const pos = this.mode === 'play' && !this.evilMode ? this.pieces?.activeWorldPos() : null;
+    const pos = this.mode === 'play' && !this.adversaryMode ? this.pieces?.activeWorldPos() : null;
     const next = pos
       ? { x: Math.round(this.camX + pos.x * this.zoom), y: Math.round(this.camY + pos.y * this.zoom - CELL_SIZE * PAWN_RADIUS_RATIO * this.zoom) }
       : null;
@@ -4567,7 +4567,7 @@ export class GameSceneComponent implements OnDestroy {
   private useAreaTool(id: string, tool: 'zoom' | 'info') {
     const info = this.areaInfo.get(id);
     if (tool === 'info') {
-      this.evilAreaInfo.set({ name: info?.name ?? id, subtitle: info?.subtitle, text: info?.text, discovered: this.state.exploration.areas.has(id) });
+      this.adversaryAreaInfo.set({ name: info?.name ?? id, subtitle: info?.subtitle, text: info?.text, discovered: this.state.exploration.areas.has(id) });
       return;
     }
     const cells = this.labelPlaces.find((l) => l.id === id)?.cells;
@@ -4760,7 +4760,7 @@ export class GameSceneComponent implements OnDestroy {
       else if (key === 'o') this.setMode('obstacles');
       else if (key === 'z' && !e.repeat) this.showWholeMap();
       else if (key === 'f' && !e.repeat) this.centerOnActive();
-      else if (key === 'a' && !e.repeat && this.evilMode) this.monstersAuto.update((v) => !v); // "Mostri automatici"
+      else if (key === 'a' && !e.repeat && this.adversaryMode) this.monstersAuto.update((v) => !v); // "Mostri automatici"
       else if (this.mode === 'obstacles') {
         if (key === 'r') this.obstacleVertical = !this.obstacleVertical;
         else if (key === 't') this.obstacleVariant = (this.obstacleVariant + 1) % OBSTACLE_VARIANTS.length;
@@ -4777,7 +4777,7 @@ export class GameSceneComponent implements OnDestroy {
         else if (key === 'e') this.tapCommand('prepare');
         else if (key === 'enter') {
           // Nella vista del Maligno Invio è il tasto Avanti/Passa; se il fuoco è su un bottone (o un campo) Invio è già suo: niente doppio scatto.
-          const onControl = this.evilMode && !!(e.target as Element | null)?.closest?.('button, input, textarea, select, a, [role="button"]');
+          const onControl = this.adversaryMode && !!(e.target as Element | null)?.closest?.('button, input, textarea, select, a, [role="button"]');
           if (!onControl) this.tapCommand('pass');
         }
       }

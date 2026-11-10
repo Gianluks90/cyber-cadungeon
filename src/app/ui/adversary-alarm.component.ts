@@ -8,7 +8,7 @@ import { IconComponent } from './icon.component';
  * al valore nuovo, più veloce se la differenza è grande; la prima volta, con `animate` falso (a inizio turno, dopo il conteggio della dialog) o con la riduzione del movimento cambia di colpo.
  */
 @Component({
-  selector: 'app-evil-hatred',
+  selector: 'app-adversary-alarm',
   imports: [TrPipe, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -22,7 +22,7 @@ import { IconComponent } from './icon.component';
     :host { position: absolute; z-index: 22; left: 12px; top: 50%; transform: translateY(-50%); }
     .pill {
       display: inline-flex; align-items: center; box-sizing: border-box; min-height: 34px; padding: 6px 10px; border-radius: var(--radius-1);
-      background: var(--c-surface); color: var(--c-hatred); border: 1px solid var(--c-faction-evil); font: 13px/1 var(--font-ui); user-select: none; outline: none;
+      background: var(--c-surface); color: var(--c-alarm); border: 1px solid var(--c-faction-adversary); font: 13px/1 var(--font-ui); user-select: none; outline: none;
     }
     .caption { max-width: 0; margin-right: 0; overflow: hidden; white-space: nowrap; opacity: 0; transition: max-width 0.2s ease, margin 0.2s ease, opacity 0.15s; }
     .value { margin-left: 8px; font-family: var(--font-mono); font-weight: 600; font-variant-numeric: tabular-nums; }
@@ -32,9 +32,9 @@ import { IconComponent } from './icon.component';
     @media (max-width: 760px) { :host { top: auto; transform: none; bottom: calc(var(--footer-height, 0px) + env(safe-area-inset-bottom) + 12px + 76px + 95px + 8px); } }
   `,
 })
-export class EvilHatredComponent {
+export class AdversaryAlarmComponent {
   /** L'Odio vero: quello che si vede (`shown`) ci arriva un punto alla volta. */
-  readonly hatred = input(0);
+  readonly alarm = input(0);
   /** Falso quando deve cambiare di colpo. */
   readonly animate = input(true);
   protected readonly shown = signal(0);
@@ -43,7 +43,7 @@ export class EvilHatredComponent {
 
   constructor() {
     effect(() => {
-      const target = this.hatred();
+      const target = this.alarm();
       untracked(() => this.countTo(target));
     });
     inject(DestroyRef).onDestroy(() => clearTimeout(this.timer));

@@ -9,7 +9,7 @@ import { DotTrailComponent } from '../ui/dot-trail.component';
 import { IconComponent } from '../ui/icon.component';
 import { ADVENTURES, AdventureCard } from './adventures';
 import { PlayDialogComponent } from './play-dialog.component';
-import { loadEvilCatalog } from '../game/evil/card';
+import { loadAdversaryCatalog } from '../game/adversary/card';
 import { composeRules } from '../game/state/setup-text';
 import type { AdventureSetup } from '../game/map/map-data';
 
@@ -160,8 +160,8 @@ export class AdventuresComponent {
         return;
       }
     }
-    const evilCards = await loadEvilCatalog();
-    const rules = composeRules(data.rules, data.setup, (id) => evilCards.get(id)?.name ?? id);
+    const adversaryCards = await loadAdversaryCatalog();
+    const rules = composeRules(data.rules, data.setup, (id) => adversaryCards.get(id)?.name ?? id);
     const t = (key: 'adventures.goal' | 'adventures.fallbackTitle' | 'adventures.specialRules' | 'common.close') => this.i18n.t(key);
     this.goal.set({ kicker: t('adventures.goal'), title: a.title ?? t('adventures.fallbackTitle'), text: objectiveText(data) + (rules ? `\n\n### ${t('adventures.specialRules')}\n\n${rules}` : ''), action: t('common.close'), dismissible: true });
   }

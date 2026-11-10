@@ -25,7 +25,7 @@ import { PageNavComponent } from '../ui/page-nav.component';
 import { SelectComponent, SelectOption } from '../ui/select.component';
 import { LobbyClient, LobbyHost, LobbyState, NetStatus, heroesPerPlayer } from './lobby-net';
 import { LocalLobbyStore } from './lobby-store';
-import { loadEvilCatalog } from '../game/evil/card';
+import { loadAdversaryCatalog } from '../game/adversary/card';
 import { composeRules } from '../game/state/setup-text';
 
 /**
@@ -310,8 +310,8 @@ export class LobbyComponent {
       const res = await fetch(new URL(`maps/${map}.json`, document.baseURI));
       if (!res.ok) return;
       const data = (await res.json()) as { objective?: { description?: string; text?: string }; rules?: string; setup?: AdventureSetup };
-      const evilCards = await loadEvilCatalog();
-      const rules = composeRules(data.rules, data.setup, (id) => evilCards.get(id)?.name ?? id);
+      const adversaryCards = await loadAdversaryCatalog();
+      const rules = composeRules(data.rules, data.setup, (id) => adversaryCards.get(id)?.name ?? id);
       const t = (key: 'adventures.goal' | 'adventures.specialRules' | 'common.close') => this.i18n.t(key);
       this.goal.set({ kicker: t('adventures.goal'), title: this.adventureTitle(), text: objectiveText(data) + (rules ? `\n\n### ${t('adventures.specialRules')}\n\n${rules}` : ''), action: t('common.close'), dismissible: true });
     } catch {

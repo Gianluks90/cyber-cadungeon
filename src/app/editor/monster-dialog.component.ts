@@ -264,7 +264,7 @@ const toInt = (s: string) => {
     .card { position: absolute; z-index: 0; top: 8px; bottom: 8px; width: 200px; margin: 0; overflow: hidden; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
     .card.right { left: calc(100% - 30px); transform: rotate(4deg); transform-origin: 30% 100%; }
     .card.left { right: calc(100% - 30px); transform: rotate(-4deg); transform-origin: 70% 100%; display: flex; flex-direction: column; background: var(--c-surface); overflow-y: auto; scrollbar-width: thin; }
-    .card.enhanced { border-color: var(--c-faction-evil); }
+    .card.enhanced { border-color: var(--c-faction-adversary); }
     .card app-picture { position: absolute; inset: 0; }
     .card figcaption { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 3px; background: var(--c-surface); border-top: 1px solid var(--c-line-strong); padding: 8px 12px 10px 38px; }
     .card figcaption b { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.04em; }
@@ -289,7 +289,7 @@ const toInt = (s: string) => {
       :host { --md-side: 0px; }
       .card, .card.left { display: none; } /* .card.left ha il suo display: senza la regola più specifica restava acceso, fuori dallo schermo */
       .summary { display: block; flex: none; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); }
-      .summary.enhanced { border-color: var(--c-faction-evil); }
+      .summary.enhanced { border-color: var(--c-faction-adversary); }
       .summary summary { padding: 10px 12px; cursor: pointer; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
       .summary .tier { padding: 8px 12px; }
     }

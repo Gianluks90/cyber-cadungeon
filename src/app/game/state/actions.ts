@@ -122,7 +122,7 @@ export function openChest(state: GameState, board: Board, piece: Piece): ChestRe
   if (curses.length) {
     chest.contents = (chest.contents ?? []).filter((l) => l.kind !== 'curse'); // risolte una volta sola (anche se lo scrigno è un Mimic che poi muore)
     found.push(...collectLoot(state, curses, piece));
-    if (isHero && !state.evilManual) armTrap(state, board, chest);
+    if (isHero && !state.adversaryManual) armTrap(state, board, chest);
     // Un Maligno a mano decide lui: l'Odio è già suo, lo scrigno resta chiuso e non si pagano punti; la scena glielo chiede e poi riapre lo scrigno (le Maledizioni sono già risolte).
     else if (isHero) return { code: 'curse', cost: 0, ...(found.length ? { found } : {}) };
   }
@@ -311,7 +311,7 @@ export function killHero(state: GameState, piece: Piece): Piece[] {
 
 /** Ricalcola cosa vede il gruppo e annota ciò che è nuovo. Restituisce le novità. */
 export function explore(state: GameState, board: Board): Reveal {
-  const reveal = state.exploration.update(board, state.pieces, state.evil.gust ? 5 : Infinity);
+  const reveal = state.exploration.update(board, state.pieces, state.adversary.gust ? 5 : Infinity);
   for (const area of reveal.areas) runEvents(state, { kind: 'areaRevealed', area }); // gli eventi "area rivelata"
   return reveal;
 }
@@ -509,8 +509,8 @@ export interface PassResult {
   toadEnded?: boolean;
   /** Le maledizioni di fine turno che hanno colpito (la scena le racconta e fa svanire chi è morto). */
   curses?: CurseHit[];
-  /** Tutti gli eroi hanno agito: tocca al Maligno, che gioca con il suo script (`state/evil.ts`) e poi chiama `endEvilTurn`. */
-  evil?: boolean;
+  /** Tutti gli eroi hanno agito: tocca al Maligno, che gioca con il suo script (`state/adversary.ts`) e poi chiama `endAdversaryTurn`. */
+  adversary?: boolean;
 }
 
 /**
@@ -525,8 +525,8 @@ export function passTurn(state: GameState, piece: Piece): PassResult | null {
     state.activeId = next.id;
     return { nextActive: next.id, roundStarted: false, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
   }
-  state.phase = 'evil';
-  return { nextActive: null, roundStarted: false, evil: true, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
+  state.phase = 'adversary';
+  return { nextActive: null, roundStarted: false, adversary: true, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
 }
 
 /** Chiude il turno di un eroe: ha agito, e il Rospo scarta un segnalino. Restituisce se la maledizione è finita. */
@@ -585,13 +585,13 @@ export function endHeroesTurn(state: GameState): PassResult | null {
     toadEnded = r.toadEnded || toadEnded;
     curses.push(...r.curses);
   }
-  state.phase = 'evil';
-  return { nextActive: null, roundStarted: false, evil: true, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
+  state.phase = 'adversary';
+  return { nextActive: null, roundStarted: false, adversary: true, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
 }
 
 /** Finito il turno del Maligno (lo gioca la scena, un mostro alla volta) comincia un nuovo round. */
-export function endEvilTurn(state: GameState): Piece[] {
-  runEvents(state, { kind: 'evilTurnEnd' }); // gli eventi "finisce il turno del Maligno" (ricompense e penalità a fine turno)
+export function endAdversaryTurn(state: GameState): Piece[] {
+  runEvents(state, { kind: 'adversaryTurnEnd' }); // gli eventi "finisce il turno del Maligno" (ricompense e penalità a fine turno)
   const revived = tickRevivals(state); // chi aspettava di tornare in vita perde un turno, e a zero riappare
   startRound(state);
   return revived;

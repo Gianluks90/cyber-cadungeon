@@ -9,11 +9,11 @@ import { IconComponent } from './icon.component';
  * (icona rossa, etichetta piccola, titolo nel carattere dei titoli) dentro una dialog con il bordo rosso.
  */
 @Component({
-  selector: 'app-evil-turn-dialog',
+  selector: 'app-adversary-turn-dialog',
   imports: [TrPipe, DialogComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-dialog [title]="'Inizia il tuo turno' | tr" [kicker]="'Maligno' | tr" [closable]="false" [evil]="true" width="min(420px, 100%)">
+    <app-dialog [title]="'Inizia il tuo turno' | tr" [kicker]="'Maligno' | tr" [closable]="false" [adversary]="true" width="min(420px, 100%)">
       <div class="content">
         <app-icon name="skull" [size]="30" />
         <p class="text">{{ (gained() === 1 ? 'Ricevi 1 segnalino Odio da spendere per carte e mostri.' : 'Ricevi {n} segnalini Odio da spendere per carte e mostri.') | tr: { n: gained() } }}</p>
@@ -22,19 +22,19 @@ import { IconComponent } from './icon.component';
           <span class="value">{{ shown() }}</span>
         </div>
       </div>
-      <button dialogFooter type="button" class="dlg-btn evil" (click)="ok.emit()">{{ 'OK' | tr }}</button>
+      <button dialogFooter type="button" class="dlg-btn adversary" (click)="ok.emit()">{{ 'OK' | tr }}</button>
     </app-dialog>
   `,
   styles: `
     .content { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-    app-icon { color: var(--c-faction-evil); }
+    app-icon { color: var(--c-faction-adversary); }
     .text { margin: 0; font: 13px/1.4 var(--font-ui); color: var(--c-text-dim); }
     .counter { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 24px; }
-    .label { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-hatred); }
-    .value { font: 600 32px/1.1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-hatred); }
+    .label { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-alarm); }
+    .value { font: 600 32px/1.1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-alarm); }
   `,
 })
-export class EvilTurnDialogComponent implements OnInit {
+export class AdversaryTurnDialogComponent implements OnInit {
   /** L'Odio prima di ricevere quello del turno e dopo. */
   readonly from = input.required<number>();
   readonly to = input.required<number>();

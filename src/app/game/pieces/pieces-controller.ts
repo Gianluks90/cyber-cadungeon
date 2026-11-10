@@ -65,7 +65,7 @@ export class PiecesController {
   private board: Board | null = null;
   private reach = new Map<string, Reach>();
   private enabled = true;
-  /** Il Maligno guarda gli eroi in sola lettura (`/evil/<map>`): sulla mappa gli eroi non si selezionano né si muovono, e non si evidenzia nessuna area. */
+  /** Il Maligno guarda gli eroi in sola lettura (`/adversary/<map>`): sulla mappa gli eroi non si selezionano né si muovono, e non si evidenzia nessuna area. */
   private viewOnly = false;
   private pulseTime = 0;
   /** L'ordine mostrato sulla pedina di ogni eroe (per ridisegnarla quando cambia). */

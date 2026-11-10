@@ -42,7 +42,7 @@ export interface AttackEffectView {
   usable: boolean;
 }
 
-/** Le voci di una scelta del Maligno nella finestra dell'attacco: l'etichetta può avere il costo (`{hatred:N}`). */
+/** Le voci di una scelta del Maligno nella finestra dell'attacco: l'etichetta può avere il costo (`{alarm:N}`). */
 export interface DecisionView {
   options: { id: string; label: string; enabled: boolean; reason?: string }[];
 }
@@ -246,7 +246,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
               @if (decision(); as d) {
                 <!-- Il Maligno a mano: una carta da giocare (Mirare, Schivare) o no. I tiri aspettano la sua scelta. -->
                 @for (o of d.options; track o.id) {
-                  <button type="button" class="btn evil" [class.off]="!o.enabled" [attr.aria-disabled]="!o.enabled" [title]="o.reason ?? ''" (click)="decide.emit(o.id)"><app-cost-text [text]="o.label" /></button>
+                  <button type="button" class="btn adversary" [class.off]="!o.enabled" [attr.aria-disabled]="!o.enabled" [title]="o.reason ?? ''" (click)="decide.emit(o.id)"><app-cost-text [text]="o.label" /></button>
                 }
               } @else if (v.step === 'preview') {
                 @if (v.auto) { <span class="wait">{{ 'Il Maligno si prepara…' | tr }}</span> } @else { <button type="button" class="btn" (click)="cancel.emit()">{{ 'Annulla' | tr }}</button> }
@@ -281,7 +281,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
       position: absolute; z-index: 0; top: 8px; bottom: 8px; width: var(--art-width); margin: 0; overflow: hidden; border-radius: var(--radius-1);
       border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
     }
-    .card.enhanced { border-color: var(--c-faction-evil); }
+    .card.enhanced { border-color: var(--c-faction-adversary); }
     .card.left { right: calc(100% - var(--art-overlap)); transform: rotate(-4deg); transform-origin: 70% 100%; animation: art-in-left 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
     .card.right { left: calc(100% - var(--art-overlap)); transform: rotate(4deg); transform-origin: 30% 100%; animation: art-in-right 0.34s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
     .card app-picture { position: absolute; inset: 0; }
@@ -384,9 +384,9 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
     .btn.off:hover { border-color: var(--c-interact); color: var(--c-text); }
     .btn:hover, .btn:focus-visible { border-color: var(--c-interact); color: var(--c-interact); outline: none; }
     /* I tasti del Maligno: grigi, rossi al passaggio. */
-    .btn.evil { color: var(--c-text-dim); }
-    .btn.evil:hover, .btn.evil:focus-visible { border-color: var(--c-faction-evil); color: var(--c-faction-evil); }
-    .btn.evil.off:hover { border-color: var(--c-line-strong); color: var(--c-text-dim); }
+    .btn.adversary { color: var(--c-text-dim); }
+    .btn.adversary:hover, .btn.adversary:focus-visible { border-color: var(--c-faction-adversary); color: var(--c-faction-adversary); }
+    .btn.adversary.off:hover { border-color: var(--c-line-strong); color: var(--c-text-dim); }
     /* Su schermi stretti le carte non ci stanno: resta una riga "A contro B" e il pannello a tutta larghezza. */
     @media (max-width: 760px) {
       .dialog { width: 100%; }

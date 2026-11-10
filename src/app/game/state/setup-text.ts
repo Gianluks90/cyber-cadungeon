@@ -10,9 +10,9 @@ export function setupBullets(setup: AdventureSetup | undefined, nameOf: (cardId:
   if (coins > 0) out.push(translate('setupText.coinsMore', { n: coins }));
   else if (coins < 0) out.push(translate('setupText.coinsLess', { n: -coins }));
   if (setup.pregameTreasures?.length) out.push(translate('setupText.treasures', { tiers: setup.pregameTreasures.map((t) => translate(TREASURE_KEYS[t])).join(', ') }));
-  if (setup.evilDeckRemove?.length) out.push(translate('setupText.deckRemove', { cards: cardList(setup.evilDeckRemove, nameOf) }));
-  if (setup.evilStartInPlay?.length) out.push(translate('setupText.inPlay', { cards: cardList(setup.evilStartInPlay, nameOf) }));
-  if (setup.evilStartHand !== undefined) out.push(translate(setup.evilStartHand === 0 ? 'setupText.handNone' : setup.evilStartHand === 1 ? 'setupText.handOne' : 'setupText.handMany', { n: setup.evilStartHand }));
+  if (setup.adversaryDeckRemove?.length) out.push(translate('setupText.deckRemove', { cards: cardList(setup.adversaryDeckRemove, nameOf) }));
+  if (setup.adversaryStartInPlay?.length) out.push(translate('setupText.inPlay', { cards: cardList(setup.adversaryStartInPlay, nameOf) }));
+  if (setup.adversaryStartHand !== undefined) out.push(translate(setup.adversaryStartHand === 0 ? 'setupText.handNone' : setup.adversaryStartHand === 1 ? 'setupText.handOne' : 'setupText.handMany', { n: setup.adversaryStartHand }));
   return out;
 }
 

@@ -66,9 +66,9 @@ export type EventTrigger =
    * un'altra sua casella: per le stanze piene di trappole, dove ogni volta che si mette piede su una casella pericolosa scatta.
    */
   | { kind: 'zoneEntered'; zoneId: string; everyStep?: boolean; /** Solo quando si fa scattare (non nei dati): il passo viene da fuori dalla zona. */ fromOutside?: boolean }
-  | { kind: 'evilTurnEnd'; /** Solo alla fine di questo round (da 1); senza, a ogni round. */ round?: number }
+  | { kind: 'adversaryTurnEnd'; /** Solo alla fine di questo round (da 1); senza, a ogni round. */ round?: number }
   /** Comincia il turno del Maligno (dopo che ha ricaricato l'Odio e pescato, prima che i mostri agiscano): serve per effetti che si ripetono a ogni round, di solito con una condizione. */
-  | { kind: 'evilTurnStart'; /** Solo all'inizio del turno del Maligno di questo round (da 1); senza, a ogni round. */ round?: number };
+  | { kind: 'adversaryTurnStart'; /** Solo all'inizio del turno del Maligno di questo round (da 1); senza, a ogni round. */ round?: number };
 
 /**
  * Una zona di innesco: un gruppo di caselle (qualunque forma, anche non collegate; possono stare su ostacoli, buche, bauli, pedine) che non blocca niente e non si vede in partita.
@@ -162,7 +162,7 @@ export type EventEffect =
   /** Il turno degli eroi finisce adesso: chi non ha ancora agito perde ciò che gli resta (movimento, attacchi) e comincia subito il turno del Maligno. Se scatta fuori dal turno degli eroi non fa niente. */
   | { kind: 'endHeroesTurn' }
   /** Cambia l'Odio del Maligno (anche in negativo, mai sotto 0). */
-  | { kind: 'hatred'; amount: number }
+  | { kind: 'alarm'; amount: number }
   /** Il Maligno pesca `count` carte (1 se manca) dal suo mazzo, come a inizio turno (la mano non supera il limite). */
   | { kind: 'drawCard'; count?: number }
   /** Aggiunge un pezzo al finale della vittoria (di solito con una condizione, per i finali alternativi): `text` (markdown) compare dopo la conclusione dell'obiettivo e `points` (anche negativi) si somma ai punti Conquista dell'obiettivo. Non fa vincere: conta se poi la partita si vince. */
@@ -206,11 +206,11 @@ export interface AdventureSetup {
   /** I tipi di tesoro che il negozio di preparazione già vende (di base nessuno: servono gli scrigni aperti). */
   pregameTreasures?: ('copper' | 'silver' | 'gold')[];
   /** Carte tolte dal Mazzo del Male: una voce = una copia (la stessa carta si ripete per togliere più copie). */
-  evilDeckRemove?: string[];
+  adversaryDeckRemove?: string[];
   /** Carte del Male già in gioco a inizio partita: ognuna toglie una copia dal mazzo, senza doppioni. */
-  evilStartInPlay?: string[];
-  /** Quante carte ha in mano il Maligno all'inizio (da 0 a EVIL_HAND_MAX; se manca, EVIL_START_HAND). */
-  evilStartHand?: number;
+  adversaryStartInPlay?: string[];
+  /** Quante carte ha in mano il Maligno all'inizio (da 0 a ADVERSARY_HAND_MAX; se manca, ADVERSARY_START_HAND). */
+  adversaryStartHand?: number;
 }
 
 export interface MapData {

@@ -294,7 +294,7 @@ export function eventLevel(issues: readonly EventIssue[] | undefined): 'ok' | 'w
 }
 
 const sameOne = (a: EventTrigger, b: EventTrigger) =>
-  a.kind === b.kind && (a.kind === 'evilTurnEnd' || a.kind === 'evilTurnStart' ? a.round === (b as typeof a).round : a.kind === 'cleared' || a.kind === 'encountersGone' ? JSON.stringify(a) === JSON.stringify(b) : a.kind === 'encounterUsed' ? a.markerId === (b as typeof a).markerId : a.kind === 'defeated' || a.kind === 'interact' ? a.pieceId === (b as typeof a).pieceId : a.kind === 'pickedUp' ? a.markerId === (b as typeof a).markerId : a.kind === 'zoneUsed' || a.kind === 'zoneEntered' ? a.zoneId === (b as typeof a).zoneId : a.area === (b as { area: string }).area);
+  a.kind === b.kind && (a.kind === 'adversaryTurnEnd' || a.kind === 'adversaryTurnStart' ? a.round === (b as typeof a).round : a.kind === 'cleared' || a.kind === 'encountersGone' ? JSON.stringify(a) === JSON.stringify(b) : a.kind === 'encounterUsed' ? a.markerId === (b as typeof a).markerId : a.kind === 'defeated' || a.kind === 'interact' ? a.pieceId === (b as typeof a).pieceId : a.kind === 'pickedUp' ? a.markerId === (b as typeof a).markerId : a.kind === 'zoneUsed' || a.kind === 'zoneEntered' ? a.zoneId === (b as typeof a).zoneId : a.area === (b as { area: string }).area);
 
 /** Due eventi hanno una causa in comune se un loro innesco è lo stesso. */
 const sameTrigger = (a: AdventureEvent, b: AdventureEvent) => triggersOf(a).some((x) => triggersOf(b).some((y) => sameOne(x, y)));
@@ -374,7 +374,7 @@ export function validateEvents(map: MapData): Map<string, EventIssue[]> {
       if (!(map.markers ?? []).some((m) => 'id' in m && m.id === w.markerId)) push(e, 'error', t('validator.ev.itemGone'));
     } else if (w.kind === 'zoneUsed' || w.kind === 'zoneEntered') {
       if (!(map.zones ?? []).some((z) => z.id === w.zoneId)) push(e, 'error', t('validator.ev.zoneGone'));
-    } else if (w.kind !== 'evilTurnEnd' && w.kind !== 'evilTurnStart') {
+    } else if (w.kind !== 'adversaryTurnEnd' && w.kind !== 'adversaryTurnStart') {
       const area = (map.areas ?? []).find((a) => a.id === w.area);
       if (!area) push(e, 'error', t('validator.ev.areaGone'));
       else if (w.kind === 'chestOpened' && area.cells?.length && !(map.markers ?? []).some((m) => m.type === 'chest' && area.cells!.some((c) => c.x === m.x && c.y === m.y))) push(e, 'error', t('validator.ev.noChestInArea'));
@@ -457,7 +457,7 @@ export function validateEvents(map: MapData): Map<string, EventIssue[]> {
         if (f.kind === 'modifyMonster' && !f.wounds && !f.speed && !f.armor) push(e, 'warning', t('validator.ev.modifyNoop'));
         if (f.kind === 'endHeroesTurn') {
           const startArea = (map.areas ?? []).find((a) => a.start)?.id;
-          if (triggers.every((t) => t.kind === 'evilTurnStart' || t.kind === 'evilTurnEnd')) push(e, 'warning', t('validator.ev.endTurnEvilTurn'));
+          if (triggers.every((t) => t.kind === 'adversaryTurnStart' || t.kind === 'adversaryTurnEnd')) push(e, 'warning', t('validator.ev.endTurnAdversaryTurn'));
           else if (startArea && triggers.some((t) => t.kind === 'areaRevealed' && t.area === startArea)) push(e, 'warning', t('validator.ev.endTurnStartArea'));
         }
         if (f.kind === 'revive' && !hasDefeated) push(e, 'error', t('validator.ev.reviveNoDefeated'));

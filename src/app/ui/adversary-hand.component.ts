@@ -1,12 +1,12 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, OnInit, effect, inject, input, output, signal, untracked } from '@angular/core';
-import { EvilCardKind } from '../game/evil/card';
+import { AdversaryCardKind } from '../game/adversary/card';
 import { tr } from '../i18n/catalog-text';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TrPipe } from '../i18n/tr.pipe';
 import { IconComponent } from './icon.component';
 
 /** I nomi dei generi di carta, nella lingua di adesso (si traducono al momento dell'uso). */
-const KIND_NAMES: Record<EvilCardKind, () => string> = {
+const KIND_NAMES: Record<AdversaryCardKind, () => string> = {
   power: () => tr('Potere'),
   event: () => tr('Evento'),
   trap: () => tr('Trappola'),
@@ -17,7 +17,7 @@ const KIND_NAMES: Record<EvilCardKind, () => string> = {
 export interface HandCardView {
   id: string;
   name: string;
-  kind: EvilCardKind;
+  kind: AdversaryCardKind;
   /** Il testo della carta (dai dati, in italiano: si traduce con `ct`). */
   text: string;
   /** Quanto Odio costa giocarla adesso (con ciò che aggiungono gli eroi), e quanto se ne prende consumandola. */
@@ -28,7 +28,7 @@ export interface HandCardView {
 }
 
 /** Il passo del turno del Maligno: Mano (pesca, scarto, consumo e carte a inizio turno), Evocazione, Attivazione dei mostri. */
-export type EvilStep = 'hand' | 'summon' | 'activate';
+export type AdversaryStep = 'hand' | 'summon' | 'activate';
 
 /** La larghezza di una carta (come il dorso del mazzo), il passo massimo fra due carte vicine e i tempi dell'arrivo di una carta pescata (millisecondi). */
 const CARD_W = 178;
@@ -45,7 +45,7 @@ const FLIP_AFTER_MS = 650;
  * Una carta pescata arriva dal basso coperta (si vede il dorso) mentre le altre scorrono per farle posto, poi si gira (come un'apertura e chiusura sull'asse verticale) e mostra la faccia.
  */
 @Component({
-  selector: 'app-evil-hand',
+  selector: 'app-adversary-hand',
   host: { '(document:pointerdown)': 'outside($event)' },
   imports: [CatalogTextPipe, TrPipe, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -79,7 +79,7 @@ const FLIP_AFTER_MS = 650;
                 </footer>
               </div>
             </div>
-            <div class="side rear" aria-hidden="true"><img src="evil/card_back.webp" alt="" draggable="false" /></div>
+            <div class="side rear" aria-hidden="true"><img src="adversary/card_back.webp" alt="" draggable="false" /></div>
           </div>
         </article>
       }
@@ -102,7 +102,7 @@ const FLIP_AFTER_MS = 650;
     .flip { position: absolute; inset: 0; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
     .card.covered .flip { transform: rotateY(180deg); }
     .side {
-      position: absolute; inset: 0; box-sizing: border-box; padding: 8px; backface-visibility: hidden; -webkit-backface-visibility: hidden; background: #12090a; border: 1px solid var(--c-faction-evil); border-radius: 14px;
+      position: absolute; inset: 0; box-sizing: border-box; padding: 8px; backface-visibility: hidden; -webkit-backface-visibility: hidden; background: #12090a; border: 1px solid var(--c-faction-adversary); border-radius: 14px;
       box-shadow: -6px 0 14px rgba(0, 0, 0, 0.55), 0 8px 24px rgba(0, 0, 0, 0.6);
     }
     .rear { transform: rotateY(180deg); }
@@ -110,11 +110,11 @@ const FLIP_AFTER_MS = 650;
     @media (prefers-reduced-motion: reduce) { .card { animation: none; transition: none; } .flip { transition: none; } }
     .face {
       height: 100%; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; padding: 8px; overflow: hidden; border-radius: 8px;
-      background: linear-gradient(180deg, #1d1112, #140b0c); border: 1px solid color-mix(in srgb, var(--c-faction-evil) 45%, transparent); color: var(--c-text);
+      background: linear-gradient(180deg, #1d1112, #140b0c); border: 1px solid color-mix(in srgb, var(--c-faction-adversary) 45%, transparent); color: var(--c-text);
     }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
     .pill { display: inline-flex; align-items: center; gap: 3px; height: 22px; padding: 0 7px; box-sizing: border-box; border-radius: 999px; font: 700 13px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
-    .cost { background: var(--c-faction-evil); color: #fff; }
+    .cost { background: var(--c-faction-adversary); color: #fff; }
     .cost app-icon { color: #fff; }
     .value { height: 20px; border: 1px solid var(--c-line-strong); color: var(--c-text-dim); font-size: 12px; }
     /* Il genere ha tutto lo spazio che resta nella riga in alto. */
@@ -133,12 +133,12 @@ const FLIP_AFTER_MS = 650;
     /* I tasti della carta: Gioca (pieno rosso), Scarta (contorno rosso) e il consumo +X (il pallino diventa un tasto, rosso al passaggio). */
     .act, .act-pill { cursor: pointer; font-family: var(--font-ui); }
     .act { height: 22px; padding: 0 12px; box-sizing: border-box; border-radius: 999px; font: 700 11px/1 var(--font-ui); letter-spacing: 0.04em; text-transform: uppercase; }
-    .play { background: var(--c-faction-evil); border: 1px solid var(--c-faction-evil); color: #fff; }
-    .discard { background: none; border: 1px solid var(--c-faction-evil); color: var(--c-faction-evil); }
+    .play { background: var(--c-faction-adversary); border: 1px solid var(--c-faction-adversary); color: #fff; }
+    .discard { background: none; border: 1px solid var(--c-faction-adversary); color: var(--c-faction-adversary); }
     .play.off { opacity: 0.45; }
     .act:hover, .act:focus-visible { filter: brightness(1.25); outline: none; }
     .act-pill { background: none; }
-    .act-pill:hover, .act-pill:focus-visible { border-color: var(--c-faction-evil); color: var(--c-faction-evil); outline: none; }
+    .act-pill:hover, .act-pill:focus-visible { border-color: var(--c-faction-adversary); color: var(--c-faction-adversary); outline: none; }
     /*
      * Schermi stretti (telefono in verticale): non c'è posto accanto a footer e mazzo, quindi la mano sta su tutta la larghezza, appena sopra il footer, a ventaglio:
      * di ogni carta spunta la parte alta (costo, genere, titolo); il resto è dietro il footer. Un tocco (o il passaggio) la alza e la mostra intera sopra il footer.
@@ -151,10 +151,10 @@ const FLIP_AFTER_MS = 650;
     @media (max-width: 760px) and (hover: hover) { .card:hover { transform: translateY(0); } }
   `,
 })
-export class EvilHandComponent implements OnInit {
+export class AdversaryHandComponent implements OnInit {
   readonly cards = input<HandCardView[]>([]);
   /** Il passo del turno: il consumo (+X) è un tasto solo nel passo Mano. */
-  readonly step = input<EvilStep | null>(null);
+  readonly step = input<AdversaryStep | null>(null);
   /** La mano è oltre il limite: al posto di Gioca e del consumo c'è "Scarta" su ogni carta. */
   readonly discarding = input(false);
   readonly consume = output<number>();
@@ -223,7 +223,7 @@ export class EvilHandComponent implements OnInit {
     return Math.max(0, index - this.newFrom);
   }
 
-  protected kindName(kind: EvilCardKind): string {
+  protected kindName(kind: AdversaryCardKind): string {
     return KIND_NAMES[kind]();
   }
 

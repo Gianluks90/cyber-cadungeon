@@ -1,5 +1,5 @@
 import { catalogText, tr } from '../../i18n/catalog-text';
-import { drawEvilCards } from './evil-deck';
+import { drawAdversaryCards } from './adversary-deck';
 import { groundCells, isGroundFree } from './ground';
 import { collectLoot } from '../markers/marker-rules';
 import { canReceiveItem } from './actions';
@@ -155,7 +155,7 @@ const same = (a: EventTrigger, b: EventTrigger, round: number): boolean => {
   if (a.kind === 'zoneUsed') return a.zoneId === (b as typeof a).zoneId;
   if (a.kind === 'zoneEntered') return a.zoneId === (b as typeof a).zoneId && (!!a.everyStep || !!(b as typeof a).fromOutside);
   if (a.kind === 'cleared' || a.kind === 'encountersGone') return false; // scatta solo da `checkCleared`, guardando com'è la mappa
-  if (a.kind === 'evilTurnEnd' || a.kind === 'evilTurnStart') return a.round === undefined || a.round === round;
+  if (a.kind === 'adversaryTurnEnd' || a.kind === 'adversaryTurnStart') return a.round === undefined || a.round === round;
   return a.area === (b as { area: string }).area;
 };
 
@@ -568,15 +568,15 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
       }
       return;
     }
-    case 'hatred': {
-      const o = state.evil;
-      const before = o.hatred;
-      o.hatred = Math.max(0, o.hatred + effect.amount);
-      if (o.hatred !== before) ev.notices.push(o.hatred > before ? tr('Il Maligno guadagna {n} Odio', { n: Math.abs(o.hatred - before) }) : tr('Il Maligno perde {n} Odio', { n: Math.abs(o.hatred - before) }));
+    case 'alarm': {
+      const o = state.adversary;
+      const before = o.alarm;
+      o.alarm = Math.max(0, o.alarm + effect.amount);
+      if (o.alarm !== before) ev.notices.push(o.alarm > before ? tr('Il Maligno guadagna {n} Odio', { n: Math.abs(o.alarm - before) }) : tr('Il Maligno perde {n} Odio', { n: Math.abs(o.alarm - before) }));
       return;
     }
     case 'drawCard': {
-      const n = drawEvilCards(state, Math.max(1, effect.count ?? 1));
+      const n = drawAdversaryCards(state, Math.max(1, effect.count ?? 1));
       if (n > 0) ev.notices.push(n === 1 ? tr('Il Maligno pesca 1 carta') : tr('Il Maligno pesca {n} carte', { n }));
       return;
     }
@@ -620,7 +620,7 @@ export function refuseCheck(state: GameState, check: PendingCheck): Piece | unde
 
 /** Mette da parte una pedina sconfitta che deve tornare in vita. */
 export function scheduleRevival(state: GameState, piece: Piece, revive: { turns: number; distance: number }): void {
-  state.events.revivals.push({ piece, turns: revive.turns, distance: revive.distance, ...(state.phase === 'evil' ? { skipNext: true } : {}) });
+  state.events.revivals.push({ piece, turns: revive.turns, distance: revive.distance, ...(state.phase === 'adversary' ? { skipNext: true } : {}) });
 }
 
 /** La pedina sconfitta che aspetta di tornare in vita ha ancora il diritto di contare come viva (per l'obiettivo "sconfiggi"). */

@@ -1,8 +1,8 @@
 import { Board, Cell, cellKey } from '../board/board';
 import { DieFace } from '../dice/faces';
-import { EvilCardDef, TrapTarget } from '../evil/card';
+import { AdversaryCardDef, TrapTarget } from '../adversary/card';
 import { Piece, footprint } from '../pieces/piece';
-import { cardCost, cardOf } from './evil-deck';
+import { cardCost, cardOf } from './adversary-deck';
 import { GameState } from './game-state';
 
 /**
@@ -36,36 +36,36 @@ export function sparks(faces: readonly DieFace[]): number {
 }
 
 /** L'Odio che costa armare la carta: Signore delle trappole lo riduce di 1, Protezione dal male (Thael) lo aumenta di 1. */
-export function trapCost(state: GameState, card: EvilCardDef): number {
-  return Math.max(0, cardCost(state, card) - (state.evil.inPlay.includes('trap-lord') ? 1 : 0));
+export function trapCost(state: GameState, card: AdversaryCardDef): number {
+  return Math.max(0, cardCost(state, card) - (state.adversary.inPlay.includes('trap-lord') ? 1 : 0));
 }
 
 /** Le ferite in più delle trappole che feriscono (Signore delle trappole: +2). */
 export function trapDamageBonus(state: GameState): number {
-  return state.evil.inPlay.includes('trap-lord') ? 2 : 0;
+  return state.adversary.inPlay.includes('trap-lord') ? 2 : 0;
 }
 
 const sameSpot = (a: TrapSpot, b: TrapSpot) => (a.kind === 'door' || b.kind === 'door' ? a.kind === b.kind && (a as { index: number }).index === (b as { index: number }).index : a.kind === b.kind && a.x === (b as { x: number }).x && a.y === (b as { y: number }).y);
 
 /** La trappola armata su una casella (fossa, macerie). */
 export function trapAtCell(state: GameState, cell: Cell): ArmedTrap | null {
-  return state.evil.traps.find((t) => t.at.kind === 'cell' && t.at.x === cell.x && t.at.y === cell.y) ?? null;
+  return state.adversary.traps.find((t) => t.at.kind === 'cell' && t.at.x === cell.x && t.at.y === cell.y) ?? null;
 }
 
 /** La trappola armata su una porta (numero d'ordine nella lista `state.doors`). */
 export function trapAtDoor(state: GameState, door: object): ArmedTrap | null {
   const index = state.doors.indexOf(door as never);
-  return state.evil.traps.find((t) => t.at.kind === 'door' && t.at.index === index) ?? null;
+  return state.adversary.traps.find((t) => t.at.kind === 'door' && t.at.index === index) ?? null;
 }
 
 /** La trappola armata sullo scrigno di questa casella. */
 export function trapAtChest(state: GameState, cell: Cell): ArmedTrap | null {
-  return state.evil.traps.find((t) => t.at.kind === 'chest' && t.at.x === cell.x && t.at.y === cell.y) ?? null;
+  return state.adversary.traps.find((t) => t.at.kind === 'chest' && t.at.x === cell.x && t.at.y === cell.y) ?? null;
 }
 
 /** La trappola è scattata (o va tolta): la carta va negli scarti. */
 export function consumeTrap(state: GameState, trap: ArmedTrap): void {
-  const o = state.evil;
+  const o = state.adversary;
   const i = o.traps.indexOf(trap);
   if (i >= 0) o.traps.splice(i, 1);
   o.discard.push(trap.card);
@@ -118,12 +118,12 @@ export function freeCellAround(state: GameState, board: Board, piece: Piece, fro
  * I bersagli dove la carta si può armare adesso. Lo script si tiene a qualche passo dagli eroi (`ARM_RANGE`); chi sceglie a mano (`anywhere`) può metterla in qualunque casella libera:
  * conta solo sperare che un eroe ci finisca dentro.
  */
-function targetsFor(state: GameState, board: Board, card: EvilCardDef, anywhere = false): TrapSpot[] {
+function targetsFor(state: GameState, board: Board, card: AdversaryCardDef, anywhere = false): TrapSpot[] {
   const heroes = state.pieces.filter((p) => p.team === 'hero' && !p.city);
   if ((!heroes.length && !anywhere) || !card.target) return [];
   const nearest = (c: Cell) => (anywhere ? 2 : Math.min(...heroes.map((h) => distance(c, h.cell))));
   const taken = new Set(state.pieces.filter((p) => !p.city).flatMap((p) => footprint(p).map(cellKey)));
-  const armed = state.evil.traps;
+  const armed = state.adversary.traps;
   const free = (spot: TrapSpot) => !armed.some((t) => sameSpot(t.at, spot));
   const target: TrapTarget = card.target;
   if (target === 'cell') {
@@ -151,21 +151,21 @@ function targetsFor(state: GameState, board: Board, card: EvilCardDef, anywhere 
 }
 
 /** I bersagli dove il Maligno a mano può armare questa carta Trappola (casella, porta o scrigno). Vuoto per Seduzione oscura (`hero`), che non si arma. */
-export function trapSpots(state: GameState, board: Board, card: EvilCardDef): TrapSpot[] {
+export function trapSpots(state: GameState, board: Board, card: AdversaryCardDef): TrapSpot[] {
   return card.kind === 'trap' ? targetsFor(state, board, card, true) : [];
 }
 
 /** Ci sono già troppe trappole armate di questa categoria (casella, porta o scrigno)? */
-export function trapLimitReached(state: GameState, card: EvilCardDef): boolean {
-  return state.evil.traps.filter((t) => cardOf(state, t.card)?.target === card.target).length >= TRAP_LIMIT_PER_TARGET;
+export function trapLimitReached(state: GameState, card: AdversaryCardDef): boolean {
+  return state.adversary.traps.filter((t) => cardOf(state, t.card)?.target === card.target).length >= TRAP_LIMIT_PER_TARGET;
 }
 
 /** Il Maligno arma la carta in mano sul bersaglio scelto: paga l'Odio (`trapCost`) e la carta resta in gioco, coperta, finché un eroe non la fa scattare. Null se non si può. */
-export function armTrapAt(state: GameState, card: EvilCardDef, at: TrapSpot): ArmedTrap | null {
-  const o = state.evil;
+export function armTrapAt(state: GameState, card: AdversaryCardDef, at: TrapSpot): ArmedTrap | null {
+  const o = state.adversary;
   const index = o.hand.indexOf(card.id);
-  if (index < 0 || trapCost(state, card) > o.hatred || o.traps.some((t) => sameSpot(t.at, at))) return null;
-  o.hatred -= trapCost(state, card);
+  if (index < 0 || trapCost(state, card) > o.alarm || o.traps.some((t) => sameSpot(t.at, at))) return null;
+  o.alarm -= trapCost(state, card);
   o.hand.splice(index, 1);
   const trap: ArmedTrap = { card: card.id, at };
   o.traps.push(trap);
@@ -183,10 +183,10 @@ function touchesObstacle(board: Board, c: Cell): boolean {
  * Con `chest` arma solo una trappola da scrigno su quello scrigno, subito (l'Odio delle Maledizioni): il tetto per categoria non vale, perché scatta all'istante.
  */
 export function armTrap(state: GameState, board: Board, chest?: Cell): ArmedTrap | null {
-  const o = state.evil;
+  const o = state.adversary;
   const candidates = o.hand
     .map((id) => cardOf(state, id))
-    .filter((c): c is EvilCardDef => !!c && c.kind === 'trap' && !!c.target && c.ready === true && trapCost(state, c) <= o.hatred)
+    .filter((c): c is AdversaryCardDef => !!c && c.kind === 'trap' && !!c.target && c.ready === true && trapCost(state, c) <= o.alarm)
     .filter((c) => (chest ? c.target === 'chest' : o.traps.filter((t) => cardOf(state, t.card)?.target === c.target).length < TRAP_LIMIT_PER_TARGET))
     .sort((a, b) => trapCost(state, b) - trapCost(state, a));
   for (const card of candidates) {
@@ -194,7 +194,7 @@ export function armTrap(state: GameState, board: Board, chest?: Cell): ArmedTrap
     const spots = chest ? here : targetsFor(state, board, card);
     if (!spots.length) continue;
     const at = spots[Math.floor(state.random() * spots.length)];
-    o.hatred -= trapCost(state, card);
+    o.alarm -= trapCost(state, card);
     o.hand.splice(o.hand.indexOf(card.id), 1);
     const trap: ArmedTrap = { card: card.id, at };
     o.traps.push(trap);

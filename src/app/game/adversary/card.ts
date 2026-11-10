@@ -1,15 +1,15 @@
 import { localizeName } from '../../i18n/catalog-text';
-/** Il genere di una Carta del Male (docs/cards/evil.md). */
-export type EvilCardKind = 'power' | 'event' | 'trap' | 'summon';
+/** Il genere di una Carta del Male (docs/cards/adversary.md). */
+export type AdversaryCardKind = 'power' | 'event' | 'trap' | 'summon';
 
 /** Chi o cosa prende di mira una trappola quando viene armata. */
 export type TrapTarget = 'cell' | 'door' | 'chest' | 'hero';
 
-/** Una carta del Mazzo del Male (public/evil/catalog.json). */
-export interface EvilCardDef {
+/** Una carta del Mazzo del Male (public/adversary/catalog.json). */
+export interface AdversaryCardDef {
   id: string;
   name: string;
-  kind: EvilCardKind;
+  kind: AdversaryCardKind;
   /** Quante copie ci sono nel mazzo. */
   copies: number;
   /** Quanto Odio costa giocarla. */
@@ -26,14 +26,14 @@ export interface EvilCardDef {
   ready?: boolean;
 }
 
-/** Carica il catalogo delle Carte del Male: un solo file, public/evil/catalog.json (`{ cards: [...] }`). Se manca, è vuoto. */
-export async function loadEvilCatalog(): Promise<Map<string, EvilCardDef>> {
-  const cards = new Map<string, EvilCardDef>();
+/** Carica il catalogo delle Carte del Male: un solo file, public/adversary/catalog.json (`{ cards: [...] }`). Se manca, è vuoto. */
+export async function loadAdversaryCatalog(): Promise<Map<string, AdversaryCardDef>> {
+  const cards = new Map<string, AdversaryCardDef>();
   try {
-    const res = await fetch('evil/catalog.json');
+    const res = await fetch('adversary/catalog.json');
     if (!res.ok) return cards;
-    const file: { cards: EvilCardDef[] } = await res.json();
-    for (const c of file.cards) cards.set(c.id, localizeName('evil', c));
+    const file: { cards: AdversaryCardDef[] } = await res.json();
+    for (const c of file.cards) cards.set(c.id, localizeName('adversary', c));
   } catch {
     console.warn('Catalogo delle Carte del Male non trovato');
   }

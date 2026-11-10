@@ -2,7 +2,7 @@ import { translate as t } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { ChangeDetectionStrategy, Component, WritableSignal, computed, effect, input, output, signal } from '@angular/core';
 import { ChestTier } from '../game/board/marker';
-import { EVIL_HAND_MAX, EVIL_START_HAND } from '../game/constants';
+import { ADVERSARY_HAND_MAX, ADVERSARY_START_HAND } from '../game/constants';
 import { TREASURE_KEYS } from '../game/heroes/party-setup';
 import type { AdventureSetup } from '../game/map/map-data';
 import { CheckboxComponent } from '../ui/checkbox.component';
@@ -107,8 +107,8 @@ export class AdventureSetupDialogComponent {
   readonly cancel = output<void>();
 
   protected readonly tiers = TIERS;
-  protected readonly handMax = EVIL_HAND_MAX;
-  protected readonly handDefault = EVIL_START_HAND;
+  protected readonly handMax = ADVERSARY_HAND_MAX;
+  protected readonly handDefault = ADVERSARY_START_HAND;
   protected readonly rules = signal('');
   protected readonly rulesImage = signal('');
   /** I campi numerici si tengono come testo: vuoto vuol dire "non cambiare". */
@@ -134,10 +134,10 @@ export class AdventureSetupDialogComponent {
       this.rules.set(v.rules);
       this.rulesImage.set(v.rulesImage);
       this.extraCoins.set(v.setup.extraCoins !== undefined ? String(v.setup.extraCoins) : '');
-      this.startHand.set(v.setup.evilStartHand !== undefined ? String(v.setup.evilStartHand) : '');
+      this.startHand.set(v.setup.adversaryStartHand !== undefined ? String(v.setup.adversaryStartHand) : '');
       this.treasures.set([...(v.setup.pregameTreasures ?? [])]);
-      this.deckRemove.set([...(v.setup.evilDeckRemove ?? [])]);
-      this.inPlay.set([...(v.setup.evilStartInPlay ?? [])]);
+      this.deckRemove.set([...(v.setup.adversaryDeckRemove ?? [])]);
+      this.inPlay.set([...(v.setup.adversaryStartInPlay ?? [])]);
     });
   }
 
@@ -162,10 +162,10 @@ export class AdventureSetupDialogComponent {
     // Le monete vanno a passi di 25: si arrotonda al multiplo più vicino.
     if (this.extraCoins().trim() !== '' && Number.isFinite(coins) && Math.round(coins / COIN_STEP) !== 0) setup.extraCoins = Math.round(coins / COIN_STEP) * COIN_STEP;
     if (this.treasures().length) setup.pregameTreasures = [...this.treasures()];
-    if (this.deckRemove().length) setup.evilDeckRemove = [...this.deckRemove()];
-    if (this.inPlay().length) setup.evilStartInPlay = [...this.inPlay()];
+    if (this.deckRemove().length) setup.adversaryDeckRemove = [...this.deckRemove()];
+    if (this.inPlay().length) setup.adversaryStartInPlay = [...this.inPlay()];
     const hand = Number(this.startHand());
-    if (this.startHand().trim() !== '' && Number.isFinite(hand)) setup.evilStartHand = Math.max(0, Math.min(EVIL_HAND_MAX, Math.floor(hand)));
+    if (this.startHand().trim() !== '' && Number.isFinite(hand)) setup.adversaryStartHand = Math.max(0, Math.min(ADVERSARY_HAND_MAX, Math.floor(hand)));
     this.confirmed.emit({ rules: this.rules().trim(), rulesImage: this.rules().trim() ? this.rulesImage() : '', setup });
   }
 }

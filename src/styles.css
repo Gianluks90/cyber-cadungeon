@@ -76,15 +76,15 @@ body {
 }
 
 /* Nelle dialog del Maligno i tasti d'azione sono grigi e si accendono di rosso. */
-.dlg-btn.evil {
+.dlg-btn.adversary {
   border-color: var(--c-line-strong);
   color: var(--c-text-dim);
 }
 
-.dlg-btn.evil:hover,
-.dlg-btn.evil:focus-visible {
-  border-color: var(--c-faction-evil);
-  color: var(--c-faction-evil);
+.dlg-btn.adversary:hover,
+.dlg-btn.adversary:focus-visible {
+  border-color: var(--c-faction-adversary);
+  color: var(--c-faction-adversary);
 }
 
 /* Campi delle dialog: un solo aspetto per tutti (stessa altezza, stesso riempimento, stesso carattere). La casella da spuntare è `app-checkbox`, l'etichetta sopra il campo `app-field`. La ricerca del catalogo (`.search`) ha il suo stile. */
@@ -314,11 +314,11 @@ app-dialog ::placeholder {
   --tok-icon: var(--ico-water-drop);
 }
 
-.tok-hatred {
-  color: var(--c-hatred);
+.tok-alarm {
+  color: var(--c-alarm);
 }
 
-.tok-hatred i {
+.tok-alarm i {
   --tok-icon: var(--ico-skull);
 }
 

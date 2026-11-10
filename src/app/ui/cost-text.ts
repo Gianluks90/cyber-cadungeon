@@ -1,11 +1,11 @@
 /**
- * I valori nei testi: si scrive `{mov:N}` (punti movimento), `{overclock:N}` (overclock) o `{hatred:N}` (Odio) e l'interfaccia li mostra come il valore con l'icona, nel colore
+ * I valori nei testi: si scrive `{mov:N}` (punti movimento), `{overclock:N}` (overclock) o `{alarm:N}` (Odio) e l'interfaccia li mostra come il valore con l'icona, nel colore
  * giusto (impronte gialle, goccia verde, teschio rosso), invece di "N punti movimento" o "N overclock". Senza numero (`{overclock}`) c'è solo l'icona, da mettere dopo la parola
  * ("l'overclock {overclock} al massimo"). Dove il testo non può avere icone (un suggerimento col mouse), `plainCostText` li riscrive a parole (e toglie quelle senza numero).
  */
-const COST = /\{(mov|overclock|hatred)(?::(\d+))?\}/g;
+const COST = /\{(mov|overclock|alarm)(?::(\d+))?\}/g;
 
-export type CostKind = 'mov' | 'overclock' | 'hatred';
+export type CostKind = 'mov' | 'overclock' | 'alarm';
 
 /** Un pezzo di testo con valori: testo semplice o un valore (`n` è null se c'è solo l'icona). */
 export type CostSegment = { text: string } | { kind: CostKind; n: number | null };

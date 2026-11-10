@@ -308,7 +308,7 @@ const TOKEN_ROLES: [path: string, cssVar: string][] = [
   ['water.texture', '--c-water'],
   ['health', '--c-life'],
   ['familiar', '--c-familiar'],
-  ['danger', '--c-faction-evil'],
+  ['danger', '--c-faction-adversary'],
   ['token.idle', '--c-faction-ally'],
   ['coin', '--c-loot'],
   ['doorKey', '--c-loot'],

@@ -116,10 +116,10 @@ export const DEFAULT_PROGRESS = 20;
 /** Il rospo: velocità fissa, armatura 0 e segnalini di partenza. */
 export const TOAD_SPEED = 5;
 export const TOAD_TOKENS = 2;
-export const EVIL_START_HAND = 3;
-export const EVIL_HAND_MAX = 8;
-export const EVIL_DRAW = 2;
-export const EVIL_DECK_END_PENALTY = 3;
+export const ADVERSARY_START_HAND = 3;
+export const ADVERSARY_HAND_MAX = 8;
+export const ADVERSARY_DRAW = 2;
+export const ADVERSARY_DECK_END_PENALTY = 3;
 export const GLYPH_PROGRESS = 3;
 /** Raggio della pedina, in rapporto alla cella. */
 export const PAWN_RADIUS_RATIO = 0.36;

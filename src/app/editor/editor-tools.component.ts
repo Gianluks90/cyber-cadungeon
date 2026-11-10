@@ -381,11 +381,11 @@ const PREVIEW_MAX_CELLS = 6;
     .item.marker.carrying { border-color: var(--tone); }
     .item.marker .name { text-align: center; }
     .item.monster .token { display: inline-flex; box-sizing: border-box; width: 56px; height: 56px; overflow: hidden; border-radius: var(--radius-1); border: 2px solid var(--c-line-strong); background: var(--c-surface); }
-    .item.monster.enhanced .token { border-color: var(--c-faction-evil); }
+    .item.monster.enhanced .token { border-color: var(--c-faction-adversary); }
     /* Tutte le schede dei nemici sono uguali: immagine sempre alla stessa altezza e nome su due righe al massimo (poi i puntini). */
     .item.monster { justify-content: flex-start; padding-top: 26px; }
     .item.monster .name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; width: 100%; min-height: 2.4em; max-height: 2.4em; line-height: 1.2; }
-    .item.monster .pot { margin-left: 4px; color: var(--c-faction-evil); font-weight: 700; }
+    .item.monster .pot { margin-left: 4px; color: var(--c-faction-adversary); font-weight: 700; }
     .item.monster .dim { position: absolute; top: 6px; left: 7px; color: var(--c-text-dim); font: 600 11px/1 var(--font-mono); }
     .item.monster .placeholder-icon { margin: auto; color: var(--c-text-dim); }
     .item.monster .token img { width: 100%; height: 100%; object-fit: cover; display: block; }

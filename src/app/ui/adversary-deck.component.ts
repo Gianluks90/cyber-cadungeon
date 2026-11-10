@@ -7,22 +7,22 @@ const DRAW_STAGGER_MS = 180;
 const DRAW_MAX_GHOSTS = 4;
 
 /**
- * Il Mazzo del Male nella vista del Maligno: il dorso di una carta (`public/evil/card_back.webp`) in sovraimpressione, a destra, prima del tasto Passa del footer. Non sta
+ * Il Mazzo del Male nella vista del Maligno: il dorso di una carta (`public/adversary/card_back.webp`) in sovraimpressione, a destra, prima del tasto Passa del footer. Non sta
  * nel footer: sporge sopra di lui e per metà esce dal bordo basso dello schermo. La carta ha gli angoli smussati e un bordo scuro interno (la "safe area" del taglio) che
  * tiene l'immagine un po' dentro. Il numero delle carte rimaste nel mazzo è un pallino scuro a cavallo del bordo sinistro, all'altezza del footer.
  * Quando il mazzo cala (si pesca) dal dorso scendono, una dopo l'altra, tante carte coperte quante ne sono state pescate: escono dal bordo basso dello schermo, dove le
- * ritrova la mano (`app-evil-hand`), che le fa arrivare dal basso.
+ * ritrova la mano (`app-adversary-hand`), che le fa arrivare dal basso.
  */
 @Component({
-  selector: 'app-evil-deck',
+  selector: 'app-adversary-deck',
   imports: [TrPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (g of drawn(); track g.id) {
-      <div class="card ghost" aria-hidden="true" [style.animation-delay.ms]="g.delay"><img src="evil/card_back.webp" alt="" draggable="false" /></div>
+      <div class="card ghost" aria-hidden="true" [style.animation-delay.ms]="g.delay"><img src="adversary/card_back.webp" alt="" draggable="false" /></div>
     }
     <div class="card top" role="img" [attr.aria-label]="'Carte rimaste nel mazzo' | tr" [title]="'Carte rimaste nel mazzo' | tr">
-      <img src="evil/card_back.webp" alt="" draggable="false" />
+      <img src="adversary/card_back.webp" alt="" draggable="false" />
       <span class="count">{{ count() }}</span>
     </div>
   `,
@@ -33,7 +33,7 @@ const DRAW_MAX_GHOSTS = 4;
     @keyframes draw { from { transform: translateY(50%); } to { transform: translateY(330%); } }
     .card {
       position: absolute; left: 0; right: 0; bottom: 0; transform: translateY(50%);
-      box-sizing: border-box; padding: 8px; /* il margine scuro del taglio */ background: #12090a; border: 1px solid var(--c-faction-evil); border-radius: 14px;
+      box-sizing: border-box; padding: 8px; /* il margine scuro del taglio */ background: #12090a; border: 1px solid var(--c-faction-adversary); border-radius: 14px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
     }
     .top { pointer-events: auto; animation: deck-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1); }
@@ -44,7 +44,7 @@ const DRAW_MAX_GHOSTS = 4;
     /* Il numero di carte: un pallino scuro (tondo, larghezza e altezza uguali) a cavallo del bordo sinistro della carta, all'altezza del centro del footer (la carta sporge di 37 px sopra il footer, alto 76 px). */
     .count {
       position: absolute; top: 75px; left: 0; transform: translate(-50%, -50%); display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; box-sizing: border-box;
-      border-radius: 50%; background: #12090a; border: 2px solid var(--c-faction-evil); color: #fff; font: 700 15px/1 var(--font-mono); font-variant-numeric: tabular-nums;
+      border-radius: 50%; background: #12090a; border: 2px solid var(--c-faction-adversary); color: #fff; font: 700 15px/1 var(--font-mono); font-variant-numeric: tabular-nums;
     }
     /* Schermi stretti: il dorso è più piccolo (72 px), un po' staccato dal tasto Avanti (largo 76 px) e rialzato di 14 px; il pallino sta sull'angolo in alto a sinistra. */
     @media (max-width: 760px) {
@@ -55,7 +55,7 @@ const DRAW_MAX_GHOSTS = 4;
     }
   `,
 })
-export class EvilDeckComponent {
+export class AdversaryDeckComponent {
   /** Le carte rimaste nel mazzo: è l'unica cosa del mazzo che tutti sanno. */
   readonly count = input(0);
   /** Le carte coperte che stanno scendendo adesso (ognuna sparisce da sola quando ha finito). */

@@ -8,7 +8,7 @@ import { IconComponent } from './icon.component';
  * nell'intestazione in alto, nella stessa riga di logo e Salva.
  */
 @Component({
-  selector: 'app-evil-actions',
+  selector: 'app-adversary-actions',
   host: { '[class.inline]': 'inline()' },
   imports: [TrPipe, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -34,11 +34,11 @@ import { IconComponent } from './icon.component';
       background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-text-dim); font: 600 12px/1 var(--font-ui);
       transition: color 0.15s, border-color 0.15s;
     }
-    .tool:hover, .tool:focus-visible { color: var(--c-faction-evil); border-color: var(--c-faction-evil); outline: none; }
-    .tool.on { color: var(--c-text); border-color: var(--c-faction-evil); }
+    .tool:hover, .tool:focus-visible { color: var(--c-faction-adversary); border-color: var(--c-faction-adversary); outline: none; }
+    .tool.on { color: var(--c-text); border-color: var(--c-faction-adversary); }
     /* Larghezza fissa: il tasto non cambia misura passando da ON a OFF. */
     .state { box-sizing: content-box; min-width: 28px; text-align: center; padding-left: 8px; border-left: 1px solid var(--c-line-strong); font: 600 11px/1 var(--font-mono); letter-spacing: var(--label-tracking); color: var(--c-text-dim); }
-    .tool.on .state { color: var(--c-faction-evil); border-left-color: var(--c-faction-evil); }
+    .tool.on .state { color: var(--c-faction-adversary); border-left-color: var(--c-faction-adversary); }
     /* La lettera del tasto, piccola in un angolo, solo dove c'è una tastiera (come sui comandi degli eroi). */
     kbd { display: none; position: absolute; right: 3px; bottom: 2px; font: 600 9px/1 var(--font-mono); color: var(--c-text-dim); pointer-events: none; }
     @media (pointer: fine) { kbd { display: block; } }
@@ -50,7 +50,7 @@ import { IconComponent } from './icon.component';
     :host(.inline) .tool { width: 100%; justify-content: center; }
   `,
 })
-export class EvilActionsComponent {
+export class AdversaryActionsComponent {
   /** I mostri agiscono da soli a inizio turno. */
   readonly autoMonsters = input(false);
   /** Dentro l'intestazione in alto (telefono) invece che sopra il footer. */

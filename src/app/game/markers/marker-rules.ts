@@ -120,9 +120,9 @@ export function collectLoot(state: GameState, loot: readonly Loot[], receiver?: 
     }
     if (l.kind === 'curse') {
       // Ogni Maledizione dà al Maligno tanto Odio quanti sono gli eroi (docs/REGOLE.md, sezione 3c).
-      const hatred = l.amount * state.pieces.filter((p) => p.team === 'hero').length;
-      state.evil.hatred += hatred;
-      return tr('Maledizione ×{amount}: il Maligno guadagna {hatred} Odio', { amount: l.amount, hatred });
+      const alarm = l.amount * state.pieces.filter((p) => p.team === 'hero').length;
+      state.adversary.alarm += alarm;
+      return tr('Maledizione ×{amount}: il Maligno guadagna {alarm} Odio', { amount: l.amount, alarm });
     }
     if (l.kind === 'item') {
       const item = state.items.get(l.itemId);
