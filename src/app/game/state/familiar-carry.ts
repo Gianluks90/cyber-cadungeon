@@ -32,23 +32,23 @@ export function familiarPickUp(state: GameState, board: Board, fam: Familiar): s
 
 /** Gli eroi a cui il famiglio può cedere l'oggetto: nella sua casella o in una adiacente (senza un muro in mezzo). */
 export function giveTargets(state: GameState, board: Board, fam: Familiar): Piece[] {
-  return state.pieces.filter((p) => p.team === 'hero' && !p.city && p.wounds > 0 && footprint(p).some((c) => (c.x === fam.cell.x && c.y === fam.cell.y) || board.canStep(fam.cell, c)));
+  return state.pieces.filter((p) => p.team === 'mercenary' && !p.city && p.wounds > 0 && footprint(p).some((c) => (c.x === fam.cell.x && c.y === fam.cell.y) || board.canStep(fam.cell, c)));
 }
 
 /** Perché l'eroe non può ricevere l'oggetto (null se può). */
-export function giveBlocked(state: GameState, hero: Piece, fam: Familiar): string | null {
+export function giveBlocked(state: GameState, mercenary: Piece, fam: Familiar): string | null {
   const m = fam.carried;
-  return m && (m.type === 'potion' || m.type === 'coins' || m.type === 'key' || m.type === 'rune' || m.type === 'item') ? pickupBlocked(state, hero, m) : null;
+  return m && (m.type === 'potion' || m.type === 'coins' || m.type === 'key' || m.type === 'rune' || m.type === 'item') ? pickupBlocked(state, mercenary, m) : null;
 }
 
 /** Cede l'oggetto a un eroe (come se lo avesse raccolto lui, compresi gli eventi "raccoglie"). Restituisce la frase, o null se non si può. */
-export function familiarGive(state: GameState, hero: Piece, fam: Familiar): string | null {
+export function familiarGive(state: GameState, mercenary: Piece, fam: Familiar): string | null {
   const m = fam.carried;
-  if (!m || giveBlocked(state, hero, fam)) return null;
-  const notice = receivePickup(state, hero, m as PickupMarker);
+  if (!m || giveBlocked(state, mercenary, fam)) return null;
+  const notice = receivePickup(state, mercenary, m as PickupMarker);
   if (notice === null) return null;
   fam.carried = undefined;
-  if (m.type !== 'glyph' && 'id' in m && m.id) runEvents(state, { kind: 'pickedUp', markerId: m.id }, undefined, { actor: hero.id });
+  if (m.type !== 'glyph' && 'id' in m && m.id) runEvents(state, { kind: 'pickedUp', markerId: m.id }, undefined, { actor: mercenary.id });
   return notice;
 }
 
@@ -84,9 +84,9 @@ export function familiarContextActions(state: GameState, board: Board, fam: Fami
     const what = pickupName(state, m).toLowerCase();
     const icon = pickupIcon(state, m);
     const noPoints = points < FAMILIAR_CARRY_COST ? tr('{name} non ha più punti movimento', { name }) : undefined;
-    for (const hero of giveTargets(state, board, fam)) {
-      const reason = noPoints ?? giveBlocked(state, hero, fam) ?? undefined;
-      out.push({ id: `fgive:${hero.id}`, kind: 'item', icon, label: tr('Dai a {name}: {name2}', { name: hero.name, name2: what }), cost: FAMILIAR_CARRY_COST, enabled: !reason, reason });
+    for (const mercenary of giveTargets(state, board, fam)) {
+      const reason = noPoints ?? giveBlocked(state, mercenary, fam) ?? undefined;
+      out.push({ id: `fgive:${mercenary.id}`, kind: 'item', icon, label: tr('Dai a {name}: {name2}', { name: mercenary.name, name2: what }), cost: FAMILIAR_CARRY_COST, enabled: !reason, reason });
     }
     out.push({ id: 'fdrop', kind: 'item', icon, label: tr('Lascia a terra: {name}', { name: what }), cost: FAMILIAR_CARRY_COST, enabled: !noPoints, reason: noPoints });
   }

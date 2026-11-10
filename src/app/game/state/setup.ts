@@ -83,10 +83,10 @@ export function startCells(state: GameState, board: Board): Cell[] {
 }
 
 /**
- * Mette `hero` nella casella scelta. Se non è più libera (un altro eroe l'ha presa) lo mette a caso in una casella libera vicina,
+ * Mette `mercenary` nella casella scelta. Se non è più libera (un altro eroe l'ha presa) lo mette a caso in una casella libera vicina,
  * preferendo quelle dell'area di partenza. Restituisce la casella dove è finito, o null se non c'è posto.
  */
-export function placeHero(state: GameState, board: Board, hero: Piece, chosen: Cell): Cell | null {
+export function placeMercenary(state: GameState, board: Board, mercenary: Piece, chosen: Cell): Cell | null {
   let target: Cell | null = usable(state, board, chosen) ? chosen : null;
   if (!target) {
     const start = new Set(startCells(state, board).map((c) => `${c.x},${c.y}`));
@@ -105,6 +105,6 @@ export function placeHero(state: GameState, board: Board, hero: Piece, chosen: C
     }
   }
   if (!target) return null;
-  hero.cell = target;
+  mercenary.cell = target;
   return target;
 }

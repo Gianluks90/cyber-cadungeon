@@ -1,15 +1,15 @@
 import { tr } from '../../i18n/catalog-text';
 import type { PawnBehavior } from './pawn-behavior';
 import { lookOf, type PawnLook } from './pawn-look';
-import { ADVANCE_ATTACKS, DEFAULT_HERO_WOUNDS, DEFAULT_MONSTER_WOUNDS, PAWN_SPEED } from '../constants';
+import { ADVANCE_ATTACKS, DEFAULT_MERCENARY_WOUNDS, DEFAULT_MONSTER_WOUNDS, PAWN_SPEED } from '../constants';
 import { Cell } from '../board/board';
 import { ChestTier, Loot, PotionKind } from '../board/marker';
-import { AttackDice, HeroSheet, StartingSkills } from '../heroes/hero-sheet';
+import { AttackDice, MercenarySheet, StartingSkills } from '../mercenaries/mercenary-sheet';
 import { DieColor, ItemDef, AttackType, fitsEquipment } from '../items/item';
 import type { SkillEffect } from '../skills/skill';
 import { MonsterDef, playersKey } from '../monsters/monster';
 
-export type Team = 'hero' | 'monster';
+export type Team = 'mercenary' | 'monster';
 
 /** Gli stati che durano (docs/cards/stati.md): fiamma, rete (ragnatela), stordimento e veleno. Ognuno è un conto di segnalini. */
 export type StatusKind = 'burn' | 'web' | 'stun' | 'poison';
@@ -40,15 +40,15 @@ export interface CityStay {
 }
 
 /** L'azione scelta per il turno: Avanzare è quella di partenza (nessun comando). Il Riposo non è un'azione: è uno degli ordini di Prepararsi. */
-export type HeroAction = 'advance' | 'run' | 'fight' | 'prepare';
+export type MercenaryAction = 'advance' | 'run' | 'fight' | 'prepare';
 
 /** Gli ordini che un eroe può piazzare con l'azione Prepararsi (docs/REGOLE.md, sezione 2f): Mira, Schivata, Riposo e Guardia. Ne ha uno solo alla volta. */
-export type HeroOrder = 'aim' | 'dodge' | 'rest' | 'guard';
+export type MercenaryOrder = 'aim' | 'dodge' | 'rest' | 'guard';
 
 /** L'icona di ogni ordine (public/icons/): resta sulla pedina e nel tab finché l'ordine non decade. */
-export const ORDER_ICONS: Record<HeroOrder, string> = { aim: 'target', dodge: 'air', rest: 'bedtime', guard: 'visibility' };
+export const ORDER_ICONS: Record<MercenaryOrder, string> = { aim: 'target', dodge: 'air', rest: 'bedtime', guard: 'visibility' };
 
-export const ORDER_NAMES: Record<HeroOrder, string> = { get aim() { return tr('Mira'); }, get dodge() { return tr('Schivata'); }, get rest() { return tr('Riposo'); }, get guard() { return tr('Guardia'); } };
+export const ORDER_NAMES: Record<MercenaryOrder, string> = { get aim() { return tr('Mira'); }, get dodge() { return tr('Schivata'); }, get rest() { return tr('Riposo'); }, get guard() { return tr('Guardia'); } };
 
 /** Un pezzo sul tabellone (eroe o mostro), con il suo stato di gioco. */
 export interface Piece {
@@ -63,7 +63,7 @@ export interface Piece {
   /** Attacchi che restano in questo round. */
   attacks: number;
   /** L'azione scelta, e quanto si è già speso (servono per sapere se si può cambiare azione). */
-  action: HeroAction;
+  action: MercenaryAction;
   pointsUsed: number;
   attacksUsed: number;
   /** Ha finito il suo turno (ha passato). */
@@ -75,7 +75,7 @@ export interface Piece {
   portrait?: string;
   /** L'immagine a figura intera (dalla scheda), per i pannelli dell'eroe. */
   portraitFull?: string;
-  /** La scheda da cui viene (public/heroes/), se è un eroe. */
+  /** La scheda da cui viene (public/mercenaries/), se è un eroe. */
   sheet?: string;
   /** Armatura fissa, overclock, valore (la Conquista che si perde se muore), abilità iniziali, dadi dei tre attacchi, abilità a parole. */
   armor: number;
@@ -84,7 +84,7 @@ export interface Piece {
   maxOverclock: number;
   value: number;
   /** La classe a parole (dalla scheda): il sottotitolo dell'eroe. */
-  heroClass: string;
+  mercenaryClass: string;
   /** Le pozioni che porta (al massimo POTION_LIMIT): ogni eroe ha le sue. */
   potions: PotionKind[];
   /** Le monete dell'eroe (personali: ogni eroe ha le sue). */
@@ -101,7 +101,7 @@ export interface Piece {
   usedSkills?: string[];
   exhausted?: string[];
   /** L'ordine piazzato con Prepararsi (se c'è): Mira, Schivata o Guardia. */
-  order?: HeroOrder | null;
+  order?: MercenaryOrder | null;
   /** Ha piazzato un ordine in questo turno: l'azione Prepararsi non si può più annullare. */
   orderPlaced?: boolean;
   /** I nemici che vedeva con la sua linea di vista all'inizio del round (solo per chi ha il Colpo a tradimento: `state/ambush.ts`). */
@@ -159,7 +159,7 @@ export interface Piece {
   /** Il nome dell'abilità primaria della scheda. */
   abilityName?: string;
   /** Gli effetti dell'abilità dell'eroe (dalla sua scheda): si leggono insieme a quelli delle carte e degli oggetti. */
-  heroEffects?: SkillEffect[];
+  mercenaryEffects?: SkillEffect[];
 }
 
 /** Tutte le caselle occupate da un pezzo (una per i normali, di più per i mostri grandi). */
@@ -180,8 +180,8 @@ export interface PieceData {
   /** Il nome: se manca, quello della scheda dell'eroe. */
   name?: string;
   team: Team;
-  /** La scheda dell'eroe (id di public/heroes/<id>.json): da lì vengono nome, ritratto, ferite, velocità e il resto. I campi scritti qui li sostituiscono. */
-  hero?: string;
+  /** La scheda dell'eroe (id di public/mercenaries/<id>.json): da lì vengono nome, ritratto, ferite, velocità e il resto. I campi scritti qui li sostituiscono. */
+  mercenary?: string;
   x: number;
   y: number;
   speed?: number;
@@ -238,21 +238,21 @@ export interface PieceData {
 
 export function createPieces(
   data: PieceData[],
-  sheets: ReadonlyMap<string, HeroSheet> = new Map(),
+  sheets: ReadonlyMap<string, MercenarySheet> = new Map(),
   items: ReadonlyMap<string, ItemDef> = new Map(),
   monsters: ReadonlyMap<string, MonsterDef> = new Map(),
   /** Quanti eroi ci sono in partita (per le ferite dei mostri); se manca, quelli di `data`. */
-  heroes?: number,
+  mercenaries?: number,
 ): Piece[] {
-  const heroCount = heroes ?? data.filter((d) => d.team === 'hero').length;
+  const mercenaryCount = mercenaries ?? data.filter((d) => d.team === 'mercenary').length;
   return data.map((d) => {
-    const sheet = d.hero ? sheets.get(d.hero) : undefined;
+    const sheet = d.mercenary ? sheets.get(d.mercenary) : undefined;
     const mob = d.monster ? monsters.get(d.monster) : undefined;
     if (d.monster && !mob) console.warn(`Mostro "${d.monster}" non trovato nel catalogo`);
     const tier = mob ? (d.enhanced ? mob.enhanced : mob.normal) : undefined;
     const bonus = d.bonus;
     const speed = Math.max(1, (d.speed ?? sheet?.speed ?? tier?.speed ?? PAWN_SPEED) + (bonus?.speed ?? 0));
-    const wounds = Math.max(1, (d.wounds ?? sheet?.wounds ?? tier?.wounds[playersKey(heroCount)] ?? (d.team === 'hero' ? DEFAULT_HERO_WOUNDS : DEFAULT_MONSTER_WOUNDS)) + (bonus?.wounds ?? 0));
+    const wounds = Math.max(1, (d.wounds ?? sheet?.wounds ?? tier?.wounds[playersKey(mercenaryCount)] ?? (d.team === 'mercenary' ? DEFAULT_MERCENARY_WOUNDS : DEFAULT_MONSTER_WOUNDS)) + (bonus?.wounds ?? 0));
     // Gli oggetti comprati prima di partire: si equipaggiano finché ci stanno, il resto va nello zaino; il prezzo si toglie dalle monete.
     const bought = d.items ?? sheet?.items ?? [];
     const equipped: string[] = [];
@@ -288,13 +288,13 @@ export function createPieces(
       speed,
       points: speed,
       attacks: ADVANCE_ATTACKS,
-      action: 'advance' as HeroAction,
+      action: 'advance' as MercenaryAction,
       pointsUsed: 0,
       attacksUsed: 0,
       done: false,
       wounds,
       maxWounds: wounds,
-      heroClass: sheet?.class ?? '',
+      mercenaryClass: sheet?.class ?? '',
       potions: [...(d.potions ?? sheet?.potions ?? [])],
       coins: d.coins ?? Math.max(0, (sheet?.coins ?? 0) - spent),
       equipped,
@@ -313,7 +313,7 @@ export function createPieces(
       dice: sheet ? { ...sheet.dice } : { melee: 0, ranged: 0, intrusion: 0 },
       ability: sheet?.ability ?? '',
       abilityName: sheet?.abilityName ?? '',
-      heroEffects: sheet?.effects ? JSON.parse(JSON.stringify(sheet.effects)) : undefined,
+      mercenaryEffects: sheet?.effects ? JSON.parse(JSON.stringify(sheet.effects)) : undefined,
     };
   });
 }

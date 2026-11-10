@@ -30,7 +30,7 @@ export const POTION_NAMES = { get heal() { return tr('Pozione curativa'); }, get
  */
 export function enterCell(board: Board, piece: Piece, state: GameState): MarkerEvent | null {
   const marker = board.markerAt(piece.cell);
-  if (!marker || piece.team !== 'hero') return null;
+  if (!marker || piece.team !== 'mercenary') return null;
   if (marker.type === 'glyph') {
     if (marker.active || marker.sealed) return null; // un glifo sigillato non si accende più
     marker.active = true;
@@ -78,7 +78,7 @@ export function pickupBlocked(state: GameState, piece: Piece, m: PickupMarker): 
  */
 export function pickUp(board: Board, piece: Piece, state: GameState): MarkerEvent | null {
   const marker = pickupAt(board, piece);
-  if (!marker || piece.team !== 'hero') return null;
+  if (!marker || piece.team !== 'mercenary') return null;
   const blocked = pickupBlocked(state, piece, marker);
   if (blocked) return { kind: 'pickup-blocked', marker, notice: tr('{blocked}: {name} resta a terra', { blocked, name: pickupName(state, marker).toLowerCase() }) };
   const notice = receivePickup(state, piece, marker);
@@ -115,12 +115,12 @@ export function collectLoot(state: GameState, loot: readonly Loot[], receiver?: 
     }
     if (l.kind === 'coins') {
       const amount = l.amount ?? COINS_PER_TOKEN;
-      for (const hero of state.pieces) if (hero.team === 'hero') hero.coins += amount;
+      for (const mercenary of state.pieces) if (mercenary.team === 'mercenary') mercenary.coins += amount;
       return tr('Denaro: +{amount} monete a ogni eroe', { amount });
     }
     if (l.kind === 'curse') {
       // Ogni Maledizione dà al Maligno tanto Odio quanti sono gli eroi (docs/REGOLE.md, sezione 3c).
-      const alarm = l.amount * state.pieces.filter((p) => p.team === 'hero').length;
+      const alarm = l.amount * state.pieces.filter((p) => p.team === 'mercenary').length;
       state.adversary.alarm += alarm;
       return tr('Maledizione ×{amount}: il Maligno guadagna {alarm} Odio', { amount: l.amount, alarm });
     }

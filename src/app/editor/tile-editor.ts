@@ -13,7 +13,7 @@ import type { PieceData } from '../game/pieces/piece';
 import type { MonsterDef } from '../game/monsters/monster';
 import type { PlacedMonster } from './monster-view';
 import { CHEST_TABLE_MAX } from '../game/board/marker';
-import { HERO_START_CELLS } from '../game/constants';
+import { MERCENARY_START_CELLS } from '../game/constants';
 import type { ChestTier, Loot, Marker, PotionKind, TokenLook } from '../game/board/marker';
 import type { DieColor } from '../game/items/item';
 
@@ -26,7 +26,7 @@ export type MarkerSpec = { type: 'potion'; kind: PotionKind } | { type: 'coins' 
 export const MARKER_LIMITS = { rune: 1 } as const;
 
 /** Quanti ne servono almeno (la Verifica dà errore sotto): il glifo acceso iniziale uno (anche più d'uno, per spartire la partenza), le caselle di partenza quante gli eroi al massimo; senza un massimo. */
-export const MARKER_MINIMUMS = { activeGlyph: 1, start: HERO_START_CELLS } as const;
+export const MARKER_MINIMUMS = { activeGlyph: 1, start: MERCENARY_START_CELLS } as const;
 
 /** La chiave con cui si conta un segnalino (`potion:heal`, `coins`, `chest:gold`, `rune:red`). */
 export const markerKey = (m: { type: string; kind?: string; tier?: string; color?: string; active?: boolean; twin?: string | boolean }): string =>

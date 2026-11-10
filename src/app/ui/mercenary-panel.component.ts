@@ -6,10 +6,10 @@ import { FamiliarDef } from '../game/familiars/familiar';
 import { IconComponent } from './icon.component';
 import { PictureComponent } from './picture.component';
 
-/** Ciò che la cornice mostra di chi la apre: un eroe (`HeroDetails`) o un mostro (`MonsterDetails`). */
+/** Ciò che la cornice mostra di chi la apre: un eroe (`MercenaryDetails`) o un mostro (`MonsterDetails`). */
 export interface PanelSubject {
   name: string;
-  heroClass?: string;
+  mercenaryClass?: string;
   portrait?: string;
   portraitFull?: string;
   /** Solo per gli eroi: c'è anche l'etichetta Città. */
@@ -45,12 +45,12 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
  * è più lungo) arriva da fuori. Sta appena sopra il gruppo dei tab degli eroi; si chiude con un tocco fuori o con Esc.
  */
 @Component({
-  selector: 'app-hero-panel',
+  selector: 'app-mercenary-panel',
   imports: [TrPipe, CatalogTextPipe, PictureComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:pointerdown)': 'outside($event)', '(document:keydown.escape)': 'closed.emit()', '[class.right]': "side() === 'right'", '[class.fam]': 'familiars().length > 0', '[style.margin-left.px]': 'shift()', '[style.margin-right.px]': '-shift()', '(window:resize)': 'measure()' },
   template: `
-    @if (hero(); as h) {
+    @if (mercenary(); as h) {
       <section class="frame" [attr.aria-label]="'Pannello di {name}' | tr: { name: h.name }">
         <figure class="art" [class.enhanced]="h.enhanced">
           <app-picture [src]="h.portraitFull ?? h.portrait" [icon]="isMonster(h) ? 'skull' : 'frame_person'" [iconSize]="72" />
@@ -63,7 +63,7 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
               </span>
             }
             <b>{{ h.name }}</b>
-            @if (h.heroClass) { <span>{{ h.heroClass | ct }}</span> }
+            @if (h.mercenaryClass) { <span>{{ h.mercenaryClass | ct }}</span> }
           </figcaption>
         </figure>
         @if (currentFamiliar(); as f) {
@@ -166,21 +166,21 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
     }
   `,
 })
-export class HeroPanelComponent {
+export class MercenaryPanelComponent {
   /** Il pannello di un mostro (la sua "classe" è "Mostro" o "Mostro potenziato"): ha l'icona del teschio al posto di quella dell'eroe. */
   protected isMonster(h: PanelSubject): boolean {
-    return [tr('Mostro'), tr('Mostro potenziato')].includes(h.heroClass ?? '');
+    return [tr('Mostro'), tr('Mostro potenziato')].includes(h.mercenaryClass ?? '');
   }
 
   protected readonly burst = BURST;
-  readonly hero = input<PanelSubject | null>(null);
+  readonly mercenary = input<PanelSubject | null>(null);
   /**
    * Le card dei famigli dell'eroe (nessuna per un mostro), quella mostrata adesso e il passaggio alla successiva. Due famigli con lo stesso ritratto (Ying e Yang: due segnalini,
    * una sola creatura) hanno una card sola, con i nomi insieme.
    */
   protected readonly familiars = computed<readonly { id: string; name: string; portrait?: string }[]>(() => {
     const cards = new Map<string, { id: string; name: string; portrait?: string }>();
-    for (const f of this.hero()?.familiars ?? []) {
+    for (const f of this.mercenary()?.familiars ?? []) {
       const key = f.portrait ?? f.id;
       const card = cards.get(key);
       if (card) card.name += ` & ${f.name}`;
@@ -200,7 +200,7 @@ export class HeroPanelComponent {
   constructor() {
     // Cambiando eroe si riparte dal primo famiglio.
     effect(() => {
-      this.hero()?.name;
+      this.mercenary()?.name;
       untracked(() => this.famIndex.set(0));
     });
     // Con o senza famigli, a pannello disegnato si rimisura il posto a sinistra.
@@ -222,7 +222,7 @@ export class HeroPanelComponent {
   readonly side = input<'left' | 'right'>('left');
   /** Le etichette in cima; senza, quelle degli eroi (Informazioni, Inventario e, in città, Città). */
   readonly kinds = input<PanelKind[] | null>(null);
-  protected readonly tabKinds = computed<PanelKind[]>(() => this.kinds() ?? ['info', 'inventory', ...(this.hero()?.cityPanel ? (['city'] as PanelKind[]) : [])]);
+  protected readonly tabKinds = computed<PanelKind[]>(() => this.kinds() ?? ['info', 'inventory', ...(this.mercenary()?.cityPanel ? (['city'] as PanelKind[]) : [])]);
   protected labelOf(k: PanelKind): string {
     return { info: tr('Informazioni'), inventory: tr('Inventario'), city: tr('Città') }[k];
   }
@@ -236,7 +236,7 @@ export class HeroPanelComponent {
   /** Un tocco fuori dal pannello lo chiude (non se è sui tasti del tab in basso, che lo aprono e lo chiudono da sé). */
   protected outside(e: Event) {
     const target = e.target as Element | null;
-    if (!this.hero() || target?.closest('[data-sheet-toggle]')) return;
+    if (!this.mercenary() || target?.closest('[data-sheet-toggle]')) return;
     if (!this.hostEl.contains(target as Node)) this.closed.emit();
   }
 }

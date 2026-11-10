@@ -11,7 +11,7 @@ export interface MonsterDetails {
   id: string;
   name: string;
   /** Il sottotitolo sotto il nome (in maiuscolo): "Mostro" o "Mostro potenziato". */
-  heroClass: string;
+  mercenaryClass: string;
   /** Potenziato: la carta con l'immagine ha il contorno rosso. */
   enhanced: boolean;
   portrait?: string;
@@ -38,7 +38,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
 
 /**
  * La scheda di un mostro: parametri (cuori e ferite, velocità, armatura, dimensione), attacco (tipo e dadi) e abilità speciali.
- * È il contenuto della cornice `app-hero-panel` aperta a destra, partendo dal tab del Maligno.
+ * È il contenuto della cornice `app-mercenary-panel` aperta a destra, partendo dal tab del Maligno.
  */
 @Component({
   selector: 'app-monster-sheet',

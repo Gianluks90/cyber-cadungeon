@@ -1,5 +1,5 @@
 import { translate } from '../../i18n/i18n.service';
-import { TREASURE_KEYS } from '../heroes/party-setup';
+import { TREASURE_KEYS } from '../mercenaries/party-setup';
 import type { AdventureSetup } from '../map/map-data';
 
 /** L'elenco (testi già tradotti) delle varianti di preparazione di un'avventura: una riga per ogni cosa che cambia. Vuoto se non cambia niente. */

@@ -136,7 +136,7 @@ interface FormCondition {
   variable: string;
   is: 'on' | 'off';
   item: string;
-  at: 'hero' | 'ground' | 'monster';
+  at: 'mercenary' | 'ground' | 'monster';
   /** Vale se l'oggetto NON sta nel posto `at`. */
   not: boolean;
 }
@@ -184,7 +184,7 @@ function toForm(e: EventEffect): FormEffect {
     case 'setStairs': return { ...f, cell: `${e.x},${e.y}`, state: e.state };
     case 'setGlyph': return { ...f, cell: `${e.x},${e.y}`, state: e.state };
     case 'permadeath': return { ...f, on: e.on ? 'on' : 'off' };
-    case 'endHeroesTurn': return f;
+    case 'endMercenariesTurn': return f;
     case 'killActor': return f;
     case 'setZone': return { ...f, zoneId: e.zoneId, state: e.state };
     case 'win': return f;
@@ -224,7 +224,7 @@ function toEffect(f: FormEffect): EventEffect {
     case 'setStairs': { const [x, y] = f.cell.split(',').map(Number); return { kind: 'setStairs', x, y, state: f.state === 'open' ? 'open' : 'collapsed' }; }
     case 'setGlyph': { const [x, y] = f.cell.split(',').map(Number); return { kind: 'setGlyph', x, y, state: f.state === 'on' ? 'on' : f.state === 'off' ? 'off' : 'blocked' }; }
     case 'permadeath': return { kind: 'permadeath', on: f.on === 'on' };
-    case 'endHeroesTurn': return { kind: 'endHeroesTurn' };
+    case 'endMercenariesTurn': return { kind: 'endMercenariesTurn' };
     case 'killActor': return { kind: 'killActor' };
     case 'setZone': return { kind: 'setZone', zoneId: f.zoneId, state: f.state === 'off' ? 'off' : 'on' };
     case 'win': return { kind: 'win' };
@@ -271,7 +271,7 @@ const EFFECT_OPTIONS: SelectOption[] = [
   { value: 'setStairs', get label() { return t('eventDialog.fxSetStairs'); } },
   { value: 'setGlyph', get label() { return t('eventDialog.fxSetGlyph'); } },
   { value: 'permadeath', get label() { return t('eventDialog.permadeath'); } },
-  { value: 'endHeroesTurn', get label() { return t('eventDialog.fxEndHeroesTurn'); } },
+  { value: 'endMercenariesTurn', get label() { return t('eventDialog.fxEndMercenariesTurn'); } },
   { value: 'killActor', get label() { return t('eventDialog.fxKillActor'); } },
   { value: 'setZone', get label() { return t('eventDialog.fxSetZone'); } },
   { value: 'check', get label() { return t('eventDialog.fxCheck'); } },
@@ -512,8 +512,8 @@ const STATE_OPTIONS: SelectOption[] = [
                   @case ('killActor') {
                     <small class="dlg-hint">{{ 'eventDialog.killActorHint' | t }}</small>
                   }
-                  @case ('endHeroesTurn') {
-                    <small class="dlg-hint">{{ 'eventDialog.endHeroesTurnHint' | t }}</small>
+                  @case ('endMercenariesTurn') {
+                    <small class="dlg-hint">{{ 'eventDialog.endMercenariesTurnHint' | t }}</small>
                   }
                   @case ('permadeath') {
                     <app-field [label]="'eventDialog.permadeath' | t"><app-select class="block" [options]="onOffOptions" [value]="e.on" [label]="'eventDialog.permadeath' | t" (changed)="patch(loc, i, { on: $any($event) })" /></app-field>
@@ -735,10 +735,10 @@ export class EventDialogComponent {
   protected readonly behaviorOptions: SelectOption[] = BEHAVIOR_OPTIONS.filter((b) => b.value !== 'useItem').map((b) => ({ value: b.value, label: b.label }));
   readonly obstacles = input<SelectOption[]>([]);
   protected readonly itemAtOptions: SelectOption[] = [
-    { value: 'hero', get label() { return t('eventDialog.atHero'); } },
+    { value: 'mercenary', get label() { return t('eventDialog.atMercenary'); } },
     { value: 'ground', get label() { return t('eventDialog.onGround'); } },
     { value: 'monster', get label() { return t('eventDialog.atMonster'); } },
-    { value: '!hero', get label() { return t('eventDialog.notAtHero'); } },
+    { value: '!mercenary', get label() { return t('eventDialog.notAtMercenary'); } },
     { value: '!ground', get label() { return t('eventDialog.notOnGround'); } },
     { value: '!monster', get label() { return t('eventDialog.notAtMonster'); } },
   ];
@@ -799,7 +799,7 @@ export class EventDialogComponent {
       this.name.set(v?.name ?? '');
       this.triggers.set(v ? triggersOf(v).map(toFormTrigger) : [blankTrigger()]);
       this.once.set(!!v?.once);
-      this.conditions.set((v?.if ?? []).map((c): FormCondition => (isItemCondition(c) ? { kind: 'item', variable: '', is: 'on', item: c.item, at: c.at, not: !!c.not } : { kind: 'variable', variable: c.variable, is: c.is ? 'on' : 'off', item: '', at: 'hero', not: false })));
+      this.conditions.set((v?.if ?? []).map((c): FormCondition => (isItemCondition(c) ? { kind: 'item', variable: '', is: 'on', item: c.item, at: c.at, not: !!c.not } : { kind: 'variable', variable: c.variable, is: c.is ? 'on' : 'off', item: '', at: 'mercenary', not: false })));
       this.effectsThen.set((v?.then ?? []).map(toForm));
       this.effectsElse.set((v?.else ?? []).map(toForm));
       this.newVariable.set('');
@@ -855,7 +855,7 @@ export class EventDialogComponent {
   }
 
   protected addCondition(kind: 'variable' | 'item' = 'variable') {
-    this.conditions.update((c) => [...c, { kind, variable: '', is: 'on', item: '', at: 'hero', not: false }]);
+    this.conditions.update((c) => [...c, { kind, variable: '', is: 'on', item: '', at: 'mercenary', not: false }]);
   }
 
   protected patchCondition(i: number, p: Partial<FormCondition>) {
@@ -928,7 +928,7 @@ export class EventDialogComponent {
       case 'setStairs': return e.cell && e.state ? '' : translate('eventDialog.prob.setStairs');
       case 'setGlyph': return e.cell && e.state ? '' : translate('eventDialog.prob.setGlyph');
       case 'permadeath': return '';
-      case 'endHeroesTurn': return '';
+      case 'endMercenariesTurn': return '';
       case 'killActor': return '';
       case 'setZone': return e.zoneId ? '' : translate('eventDialog.prob.setZone');
       case 'makeVulnerable': return e.pieceIds.length ? '' : translate('eventDialog.prob.makeVulnerable');

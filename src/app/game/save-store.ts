@@ -2,7 +2,7 @@ import type { GameSnapshot } from './state/game-state';
 
 /** Una partita salvata: lo stato della partita (dati puri) con l'avventura a cui appartiene e quando. */
 export interface GameSave {
-  version: 4;
+  version: 5;
   /** Il nome della mappa (`public/maps/<map>.json`): serve per ricaricare le tessere, i disegni e i testi, che non stanno nello stato. */
   map: string;
   savedAt: number;
@@ -39,7 +39,7 @@ export class LocalSaveStore implements SaveStore {
     try {
       const raw = localStorage.getItem(KEY(map));
       const s = raw ? (JSON.parse(raw) as GameSave) : null;
-      return s && s.version === 4 && s.map === map && s.snapshot ? s : null;
+      return s && s.version === 5 && s.map === map && s.snapshot ? s : null;
     } catch {
       return null; // niente storage o dati rovinati: come se non ci fosse un salvataggio
     }

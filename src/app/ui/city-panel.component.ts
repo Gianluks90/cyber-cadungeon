@@ -3,10 +3,10 @@ import { TrPipe } from '../i18n/tr.pipe';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { ChestTier, PotionKind } from '../game/board/marker';
-import { AttackDice } from '../game/heroes/hero-sheet';
+import { AttackDice } from '../game/mercenaries/mercenary-sheet';
 import { CityService } from '../game/pieces/piece';
 import { SkillSchool } from '../game/skills/skill';
-import { HeroDetails } from './hero-sheet.component';
+import { MercenaryDetails } from './mercenary-sheet.component';
 import { IconComponent } from './icon.component';
 import { ItemCardComponent } from './item-card.component';
 
@@ -26,14 +26,14 @@ export type CityEvent =
  * Il pannello "Città" di un eroe (si vede solo quando è in città): le sue monete, i tre servizi (se ne visita uno solo, poi il turno passa),
  * il contenuto del servizio scelto (negozio: pozioni, tesori, oggetti, vendita; campo: abilità e dadi; tempio: ripristino della salute) e il tasto per tornare nel
  * dungeon. Il campo di addestramento vende carte abilità e dadi d'attacco. Esiste solo nel turno dell'arrivo: dal turno dopo il ritorno parte da solo e il pannello non c'è più. È il
- * contenuto della cornice `app-hero-panel`.
+ * contenuto della cornice `app-mercenary-panel`.
  */
 @Component({
   selector: 'app-city-panel',
   imports: [TrPipe, IconComponent, ItemCardComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (hero(); as h) {
+    @if (mercenary(); as h) {
       @if (h.city; as c) {
         <div class="row"><span class="coins" [title]="'Monete dell\\'eroe' | tr"><app-icon name="tokens/gold_pile" [size]="18" />{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
 
@@ -138,7 +138,7 @@ export type CityEvent =
 export class CityPanelComponent {
   /** Il motivo di riserva quando un'azione spenta non ne dà uno. */
   protected readonly notPossible = () => tr('Non è possibile');
-  readonly hero = input<HeroDetails | null>(null);
+  readonly mercenary = input<MercenaryDetails | null>(null);
   readonly cityAction = output<CityEvent>();
   /** Un bottone spento è stato toccato: il motivo per cui non si può (da mostrare come notifica). */
   readonly denied = output<string>();

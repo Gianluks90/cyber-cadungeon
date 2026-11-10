@@ -20,7 +20,7 @@ export function cardOf(state: GameState, id: string): AdversaryCardDef | null {
 
 /** Quanto Odio costa giocare la carta: quella stampata più ciò che aggiungono gli eroi in campo (Protezione dal male di Thael: +1). */
 export function cardCost(state: GameState, card: AdversaryCardDef): number {
-  const extra = state.pieces.filter((p) => p.team === 'hero' && !p.city).reduce((n, h) => n + ruleAmount(state, h, 'adversaryCardCost'), 0);
+  const extra = state.pieces.filter((p) => p.team === 'mercenary' && !p.city).reduce((n, h) => n + ruleAmount(state, h, 'adversaryCardCost'), 0);
   return Math.max(0, card.cost + extra);
 }
 
@@ -43,9 +43,9 @@ export interface UpkeepResult {
 /** Inizio del turno del Maligno: 1 Odio per eroe, pesca (di più con Genio del Male), scarta oltre il limite della mano. */
 /** Quanto Odio riceve il Maligno a ogni turno: 1 per eroe, meno ciò che tolgono le carte degli eroi (Prudente: −1), mai meno di 0. */
 export function alarmPerTurn(state: GameState): number {
-  const heroes = state.pieces.filter((p) => p.team === 'hero');
-  const cut = heroes.reduce((n, h) => n + ruleAmount(state, h, 'adversaryAlarm'), 0);
-  return Math.max(0, heroes.length + cut);
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary');
+  const cut = mercenaries.reduce((n, h) => n + ruleAmount(state, h, 'adversaryAlarm'), 0);
+  return Math.max(0, mercenaries.length + cut);
 }
 
 /** Il Maligno pesca fino a `want` carte (se il mazzo finisce rimescola gli scarti e la Conquista cala: `ADVERSARY_DECK_END_PENALTY`). */
@@ -186,13 +186,13 @@ const distance = (a: Cell, b: Cell) => Math.max(Math.abs(a.x - b.x), Math.abs(a.
  * (gli altri eroi sì). Si può evocare sopra oggetti a terra, ma non su glifi, scrigni e scale. L'elenco è ordinato dalla più vicina agli eroi.
  */
 export function summonCells(state: GameState, board: Board): Cell[] {
-  const heroes = state.pieces.filter((p) => p.team === 'hero' && !p.city);
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary' && !p.city);
   const occupied = new Set(state.pieces.filter((p) => !p.city).flatMap((p) => footprint(p).map(cellKey)));
-  const heroCells = new Set(heroes.map((h) => cellKey(h.cell)));
+  const mercenaryCells = new Set(mercenaries.map((h) => cellKey(h.cell)));
   const reach = state.adversary.gust ? GUST_SIGHT : Infinity; // la Raffica di vento accorcia anche questa vista
   const seen = new Set<string>();
-  for (const h of heroes) {
-    const blockers = new Set(heroCells); // solo gli altri eroi fanno da schermo
+  for (const h of mercenaries) {
+    const blockers = new Set(mercenaryCells); // solo gli altri eroi fanno da schermo
     blockers.delete(cellKey(h.cell));
     for (const k of visibleCells(board, h.cell, blockers)) {
       const [x, y] = k.split(',').map(Number);
@@ -200,9 +200,9 @@ export function summonCells(state: GameState, board: Board): Cell[] {
     }
   }
   // Anche la vista di un famiglio che "vede come un eroe" (Francor) conta: lì il Maligno non può evocare.
-  const heroBlockers = new Set(heroCells);
-  for (const k of familiarSightCells(state, board, (b, from) => [...visibleCells(b, from, heroBlockers)].filter((key) => { const [x, y] = key.split(',').map(Number); return Math.max(Math.abs(x - from.x), Math.abs(y - from.y)) <= reach; }))) seen.add(k);
-  const near = (c: Cell) => Math.min(...heroes.map((h) => distance(c, h.cell)));
+  const mercenaryBlockers = new Set(mercenaryCells);
+  for (const k of familiarSightCells(state, board, (b, from) => [...visibleCells(b, from, mercenaryBlockers)].filter((key) => { const [x, y] = key.split(',').map(Number); return Math.max(Math.abs(x - from.x), Math.abs(y - from.y)) <= reach; }))) seen.add(k);
+  const near = (c: Cell) => Math.min(...mercenaries.map((h) => distance(c, h.cell)));
   return board
     .walkableCells()
     .filter((c) => {
@@ -294,8 +294,8 @@ function castSummon(state: GameState, board: Board, card: AdversaryCardDef): Pla
 
 /** Mette in gioco un mostro (con la sua scheda del catalogo e gli eroi di adesso per i suoi scaglioni) nella casella data. */
 export function spawnMonster(state: GameState, monster: string, enhanced: boolean, cell: Cell): Piece {
-  const heroes = state.pieces.filter((p) => p.team === 'hero').length;
-  const [piece] = createPieces([{ id: newMonsterId(state, monster), team: 'monster', monster, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.monsters, heroes);
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary').length;
+  const [piece] = createPieces([{ id: newMonsterId(state, monster), team: 'monster', monster, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.monsters, mercenaries);
   state.pieces.push(piece);
   return piece;
 }

@@ -10,7 +10,7 @@ import type { GameState } from './game-state';
  * l'attacco (fuori dal turno degli eroi, senza consumare i suoi attacchi).
  */
 export interface VigilanceChance {
-  hero: Piece;
+  mercenary: Piece;
   /** L'overclock da spendere. */
   cost: number;
   /** Le armi (o i pugni) con cui può attaccare quel mostro adesso. */
@@ -22,9 +22,9 @@ interface VigilanceEffect extends Effect {
   cost?: { overclock?: number };
 }
 
-/** L'overclock che costa la Vigilanza a `hero`, o null se non ce l'ha. */
-function vigilanceCost(state: GameState, hero: Piece): number | null {
-  for (const cardId of hero.skillCards) {
+/** L'overclock che costa la Vigilanza a `mercenary`, o null se non ce l'ha. */
+function vigilanceCost(state: GameState, mercenary: Piece): number | null {
+  for (const cardId of mercenary.skillCards) {
     for (const e of state.skills.get(cardId)?.effects ?? []) {
       const t = e as VigilanceEffect;
       if (t.kind === 'trigger' && t.on === 'enemyEntersAdjacent') return t.cost?.overclock ?? 0;
@@ -43,13 +43,13 @@ const adjacent = (a: Pick<Piece, 'cell' | 'size'>, b: Pick<Piece, 'cell' | 'size
 export function vigilanceChances(state: GameState, board: Board, monster: Piece, from: Pick<Piece, 'cell' | 'size'>): VigilanceChance[] {
   if (monster.team !== 'monster' || monster.city) return [];
   const out: VigilanceChance[] = [];
-  for (const hero of state.pieces) {
-    if (hero.team !== 'hero' || hero.city || hero.toad || hero.wounds <= 0) continue;
-    const cost = vigilanceCost(state, hero);
-    if (cost === null || hero.overclock < cost) continue;
-    if (!adjacent(hero, monster) || adjacent(hero, from)) continue; // deve essere appena entrato
-    const options = controlledAttackOptions(state, board, hero, monster);
-    if (options.length) out.push({ hero, cost, options });
+  for (const mercenary of state.pieces) {
+    if (mercenary.team !== 'mercenary' || mercenary.city || mercenary.toad || mercenary.wounds <= 0) continue;
+    const cost = vigilanceCost(state, mercenary);
+    if (cost === null || mercenary.overclock < cost) continue;
+    if (!adjacent(mercenary, monster) || adjacent(mercenary, from)) continue; // deve essere appena entrato
+    const options = controlledAttackOptions(state, board, mercenary, monster);
+    if (options.length) out.push({ mercenary, cost, options });
   }
   return out;
 }
@@ -61,10 +61,10 @@ export function vigilanceChances(state: GameState, board: Board, monster: Piece,
 export function guardChances(state: GameState, board: Board, monster: Piece, declined: ReadonlySet<string>): VigilanceChance[] {
   if (monster.team !== 'monster' || monster.city || monster.wounds <= 0) return [];
   const out: VigilanceChance[] = [];
-  for (const hero of state.pieces) {
-    if (hero.team !== 'hero' || hero.city || hero.toad || hero.wounds <= 0 || hero.order !== 'guard' || declined.has(hero.id)) continue;
-    const options = controlledAttackOptions(state, board, hero, monster).filter((o) => o.enabled);
-    if (options.length) out.push({ hero, cost: 0, options });
+  for (const mercenary of state.pieces) {
+    if (mercenary.team !== 'mercenary' || mercenary.city || mercenary.toad || mercenary.wounds <= 0 || mercenary.order !== 'guard' || declined.has(mercenary.id)) continue;
+    const options = controlledAttackOptions(state, board, mercenary, monster).filter((o) => o.enabled);
+    if (options.length) out.push({ mercenary, cost: 0, options });
   }
   return out;
 }

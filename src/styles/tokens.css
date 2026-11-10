@@ -43,7 +43,7 @@
   --c-error:         var(--c-danger);  /* verifica dell'avventura: qualcosa è sbagliato */
 
   /* ---------- Fazioni (anello token e ordine di turno) ---------- */
-  --c-faction-hero:      var(--c-interact);
+  --c-faction-mercenary:      var(--c-interact);
   --c-faction-ally:      var(--c-line-strong);
   --c-faction-adversary:   var(--px-red); /* rosso della Megacorp */
 
@@ -179,7 +179,7 @@
 
 /* Anello token per fazione */
 .token { border-radius: var(--radius-round); border: 2px solid var(--c-faction-ally); }
-.token--hero      { border-color: var(--c-faction-hero); }
+.token--mercenary      { border-color: var(--c-faction-mercenary); }
 .token--adversary  { border-color: var(--c-faction-adversary); }
 .token--active    { box-shadow: 0 0 14px color-mix(in srgb, var(--c-interact) 45%, transparent); }
 

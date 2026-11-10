@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { HeroSheet } from '../game/heroes/hero-sheet';
+import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { SKILL_SCHOOLS, SKILL_SCHOOL_NAMES, SkillSchool } from '../game/skills/skill';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -8,21 +8,21 @@ import { DialogComponent } from './dialog.component';
 import { MarkdownPipe } from './markdown.pipe';
 import { HeartsComponent } from './hearts.component';
 import { IconComponent } from './icon.component';
-import { HeroFaceComponent } from './hero-face.component';
+import { MercenaryFaceComponent } from './mercenary-face.component';
 
 /**
  * La scheda di un eroe nella scelta della squadra: solo ciò che è fisso, cioè i parametri, i dadi d'attacco extra, l'abilità primaria e gli attributi (i punti nei tre rami) che decidono le
  * 3 abilità secondarie: a inizio partita l'eroe pesca a caso una carta per ogni punto, dal mazzo di quel ramo. Le carte vere non si vedono qui perché non sono ancora state pescate.
  */
 @Component({
-  selector: 'app-hero-detail-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, MarkdownPipe, DialogComponent, HeartsComponent, IconComponent, HeroFaceComponent, TranslatePipe],
+  selector: 'app-mercenary-detail-dialog',
+  imports: [AttackDiceComponent, CatalogTextPipe, MarkdownPipe, DialogComponent, HeartsComponent, IconComponent, MercenaryFaceComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (hero(); as h) {
+    @if (mercenary(); as h) {
       <app-dialog [kicker]="h.class | ct" [title]="h.name" (closed)="closed.emit()">
         <!-- A sinistra la carta dell'eroe con i suoi parametri, a destra la sua storia: inclinate e infilate sotto il pannello. -->
-        <figure dialogSide class="card left"><app-hero-face [hero]="h" /></figure>
+        <figure dialogSide class="card left"><app-mercenary-face [mercenary]="h" /></figure>
         <figure dialogSide class="card right">
           <figcaption class="head">{{ 'detail.story' | t }}</figcaption>
           <div class="story"><p>{{ h.story || ('detail.storyPlaceholder' | t) }}</p></div>
@@ -83,14 +83,14 @@ import { HeroFaceComponent } from './hero-face.component';
     @media (max-width: 1000px) { .card { display: none; } }
   `,
 })
-export class HeroDetailDialogComponent {
-  readonly hero = input<HeroSheet | null>(null);
+export class MercenaryDetailDialogComponent {
+  readonly mercenary = input<MercenarySheet | null>(null);
   readonly closed = output<void>();
 
-  protected readonly total = computed(() => SKILL_SCHOOLS.reduce((n, s) => n + (this.hero()?.skills[s] ?? 0), 0));
+  protected readonly total = computed(() => SKILL_SCHOOLS.reduce((n, s) => n + (this.mercenary()?.skills[s] ?? 0), 0));
   /** Una carta segnaposto per ogni punto di attributo, ramo per ramo. */
   protected readonly slots = computed(() => {
-    const h = this.hero();
+    const h = this.mercenary();
     if (!h) return [];
     return SKILL_SCHOOLS.flatMap((school: SkillSchool) => Array.from({ length: h.skills[school] }, () => ({ school, name: SKILL_SCHOOL_NAMES[school] })));
   });

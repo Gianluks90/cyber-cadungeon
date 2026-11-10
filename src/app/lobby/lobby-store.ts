@@ -3,12 +3,12 @@ export interface Lobby {
   /** Il codice unico che gli altri giocatori scrivono in "Unisciti". */
   code: string;
   /** Da 1 a 4: con il Maligno i giocatori sono al massimo 5. */
-  heroes: number;
+  mercenaries: number;
   createdAt: number;
 }
 
-export const LOBBY_MIN_HEROES = 1;
-export const LOBBY_MAX_HEROES = 4;
+export const LOBBY_MIN_MERCENARIES = 1;
+export const LOBBY_MAX_MERCENARIES = 4;
 export const LOBBY_CODE_MIN = 4;
 export const LOBBY_CODE_MAX = 8;
 
@@ -46,7 +46,7 @@ export class LocalLobbyStore implements LobbyStore {
     try {
       const data = JSON.parse(localStorage.getItem(KEY) ?? '[]');
       if (!Array.isArray(data)) return [];
-      return data.filter((l): l is Lobby => typeof l?.code === 'string' && typeof l?.heroes === 'number');
+      return data.filter((l): l is Lobby => typeof l?.code === 'string' && typeof l?.mercenaries === 'number');
     } catch {
       return [];
     }

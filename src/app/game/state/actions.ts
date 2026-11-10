@@ -15,7 +15,7 @@ import {
 import { Reveal } from '../exploration';
 import { MarkerEvent, POTION_NAMES, collectLoot, enterCell, pickupAt, pickupBlocked, pickupName } from '../markers/marker-rules';
 import { AttackType, ItemDef, cappedSpeed, movementBonusOf, conflictsWith, fitsEquipment, itemDetail, itemsToDisplace, totalArmor } from '../items/item';
-import { HeroAction, HeroOrder, Piece, footprint, occupies } from '../pieces/piece';
+import { MercenaryAction, MercenaryOrder, Piece, footprint, occupies } from '../pieces/piece';
 import { GameState } from './game-state';
 import { effectsOf, hasRule, ruleAmount, statBonus } from './effects';
 import { weakening } from './familiars';
@@ -54,7 +54,7 @@ export interface ChestResult {
 /** Cosa è successo con un passo: la pedina è caduta in una buca, e/o ha toccato un segnalino. */
 export interface StepOutcome {
   fell: boolean;
-  /** Il passo è costato la vita a un eroe (vedi `killHero`). */
+  /** Il passo è costato la vita a un eroe (vedi `killMercenary`). */
   died: boolean;
   marker: MarkerEvent | null;
   /** Le creature con Aura che hanno ferito chi è appena entrato accanto a loro (1 ferita che l'armatura non riduce). */
@@ -98,7 +98,7 @@ export function useDoor(state: GameState, board: Board, piece: Piece, index: num
   board.toggleDoor(index, piece.cell);
   spendPoints(piece, action.cost);
   const code = action.kind === 'open' ? 'opened' : action.kind === 'close' ? 'closed' : action.kind === 'unlock' ? 'unlocked' : 'picked';
-  const trap = piece.team === 'hero' && door.open && (action.kind === 'open' || action.kind === 'unlock' || action.kind === 'pick') ? trapAtDoor(state, door) : null;
+  const trap = piece.team === 'mercenary' && door.open && (action.kind === 'open' || action.kind === 'unlock' || action.kind === 'pick') ? trapAtDoor(state, door) : null;
   return trap ? { code, cost: action.cost, trap } : { code, cost: action.cost };
 }
 
@@ -113,21 +113,21 @@ export function openChest(state: GameState, board: Board, piece: Piece): ChestRe
   if (chest.open) return { code: 'already', cost: 0 };
   if (piece.points < CHEST_OPEN_COST) return { code: 'cost', cost: CHEST_OPEN_COST };
   assignChestReward(state, chest);
-  const isHero = piece.team === 'hero';
+  const isMercenary = piece.team === 'mercenary';
   // Un Mimic già armato lascia lo scrigno chiuso comunque; altrimenti, se c'è una reliquia che non ci sta, resta chiuso e non succede niente.
-  if (!(isHero && trapAtChest(state, chest)?.card === 'mimic') && chestItemsBlocked(state, piece, chest)) return { code: 'full', cost: 0 };
+  if (!(isMercenary && trapAtChest(state, chest)?.card === 'mimic') && chestItemsBlocked(state, piece, chest)) return { code: 'full', cost: 0 };
   // Prima di tutto le Maledizioni: danno Odio al Maligno, che può spenderlo subito per armare una trappola su questo scrigno. Solo dopo gli eroi ricevono il resto.
   const found: string[] = [];
   const curses = (chest.contents ?? []).filter((l) => l.kind === 'curse');
   if (curses.length) {
     chest.contents = (chest.contents ?? []).filter((l) => l.kind !== 'curse'); // risolte una volta sola (anche se lo scrigno è un Mimic che poi muore)
     found.push(...collectLoot(state, curses, piece));
-    if (isHero && !state.adversaryManual) armTrap(state, board, chest);
+    if (isMercenary && !state.adversaryManual) armTrap(state, board, chest);
     // Un Maligno a mano decide lui: l'Odio è già suo, lo scrigno resta chiuso e non si pagano punti; la scena glielo chiede e poi riapre lo scrigno (le Maledizioni sono già risolte).
-    else if (isHero) return { code: 'curse', cost: 0, ...(found.length ? { found } : {}) };
+    else if (isMercenary) return { code: 'curse', cost: 0, ...(found.length ? { found } : {}) };
   }
   // Mostro mimetico: lo scrigno è vivo. Si pagano i punti, ma non si apre e non dà niente finché il Mimic non muore.
-  const mimic = isHero ? trapAtChest(state, chest) : null;
+  const mimic = isMercenary ? trapAtChest(state, chest) : null;
   if (mimic?.card === 'mimic') {
     spendPoints(piece, CHEST_OPEN_COST);
     return { code: 'mimic', cost: CHEST_OPEN_COST, trap: mimic, ...(found.length ? { found } : {}) };
@@ -137,9 +137,9 @@ export function openChest(state: GameState, board: Board, piece: Piece): ChestRe
   spendPoints(piece, CHEST_OPEN_COST);
   found.push(...collectLoot(state, chest.contents ?? [], piece));
   const area = board.areaAt(piece.cell);
-  if (area && isHero) runEvents(state, { kind: 'chestOpened', area }); // gli eventi "scrigno aperto in quest'area", dopo che il contenuto è andato al gruppo
+  if (area && isMercenary) runEvents(state, { kind: 'chestOpened', area }); // gli eventi "scrigno aperto in quest'area", dopo che il contenuto è andato al gruppo
   if (chest.random !== false) for (let i = 0; i < (chest.treasures ?? 1); i++) found.push(...drawTreasures(state, chest.tier));
-  const trap = isHero ? trapAtChest(state, chest) : null;
+  const trap = isMercenary ? trapAtChest(state, chest) : null;
   const ticket = chest.ticket;
   return trap ? { code: 'opened', cost: CHEST_OPEN_COST, found, ...(ticket ? { ticket } : {}), trap } : { code: 'opened', cost: CHEST_OPEN_COST, found, ...(ticket ? { ticket } : {}) };
 }
@@ -171,7 +171,7 @@ function chestItemsBlocked(state: GameState, piece: Piece, chest: Chest): boolea
  */
 export function drawTreasures(state: GameState, tier: ChestTier): string[] {
   const lines: string[] = [];
-  for (const hero of state.pieces) if (hero.team === 'hero') lines.push(...drawTreasureFor(state, hero, tier));
+  for (const mercenary of state.pieces) if (mercenary.team === 'mercenary') lines.push(...drawTreasureFor(state, mercenary, tier));
   return lines;
 }
 
@@ -179,7 +179,7 @@ export function drawTreasures(state: GameState, tier: ChestTier): string[] {
  * Un eroe pesca dal mazzo `tier`: la carta, se è un oggetto, la tiene (equipaggiata se ci sta, altrimenti nello zaino) o la scarta per monete se non ha
  * posto. Una carta evento (`instant`) non si tiene: dà subito le sue monete e fa pescare ancora. Un mazzo vuoto non dà niente.
  */
-export function drawTreasureFor(state: GameState, hero: Piece, tier: ChestTier): string[] {
+export function drawTreasureFor(state: GameState, mercenary: Piece, tier: ChestTier): string[] {
   const lines: string[] = [];
   let toDraw = 1;
   for (let guard = 0; toDraw > 0 && guard < 50; guard++) {
@@ -188,19 +188,19 @@ export function drawTreasureFor(state: GameState, hero: Piece, tier: ChestTier):
     const item = id ? state.items.get(id) : undefined;
     if (!id || !item) break;
     if (item.instant) {
-      hero.coins += item.instant.coins ?? 0;
+      mercenary.coins += item.instant.coins ?? 0;
       const potion = item.instant.potion;
-      const gotPotion = !!potion && hero.potions.length < POTION_LIMIT && (hero.potions.push(potion), true);
+      const gotPotion = !!potion && mercenary.potions.length < POTION_LIMIT && (mercenary.potions.push(potion), true);
       const gains = [item.instant.coins ? `+${item.instant.coins} monete` : '', gotPotion ? (potion === 'heal' ? tr('+1 pozione di cura') : tr('+1 pozione dell\'Overclock')) : ''].filter(Boolean);
-      lines.push(`${hero.name}: ${item.name}${gains.length ? ` (${gains.join(', ')})` : ''}`);
+      lines.push(`${mercenary.name}: ${item.name}${gains.length ? ` (${gains.join(', ')})` : ''}`);
       toDraw += item.instant.draw ?? 0;
       continue;
     }
-    const where = receiveItem(state, hero, id);
+    const where = receiveItem(state, mercenary, id);
     if (where === 'none') {
-      hero.coins += TREASURE_SELL_COINS[tier];
-      lines.push(tr('{name}: {name2} scartata per {tier} monete', { name: hero.name, name2: item.name, tier: TREASURE_SELL_COINS[tier] }));
-    } else lines.push(`${hero.name}: ${item.name} (${where === 'equipped' ? 'equipaggiata' : 'nello zaino'})`);
+      mercenary.coins += TREASURE_SELL_COINS[tier];
+      lines.push(tr('{name}: {name2} scartata per {tier} monete', { name: mercenary.name, name2: item.name, tier: TREASURE_SELL_COINS[tier] }));
+    } else lines.push(`${mercenary.name}: ${item.name} (${where === 'equipped' ? 'equipaggiata' : 'nello zaino'})`);
   }
   return lines;
 }
@@ -244,11 +244,11 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
     }
   }
   // Zone: un eroe che entra in una zona fa scattare i suoi eventi; se uno lo fa morire (effetto `killActor`) muore come cadendo in una buca letale.
-  if (piece.team === 'hero' && !piece.city) {
+  if (piece.team === 'mercenary' && !piece.city) {
     runZonesEntered(state, piece, from, step.cell);
-    const queued = state.events.killHeroes ?? [];
+    const queued = state.events.killMercenaries ?? [];
     if (queued.includes(piece.id)) {
-      state.events.killHeroes = queued.filter((id) => id !== piece.id);
+      state.events.killMercenaries = queued.filter((id) => id !== piece.id);
       piece.wounds = 0;
     }
   }
@@ -256,10 +256,10 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
   let slain: Piece[] = [];
   let drop: RemovalResult | null = null;
   if (died) {
-    if (piece.team === 'hero') slain = killHero(state, piece);
+    if (piece.team === 'mercenary') slain = killMercenary(state, piece);
     else drop = removeMonster(state, piece); // un mostro che muore per strada esce dalla mappa e lascia il suo bottino
   }
-  const trap = !died && piece.team === 'hero' ? trapAtCell(state, piece.cell) : null;
+  const trap = !died && piece.team === 'mercenary' ? trapAtCell(state, piece.cell) : null;
   const outcome: StepOutcome = { fell, died, marker: died ? null : enterCell(board, piece, state), auraHits, slain, drop };
   if (trap) outcome.trap = trap;
   if (opened.length) outcome.opened = opened;
@@ -271,7 +271,7 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
  * (con la morte permanente, accesa da un evento, è invece eliminato: esce dalla partita e lo si restituisce fra quelli da far svanire)
  * (la sua pedina non c'è più), con ferite al massimo. Passa il turno da solo (lo fa chi lo chiama); al round dopo rientra su un glifo acceso senza pagare.
  */
-export function killHero(state: GameState, piece: Piece): Piece[] {
+export function killMercenary(state: GameState, piece: Piece): Piece[] {
   // Giustizia divina: quando muore uccide i mostri senza un nome entro 3 spazi (anche gli Immortali). Restituisce quelli uccisi, che la scena fa svanire.
   const slain: Piece[] = [];
   for (const { effect: e } of effectsOf(state, piece)) {
@@ -294,8 +294,8 @@ export function killHero(state: GameState, piece: Piece): Piece[] {
     state.pieces.splice(state.pieces.indexOf(piece), 1);
     for (let i = state.familiars.length - 1; i >= 0; i--) if (state.familiars[i].owner === piece.id) state.familiars.splice(i, 1);
     state.addProgress(-piece.value);
-    if (!state.pieces.some((p) => p.team === 'hero') && state.status === 'playing') state.status = 'defeat';
-    if (state.activeId === piece.id) state.activeId = state.pieces.find((p) => p.team === 'hero' && !p.done)?.id ?? null;
+    if (!state.pieces.some((p) => p.team === 'mercenary') && state.status === 'playing') state.status = 'defeat';
+    if (state.activeId === piece.id) state.activeId = state.pieces.find((p) => p.team === 'mercenary' && !p.done)?.id ?? null;
     return [...slain, piece];
   }
   piece.toad = undefined; // la morte toglie anche la trasformazione
@@ -332,7 +332,7 @@ export function reachFor(state: GameState, board: Board, piece: Piece, knownMark
   if (!canActOnMap(state, piece) || isGrappled(state, piece)) return { reach: new Map(), travelTargets: new Set() }; // afferrato: nessun movimento
   const enemies = new Set(state.pieces.filter((p) => p.team !== piece.team && onMap(p)).flatMap((p) => footprint(p).map(cellKey))); // un mostro grande blocca tutte le sue caselle
   const here = board.markerAt(piece.cell);
-  const onActiveGlyph = here?.type === 'glyph' && here.active && piece.team === 'hero';
+  const onActiveGlyph = here?.type === 'glyph' && here.active && piece.team === 'mercenary';
   const occupied = (c: Cell) => state.pieces.some((p) => onMap(p) && occupies(p, c));
   const targets = onActiveGlyph && piece.points >= 1 && !equippedDefs(state, piece).some((d) => d.blocksTravel) // chi porta la Principessa non viaggia da un glifo all'altro
     ? board.markers.filter(
@@ -341,7 +341,7 @@ export function reachFor(state: GameState, board: Board, piece: Piece, knownMark
           (!knownMarkers || knownMarkers.has(m)) && !occupied({ x: m.x, y: m.y }),
       )
     : [];
-  const stairs = piece.team === 'hero' ? board.stairsLinks() : undefined;
+  const stairs = piece.team === 'mercenary' ? board.stairsLinks() : undefined;
   return {
     reach: reachable(board, piece.cell, piece.points, enemies, targets.map((m) => ({ x: m.x, y: m.y })), stairs, undefined, hasRule(state, piece, 'passThrough')),
     travelTargets: new Set(targets),
@@ -356,7 +356,7 @@ export function stopForbidden(state: GameState, board: Board, piece: Piece, cell
 // --- Turno e azioni dell'eroe (docs/REGOLE.md, sezioni 1 e 2) ---
 
 /** Punti movimento che l'azione dà in un turno. */
-export function movementBudget(state: GameState, piece: Piece, action: HeroAction = piece.action): number {
+export function movementBudget(state: GameState, piece: Piece, action: MercenaryAction = piece.action): number {
   const speed = speedOf(state, piece);
   const bonus = movementBonusOf(equippedDefs(state, piece));
   return Math.max(0, (action === 'run' ? speed * RUN_SPEED_MULTIPLIER : action === 'fight' ? 0 : speed) + bonus); // un bonus negativo (chi porta la Principessa) non scende sotto 0
@@ -380,13 +380,13 @@ export function armorOf(state: GameState, piece: Piece, vs?: AttackType): number
 }
 
 /** Attacchi che l'azione dà in un turno. */
-export function attackBudget(action: HeroAction): number {
+export function attackBudget(action: MercenaryAction): number {
   return action === 'run' ? 0 : action === 'fight' ? FIGHT_ATTACKS : ADVANCE_ATTACKS; // Prepararsi: come Avanzare, ma o ci si muove o si attacca (vedi `spendPoints`)
 }
 
 /** Può agire adesso? Serve la partita in corso, il turno degli eroi e un eroe che non abbia ancora passato. */
 export function canAct(state: GameState, piece: Piece): boolean {
-  return state.status === 'playing' && state.phase === 'heroes' && piece.team === 'hero' && !piece.done;
+  return state.status === 'playing' && state.phase === 'mercenaries' && piece.team === 'mercenary' && !piece.done;
 }
 
 /** La pedina è sulla mappa (non in città)? */
@@ -412,7 +412,7 @@ export function spendAttack(piece: Piece): void {
   piece.attacksUsed += 1;
 }
 
-export type ActionChange = { ok: true; action: HeroAction } | { ok: false; reason: 'attacked' | 'moved' | 'turn' | 'stunned' | 'toad' | 'ordered' };
+export type ActionChange = { ok: true; action: MercenaryAction } | { ok: false; reason: 'attacked' | 'moved' | 'turn' | 'stunned' | 'toad' | 'ordered' };
 
 /**
  * Sceglie Correre o Combattere; ripetere lo stesso comando riporta ad Avanzare. Ogni azione cambia le due scorte
@@ -424,7 +424,7 @@ export function setAction(state: GameState, piece: Piece, requested: 'run' | 'fi
   if (piece.toad) return { ok: false, reason: 'toad' }; // il rospo non ha azioni di movimento né di combattimento
   if (piece.stunned) return { ok: false, reason: 'stunned' }; // stordito: solo muoversi o attaccare
   if (piece.orderPlaced && (requested !== 'prepare' || piece.action === 'prepare')) return { ok: false, reason: 'ordered' }; // l'ordine è piazzato: Prepararsi non si cambia più
-  const next: HeroAction = piece.action === requested ? 'advance' : requested;
+  const next: MercenaryAction = piece.action === requested ? 'advance' : requested;
   let points = movementBudget(state, piece, next) - piece.pointsUsed;
   let attacks = attackBudget(next) - piece.attacksUsed;
   // Prepararsi: o ci si muove o si attacca, non tutti e due.
@@ -441,12 +441,12 @@ export function setAction(state: GameState, piece: Piece, requested: 'run' | 'fi
 }
 
 /** Com'è andato il piazzamento di un ordine. */
-export type OrderChange = { ok: true; order: HeroOrder } | { ok: false; reason: 'turn' | 'action' | 'has' };
+export type OrderChange = { ok: true; order: MercenaryOrder } | { ok: false; reason: 'turn' | 'action' | 'has' };
 
 /**
  * Piazza un ordine (Mira, Schivata, Riposo o Guardia): solo con l'azione Prepararsi, e uno solo alla volta (finché il primo non è usato o perso non se ne piazza un altro).
  */
-export function placeOrder(state: GameState, piece: Piece, order: HeroOrder): OrderChange {
+export function placeOrder(state: GameState, piece: Piece, order: MercenaryOrder): OrderChange {
   if (!canActOnMap(state, piece) || piece.toad) return { ok: false, reason: 'turn' };
   if (piece.action !== 'prepare') return { ok: false, reason: 'action' };
   if (piece.order) return { ok: false, reason: 'has' };
@@ -457,7 +457,7 @@ export function placeOrder(state: GameState, piece: Piece, order: HeroOrder): Or
 
 /** Quanta overclock costa cambiare ordine a questo eroe (Ordini flessibili di Anarien), o null se non può. */
 export function orderChangeCost(state: GameState, piece: Piece): number | null {
-  if (piece.team !== 'hero' || piece.city || piece.wounds <= 0 || state.status !== 'playing') return null;
+  if (piece.team !== 'mercenary' || piece.city || piece.wounds <= 0 || state.status !== 'playing') return null;
   const cost = ruleAmount(state, piece, 'changeOrder');
   return cost > 0 && piece.order ? cost : null;
 }
@@ -469,7 +469,7 @@ export type OrderSwap = { ok: true; cost: number } | { ok: false; reason: 'rule'
  * Ordini flessibili: chi ha già un ordine può cambiarlo con uno diverso pagando overclock, in qualsiasi momento (anche nel turno del Maligno e dentro un attacco).
  * Non serve l'azione Prepararsi: l'ordine lo ha già.
  */
-export function changeOrder(state: GameState, piece: Piece, to: HeroOrder): OrderSwap {
+export function changeOrder(state: GameState, piece: Piece, to: MercenaryOrder): OrderSwap {
   const cost = orderChangeCost(state, piece);
   if (cost === null) return { ok: false, reason: 'rule' };
   if (piece.order === to) return { ok: false, reason: 'same' };
@@ -515,12 +515,12 @@ export interface PassResult {
 
 /**
  * L'eroe ha finito il suo turno. Se ce n'è un altro che non ha agito, tocca a lui (l'ordine è libero: poi si può
- * scegliere un altro con selectHero). Se hanno agito tutti, tocca al Maligno e poi comincia un nuovo round.
+ * scegliere un altro con selectMercenary). Se hanno agito tutti, tocca al Maligno e poi comincia un nuovo round.
  */
 export function passTurn(state: GameState, piece: Piece): PassResult | null {
   if (!canAct(state, piece)) return null;
-  const { toadEnded, curses } = finishHeroTurn(state, piece);
-  const next = state.pieces.find((p) => p.team === 'hero' && !p.done);
+  const { toadEnded, curses } = finishMercenaryTurn(state, piece);
+  const next = state.pieces.find((p) => p.team === 'mercenary' && !p.done);
   if (next) {
     state.activeId = next.id;
     return { nextActive: next.id, roundStarted: false, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
@@ -530,7 +530,7 @@ export function passTurn(state: GameState, piece: Piece): PassResult | null {
 }
 
 /** Chiude il turno di un eroe: ha agito, e il Rospo scarta un segnalino. Restituisce se la maledizione è finita. */
-function finishHeroTurn(state: GameState, piece: Piece): { toadEnded: boolean; curses: CurseHit[] } {
+function finishMercenaryTurn(state: GameState, piece: Piece): { toadEnded: boolean; curses: CurseHit[] } {
   if (piece.city?.service) piece.city.visited = true; // aver scelto un servizio e passare chiude la visita: poi si deve tornare
   piece.done = true;
   // Rospo: a fine turno si scarta un segnalino (non in quello della trasformazione); scartato l'ultimo si torna normali.
@@ -547,7 +547,7 @@ function finishHeroTurn(state: GameState, piece: Piece): { toadEnded: boolean; c
 
 /** Una maledizione di fine turno che ha colpito un eroe (`ItemDef.curse`): quante ferite, e se è morto. */
 export interface CurseHit {
-  hero: Piece;
+  mercenary: Piece;
   item: ItemDef;
   wounds: number;
   died: boolean;
@@ -568,20 +568,20 @@ function applyTurnEndCurses(state: GameState, piece: Piece): CurseHit[] {
     piece.wounds = Math.max(0, piece.wounds - wounds);
     loseOrdersOnWounds(piece);
     const died = piece.wounds <= 0;
-    hits.push({ hero: piece, item, wounds, died, slain: died ? killHero(state, piece) : [] });
+    hits.push({ mercenary: piece, item, wounds, died, slain: died ? killMercenary(state, piece) : [] });
   }
   return hits;
 }
 
 /**
- * Il turno degli eroi finisce adesso (effetto degli eventi `endHeroesTurn`): ogni eroe che non ha ancora agito passa, anche in città, e tocca al Maligno. Null se non è il turno degli eroi.
+ * Il turno degli eroi finisce adesso (effetto degli eventi `endMercenariesTurn`): ogni eroe che non ha ancora agito passa, anche in città, e tocca al Maligno. Null se non è il turno degli eroi.
  */
-export function endHeroesTurn(state: GameState): PassResult | null {
-  if (state.phase !== 'heroes' || state.status !== 'playing') return null;
+export function endMercenariesTurn(state: GameState): PassResult | null {
+  if (state.phase !== 'mercenaries' || state.status !== 'playing') return null;
   let toadEnded = false;
   const curses: CurseHit[] = [];
-  for (const hero of state.pieces.filter((p) => p.team === 'hero' && !p.done)) {
-    const r = finishHeroTurn(state, hero);
+  for (const mercenary of state.pieces.filter((p) => p.team === 'mercenary' && !p.done)) {
+    const r = finishMercenaryTurn(state, mercenary);
     toadEnded = r.toadEnded || toadEnded;
     curses.push(...r.curses);
   }
@@ -601,11 +601,11 @@ export function endAdversaryTurn(state: GameState): Piece[] {
 export function startRound(state: GameState): void {
   for (const p of state.pieces) {
     // Chi ha l'ordine Riposo (e non ha subito ferite: le ferite lo fanno perdere) riparte con l'overclock al massimo.
-    if (p.team === 'hero' && p.order === 'rest') p.overclock = p.maxOverclock;
+    if (p.team === 'mercenary' && p.order === 'rest') p.overclock = p.maxOverclock;
     // Ritmo costante (Najim): chi ha la regola recupera overclock all'inizio del round, anche dopo il Riposo (che la riporta già al massimo, quindi in quel caso non si somma).
-    if (p.team === 'hero' && !p.city) p.overclock = Math.min(p.maxOverclock, p.overclock + ruleAmount(state, p, 'overclockAtStart'));
+    if (p.team === 'mercenary' && !p.city) p.overclock = Math.min(p.maxOverclock, p.overclock + ruleAmount(state, p, 'overclockAtStart'));
     // Cuore di koboldo (Frubb): chi ha la regola recupera ferite all'inizio del round (il veleno si toglie per primo, come in ogni cura).
-    if (p.team === 'hero' && !p.city && p.wounds > 0) {
+    if (p.team === 'mercenary' && !p.city && p.wounds > 0) {
       const regen = ruleAmount(state, p, 'regenerate');
       if (regen > 0) healWounds(p, regen);
     }
@@ -629,12 +629,12 @@ export function startRound(state: GameState): void {
     p.tempArmor = 0;
   }
   state.round++;
-  state.phase = 'heroes';
-  state.activeId = state.pieces.find((p) => p.team === 'hero')?.id ?? null;
+  state.phase = 'mercenaries';
+  state.activeId = state.pieces.find((p) => p.team === 'mercenary')?.id ?? null;
 }
 
 /** Sceglie l'eroe che agisce. Restituisce false se non è un eroe o ha già passato. */
-export function selectHero(state: GameState, id: string): boolean {
+export function selectMercenary(state: GameState, id: string): boolean {
   const piece = state.pieces.find((p) => p.id === id);
   if (!piece || !canAct(state, piece)) return false;
   state.activeId = id;
@@ -697,7 +697,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   }
 
   // Un oggetto a terra nella sua casella: raccoglierlo è un'azione, senza costo (così un eroe può anche lasciarlo lì).
-  const loot = piece.team === 'hero' ? pickupAt(board, piece) : null;
+  const loot = piece.team === 'mercenary' ? pickupAt(board, piece) : null;
   if (loot) {
     const reason = pickupBlocked(state, piece, loot) ?? undefined;
     const icon = loot.type === 'item' ? state.items.get(loot.itemId)?.icon ?? 'inventory_2' : { potion: 'tokens/potion', coins: 'tokens/gold_pile', key: 'tokens/little_key', rune: 'tokens/rune_key' }[loot.type];
@@ -705,7 +705,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   }
 
   // I segnalini Incontro che può usare (nella sua casella o, se lo permettono, accanto a lui): l'azione la sceglie l'autore ("Suona la campana"), con il suo costo.
-  if (piece.team === 'hero') {
+  if (piece.team === 'mercenary') {
     for (const m of usableEncounters(board, piece)) {
       const cost = m.cost ?? 0;
       const reason = costReason(cost);
@@ -714,12 +714,12 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   }
 
   // Su un glifo acceso si può viaggiare in città: costa tutto il movimento (almeno 1).
-  if (here?.type === 'glyph' && here.active && piece.team === 'hero') {
+  if (here?.type === 'glyph' && here.active && piece.team === 'mercenary') {
     const reason = piece.points < 1 ? tr('Serve almeno {mov:1}') : undefined;
     out.push({ id: 'city', kind: 'city', icon: 'castle', label: tr('Viaggia in città (tutto il movimento)'), cost: piece.points, enabled: !reason, reason });
   }
 
-  const partner = piece.team === 'hero' ? board.stairsPartnerAt(piece.cell) : undefined;
+  const partner = piece.team === 'mercenary' ? board.stairsPartnerAt(piece.cell) : undefined;
   if (partner) {
     const taken = state.pieces.some((p) => onMap(p) && p.cell.x === partner.x && p.cell.y === partner.y);
     const reason = taken ? tr('L\'altro capo è occupato') : costReason(STAIRS_MOVE_COST);
@@ -727,7 +727,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   }
 
   // Le zone d'azione che può usare (evento "usa una zona"): una voce ciascuna, col testo e il costo scelti dall'autore.
-  if (piece.team === 'hero') {
+  if (piece.team === 'mercenary') {
     for (const zone of usableZones(state, board, piece)) {
       const cost = zoneCost(state, zone);
       const reason = costReason(cost);
@@ -736,7 +736,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   }
 
   // Le pedine con cui può interagire (evento "interagisce"): una voce "?" per ognuna, se è adiacente.
-  if (piece.team === 'hero') {
+  if (piece.team === 'mercenary') {
     for (const target of interactablePieces(state, board, piece)) {
       const cost = interactCost(state, target.id);
       const reason = costReason(cost);
@@ -745,14 +745,14 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   }
 
   // Le pozioni che porta: berle, o darle a un eroe adiacente.
-  if (piece.team === 'hero') {
+  if (piece.team === 'mercenary') {
     for (const kind of POTION_KINDS) {
       if (!piece.potions.includes(kind)) continue;
       const reason =
         kind === 'overclock' ? (piece.overclock >= piece.maxOverclock ? tr('Hai già l\'overclock al massimo') : costReason(POTION_DRINK_COST)) : piece.wounds >= piece.maxWounds ? tr('Sei già in piena salute') : costReason(POTION_DRINK_COST);
       out.push({ id: `drink:${kind}`, kind: 'potion', icon: 'tokens/potion', label: tr('Bevi: {name}', { name: POTION_NAMES[kind].toLowerCase() }), cost: POTION_DRINK_COST, enabled: !reason, reason });
     }
-    for (const other of adjacentHeroes(state, board, piece)) {
+    for (const other of adjacentMercenaries(state, board, piece)) {
       for (const kind of POTION_KINDS) {
         if (!piece.potions.includes(kind)) continue;
         const reason = !canCarryPotion(other) ? tr('{name} porta già {potionLimit} pozioni', { name: other.name, potionLimit: POTION_LIMIT }) : costReason(POTION_GIVE_COST);
@@ -794,7 +794,7 @@ export interface EncounterResult {
 
 /** piece usa il segnalino Incontro in `at` (di base la sua casella): paga il costo, il segnalino sparisce dalla mappa (se non è riutilizzabile) e scattano gli eventi "usa un incontro" (poi la scena guarda quelli "non ci sono più" con checkCleared). */
 export function useEncounter(state: GameState, board: Board, piece: Piece, at: Cell = piece.cell): EncounterResult {
-  if (!canActOnMap(state, piece) || piece.team !== 'hero') return { code: 'busy' };
+  if (!canActOnMap(state, piece) || piece.team !== 'mercenary') return { code: 'busy' };
   const marker = usableEncounters(board, piece).find((m) => m.x === at.x && m.y === at.y);
   if (!marker) return { code: 'none' };
   const cost = marker.cost ?? 0;
@@ -814,7 +814,7 @@ export interface ZoneResult {
 
 /** `piece` usa la zona `zoneId`: paga il costo e scattano gli eventi "usa una zona" (poi la scena guarda i messaggi). */
 export function useZone(state: GameState, board: Board, piece: Piece, zoneId: string): ZoneResult {
-  if (!canActOnMap(state, piece) || piece.team !== 'hero') return { code: 'busy' };
+  if (!canActOnMap(state, piece) || piece.team !== 'mercenary') return { code: 'busy' };
   const zone = usableZones(state, board, piece).find((z) => z.id === zoneId);
   if (!zone) return { code: 'none' };
   const cost = zoneCost(state, zone); // non si paga se scatta solo l'"Altrimenti"
@@ -845,7 +845,7 @@ export interface InteractResult {
 
 /** `piece` interagisce con la pedina `targetId`: costa i punti movimento dell'evento, scattano gli eventi e l'interazione sparisce. */
 export function interact(state: GameState, board: Board, piece: Piece, targetId: string): InteractResult {
-  if (!canActOnMap(state, piece) || piece.team !== 'hero') return { code: 'busy' };
+  if (!canActOnMap(state, piece) || piece.team !== 'mercenary') return { code: 'busy' };
   if (!interactionsOn(state, targetId).length) return { code: 'none' };
   if (!interactablePieces(state, board, piece).some((p) => p.id === targetId)) return { code: 'far' };
   const cost = interactCost(state, targetId);
@@ -864,8 +864,8 @@ export function canCarryPotion(piece: Piece): boolean {
 }
 
 /** Gli altri eroi vicini a `piece` (anche in diagonale, se in mezzo non c'è un muro). */
-export function adjacentHeroes(state: GameState, board: Board, piece: Piece): Piece[] {
-  return state.pieces.filter((p) => p.team === 'hero' && p.id !== piece.id && onMap(p) && board.canStep(piece.cell, p.cell));
+export function adjacentMercenaries(state: GameState, board: Board, piece: Piece): Piece[] {
+  return state.pieces.filter((p) => p.team === 'mercenary' && p.id !== piece.id && onMap(p) && board.canStep(piece.cell, p.cell));
 }
 
 export interface DrinkResult {
@@ -901,7 +901,7 @@ export interface GiveResult {
 /** `giver` dà una pozione di quel tipo a `receiverId`, un eroe adiacente: costa POTION_GIVE_COST punti movimento, e chi riceve deve avere posto. */
 export function givePotion(state: GameState, board: Board, giver: Piece, receiverId: string, kind: PotionKind): GiveResult {
   if (!canAct(state, giver) || giver.toad) return { code: 'busy' };
-  const receiver = adjacentHeroes(state, board, giver).find((p) => p.id === receiverId);
+  const receiver = adjacentMercenaries(state, board, giver).find((p) => p.id === receiverId);
   if (!receiver) return { code: 'far' };
   const i = giver.potions.indexOf(kind);
   if (i < 0) return { code: 'none' };
@@ -1045,7 +1045,7 @@ export function dropItem(state: GameState, piece: Piece, id: string): ItemResult
 /** `giver` dà un oggetto a un eroe adiacente: costa ITEM_GIVE_COST punti movimento; chi riceve lo equipaggia se ci sta, altrimenti lo mette nello zaino. */
 export function giveItem(state: GameState, board: Board, giver: Piece, receiverId: string, id: string): ItemResult {
   if (!canAct(state, giver) || giver.toad) return { code: 'busy' };
-  const receiver = adjacentHeroes(state, board, giver).find((p) => p.id === receiverId);
+  const receiver = adjacentMercenaries(state, board, giver).find((p) => p.id === receiverId);
   if (!receiver) return { code: 'far' };
   const list = giver.equipped.includes(id) ? giver.equipped : giver.backpack.includes(id) ? giver.backpack : null;
   if (!list) return { code: 'none' };

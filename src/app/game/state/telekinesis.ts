@@ -28,9 +28,9 @@ export function telekinesisMoves(state: GameState, board: Board, model: Piece): 
     .map((s) => ({ ...s, cost: 0, stepCost: 0 })); // il passo non costa niente al modello spostato
 }
 
-/** I modelli che `hero` può spostare: li vede (e, con la nebbia, `known`) e hanno almeno un posto dove andare. */
-export function telekinesisTargets(state: GameState, board: Board, hero: Piece, known: (p: Piece) => boolean): Piece[] {
-  return state.pieces.filter((p) => p.id !== hero.id && !p.city && known(p) && canSeeTarget(state, board, hero, p) && telekinesisMoves(state, board, p).length > 0);
+/** I modelli che `mercenary` può spostare: li vede (e, con la nebbia, `known`) e hanno almeno un posto dove andare. */
+export function telekinesisTargets(state: GameState, board: Board, mercenary: Piece, known: (p: Piece) => boolean): Piece[] {
+  return state.pieces.filter((p) => p.id !== mercenary.id && !p.city && known(p) && canSeeTarget(state, board, mercenary, p) && telekinesisMoves(state, board, p).length > 0);
 }
 
 /** Le caselle da evidenziare per i passi di `moves` (la casella in alto a sinistra della nuova sagoma). */

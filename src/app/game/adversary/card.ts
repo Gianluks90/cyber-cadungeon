@@ -3,7 +3,7 @@ import { localizeName } from '../../i18n/catalog-text';
 export type AdversaryCardKind = 'power' | 'event' | 'trap' | 'summon';
 
 /** Chi o cosa prende di mira una trappola quando viene armata. */
-export type TrapTarget = 'cell' | 'door' | 'chest' | 'hero';
+export type TrapTarget = 'cell' | 'door' | 'chest' | 'mercenary';
 
 /** Una carta del Mazzo del Male (public/adversary/catalog.json). */
 export interface AdversaryCardDef {

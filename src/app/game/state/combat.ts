@@ -7,7 +7,7 @@ import { FaceRoll } from '../dice/faces';
 import { AttackType, DieColor, ItemDef } from '../items/item';
 import { StatusKind } from '../pieces/piece';
 import { Piece, footprint } from '../pieces/piece';
-import { armorOf, canActOnMap, killHero, loseOrdersOnWounds } from './actions';
+import { armorOf, canActOnMap, killMercenary, loseOrdersOnWounds } from './actions';
 import { usedItem } from './behaviors';
 import { attackBonus, effectsOf, hasRule, onHitStatuses, ruleAmount } from './effects';
 import { onKillBonuses } from './skills';
@@ -176,7 +176,7 @@ export function stairsRoute(state: GameState, board: Board, attacker: Piece, tar
 
 /** `attacker` vede `target`? Le altre creature bloccano la vista; il bersaglio si vede se se ne vede una qualunque delle sue caselle. */
 export function canSeeTarget(state: GameState, board: Board, attacker: Piece, target: Piece, opts: { fromAdjacent?: boolean; ignore?: number } = {}): boolean {
-  if (state.adversary.gust && attacker.team === 'hero' && distanceTo(attacker, target) > GUST_SIGHT) return false; // Raffica di vento
+  if (state.adversary.gust && attacker.team === 'mercenary' && distanceTo(attacker, target) > GUST_SIGHT) return false; // Raffica di vento
   const blockers = new Set<string>();
   for (const p of state.pieces) {
     if (p.city || p.id === attacker.id || p.id === target.id) continue;
@@ -334,7 +334,7 @@ export function monsterAttackType(state: GameState, monster: Piece): AttackType 
 export function monsterAttackOption(state: GameState, board: Board, monster: Piece, target: Piece): AttackOption | null {
   const used = usedItem(state, monster);
   const attackType = monsterAttackType(state, monster);
-  if (monster.team !== 'monster' || !attackType || target.team !== 'hero' || target.city) return null;
+  if (monster.team !== 'monster' || !attackType || target.team !== 'mercenary' || target.city) return null;
   // Il Soffio colpisce chi sta nel suo cono (niente gittata, niente linea di vista verso il bersaglio: solo i muri).
   if (keywordLevel(state, monster, 'Soffio') > 0) {
     const dir = breathDirTo(state, board, monster, target);
@@ -360,7 +360,7 @@ export function monsterAttackOption(state: GameState, board: Board, monster: Pie
  */
 export function controlledAttackOptions(state: GameState, board: Board, attacker: Piece, target: Piece): AttackOption[] {
   const saved = { phase: state.phase, done: attacker.done, attacks: attacker.attacks };
-  state.phase = 'heroes';
+  state.phase = 'mercenaries';
   attacker.done = false;
   attacker.attacks = Math.max(1, attacker.attacks);
   try {
@@ -684,7 +684,7 @@ export function resolveAttack(
   range += sRange;
   bonusDamage += Math.min(sorcery.damage, points - sRange);
   const inRange = !plan.needsRange || range >= plan.distance;
-  const armor = target.team === 'hero' ? armorOf(state, target, plan.option.attack) : target.armor;
+  const armor = target.team === 'mercenary' ? armorOf(state, target, plan.option.attack) : target.armor;
   const hit = !miss && inRange && !feared;
   const raw = hearts + bonusDamage;
   // Preso o mancato, il danno è sempre 0 se è invincibile o se non lo si colpisce con la sua unica arma (`onlyHurtBy`).
@@ -723,13 +723,13 @@ export interface AttackResult {
   overclockGained?: number;
 }
 
-/** Applica l'attacco: consuma un attacco dell'attaccante e toglie le ferite al bersaglio. Un mostro a zero ferite esce dalla mappa; un eroe muore come in `killHero`. */
+/** Applica l'attacco: consuma un attacco dell'attaccante e toglie le ferite al bersaglio. Un mostro a zero ferite esce dalla mappa; un eroe muore come in `killMercenary`. */
 export function applyAttack(state: GameState, attacker: Piece, target: Piece, outcome: AttackOutcome, opts: { undying?: boolean; option?: AttackOption; extra?: boolean } = {}): AttackResult {
   if (!opts.extra) {
     attacker.attacks = Math.max(0, attacker.attacks - 1);
     attacker.attacksUsed += 1;
   }
-  if (!opts.extra && attacker.team === 'hero' && opts.option) {
+  if (!opts.extra && attacker.team === 'mercenary' && opts.option) {
     attacker.lastAttack = { type: opts.option.attack, weaponId: opts.option.itemId }; // per le abilità "dopo un attacco"
     (attacker.attackTypesUsed ??= []).push(opts.option.attack); // per "il primo attacco di quel tipo"
     if (attacker.attacks <= 0) attacker.lockedWeapon = null; // l'attacco in più con la stessa arma è stato fatto
@@ -738,7 +738,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
   if (outcome.alarmLoss > 0) state.adversary.alarm = Math.max(0, state.adversary.alarm - outcome.alarmLoss); // Bastone della Conoscenza
   const before = target.wounds;
   target.wounds = Math.max(0, target.wounds - outcome.damage);
-  if (outcome.damage > 0 && target.team === 'hero') {
+  if (outcome.damage > 0 && target.team === 'mercenary') {
     loseOrdersOnWounds(target); // perde la Mira, il Riposo (non recupera l'overclock) e la Guardia
   }
   // Immortale: se il dado competenza ha dato una scintilla il mostro si rialza a salute piena, meno i danni in più del colpo mortale.
@@ -759,10 +759,10 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
       if (n) applied.push({ kind: 'poison', n });
     }
     // Furia del dolore: un eroe che subisce ferite da un attacco (di qualunque tipo) recupera overclock, una volta per attacco.
-    const gain = outcome.damage > 0 && target.team === 'hero' ? Math.min(target.maxOverclock - target.overclock, ruleAmount(state, target, 'overclockOnWounded')) : 0;
+    const gain = outcome.damage > 0 && target.team === 'mercenary' ? Math.min(target.maxOverclock - target.overclock, ruleAmount(state, target, 'overclockOnWounded')) : 0;
     if (gain > 0) target.overclock += gain;
     // Zanna e simili: l'attacco che ferisce piazza uno stato (una volta per attacco).
-    if (!opts.extra && outcome.damage > 0 && attacker.team === 'hero' && target.team === 'monster' && opts.option) {
+    if (!opts.extra && outcome.damage > 0 && attacker.team === 'mercenary' && target.team === 'monster' && opts.option) {
       for (const s of onHitStatuses(state, attacker, opts.option.attack)) {
         const n = inflictStatus(state, target, s.kind, s.n);
         if (n) applied.push({ kind: s.kind, n });
@@ -770,18 +770,18 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
     }
     return { killed: false, reward: 0, target, applied, undying: false, slain: [], drop: null, knockback: !opts.extra && outcome.knockback && !immuneTo(state, target, 'knockback'), ...(gain > 0 ? { overclockGained: gain } : {}) };
   }
-  if (target.team === 'hero') {
-    const slain = killHero(state, target);
+  if (target.team === 'mercenary') {
+    const slain = killMercenary(state, target);
     return { killed: true, reward: 0, target, applied: [], undying: false, slain, drop: null, knockback: false };
   }
-  const drop = removeMonster(state, target, attacker.team === 'hero' ? attacker : undefined);
-  if (attacker.team === 'hero') {
+  const drop = removeMonster(state, target, attacker.team === 'mercenary' ? attacker : undefined);
+  if (attacker.team === 'mercenary') {
     if (opts.option?.attack === 'melee') attacker.lastKill = { weaponId: opts.option.itemId }; // Fendente
     onKillBonuses(state, attacker); // Sangue vampirico
     if (opts.option?.itemId) (attacker.killedWith ??= []).push(opts.option.itemId); // chi ha dato il colpo mortale (la maledizione della Divoratrice)
   }
   // Il colpo fatale a un mostro potenziato vale monete per l'eroe che lo dà (il denaro è personale).
-  const reward = target.enhanced && attacker.team === 'hero' && !drop.revived ? ENHANCED_KILL_COINS : 0;
+  const reward = target.enhanced && attacker.team === 'mercenary' && !drop.revived ? ENHANCED_KILL_COINS : 0;
   attacker.coins += reward;
   return { killed: true, reward, target, applied: [], undying: false, slain: [], drop, knockback: false };
 }

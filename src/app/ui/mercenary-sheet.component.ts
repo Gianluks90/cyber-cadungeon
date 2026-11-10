@@ -2,7 +2,7 @@ import { TrPipe } from '../i18n/tr.pipe';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { PotionKind } from '../game/board/marker';
-import { AttackDice, StartingSkills } from '../game/heroes/hero-sheet';
+import { AttackDice, StartingSkills } from '../game/mercenaries/mercenary-sheet';
 import { InventoryView } from '../game/state/actions';
 import { CityView } from '../game/state/city';
 import { SkillDef } from '../game/skills/skill';
@@ -16,10 +16,10 @@ import { IconComponent } from './icon.component';
 import { SkillCardComponent } from './skill-card.component';
 
 /** Tutto ciò che la scheda completa di un eroe mostra. */
-export interface HeroDetails {
+export interface MercenaryDetails {
   name: string;
   /** La classe (druido, ranger, ...): il sottotitolo, in maiuscolo. */
-  heroClass: string;
+  mercenaryClass: string;
   portrait?: string;
   /** L'immagine a figura intera, per la cornice dei pannelli. */
   portraitFull?: string;
@@ -57,15 +57,15 @@ export interface HeroDetails {
 
 /**
  * Il pannello "Informazioni" di un eroe: parametri (cuori e salute, velocità, overclock, armatura, valore), attributi (una sezione ancora vuota:
- * le quattro caratteristiche sono in pausa, docs/REGOLE.md sezione 4), dadi d'attacco, abilità primaria (quella stampata sulla scheda) e abilità secondarie (le carte pescate). È il contenuto della cornice `app-hero-panel`, che gli dà posizione, altezza, immagine ed etichette; l'equipaggiamento sta
+ * le quattro caratteristiche sono in pausa, docs/REGOLE.md sezione 4), dadi d'attacco, abilità primaria (quella stampata sulla scheda) e abilità secondarie (le carte pescate). È il contenuto della cornice `app-mercenary-panel`, che gli dà posizione, altezza, immagine ed etichette; l'equipaggiamento sta
  * nel pannello dell'inventario (`app-inventory-panel`).
  */
 @Component({
-  selector: 'app-hero-sheet',
+  selector: 'app-mercenary-sheet',
   imports: [FamiliarCardComponent, MarkdownPipe, TrPipe, CatalogTextPipe, AttackDiceComponent, HeartsComponent, IconComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (hero(); as h) {
+    @if (mercenary(); as h) {
       <h3 class="first">{{ 'Parametri' | tr }}</h3>
       <div class="life">
         <app-hearts [wounds]="h.wounds" [max]="h.maxWounds" [poison]="h.poison" [size]="18" />
@@ -134,14 +134,14 @@ export interface HeroDetails {
     .aname { text-transform: none; letter-spacing: 0; font: 600 13px/1 var(--font-ui); color: var(--c-text); }
   `,
 })
-export class HeroSheetComponent {
+export class MercenarySheetComponent {
   /** L'eroe da mostrare. */
-  readonly hero = input<HeroDetails | null>(null);
+  readonly mercenary = input<MercenaryDetails | null>(null);
   /** Si usa un'abilità (l'id viene da `skillActions`). */
   readonly skillUse = output<string>();
   readonly denied = output<string>();
 
-  protected actionOf(h: HeroDetails, cardId: string): SkillAction | null {
+  protected actionOf(h: MercenaryDetails, cardId: string): SkillAction | null {
     return h.skillActions.find((a) => a.cardId === cardId) ?? null;
   }
 }

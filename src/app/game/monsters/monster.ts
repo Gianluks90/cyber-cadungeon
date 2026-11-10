@@ -39,8 +39,8 @@ export interface MonsterDef {
 }
 
 /** Lo scaglione da usare con questo numero di eroi: i giocatori sono gli eroi più il Maligno. */
-export function playersKey(heroes: number): PlayersKey {
-  const players = heroes + 1;
+export function playersKey(mercenaries: number): PlayersKey {
+  const players = mercenaries + 1;
   return players <= 3 ? '2-3' : players === 4 ? '4' : '5';
 }
 

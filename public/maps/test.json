@@ -346,17 +346,17 @@
   "pieces": [
     {
       "id": "h1",
-      "team": "hero",
+      "team": "mercenary",
       "x": 2,
       "y": 2,
-      "hero": "bastion", "items": ["mono-blade", "shield", "ballistic-vest"]
+      "mercenary": "bastion", "items": ["mono-blade", "shield", "ballistic-vest"]
     },
     {
       "id": "h2",
-      "team": "hero",
+      "team": "mercenary",
       "x": 3,
       "y": 3,
-      "hero": "vesper"
+      "mercenary": "vesper"
     },
     {"id": "m1", "team": "monster", "monster": "sentry-drone", "x": 13, "y": 3}
   ],

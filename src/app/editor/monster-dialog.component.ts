@@ -149,7 +149,7 @@ const toInt = (s: string) => {
                     <app-select class="block" [options]="runeOptions" [value]="r.color" [label]="'common.color' | t" (changed)="patch($index, { color: $any($event) })" />
                   }
                   @case ('key') { <input type="text" [attr.value]="r.keyId" [placeholder]="'monsterDialog.keyIdExample' | t" (input)="patch($index, { keyId: $any($event.target).value })" /> }
-                  @default { <span class="note">{{ 'monsterDialog.coinsPerHero' | t }}</span> }
+                  @default { <span class="note">{{ 'monsterDialog.coinsPerMercenary' | t }}</span> }
                 }
                 <button type="button" class="dlg-rm" [attr.aria-label]="'monsterDialog.remove' | t" [title]="'monsterDialog.remove' | t" (click)="removeLoot($index)">×</button>
               </div>

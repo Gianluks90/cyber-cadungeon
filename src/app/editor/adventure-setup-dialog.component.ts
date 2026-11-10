@@ -3,7 +3,7 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { ChangeDetectionStrategy, Component, WritableSignal, computed, effect, input, output, signal } from '@angular/core';
 import { ChestTier } from '../game/board/marker';
 import { ADVERSARY_HAND_MAX, ADVERSARY_START_HAND } from '../game/constants';
-import { TREASURE_KEYS } from '../game/heroes/party-setup';
+import { TREASURE_KEYS } from '../game/mercenaries/party-setup';
 import type { AdventureSetup } from '../game/map/map-data';
 import { CheckboxComponent } from '../ui/checkbox.component';
 import { DialogComponent } from '../ui/dialog.component';

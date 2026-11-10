@@ -1,7 +1,7 @@
 import { TrPipe } from '../i18n/tr.pipe';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
-import { HeroSheet } from '../game/heroes/hero-sheet';
+import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { AttackDiceComponent } from './attack-dice.component';
 import { MarkdownPipe } from './markdown.pipe';
 import { HeartsComponent } from './hearts.component';
@@ -10,7 +10,7 @@ import { PictureComponent } from './picture.component';
 
 /** La card di un eroe nel catalogo: ritratto, nome e classe, parametri, dadi d'attacco, abilità iniziali e abilità (per ora un testo segnaposto). */
 @Component({
-  selector: 'app-hero-card',
+  selector: 'app-mercenary-card',
   imports: [TrPipe, CatalogTextPipe, MarkdownPipe, AttackDiceComponent, HeartsComponent, IconComponent, PictureComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -72,6 +72,6 @@ import { PictureComponent } from './picture.component';
     .placeholder { color: var(--c-text-dim); }
   `,
 })
-export class HeroCardComponent {
-  readonly sheet = input<HeroSheet | null>(null);
+export class MercenaryCardComponent {
+  readonly sheet = input<MercenarySheet | null>(null);
 }

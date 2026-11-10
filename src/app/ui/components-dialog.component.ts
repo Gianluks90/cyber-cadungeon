@@ -1,13 +1,13 @@
 import { TrPipe } from '../i18n/tr.pipe';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FamiliarDef } from '../game/familiars/familiar';
-import { HeroSheet } from '../game/heroes/hero-sheet';
+import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { ItemDef } from '../game/items/item';
 import { MonsterDef } from '../game/monsters/monster';
 import { SkillDef } from '../game/skills/skill';
 import { DialogComponent } from './dialog.component';
 import { FamiliarCardComponent } from './familiar-card.component';
-import { HeroCardComponent } from './hero-card.component';
+import { MercenaryCardComponent } from './mercenary-card.component';
 import { MonsterCardComponent } from './monster-card.component';
 import { ItemCardComponent } from './item-card.component';
 import { SkillCardComponent } from './skill-card.component';
@@ -16,7 +16,7 @@ import { SkillCardComponent } from './skill-card.component';
 export type CatalogEntry =
   | { kind: 'item'; id: string; name: string; def: ItemDef; icon: string; detail: string; count: number | null; search: string }
   | { kind: 'skill'; id: string; name: string; def: SkillDef; search: string }
-  | { kind: 'hero'; id: string; name: string; sheet: HeroSheet; search: string }
+  | { kind: 'mercenary'; id: string; name: string; sheet: MercenarySheet; search: string }
   | { kind: 'monster'; id: string; name: string; def: MonsterDef; search: string }
   | { kind: 'familiar'; id: string; name: string; def: FamiliarDef; search: string };
 
@@ -37,7 +37,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
  */
 @Component({
   selector: 'app-components-dialog',
-  imports: [TrPipe, DialogComponent, FamiliarCardComponent, HeroCardComponent, ItemCardComponent, MonsterCardComponent, SkillCardComponent],
+  imports: [TrPipe, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, MonsterCardComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
@@ -62,8 +62,8 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
                   </app-item-card>
                 } @else if (e.kind === 'skill') {
                   <app-skill-card [skill]="e.def" />
-                } @else if (e.kind === 'hero') {
-                  <app-hero-card [sheet]="e.sheet" />
+                } @else if (e.kind === 'mercenary') {
+                  <app-mercenary-card [sheet]="e.sheet" />
                 } @else if (e.kind === 'familiar') {
                   <app-familiar-card [familiar]="e.def" />
                 } @else {

@@ -2,28 +2,28 @@ import { ChangeDetectionStrategy, Component, effect, DestroyRef, computed, injec
 import { ActivatedRoute, Router } from '@angular/router';
 import { ADVENTURES } from '../adventures/adventures';
 import { objectiveText } from '../game/state/objective-text';
-import { HeroSheet, loadAllHeroSheets } from '../game/heroes/hero-sheet';
+import { MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
 import type { AdventureSetup } from '../game/map/map-data';
-import { Loadout, ShopData, coinsWithSetup, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/heroes/party-setup';
+import { Loadout, ShopData, coinsWithSetup, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { AdventureDialogComponent, AdventureView } from '../ui/adventure-dialog.component';
-import { HeroStatsPillComponent } from '../ui/hero-stats-pill.component';
-import { HeroDetailDialogComponent } from '../ui/hero-detail-dialog.component';
+import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
+import { MercenaryDetailDialogComponent } from '../ui/mercenary-detail-dialog.component';
 import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
 import { FamiliarDef, familiarsOfSheet, loadFamiliarCatalog } from '../game/familiars/familiar';
 import { HeartsComponent } from '../ui/hearts.component';
-import { HeroLoadoutComponent } from '../ui/hero-loadout.component';
+import { MercenaryLoadoutComponent } from '../ui/mercenary-loadout.component';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { DotTrailComponent } from '../ui/dot-trail.component';
 import { FieldComponent } from '../ui/field.component';
 import { IconComponent } from '../ui/icon.component';
 import { PageNavComponent } from '../ui/page-nav.component';
 import { SelectComponent, SelectOption } from '../ui/select.component';
-import { LobbyClient, LobbyHost, LobbyState, NetStatus, heroesPerPlayer } from './lobby-net';
+import { LobbyClient, LobbyHost, LobbyState, NetStatus, mercenariesPerPlayer } from './lobby-net';
 import { LocalLobbyStore } from './lobby-store';
 import { loadAdversaryCatalog } from '../game/adversary/card';
 import { composeRules } from '../game/state/setup-text';
@@ -35,7 +35,7 @@ import { composeRules } from '../game/state/setup-text';
  */
 @Component({
   selector: 'app-lobby',
-  imports: [AdventureDialogComponent, CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, HeroDetailDialogComponent, HeroStatsPillComponent, HeroLoadoutComponent, FieldComponent, IconComponent, PageNavComponent, SelectComponent, TranslatePipe],
+  imports: [AdventureDialogComponent, CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, FieldComponent, IconComponent, PageNavComponent, SelectComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -60,7 +60,7 @@ import { composeRules } from '../game/state/setup-text';
                 <button type="button" class="flag" [attr.aria-label]="'adventures.goal' | t" [title]="'adventures.goalHint' | t" (click)="showGoal(s.map)"><app-icon name="flag" [size]="20" /></button>
               }
             </div>
-            <p class="note">{{ (perPlayer() === 2 ? 'lobby.chooseTwo' : 'lobby.chooseHero') | t }}</p>
+            <p class="note">{{ (perPlayer() === 2 ? 'lobby.chooseTwo' : 'lobby.chooseMercenary') | t }}</p>
           }
         }
         @if (isHost) {
@@ -77,8 +77,8 @@ import { composeRules } from '../game/state/setup-text';
         @if (isHost) {
           <div class="row slots">
             @for (slot of slots(); track $index) {
-              <div class="card slot" [class.filled]="slot.hero" [class.ready]="slot.player?.ready">
-                @if (slot.hero; as h) {
+              <div class="card slot" [class.filled]="slot.mercenary" [class.ready]="slot.player?.ready">
+                @if (slot.mercenary; as h) {
                   <img [src]="h.portraitFull" [alt]="h.name" />
                   <div class="cap"><b>{{ h.name }}</b><span>{{ h.class | ct }}</span><small>{{ gear(slot) }}</small></div>
                   @if (slot.player?.ready) { <span class="tick"><app-icon name="check_circle" [size]="24" /></span> }
@@ -91,9 +91,9 @@ import { composeRules } from '../game/state/setup-text';
         } @else if (s.started) {
           <p class="note">{{ 'lobby.startedPlayer' | t }}</p>
         } @else if (!showGear()) {
-          <div class="row" role="group" [attr.aria-label]="'lobby.chooseHero' | t">
-            @for (h of heroes(); track h.id) {
-              <div class="card hero" role="button" tabindex="0" [attr.aria-pressed]="!!mine()?.heroes?.includes(h.id)" [class.mine]="mine()?.heroes?.includes(h.id)" [class.taken]="takenBy(h.id)"
+          <div class="row" role="group" [attr.aria-label]="'lobby.chooseMercenary' | t">
+            @for (h of mercenaries(); track h.id) {
+              <div class="card mercenary" role="button" tabindex="0" [attr.aria-pressed]="!!mine()?.mercenaries?.includes(h.id)" [class.mine]="mine()?.mercenaries?.includes(h.id)" [class.taken]="takenBy(h.id)"
                 [attr.aria-disabled]="takenBy(h.id) ? 'true' : null" (click)="pick(h.id)" (keydown.enter)="pick(h.id)" (keydown.space)="pick(h.id); $event.preventDefault()">
                 <img [src]="h.portraitFull" [alt]="h.name" />
                 <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
@@ -101,7 +101,7 @@ import { composeRules } from '../game/state/setup-text';
                 <div class="cap">
                   <app-value-star class="value" [value]="h.value" />
                   @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                  <app-hero-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
+                  <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
                   <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + h.armor">
                   <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
                   <em>{{ h.armor }}</em>
@@ -114,8 +114,8 @@ import { composeRules } from '../game/state/setup-text';
           </div>
         } @else {
           <div class="squad">
-            @for (h of myHeroes(); track h.id) {
-              <app-hero-loadout [hero]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" (changed)="setLoadout(h.id, $event)" />
+            @for (h of myMercenaries(); track h.id) {
+              <app-mercenary-loadout [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" (changed)="setLoadout(h.id, $event)" />
             }
           </div>
         }
@@ -129,7 +129,7 @@ import { composeRules } from '../game/state/setup-text';
         } @else if (!s.started) {
           @if (!showGear()) {
             <button type="button" class="dlg-btn primary" [attr.aria-disabled]="complete() ? null : 'true'" (click)="enterGear()">{{ 'party.confirm' | t }}</button>
-            @if (!complete()) { <p class="warn"><app-icon name="warning" [size]="18" />{{ (perPlayer() === 2 ? 'lobby.chooseTwo' : 'lobby.chooseHero') | t }}</p> }
+            @if (!complete()) { <p class="warn"><app-icon name="warning" [size]="18" />{{ (perPlayer() === 2 ? 'lobby.chooseTwo' : 'lobby.chooseMercenary') | t }}</p> }
           } @else {
             <button type="button" class="dlg-btn primary" [class.on]="mine()?.ready" (click)="toggleReady()">{{ (mine()?.ready ? 'lobby.notReady' : 'lobby.ready') | t }}</button>
           }
@@ -137,7 +137,7 @@ import { composeRules } from '../game/state/setup-text';
       }
     </footer>
     <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
-    <app-hero-detail-dialog [hero]="detail()" (closed)="detail.set(null)" />
+    <app-mercenary-detail-dialog [mercenary]="detail()" (closed)="detail.set(null)" />
     <app-adventure-dialog [view]="goal()" (confirm)="goal.set(null)" />
     <app-confirm-dialog [open]="askUnspent()" [danger]="false" [title]="'party.unspentTitle' | t" [text]="'party.unspentText' | t: { names: unspentNames() }" [confirmLabel]="'lobby.readyAnyway' | t" (confirmed)="askUnspent.set(false); client?.setReady(true)" (cancel)="askUnspent.set(false)" />
   `,
@@ -167,7 +167,7 @@ import { composeRules } from '../game/state/setup-text';
       border-radius: var(--radius-1); border: 1px dashed var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit;
       display: flex; align-items: center; justify-content: center; transform: rotate(4deg); transform-origin: 30% 100%; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
     }
-    .card.filled, .card.hero { border-style: solid; }
+    .card.filled, .card.mercenary { border-style: solid; }
     .card.ready { border-color: var(--c-ok); }
     .empty { padding: 12px; color: var(--c-text-dim); font-size: 12px; }
     img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -175,14 +175,14 @@ import { composeRules } from '../game/state/setup-text';
     .cap b { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.04em; }
     .cap span { color: var(--c-text-dim); font-size: 11px; font-weight: 600; letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .tick { position: absolute; top: 8px; right: 8px; color: var(--c-ok); }
-    .hero { cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
-    .hero:hover, .hero:focus-visible { border-color: var(--c-interact); outline: none; transform: rotate(4deg) translateY(-4px); }
-    .hero.mine { border-color: var(--c-interact); box-shadow: 0 0 0 1px var(--c-interact), 0 8px 22px rgba(0, 0, 0, 0.55); }
+    .mercenary { cursor: pointer; transition: border-color 0.15s, transform 0.15s; }
+    .mercenary:hover, .mercenary:focus-visible { border-color: var(--c-interact); outline: none; transform: rotate(4deg) translateY(-4px); }
+    .mercenary.mine { border-color: var(--c-interact); box-shadow: 0 0 0 1px var(--c-interact), 0 8px 22px rgba(0, 0, 0, 0.55); }
     /* Passando su un eroe (o col focus) tutti gli altri perdono colore, così quello sotto il puntatore risalta. */
-    .hero img { transition: filter 0.2s; }
-    .hero.taken { cursor: not-allowed; }
-    .hero.taken img { filter: grayscale(1) brightness(0.45); }
-    .hero.taken:hover { border-color: var(--c-line-strong); transform: rotate(4deg); }
+    .mercenary img { transition: filter 0.2s; }
+    .mercenary.taken { cursor: not-allowed; }
+    .mercenary.taken img { filter: grayscale(1) brightness(0.45); }
+    .mercenary.taken:hover { border-color: var(--c-line-strong); transform: rotate(4deg); }
     .badge { position: absolute; top: 8px; right: 46px; padding: 3px 7px; border-radius: var(--radius-1); background: rgba(0, 0, 0, 0.75); font-size: 11px; font-weight: 600; }
     /* I punti ferita in cuori in colonna in alto a sinistra; l'armatura in uno scudo nero in basso a destra sopra il piede (come in partita). */
     .hearts { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 2px; }
@@ -218,22 +218,22 @@ export class LobbyComponent {
   /** Chi ha creato la partita (e non è entrato con "Unisciti") è l'host. */
   protected readonly isHost = !!this.lobby && !this.route.snapshot.queryParamMap.has('join');
 
-  private readonly rawHeroes = signal<HeroSheet[]>([]);
+  private readonly rawMercenaries = signal<MercenarySheet[]>([]);
   private readonly rawShop = signal<ShopData | null>(null);
   /** La variante di preparazione dell'avventura scelta (monete in più, tesori in negozio): si rilegge quando l'host cambia avventura. */
   private readonly adventureSetup = signal<AdventureSetup>({});
-  protected readonly heroes = computed(() => this.rawHeroes().map((h) => ({ ...h, coins: coinsWithSetup(h.coins, this.adventureSetup()) })));
+  protected readonly mercenaries = computed(() => this.rawMercenaries().map((h) => ({ ...h, coins: coinsWithSetup(h.coins, this.adventureSetup()) })));
   protected readonly shop = computed<ShopData | null>(() => {
     const s = this.rawShop();
     return s ? { ...s, treasureTiers: this.adventureSetup().pregameTreasures ?? [] } : null;
   });
   private readonly familiarDefs = signal<ReadonlyMap<string, FamiliarDef>>(new Map());
-  protected familiarsOf(h: HeroSheet): FamiliarDef[] {
+  protected familiarsOf(h: MercenarySheet): FamiliarDef[] {
     return familiarsOfSheet(h, this.familiarDefs());
   }
   private readonly skillCatalog = signal<ReadonlyMap<string, SkillDef>>(new Map());
   protected readonly host: LobbyHost | undefined = this.isHost
-    ? new LobbyHost(this.code, this.lobby!.heroes, () => ({ heroIds: this.heroes().map((h) => h.id), coins: (id) => this.heroes().find((h) => h.id === id)?.coins ?? 0, shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), heroSkills: (id) => this.heroes().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
+    ? new LobbyHost(this.code, this.lobby!.mercenaries, () => ({ mercenaryIds: this.mercenaries().map((h) => h.id), coins: (id) => this.mercenaries().find((h) => h.id === id)?.coins ?? 0, shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), mercenarySkills: (id) => this.mercenaries().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
     : undefined;
   private readonly client: LobbyClient | undefined = this.isHost ? undefined : new LobbyClient(this.code);
 
@@ -251,31 +251,31 @@ export class LobbyComponent {
     const s = this.state();
     if (!s) return [];
     // Un posto per ogni eroe: con un solo giocatore eroe sono due carte dello stesso giocatore.
-    const per = heroesPerPlayer(s.heroes);
-    return Array.from({ length: s.heroes * per }, (_, i) => {
+    const per = mercenariesPerPlayer(s.mercenaries);
+    return Array.from({ length: s.mercenaries * per }, (_, i) => {
       const player = s.players[Math.floor(i / per)];
-      return { player, hero: this.heroes().find((h) => h.id === player?.heroes[i % per]) };
+      return { player, mercenary: this.mercenaries().find((h) => h.id === player?.mercenaries[i % per]) };
     });
   });
   /** Il mio posto (solo per chi gioca). */
   protected readonly mine = computed(() => this.state()?.players.find((p) => p.pid === this.client?.pid));
   /** Quanti eroi deve scegliere ogni giocatore (2 se è l'unico giocatore eroe) e se il mio gruppo è completo. */
   /** I miei eroi (le schede), nell'ordine in cui li ho scelti, ognuno col suo spazio per il negozio. */
-  protected readonly myHeroes = computed(() => (this.mine()?.heroes ?? []).flatMap((id) => this.heroes().find((h) => h.id === id) ?? []));
+  protected readonly myMercenaries = computed(() => (this.mine()?.mercenaries ?? []).flatMap((id) => this.mercenaries().find((h) => h.id === id) ?? []));
   protected readonly askUnspent = signal(false);
   protected readonly skillNotice = signal(false);
   /** La scheda di dettaglio aperta dal tasto "i" di una carta. */
-  protected readonly detail = signal<HeroSheet | null>(null);
+  protected readonly detail = signal<MercenarySheet | null>(null);
   /** I miei eroi che non hanno speso niente (hanno ancora tutte le monete). */
   protected readonly unspentNames = computed(() => {
     const shop = this.shop();
-    return this.myHeroes().filter((h) => !shop || loadoutCost(this.loadoutOf(h.id), shop) === 0).map((h) => h.name).join(', ');
+    return this.myMercenaries().filter((h) => !shop || loadoutCost(this.loadoutOf(h.id), shop) === 0).map((h) => h.name).join(', ');
   });
   /** Eroi confermati: si passa alla schermata degli acquisti (finché il gruppo è completo). */
   protected readonly gearStep = signal(false);
   protected readonly showGear = computed(() => this.gearStep() && this.complete());
-  protected readonly perPlayer = computed(() => heroesPerPlayer(this.state()?.heroes ?? 0));
-  protected readonly complete = computed(() => (this.mine()?.heroes.length ?? 0) === this.perPlayer());
+  protected readonly perPlayer = computed(() => mercenariesPerPlayer(this.state()?.mercenaries ?? 0));
+  protected readonly complete = computed(() => (this.mine()?.mercenaries.length ?? 0) === this.perPlayer());
   protected readonly problem = computed(() => !['online', 'connecting'].includes(this.status()));
 
   protected readonly statusText = computed(() => this.i18n.t(`lobby.status.${this.status()}`));
@@ -284,12 +284,12 @@ export class LobbyComponent {
     const s = this.state();
     if (!s) return '';
     if (!s.map) return this.i18n.t('lobby.hint.map');
-    if (s.players.length < s.heroes) return this.i18n.t('lobby.hint.players', { n: s.heroes - s.players.length });
+    if (s.players.length < s.mercenaries) return this.i18n.t('lobby.hint.players', { n: s.mercenaries - s.players.length });
     return this.i18n.t('lobby.hint.ready');
   });
 
   constructor() {
-    void loadAllHeroSheets().then((h) => this.rawHeroes.set(h));
+    void loadAllMercenarySheets().then((h) => this.rawMercenaries.set(h));
     void loadPregameShop().then((s) => this.rawShop.set(s));
     // Cambiando avventura (l'host la sceglie, gli altri la vedono) si rilegge la variante di preparazione.
     effect(() => {
@@ -338,8 +338,8 @@ export class LobbyComponent {
   }
 
   /** Per il Maligno: monete rimaste e numero di acquisti di un posto, da mostrare sulla carta. */
-  protected gear(slot: { player?: { loadouts: Record<string, Loadout> }; hero?: HeroSheet }): string {
-    const h = slot.hero;
+  protected gear(slot: { player?: { loadouts: Record<string, Loadout> }; mercenary?: MercenarySheet }): string {
+    const h = slot.mercenary;
     const shop = this.shop();
     if (!h || !shop) return '';
     const l = slot.player?.loadouts[h.id] ?? emptyLoadout();
@@ -354,13 +354,13 @@ export class LobbyComponent {
   }
 
   /** Si torna a cambiare gli eroi: il "Pronto" cade da solo (lo toglie l'host alla prima scelta). */
-  protected backToHeroes() {
+  protected backToMercenaries() {
     if (this.mine()?.ready) this.client?.setReady(false);
     this.gearStep.set(false);
   }
 
   protected takenBy(id: string): boolean {
-    return !!this.state()?.players.some((p) => p.heroes.includes(id) && p.pid !== this.client?.pid);
+    return !!this.state()?.players.some((p) => p.mercenaries.includes(id) && p.pid !== this.client?.pid);
   }
 
   protected pick(id: string) {
@@ -389,7 +389,7 @@ export class LobbyComponent {
 
   /** La freccia: dagli acquisti si torna agli eroi; dal resto si chiede se uscire. */
   protected back() {
-    if (this.showGear()) this.backToHeroes();
+    if (this.showGear()) this.backToMercenaries();
     else this.nav()?.ask();
   }
 

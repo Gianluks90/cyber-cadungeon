@@ -10,7 +10,7 @@ import { ruleAmount } from './effects';
  * Valgono per le ferite degli attacchi (che l'armatura può ridurre); le ferite che la ignorano (buche, fiamme, trappole) non si possono annullare così.
  */
 export interface WoundReaction {
-  /** Un nome stabile: `<id oggetto>:<posizione>` o `hero:<posizione>` (serve per ricordare che è esaurita). */
+  /** Un nome stabile: `<id oggetto>:<posizione>` o `mercenary:<posizione>` (serve per ricordare che è esaurita). */
   id: string;
   name: string;
   /** Automatica (i dadi) o a scelta. */
@@ -33,32 +33,32 @@ interface ReactEffect {
 }
 
 /** Le reazioni alle ferite dell'eroe (di oggetti equipaggiati e dell'abilità dell'eroe). */
-export function woundReactions(state: GameState, hero: Piece): WoundReaction[] {
+export function woundReactions(state: GameState, mercenary: Piece): WoundReaction[] {
   const out: WoundReaction[] = [];
-  for (const itemId of hero.equipped) {
+  for (const itemId of mercenary.equipped) {
     const def = state.items.get(itemId);
     ((def?.effects ?? []) as ReactEffect[]).forEach((e, i) => {
       if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `${itemId}:${i}`, name: def!.name, auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: def!.kind === 'shield' });
     });
   }
-  (hero.heroEffects as ReactEffect[] | undefined)?.forEach((e, i) => {
-    if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `hero:${i}`, name: e.name ?? tr('Abilità'), auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: false });
+  (mercenary.mercenaryEffects as ReactEffect[] | undefined)?.forEach((e, i) => {
+    if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `mercenary:${i}`, name: e.name ?? tr('Abilità'), auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: false });
   });
   return out;
 }
 
 /** Perché una reazione non si può usare adesso (esaurita), o undefined. */
-export function reactionBlock(hero: Piece, r: WoundReaction): string | undefined {
-  return r.exhaust && hero.exhausted?.includes(r.id) ? tr('esaurita fino al prossimo round') : undefined;
+export function reactionBlock(mercenary: Piece, r: WoundReaction): string | undefined {
+  return r.exhaust && mercenary.exhausted?.includes(r.id) ? tr('esaurita fino al prossimo round') : undefined;
 }
 
 /** Quante ferite annulla una reazione a numero fisso: quelle scritte, più 1 con Ambidestro se è uno scudo. */
-export function cancelAmount(state: GameState, hero: Piece, r: WoundReaction): number {
+export function cancelAmount(state: GameState, mercenary: Piece, r: WoundReaction): number {
   if (typeof r.cancel !== 'number') return 0;
-  return r.cancel + (r.shield ? ruleAmount(state, hero, 'shieldBlock') : 0);
+  return r.cancel + (r.shield ? ruleAmount(state, mercenary, 'shieldBlock') : 0);
 }
 
 /** La reazione è stata usata: se si esaurisce, resta tale fino al round dopo. */
-export function markReactionUsed(hero: Piece, r: WoundReaction): void {
-  if (r.exhaust) (hero.exhausted ??= []).push(r.id);
+export function markReactionUsed(mercenary: Piece, r: WoundReaction): void {
+  if (r.exhaust) (mercenary.exhausted ??= []).push(r.id);
 }

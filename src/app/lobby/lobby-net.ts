@@ -1,12 +1,12 @@
 import Peer, { DataConnection } from 'peerjs';
 import { signal } from '@angular/core';
-import { StartingSkills } from '../game/heroes/hero-sheet';
-import { Loadout, PartySetup, ShopData, SkillPoolCard, drawSkillCards, loadoutCost, validLoadout } from '../game/heroes/party-setup';
+import { StartingSkills } from '../game/mercenaries/mercenary-sheet';
+import { Loadout, PartySetup, ShopData, SkillPoolCard, drawSkillCards, loadoutCost, validLoadout } from '../game/mercenaries/party-setup';
 
 /** Un giocatore seduto al tavolo: gli eroi che ha scelto (uno, o due se è l'unico giocatore eroe) e se è pronto. `pid` è il suo id, che resta lo stesso se ricarica la pagina. */
 export interface LobbyPlayer {
   pid: string;
-  heroes: string[];
+  mercenaries: string[];
   /** Ciò che ogni suo eroe ha comprato nel negozio di prima della partita (per id dell'eroe). */
   loadouts: Record<string, Loadout>;
   /** Le carte abilità secondarie assegnate a ogni suo eroe (id del catalogo), pescate dall'host appena l'eroe è scelto. */
@@ -16,21 +16,21 @@ export interface LobbyPlayer {
 
 /** Ciò che l'host sa del gioco per controllare le scelte: gli eroi che esistono, le monete con cui parte ciascuno e il negozio. */
 export interface LobbyWorld {
-  heroIds: readonly string[];
-  coins: (heroId: string) => number;
+  mercenaryIds: readonly string[];
+  coins: (mercenaryId: string) => number;
   shop: ShopData | null;
   /** Le carte abilità del catalogo e i punti di attributo di ogni eroe: servono a pescare le abilità secondarie. */
   skillPool: readonly SkillPoolCard[];
-  heroSkills: (heroId: string) => StartingSkills;
+  mercenarySkills: (mercenaryId: string) => StartingSkills;
 }
 
 /** Quanti eroi controlla ogni giocatore: con un solo giocatore eroe (più il Maligno, 2 persone) ne servono sempre 2; da 3 persone in poi ognuno ne ha uno. */
-export const heroesPerPlayer = (heroPlayers: number) => (heroPlayers === 1 ? 2 : 1);
+export const mercenariesPerPlayer = (mercenaryPlayers: number) => (mercenaryPlayers === 1 ? 2 : 1);
 
 /** Tutto ciò che si vede nella sala d'attesa: lo decide l'host (il Maligno) e lo manda a tutti. */
 export interface LobbyState {
   /** Quanti eroi servono (i posti per i giocatori, Maligno escluso). */
-  heroes: number;
+  mercenaries: number;
   /** L'avventura scelta dall'host (nome del file in `public/maps/`), se l'ha scelta. */
   map: string | null;
   players: LobbyPlayer[];
@@ -38,7 +38,7 @@ export interface LobbyState {
 }
 
 /** Cosa manda un giocatore all'host: sono intenzioni, l'host le valida (CLAUDE.md, "Architettura di rete"). */
-type ToHost = { t: 'hello'; pid: string } | { t: 'pick'; hero: string } | { t: 'loadout'; hero: string; loadout: Loadout } | { t: 'ready'; ready: boolean };
+type ToHost = { t: 'hello'; pid: string } | { t: 'pick'; mercenary: string } | { t: 'loadout'; mercenary: string; loadout: Loadout } | { t: 'ready'; ready: boolean };
 type ToClient = { t: 'state'; state: LobbyState } | { t: 'full' };
 
 /** Come sta la connessione, visto da chi la usa. */
@@ -80,7 +80,7 @@ export function playerId(): string {
 
 /** Il lato dell'host: ha lo stato autoritativo della sala, valida le scelte dei giocatori e rimanda lo stato a tutti. */
 export class LobbyHost {
-  readonly state = signal<LobbyState>({ heroes: 0, map: null, players: [], started: false });
+  readonly state = signal<LobbyState>({ mercenaries: 0, map: null, players: [], started: false });
   readonly status = signal<NetStatus>('connecting');
   private peer?: Peer;
   private readonly conns = new Map<string, DataConnection>();
@@ -88,9 +88,9 @@ export class LobbyHost {
   private timer?: ReturnType<typeof setTimeout>;
   private destroyed = false;
 
-  /** `heroes`: quanti posti; `validHeroes`: gli id degli eroi che si possono scegliere. */
-  constructor(private readonly code: string, heroes: number, private readonly world: () => LobbyWorld, map: string | null = null) {
-    this.state.set({ heroes, map, players: [], started: false });
+  /** `mercenaries`: quanti posti; `validMercenaries`: gli id degli eroi che si possono scegliere. */
+  constructor(private readonly code: string, mercenaries: number, private readonly world: () => LobbyWorld, map: string | null = null) {
+    this.state.set({ mercenaries, map, players: [], started: false });
     this.open();
   }
 
@@ -124,8 +124,8 @@ export class LobbyHost {
       if (msg?.t === 'hello' && typeof msg.pid === 'string' && !pid) {
         pid = msg.pid;
         this.join(pid, conn);
-      } else if (pid && msg?.t === 'pick' && typeof msg.hero === 'string') this.pick(pid, msg.hero);
-      else if (pid && msg?.t === 'loadout') this.setLoadout(pid, msg.hero, msg.loadout);
+      } else if (pid && msg?.t === 'pick' && typeof msg.mercenary === 'string') this.pick(pid, msg.mercenary);
+      else if (pid && msg?.t === 'loadout') this.setLoadout(pid, msg.mercenary, msg.loadout);
       else if (pid && msg?.t === 'ready') this.setReady(pid, !!msg.ready);
     });
     const left = () => {
@@ -140,49 +140,49 @@ export class LobbyHost {
 
   private join(pid: string, conn: DataConnection) {
     const known = this.state().players.some((p) => p.pid === pid);
-    if (!known && this.state().players.length >= this.state().heroes) {
+    if (!known && this.state().players.length >= this.state().mercenaries) {
       conn.send({ t: 'full' } satisfies ToClient);
       setTimeout(() => conn.close(), 300);
       return;
     }
     this.conns.get(pid)?.close(); // una scheda più vecchia dello stesso giocatore
     this.conns.set(pid, conn);
-    this.update((s) => (known ? s : { ...s, players: [...s.players, { pid, heroes: [], loadouts: {}, skillCards: {}, ready: false }] }));
+    this.update((s) => (known ? s : { ...s, players: [...s.players, { pid, mercenaries: [], loadouts: {}, skillCards: {}, ready: false }] }));
   }
 
   /** Tocca un eroe: se è già suo lo toglie; altrimenti lo prende, se è libero (con più eroi da scegliere, quando i posti sono pieni il più vecchio lascia il posto al nuovo). */
-  private pick(pid: string, hero: string) {
+  private pick(pid: string, mercenary: string) {
     const s = this.state();
-    if (s.started || !this.world().heroIds.includes(hero)) return;
+    if (s.started || !this.world().mercenaryIds.includes(mercenary)) return;
     const me = s.players.find((p) => p.pid === pid);
     if (!me) return;
     // Un eroe già preso da un altro: la scelta non vale e il giocatore riceve lo stato com'è (così vede chi l'ha preso).
-    if (!me.heroes.includes(hero) && s.players.some((p) => p.heroes.includes(hero))) return this.send(pid);
-    const max = heroesPerPlayer(s.heroes);
-    const next = me.heroes.includes(hero) ? me.heroes.filter((h) => h !== hero) : [...me.heroes, hero].slice(-max);
+    if (!me.mercenaries.includes(mercenary) && s.players.some((p) => p.mercenaries.includes(mercenary))) return this.send(pid);
+    const max = mercenariesPerPlayer(s.mercenaries);
+    const next = me.mercenaries.includes(mercenary) ? me.mercenaries.filter((h) => h !== mercenary) : [...me.mercenaries, mercenary].slice(-max);
     // Le carte abilità di un eroe appena scelto si pescano subito (senza quelle già date agli altri eroi); quelle di chi esce tornano nel mazzo.
     const w = this.world();
     const taken = new Set(s.players.flatMap((p) => Object.values(p.skillCards).flat()));
-    const skillCards = Object.fromEntries(next.map((h) => [h, me.skillCards[h] ?? (() => { const c = drawSkillCards(w.heroSkills(h), w.skillPool, taken); c.forEach((id) => taken.add(id)); return c; })()]));
-    this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, heroes: next, skillCards, loadouts: Object.fromEntries(Object.entries(p.loadouts).filter(([h]) => next.includes(h))), ready: false } : p)) }));
+    const skillCards = Object.fromEntries(next.map((h) => [h, me.skillCards[h] ?? (() => { const c = drawSkillCards(w.mercenarySkills(h), w.skillPool, taken); c.forEach((id) => taken.add(id)); return c; })()]));
+    this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, mercenaries: next, skillCards, loadouts: Object.fromEntries(Object.entries(p.loadouts).filter(([h]) => next.includes(h))), ready: false } : p)) }));
   }
 
   /** Un giocatore cambia ciò che ha comprato per uno dei suoi eroi: vale solo se è valido (monete, posto, copie ancora in vendita, comuni a tutta la squadra). */
-  private setLoadout(pid: string, hero: string, loadout: Loadout) {
+  private setLoadout(pid: string, mercenary: string, loadout: Loadout) {
     const s = this.state();
     const w = this.world();
     const me = s.players.find((p) => p.pid === pid);
-    if (s.started || !me || !me.heroes.includes(hero) || !w.shop) return;
-    const others = s.players.flatMap((p) => Object.entries(p.loadouts).filter(([h]) => h !== hero).map(([, l]) => l));
-    if (!validLoadout(loadout, w.coins(hero), w.shop, others)) return this.send(pid);
+    if (s.started || !me || !me.mercenaries.includes(mercenary) || !w.shop) return;
+    const others = s.players.flatMap((p) => Object.entries(p.loadouts).filter(([h]) => h !== mercenary).map(([, l]) => l));
+    if (!validLoadout(loadout, w.coins(mercenary), w.shop, others)) return this.send(pid);
     const clean: Loadout = { items: [...loadout.items], potions: [...loadout.potions], treasures: [...(loadout.treasures ?? [])] };
-    this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, loadouts: { ...p.loadouts, [hero]: clean }, ready: false } : p)) }));
+    this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, loadouts: { ...p.loadouts, [mercenary]: clean }, ready: false } : p)) }));
   }
 
   private setReady(pid: string, ready: boolean) {
     const s = this.state();
     if (s.started) return;
-    this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, ready: ready && p.heroes.length === heroesPerPlayer(s.heroes) } : p)) }));
+    this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, ready: ready && p.mercenaries.length === mercenariesPerPlayer(s.mercenaries) } : p)) }));
   }
 
   /** L'host sceglie l'avventura. */
@@ -193,7 +193,7 @@ export class LobbyHost {
   /** Tutti i posti sono pieni, ognuno con il suo eroe e pronto, e l'avventura è scelta. */
   readonly canStart = () => {
     const s = this.state();
-    return !s.started && !!s.map && s.players.length === s.heroes && s.players.every((p) => p.heroes.length === heroesPerPlayer(s.heroes) && p.ready);
+    return !s.started && !!s.map && s.players.length === s.mercenaries && s.players.every((p) => p.mercenaries.length === mercenariesPerPlayer(s.mercenaries) && p.ready);
   };
 
   /** Gli acquisti di tutti gli eroi, con le monete che restano a ciascuno: passano alla partita. */
@@ -201,9 +201,9 @@ export class LobbyHost {
     const w = this.world();
     const out: PartySetup = {};
     for (const p of this.state().players) {
-      for (const hero of p.heroes) {
-        const l = p.loadouts[hero] ?? { items: [], potions: [] };
-        out[hero] = { ...l, coins: w.coins(hero) - (w.shop ? loadoutCost(l, w.shop) : 0), skillCards: p.skillCards[hero] ?? [] };
+      for (const mercenary of p.mercenaries) {
+        const l = p.loadouts[mercenary] ?? { items: [], potions: [] };
+        out[mercenary] = { ...l, coins: w.coins(mercenary) - (w.shop ? loadoutCost(l, w.shop) : 0), skillCards: p.skillCards[mercenary] ?? [] };
       }
     }
     return out;
@@ -213,7 +213,7 @@ export class LobbyHost {
   start(): string[] | null {
     if (!this.canStart()) return null;
     this.update((s) => ({ ...s, started: true }));
-    return this.state().players.flatMap((p) => p.heroes);
+    return this.state().players.flatMap((p) => p.mercenaries);
   }
 
   private update(f: (s: LobbyState) => LobbyState) {
@@ -277,13 +277,13 @@ export class LobbyClient {
   }
 
   /** Tocca un eroe: lo prende o, se è già suo, lo lascia. */
-  pick(hero: string) {
-    this.send({ t: 'pick', hero });
+  pick(mercenary: string) {
+    this.send({ t: 'pick', mercenary });
   }
 
   /** Cambia gli acquisti di uno dei miei eroi. */
-  setLoadout(hero: string, loadout: Loadout) {
-    this.send({ t: 'loadout', hero, loadout });
+  setLoadout(mercenary: string, loadout: Loadout) {
+    this.send({ t: 'loadout', mercenary, loadout });
   }
 
   setReady(ready: boolean) {

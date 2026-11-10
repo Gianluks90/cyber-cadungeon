@@ -10,9 +10,9 @@ import type { GameState } from './game-state';
 export function snapshotSeen(state: GameState): void {
   const board = state.board;
   if (!board) return;
-  for (const hero of state.pieces) {
-    if (hero.team !== 'hero' || hero.city) continue;
-    if (!effectsOf(state, hero).some((x) => x.effect.kind === 'attack' && x.effect['ifUnseenAtStart'])) continue;
-    hero.seenAtStart = state.pieces.filter((p: Piece) => p.team === 'monster' && !p.city && canSeeTarget(state, board, hero, p)).map((p) => p.id);
+  for (const mercenary of state.pieces) {
+    if (mercenary.team !== 'mercenary' || mercenary.city) continue;
+    if (!effectsOf(state, mercenary).some((x) => x.effect.kind === 'attack' && x.effect['ifUnseenAtStart'])) continue;
+    mercenary.seenAtStart = state.pieces.filter((p: Piece) => p.team === 'monster' && !p.city && canSeeTarget(state, board, mercenary, p)).map((p) => p.id);
   }
 }

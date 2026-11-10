@@ -23,7 +23,7 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - Due modi: **chiavi a nome** (`home.newGame`, pipe `t` o `translate('chiave')`, in inglese, per le schermate) e **italiano come chiave** (`tr('Testo {nome}', { nome })` o pipe `tr`, per messaggi di regole e partita; la chiave è ricavata dal testo con `catalogKey`, quindi cambiare una parola vuole la riga nuova in entrambi i file).
 - Dopo ogni modifica ai testi: `npm run i18n:check` (controlla che ogni testo passato a `tr` abbia la riga in entrambi i file).
 - Si traduce al momento dell'uso, mai in costanti di modulo (usa getter). Plurali = frasi diverse, niente suffissi a mano; numeri e nomi con segnaposto.
-- Cataloghi (eroi, mostri, oggetti, abilità, Carte della Megacorp) restano in italiano in `public/`, perché è anche ciò che legge il motore ("Perforare 2"…): si traducono solo in visualizzazione. Nomi con chiavi `item.<id>`, `skill.<id>`, `monster.<id>`, `evil.<id>`; altri testi con la chiave di `catalogKey` e il pipe `ct`. Ogni voce nuova nei cataloghi vuole la sua traduzione.
+- Cataloghi (Mercenari, mostri, oggetti, abilità, Carte dell'Avversario) restano in italiano in `public/`, perché è anche ciò che legge il motore ("Perforare 2"…): si traducono solo in visualizzazione. Nomi con chiavi `item.<id>`, `skill.<id>`, `monster.<id>`, `adversary.<id>`; altri testi con la chiave di `catalogKey` e il pipe `ct`. Ogni voce nuova nei cataloghi vuole la sua traduzione.
 - Dettagli del meccanismo: `i18n/` (`i18n.service.ts`, `catalog-text.ts`). Lingua scelta in `localStorage` (`cad-lang`), poi lingua del browser, poi italiano.
 
 ## Architettura di rete
@@ -37,7 +37,7 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - Una sola unità: la **cella**, 64 px ovunque (SVG compresi).
 - **Tile**: JSON in `public/tiles/` con dimensione in celle, forma (rettangolo `size` o unione `rects`) e aperture (lato, posizione, larghezza 2). Rotazione a scatti di 90°; due tile si agganciano se hanno aperture che si guardano. Pavimento, muri e fratture si disegnano da codice. Un'apertura senza vicino è muro; i punti morti (`deadEnd`) chiudono le uscite libere.
 - **Mappa**: elenco di tile con posizione e rotazione + `seed` per i dettagli generati (`public/maps/`; `test.json` è la mappa di prova, `catalog.json` mostra tutti i tile). È anche il formato di salvataggio ed esportazione dell'editor (`MapData`, `game/map/map-data.ts`).
-- **Dati dell'avventura, non dei tile**: porte (`doors`: lato di cella, aperta/chiusa, serratura `lock`), ostacoli (`obstacles`: roccia, buca, acqua), muri d'autore (`walls`), segnalini (`markers`: glifi, scale, scrigni, oggetti a terra, incontri), pedine (`pieces`), aree (`areas[].cells`), torce, eventi (`events`, `variables`), zone. Un eroe o mostro si richiama dal catalogo con `hero`/`monster` e i campi scritti sulla pedina lo sostituiscono.
+- **Dati dell'avventura, non dei tile**: porte (`doors`: lato di cella, aperta/chiusa, serratura `lock`), ostacoli (`obstacles`: roccia, buca, acqua), muri d'autore (`walls`), segnalini (`markers`: glifi, scale, scrigni, oggetti a terra, incontri), pedine (`pieces`), aree (`areas[].cells`), torce, eventi (`events`, `variables`), zone. Un eroe o mostro si richiama dal catalogo con `mercenary`/`monster` e i campi scritti sulla pedina lo sostituiscono.
 - Geometria dei muri a segmenti: serve per movimento e linea di vista. Si scoprono gli elementi singoli, non le stanze.
 - Torce, scale, barili, bauli non sono proprietà del tile: tile neutri e riutilizzabili.
 
@@ -52,17 +52,17 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - **Griglia, movimento, vista**: `game/board/` (`board.ts` è il cuore: muri, porte, ostacoli, `canStep`, linea di vista in `sight.ts`).
 - **Mappa e disegno**: `game/map/` (tile, snap, muri, etichette delle aree), `game/pieces/`, `game/markers/`, `game/obstacles/`, `game/doors/`, `game/veil-view.ts`.
 - **Stato e regole di partita**: `game/state/` (`game-state.ts`, `actions.ts`, `combat.ts`, `status.ts`, `effects.ts`); scena Pixi e HUD in `game/game-scene.component.ts`.
-- **Eventi dell'avventura**: `game/state/events.ts` (+ tipi in `game/map/map-data.ts`); il Maligno/Megacorp in `game/state/evil.ts`, `evil-deck.ts`, `game/evil/`.
+- **Eventi dell'avventura**: `game/state/events.ts` (+ tipi in `game/map/map-data.ts`); l'Avversario in `game/state/adversary.ts`, `adversary-deck.ts`, `game/adversary/`.
 - **Editor**: `src/app/editor/` (`editor.component.ts`, `tile-editor.ts` senza interfaccia, `validator.ts` per la Verifica, `map-camera.ts`). Esiste un editor completo con strumenti per tessere, porte, ostacoli, oggetti, nemici, aree, glifi ed eventi; i dettagli sono nel legacy.
-- **Cataloghi**: `public/{heroes,monsters,items,skills,evil,shops}/`, caricati da `game/{heroes,monsters,items,skills,evil}/`. Squadra predefinita in `game/heroes/hero-sheet.ts` (`DEFAULT_PARTY`).
+- **Cataloghi**: `public/{mercenaries,monsters,items,skills,adversary,shops}/`, caricati da `game/{mercenaries,monsters,items,skills,adversary}/`. Squadra predefinita in `game/mercenaries/mercenary-sheet.ts` (`DEFAULT_PARTY`).
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
-- **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/evil/:map`, `/editor`).
+- **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 
 ## Glossario (nomi decisi)
-Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.md`. Il codice è **in transizione**: finché la rinomina (TODO L1.9) non è finita, i nomi vecchi restano tra parentesi.
-- **Avversario**: il ruolo opposto (era "Maligno"/"Megacorp"; nel codice ancora `evil`, `state.evil`, rotta `/evil/:map`; diventerà `adversary`).
-- **Allarme**: la sua risorsa (era "Odio"; nel codice ancora `hatred`, `{hatred:N}`, `--c-hatred`; diventerà `alarm`).
-- **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice ancora `hero`, `heroes/`; diventerà `mercenary`). Li modella l'utente: `bastion`, `vesper`, `halo` sono solo di test e si ignorano.
+Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.md`. La rinomina nel codice e nei dati (TODO L1.9) è completata: non restano alias dei nomi vecchi.
+- **Avversario**: il ruolo opposto (era "Maligno"/"Megacorp"; nel codice `adversary`, `state.adversary`, rotta `/adversary/:map`).
+- **Allarme**: la sua risorsa (era "Odio"; nel codice `alarm`, `{alarm:N}`, `--c-alarm`).
+- **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice `mercenary`, cartelle `mercenaries/`). Li modella l'utente: `bastion`, `vesper`, `halo` sono solo di test e si ignorano.
 - **Picchiatore** (mischia), **Artigliere** (distanza), **Incursore** (Intrusione, ramo `hacking`): i tre archetipi.
 - **Intrusione**: attacco dell'Incursore (nei dati `intrusion`; il ramo abilità è `hacking`, "Hacking").
 - **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nei dati ancora `energy`, `{energy:N}`; diventerà `overclock`).

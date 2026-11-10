@@ -2,7 +2,7 @@ import { tr } from '../../i18n/catalog-text';
 import { Board } from '../board/board';
 import { Piece } from '../pieces/piece';
 import { ItemDef } from '../items/item';
-import { adjacentHeroes, canActOnMap, spendPoints } from './actions';
+import { adjacentMercenaries, canActOnMap, spendPoints } from './actions';
 import { Effect } from './effects';
 import type { GameState } from './game-state';
 import { healWounds } from './status';
@@ -41,7 +41,7 @@ const full = (v: number | 'full' | undefined, max: number) => (v === 'full' ? ma
 
 /** I bersagli possibili: l'eroe stesso e, a seconda dell'oggetto, gli adiacenti. */
 function targetsFor(state: GameState, board: Board | null, piece: Piece, who: string): Piece[] {
-  const near = board ? adjacentHeroes(state, board, piece) : [];
+  const near = board ? adjacentMercenaries(state, board, piece) : [];
   return who === 'self' ? [piece] : [piece, ...near];
 }
 

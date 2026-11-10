@@ -119,9 +119,9 @@ export function freeCellAround(state: GameState, board: Board, piece: Piece, fro
  * conta solo sperare che un eroe ci finisca dentro.
  */
 function targetsFor(state: GameState, board: Board, card: AdversaryCardDef, anywhere = false): TrapSpot[] {
-  const heroes = state.pieces.filter((p) => p.team === 'hero' && !p.city);
-  if ((!heroes.length && !anywhere) || !card.target) return [];
-  const nearest = (c: Cell) => (anywhere ? 2 : Math.min(...heroes.map((h) => distance(c, h.cell))));
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary' && !p.city);
+  if ((!mercenaries.length && !anywhere) || !card.target) return [];
+  const nearest = (c: Cell) => (anywhere ? 2 : Math.min(...mercenaries.map((h) => distance(c, h.cell))));
   const taken = new Set(state.pieces.filter((p) => !p.city).flatMap((p) => footprint(p).map(cellKey)));
   const armed = state.adversary.traps;
   const free = (spot: TrapSpot) => !armed.some((t) => sameSpot(t.at, spot));
@@ -150,7 +150,7 @@ function targetsFor(state: GameState, board: Board, card: AdversaryCardDef, anyw
   return [];
 }
 
-/** I bersagli dove il Maligno a mano può armare questa carta Trappola (casella, porta o scrigno). Vuoto per Seduzione oscura (`hero`), che non si arma. */
+/** I bersagli dove il Maligno a mano può armare questa carta Trappola (casella, porta o scrigno). Vuoto per Seduzione oscura (`mercenary`), che non si arma. */
 export function trapSpots(state: GameState, board: Board, card: AdversaryCardDef): TrapSpot[] {
   return card.kind === 'trap' ? targetsFor(state, board, card, true) : [];
 }

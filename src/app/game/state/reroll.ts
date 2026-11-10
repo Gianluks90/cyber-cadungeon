@@ -15,17 +15,17 @@ interface RerollEffect extends Effect {
   firstOnly?: boolean;
 }
 
-/** Quanti dadi può ripetere `hero` con questo attacco e chi glielo permette (vuoto se nessuno). */
-export function rerollsFor(state: GameState, hero: Piece, attack: AttackType): { count: number; sources: string[] } {
+/** Quanti dadi può ripetere `mercenary` con questo attacco e chi glielo permette (vuoto se nessuno). */
+export function rerollsFor(state: GameState, mercenary: Piece, attack: AttackType): { count: number; sources: string[] } {
   let count = 0;
   const sources: string[] = [];
-  for (const { source, effect } of effectsOf(state, hero)) {
+  for (const { source, effect } of effectsOf(state, mercenary)) {
     const e = effect as RerollEffect;
     if (e.kind !== 'reroll') continue;
     const on = Array.isArray(e.on) ? e.on : e.on ? [e.on] : [];
     if (on.length && !on.includes(attack)) continue;
-    if (e.ifNotMoved && hero.pointsUsed > 0) continue;
-    if (e.firstOnly && (hero.attackTypesUsed ?? []).includes(attack)) continue;
+    if (e.ifNotMoved && mercenary.pointsUsed > 0) continue;
+    if (e.firstOnly && (mercenary.attackTypesUsed ?? []).includes(attack)) continue;
     count += e.count ?? 1;
     sources.push(source);
   }

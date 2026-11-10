@@ -16,10 +16,10 @@ export interface StartingSkills {
 }
 
 /**
- * La scheda di un eroe: un archetipo pronto (public/heroes/<id>.json). Le regole stanno in docs/REGOLE.md, sezione 10.
+ * La scheda di un eroe: un archetipo pronto (public/mercenaries/<id>.json). Le regole stanno in docs/REGOLE.md, sezione 10.
  * Le quattro caratteristiche (forza, conoscenza, volontà, percezione) sono in pausa e non fanno parte della scheda.
  */
-export interface HeroSheet {
+export interface MercenarySheet {
   id: string;
   name: string;
   /** La classe, a parole (druido, ranger, ...): è il sottotitolo dell'eroe. */
@@ -55,7 +55,7 @@ export interface HeroSheet {
 }
 
 /** Controlla che una scheda segua i pattern dei riferimenti; si limita ad avvisare (i valori sono da bilanciare). */
-function check(s: HeroSheet) {
+function check(s: MercenarySheet) {
   const sum = (o: object) => Object.values(o).reduce((a: number, b: number) => a + b, 0);
   if (s.wounds % 4 !== 0) console.warn(`Eroe "${s.id}": le ferite (${s.wounds}) dovrebbero essere un multiplo di 4`);
   if (sum(s.dice) !== 3) console.warn(`Eroe "${s.id}": i dadi dei tre attacchi di solito sommano 3 (qui ${sum(s.dice)})`);
@@ -63,15 +63,15 @@ function check(s: HeroSheet) {
 }
 
 /** Carica le schede che servono (una per id, senza ripetizioni). Quelle che mancano si saltano: la pedina usa i valori di riserva. */
-export async function loadHeroSheets(ids: readonly (string | undefined)[]): Promise<Map<string, HeroSheet>> {
+export async function loadMercenarySheets(ids: readonly (string | undefined)[]): Promise<Map<string, MercenarySheet>> {
   const unique = [...new Set(ids.filter((id): id is string => !!id))];
-  const sheets = new Map<string, HeroSheet>();
+  const sheets = new Map<string, MercenarySheet>();
   await Promise.all(
     unique.map(async (id) => {
       try {
-        const res = await fetch(`heroes/${id}.json`);
+        const res = await fetch(`mercenaries/${id}.json`);
         if (!res.ok) throw new Error(String(res.status));
-        const sheet: HeroSheet = await res.json();
+        const sheet: MercenarySheet = await res.json();
         check(sheet);
         sheets.set(id, sheet);
       } catch {
@@ -82,17 +82,17 @@ export async function loadHeroSheets(ids: readonly (string | undefined)[]): Prom
   return sheets;
 }
 
-/** Carica tutte le schede degli eroi elencate in public/heroes/index.json (per il catalogo dei componenti). */
-export async function loadAllHeroSheets(): Promise<HeroSheet[]> {
+/** Carica tutte le schede degli eroi elencate in public/mercenaries/index.json (per il catalogo dei componenti). */
+export async function loadAllMercenarySheets(): Promise<MercenarySheet[]> {
   try {
-    const res = await fetch('heroes/index.json');
+    const res = await fetch('mercenaries/index.json');
     if (!res.ok) return [];
-    const { heroes }: { heroes: string[] } = await res.json();
-    return [...(await loadHeroSheets(heroes)).values()].sort((a, b) => a.name.localeCompare(b.name, 'it')); // in ordine alfabetico
+    const { mercenaries }: { mercenaries: string[] } = await res.json();
+    return [...(await loadMercenarySheets(mercenaries)).values()].sort((a, b) => a.name.localeCompare(b.name, 'it')); // in ordine alfabetico
   } catch {
     return [];
   }
 }
 
-/** La squadra di una partita su un'avventura senza eroi nei dati (quelle fatte con l'editor): gli id delle schede in `public/heroes/`, nell'ordine in cui entrano in campo. */
+/** La squadra di una partita su un'avventura senza eroi nei dati (quelle fatte con l'editor): gli id delle schede in `public/mercenaries/`, nell'ordine in cui entrano in campo. */
 export const DEFAULT_PARTY: readonly string[] = ['vesper', 'bastion'];

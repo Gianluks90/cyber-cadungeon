@@ -2,7 +2,7 @@ import { tr } from '../../i18n/catalog-text';
 import { Board, Cell } from '../board/board';
 import { ChestTier, Marker, PotionKind } from '../board/marker';
 import { ATTACK_DICE_MAX, ATTACK_DICE_PRICE, CITY_TELEPORT_COST, POTION_LIMIT, POTION_PRICES, SELL_STEP_COINS, SKILL_CARD_PRICE, TEMPLE_HEAL_COST, TREASURE_PRICES } from '../constants';
-import { AttackDice } from '../heroes/hero-sheet';
+import { AttackDice } from '../mercenaries/mercenary-sheet';
 import { SKILL_SCHOOLS, SKILL_SCHOOL_NAMES, SkillSchool } from '../skills/skill';
 import { ItemDef, itemDetail } from '../items/item';
 import { POTION_NAMES } from '../markers/marker-rules';

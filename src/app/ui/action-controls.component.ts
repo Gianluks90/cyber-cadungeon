@@ -1,6 +1,6 @@
 import { tr } from '../i18n/catalog-text';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
-import { HeroAction } from '../game/pieces/piece';
+import { MercenaryAction } from '../game/pieces/piece';
 import { IconComponent } from './icon.component';
 import { PillComponent } from './pill.component';
 
@@ -72,7 +72,7 @@ export class ActionControlsComponent {
   readonly slots = input(2);
   /** Le chiavi runiche della partita: a destra, sulla stessa riga dei comandi, grigie finché non sono trovate. */
   readonly runes = input<{ color: string; owned: boolean; label: string }[]>([]);
-  readonly action = input<HeroAction>('advance');
+  readonly action = input<MercenaryAction>('advance');
   /** Ora i comandi non si possono usare (turno del Maligno, finestra aperta): i pallini restano ma spenti. */
   readonly busy = input(false);
   readonly chosen = output<ActionCommand>();

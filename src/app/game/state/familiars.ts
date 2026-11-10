@@ -10,24 +10,24 @@ import type { GameState } from './game-state';
  */
 
 /** Gli id dei famigli che questo eroe ha: quelli della sua scheda (effetto `familiar` in `effects`) e quelli delle sue carte abilità. */
-export function familiarIdsOf(state: GameState, hero: Piece): string[] {
+export function familiarIdsOf(state: GameState, mercenary: Piece): string[] {
   const out: string[] = [];
   const read = (effects: readonly { kind: string; ids?: unknown }[]) => {
     for (const e of effects) if (e.kind === 'familiar' && Array.isArray(e.ids)) out.push(...(e.ids as string[]));
   };
-  read((hero.heroEffects ?? []) as { kind: string; ids?: unknown }[]);
-  for (const id of hero.skillCards) read((state.skills.get(id)?.effects ?? []) as { kind: string; ids?: unknown }[]);
+  read((mercenary.mercenaryEffects ?? []) as { kind: string; ids?: unknown }[]);
+  for (const id of mercenary.skillCards) read((state.skills.get(id)?.effects ?? []) as { kind: string; ids?: unknown }[]);
   return out;
 }
 
 /** Dà a ogni eroe i suoi famigli che ancora non ci sono: compaiono nella casella del padrone. Si chiama a inizio partita e quando un eroe prende una carta con un famiglio. */
 export function spawnFamiliars(state: GameState): Familiar[] {
   const added: Familiar[] = [];
-  for (const hero of state.pieces) {
-    if (hero.team !== 'hero') continue;
-    for (const id of familiarIdsOf(state, hero)) {
+  for (const mercenary of state.pieces) {
+    if (mercenary.team !== 'mercenary') continue;
+    for (const id of familiarIdsOf(state, mercenary)) {
       if (state.familiars.some((f) => f.id === id) || !state.familiarDefs.has(id)) continue;
-      const f: Familiar = { id, owner: hero.id, cell: { ...hero.cell } };
+      const f: Familiar = { id, owner: mercenary.id, cell: { ...mercenary.cell } };
       state.familiars.push(f);
       added.push(f);
     }
@@ -40,7 +40,7 @@ export function familiarHas(def: FamiliarDef | undefined, kind: string): boolean
   return !!def?.effects?.some((e) => e.kind === kind);
 }
 
-export const familiarsOf = (state: GameState, heroId: string): Familiar[] => state.familiars.filter((f) => f.owner === heroId);
+export const familiarsOf = (state: GameState, mercenaryId: string): Familiar[] => state.familiars.filter((f) => f.owner === mercenaryId);
 
 /**
  * Dove può andare un famiglio: fino alla sua velocità, con le regole degli eroi ma attraversando i modelli (anche i nemici) e potendosi fermare su una casella occupata. Non salta le buche

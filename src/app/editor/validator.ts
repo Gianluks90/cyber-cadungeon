@@ -5,7 +5,7 @@ import { RuneColor } from '../game/board/door';
 import type { Marker } from '../game/board/marker';
 import { obstacleCells } from '../game/board/obstacle';
 import { THIS_PIECE, targetsOf, triggersOf } from '../game/map/map-data';
-import { HERO_START_CELLS } from '../game/constants';
+import { MERCENARY_START_CELLS } from '../game/constants';
 import { MAX_TWIN_PAIRS } from '../game/markers/twin-pattern';
 import type { AdventureEvent, EventEffect, EventTrigger, MapData } from '../game/map/map-data';
 
@@ -203,8 +203,8 @@ export function validate(map: MapData, openExits: number, unassignedTiles = 0, u
     const glyph = (map.markers ?? []).some((m) => m.type === 'glyph' && m.active && inArea.has(`${m.x},${m.y}`));
     add('start-glyph', glyph ? 'ok' : 'error', glyph ? t('validator.startGlyphOk') : t('validator.startGlyphMissing'));
     const cells = (map.start ?? []).filter((c) => inArea.has(`${c.x},${c.y}`)).length;
-    if (cells < HERO_START_CELLS) add('start-placement', 'error', cells ? (cells === 1 ? t('validator.startCellsOne', { min: HERO_START_CELLS }) : t('validator.startCellsFew', { n: cells, min: HERO_START_CELLS })) : t('validator.startCellsNone'));
-    else add('start-placement', 'ok', t('validator.startCellsOk', { n: cells, min: HERO_START_CELLS }));
+    if (cells < MERCENARY_START_CELLS) add('start-placement', 'error', cells ? (cells === 1 ? t('validator.startCellsOne', { min: MERCENARY_START_CELLS }) : t('validator.startCellsFew', { n: cells, min: MERCENARY_START_CELLS })) : t('validator.startCellsNone'));
+    else add('start-placement', 'ok', t('validator.startCellsOk', { n: cells, min: MERCENARY_START_CELLS }));
   }
   // Un segnalino Incontro che blocca il movimento su una casella di partenza la rende inutilizzabile
   const solid = new Set((map.markers ?? []).filter((m) => m.type === 'encounter' && m.blocksMove).map((m) => `${m.x},${m.y}`));
@@ -300,7 +300,7 @@ const sameOne = (a: EventTrigger, b: EventTrigger) =>
 const sameTrigger = (a: AdventureEvent, b: AdventureEvent) => triggersOf(a).some((x) => triggersOf(b).some((y) => sameOne(x, y)));
 
 /** Due eventi non possono scattare insieme se uno chiede una variabile accesa e l'altro la stessa spenta. */
-const ITEM_PLACES = ['hero', 'ground', 'monster', 'none'];
+const ITEM_PLACES = ['mercenary', 'ground', 'monster', 'none'];
 
 /** I posti in cui un oggetto può stare perché valgano tutte le condizioni di `e` su di lui (null se `e` non ne ha). */
 const allowedAt = (e: AdventureEvent, item: string): Set<string> | null => {
@@ -455,7 +455,7 @@ export function validateEvents(map: MapData): Map<string, EventIssue[]> {
         }
         if (f.kind === 'openDoor' && !(map.doors ?? []).some((d) => d.lock?.kind === 'event' && d.lock.id === f.doorId)) push(e, 'error', t('validator.ev.doorGone'));
         if (f.kind === 'modifyMonster' && !f.wounds && !f.speed && !f.armor) push(e, 'warning', t('validator.ev.modifyNoop'));
-        if (f.kind === 'endHeroesTurn') {
+        if (f.kind === 'endMercenariesTurn') {
           const startArea = (map.areas ?? []).find((a) => a.start)?.id;
           if (triggers.every((t) => t.kind === 'adversaryTurnStart' || t.kind === 'adversaryTurnEnd')) push(e, 'warning', t('validator.ev.endTurnAdversaryTurn'));
           else if (startArea && triggers.some((t) => t.kind === 'areaRevealed' && t.area === startArea)) push(e, 'warning', t('validator.ev.endTurnStartArea'));

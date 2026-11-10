@@ -276,7 +276,7 @@ export const ATTACK_DICE_PRICE = 500;
 export const ATTACK_DICE_MAX = 5;
 
 /** Quanto dura la scomparsa di un eroe che muore (sfuma e diventa rosso), in millisecondi. */
-export const HERO_DEATH_FADE_MS = 2200;
+export const MERCENARY_DEATH_FADE_MS = 2200;
 
 // --- Esplorazione ---
 /** Quanto dura la comparsa di ciò che si scopre (il velo che svanisce, un mostro che appare), in millisecondi. */
@@ -334,7 +334,7 @@ export const PIT_FALL_WOUNDS = 1;
 export const PIT_CLIMB_COST = 2;
 export const PIT_JUMP_COST_PER_SPACE = 3;
 /** Ferite di partenza, se la mappa non le indica. Quelle degli eroi sono multipli di 4 (cuori divisi in quarti). */
-export const DEFAULT_HERO_WOUNDS = 12;
+export const DEFAULT_MERCENARY_WOUNDS = 12;
 export const DEFAULT_MONSTER_WOUNDS = 8;
 /** Distanza dell'ostacolo dal bordo della cella. */
 export const OBSTACLE_INSET_PX = 8;
@@ -431,7 +431,7 @@ export const FX = {
 
 /** Le caselle di partenza degli eroi: un cerchio a trattini (raggio in celle, numero di trattini, spessore) che lampeggia piano (un ciclo in `pulseMs`, l'opacità oscilla fra `alphaMin` e `alphaMax`). */
 /** Quante caselle di partenza servono almeno a un'avventura: tante quanti gli eroi al massimo (4), così ci sono sempre tutte, anche se si gioca in 2 o in 5 (con meno eroi ne restano libere). Se ne possono mettere di più. */
-export const HERO_START_CELLS = 4;
+export const MERCENARY_START_CELLS = 4;
 /** L'avviso di un attacco ad area: le caselle colpite lampeggiano di rosso per `ms` prima che l'attacco si applichi (rosso fisso con la riduzione del movimento). */
 export const AREA_WARNING = { ms: 2000, pulseMs: 500, alphaMin: 0.12, alphaMax: 0.55 };
 

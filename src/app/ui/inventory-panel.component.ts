@@ -6,20 +6,20 @@ import { PotionKind } from '../game/board/marker';
 import { BACKPACK_LIMIT, EQUIP_HANDS, POTION_LIMIT } from '../game/constants';
 import { plainCostText } from './cost-text';
 import { CostTextComponent } from './cost-text.component';
-import { HeroDetails } from './hero-sheet.component';
+import { MercenaryDetails } from './mercenary-sheet.component';
 import { IconComponent } from './icon.component';
 import { ItemCardComponent } from './item-card.component';
 
 /**
  * Il pannello "Inventario" di un eroe: le monete, le mani libere, le pozioni e gli oggetti (equipaggiati e nello zaino) come
- * card complete: tipo, dadi, abilità e prezzo, con le azioni per spostarli o scartarli. È il contenuto della cornice `app-hero-panel`.
+ * card complete: tipo, dadi, abilità e prezzo, con le azioni per spostarli o scartarli. È il contenuto della cornice `app-mercenary-panel`.
  */
 @Component({
   selector: 'app-inventory-panel',
   imports: [TrPipe, CostTextComponent, IconComponent, ItemCardComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (hero(); as h) {
+    @if (mercenary(); as h) {
       <section>
         <div class="row"><span class="coins" [title]="'Monete dell\\'eroe' | tr"><app-icon name="tokens/gold_pile" [size]="18" />{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
 
@@ -90,7 +90,7 @@ export class InventoryPanelComponent {
   /** Il motivo di riserva quando un'azione spenta non ne dà uno. */
   protected readonly notPossible = () => tr('Non è possibile');
   /** L'eroe di cui si mostra l'inventario. */
-  readonly hero = input<HeroDetails | null>(null);
+  readonly mercenary = input<MercenaryDetails | null>(null);
   /** Un'azione su un oggetto: equipaggiare, mettere nello zaino o scartare. */
   readonly itemAction = output<{ action: 'equip' | 'stow' | 'drop' | 'use'; itemId: string }>();
   /** Un bottone spento è stato toccato: il motivo per cui non si può (da mostrare come notifica). */
@@ -101,7 +101,7 @@ export class InventoryPanelComponent {
   protected plain = plainCostText;
 
   /** Le mani libere: le 2 mani meno quelle occupate da armi e scudi. */
-  protected freeHands(h: HeroDetails): number {
+  protected freeHands(h: MercenaryDetails): number {
     return Math.max(0, EQUIP_HANDS - h.inventory.hands);
   }
 

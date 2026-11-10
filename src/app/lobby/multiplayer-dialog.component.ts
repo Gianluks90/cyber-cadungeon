@@ -5,7 +5,7 @@ import { DialogComponent } from '../ui/dialog.component';
 import { FieldComponent } from '../ui/field.component';
 import { IconComponent } from '../ui/icon.component';
 import { claimCode } from './lobby-net';
-import { Lobby, LOBBY_CODE_MAX, LOBBY_MAX_HEROES, LOBBY_MIN_HEROES, cleanLobbyCode, generateLobbyCode, isValidLobbyCode } from './lobby-store';
+import { Lobby, LOBBY_CODE_MAX, LOBBY_MAX_MERCENARIES, LOBBY_MIN_MERCENARIES, cleanLobbyCode, generateLobbyCode, isValidLobbyCode } from './lobby-store';
 
 type Tab = 'create' | 'join';
 
@@ -25,10 +25,10 @@ type Tab = 'create' | 'join';
       </div>
       @if (tab() === 'create') {
         <div class="pane">
-          <app-field [label]="'mp.heroes' | t">
-            <div class="count" role="radiogroup" [attr.aria-label]="'mp.heroes' | t">
+          <app-field [label]="'mp.mercenaries' | t">
+            <div class="count" role="radiogroup" [attr.aria-label]="'mp.mercenaries' | t">
               @for (n of counts; track n) {
-                <button type="button" role="radio" [attr.aria-checked]="heroes() === n" [class.on]="heroes() === n" (click)="heroes.set(n)">{{ n }}</button>
+                <button type="button" role="radio" [attr.aria-checked]="mercenaries() === n" [class.on]="mercenaries() === n" (click)="mercenaries.set(n)">{{ n }}</button>
               }
             </div>
           </app-field>
@@ -81,10 +81,10 @@ export class MultiplayerDialogComponent {
   readonly joined = output<string>();
 
   private readonly i18n = inject(I18nService);
-  protected readonly counts = Array.from({ length: LOBBY_MAX_HEROES - LOBBY_MIN_HEROES + 1 }, (_, i) => LOBBY_MIN_HEROES + i);
+  protected readonly counts = Array.from({ length: LOBBY_MAX_MERCENARIES - LOBBY_MIN_MERCENARIES + 1 }, (_, i) => LOBBY_MIN_MERCENARIES + i);
   protected readonly codeMax = LOBBY_CODE_MAX;
   protected readonly tab = signal<Tab>('create');
-  protected readonly heroes = signal(LOBBY_MIN_HEROES + 1);
+  protected readonly mercenaries = signal(LOBBY_MIN_MERCENARIES + 1);
   protected readonly code = signal('');
   protected generate() {
     this.netError.set('');
@@ -93,7 +93,7 @@ export class MultiplayerDialogComponent {
   /** Il codice è già in uso su questo dispositivo: lo dice la home, che tiene l'elenco (`taken`). */
   readonly taken = input<readonly string[]>([]);
 
-  protected readonly summary = computed(() => this.i18n.t(this.heroes() === 1 ? 'mp.summaryOne' : 'mp.summaryMany', { n: this.heroes(), total: this.heroes() + 1 }));
+  protected readonly summary = computed(() => this.i18n.t(this.mercenaries() === 1 ? 'mp.summaryOne' : 'mp.summaryMany', { n: this.mercenaries(), total: this.mercenaries() + 1 }));
   /** Il controllo sulla rete è in corso, oppure ha dato un errore (codice già usato da qualcun altro, nessuna connessione). */
   protected readonly checking = signal(false);
   private readonly netError = signal<'taken' | 'offline' | ''>('');
@@ -123,6 +123,6 @@ export class MultiplayerDialogComponent {
     const result = await claimCode(code);
     this.checking.set(false);
     if (result !== 'ok') return this.netError.set(result);
-    this.created.emit({ code, heroes: this.heroes(), createdAt: Date.now() });
+    this.created.emit({ code, mercenaries: this.mercenaries(), createdAt: Date.now() });
   }
 }

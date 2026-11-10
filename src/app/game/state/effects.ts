@@ -48,7 +48,7 @@ export function effectsOf(state: GameState, piece: Piece): SourcedEffect[] {
     for (const effect of card?.effects ?? []) out.push({ source: card!.name, effect });
   }
   for (const d of equippedDefs(state, piece)) for (const effect of d.effects ?? []) out.push({ source: d.name, effect });
-  for (const effect of piece.heroEffects ?? []) out.push({ source: String(effect['name'] ?? (piece.abilityName || piece.name)), effect });
+  for (const effect of piece.mercenaryEffects ?? []) out.push({ source: String(effect['name'] ?? (piece.abilityName || piece.name)), effect });
   return out;
 }
 
@@ -115,16 +115,16 @@ export function attackBonus(state: GameState, piece: Piece, type: AttackType, ta
 }
 
 /** Quando un eroe prende una carta, i suoi bonus permanenti ai massimi (ferite e overclock) si sommano subito, anche a ciò che ha adesso. */
-export function applyPermanentStats(hero: Piece, effects: readonly SkillEffect[]): void {
+export function applyPermanentStats(mercenary: Piece, effects: readonly SkillEffect[]): void {
   for (const e of effects as readonly Effect[]) {
     if (e.kind !== 'stat' || e.vs || e.when) continue;
     const n = Number(e.amount);
     if (e.stat === 'wounds') {
-      hero.maxWounds += n;
-      hero.wounds += n;
+      mercenary.maxWounds += n;
+      mercenary.wounds += n;
     } else if (e.stat === 'overclock') {
-      hero.maxOverclock += n;
-      hero.overclock += n;
+      mercenary.maxOverclock += n;
+      mercenary.overclock += n;
     }
   }
 }

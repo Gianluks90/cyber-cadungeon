@@ -108,11 +108,11 @@ export function useSkill(state: GameState, piece: Piece, id: string): SkillResul
   const notes: string[] = [];
   for (const op of t.do ?? []) {
     if (op.op === 'recoverOverclock') {
-      const heroes = op.who === 'selfAndAdjacent'
-        ? state.pieces.filter((p) => p.team === 'hero' && !p.city && (p.id === piece.id || footprint(p).some((c) => footprint(piece).some((d) => Math.max(Math.abs(c.x - d.x), Math.abs(c.y - d.y)) <= 1))))
+      const mercenaries = op.who === 'selfAndAdjacent'
+        ? state.pieces.filter((p) => p.team === 'mercenary' && !p.city && (p.id === piece.id || footprint(p).some((c) => footprint(piece).some((d) => Math.max(Math.abs(c.x - d.x), Math.abs(c.y - d.y)) <= 1))))
         : [piece];
-      for (const h of heroes) h.overclock = Math.min(h.maxOverclock, h.overclock + Number(op.amount ?? 1));
-      notes.push(heroes.length > 1 ? `+{overclock:${op.amount}} a ${heroes.map((h) => h.name).join(', ')}` : `+{overclock:${op.amount}}`);
+      for (const h of mercenaries) h.overclock = Math.min(h.maxOverclock, h.overclock + Number(op.amount ?? 1));
+      notes.push(mercenaries.length > 1 ? `+{overclock:${op.amount}} a ${mercenaries.map((h) => h.name).join(', ')}` : `+{overclock:${op.amount}}`);
     } else if (op.op === 'extraAttack') {
       piece.attacks += Number(op.amount ?? 1);
       if ((op as { sameWeapon?: boolean }).sameWeapon && lastWeapon) piece.lockedWeapon = lastWeapon; // l'attacco in più si fa con la stessa arma

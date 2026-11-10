@@ -42,8 +42,8 @@ export function upgradeOptions(state: GameState, inArea: readonly Piece[]): Piec
 
 /** Il mostro diventa potenziato, dello stesso tipo: mantiene id, casella, bottino e immagini. */
 export function upgradeMonster(state: GameState, old: Piece): void {
-  const heroes = state.pieces.filter((p) => p.team === 'hero').length;
-  const [fresh] = createPieces([{ id: old.id, team: 'monster', monster: old.monster!, enhanced: true, x: old.cell.x, y: old.cell.y }], new Map(), state.items, state.monsters, heroes);
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary').length;
+  const [fresh] = createPieces([{ id: old.id, team: 'monster', monster: old.monster!, enhanced: true, x: old.cell.x, y: old.cell.y }], new Map(), state.items, state.monsters, mercenaries);
   Object.assign(old, { ...fresh, cell: old.cell, size: old.size, awake: true, drop: old.drop, chestTier: old.chestTier, portrait: old.portrait, portraitFull: old.portraitFull });
 }
 
@@ -53,9 +53,9 @@ export function revealArea(state: GameState, board: Board, area: string): AreaRe
   const inArea = monstersIn(state, board, area);
   for (const m of inArea) m.awake = true;
   if (!inArea.length || state.adversaryManual) return result;
-  const heroes = state.pieces.filter((p) => p.team === 'hero').length;
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary').length;
   const make = (monster: string, enhanced: boolean, id: string, cell: Cell) =>
-    createPieces([{ id, team: 'monster', monster, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.monsters, heroes)[0];
+    createPieces([{ id, team: 'monster', monster, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.monsters, mercenaries)[0];
 
   // Abile comandante: un mostro qualunque dell'area (non unico, non già potenziato) diventa potenziato, dello stesso tipo.
   if (state.adversary.inPlay.includes('able-commander')) {

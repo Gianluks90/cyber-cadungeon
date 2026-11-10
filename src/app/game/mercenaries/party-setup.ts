@@ -2,7 +2,7 @@ import { ChestTier, PotionKind } from '../board/marker';
 import { BACKPACK_LIMIT, POTION_LIMIT, POTION_PRICES, TREASURE_PRICES } from '../constants';
 import type { AdventureSetup } from '../map/map-data';
 import { SKILL_SCHOOLS, SkillSchool } from '../skills/skill';
-import { StartingSkills } from './hero-sheet';
+import { StartingSkills } from './mercenary-sheet';
 import { ItemDef, fitsEquipment, loadItemCatalog, loadShopStock } from '../items/item';
 
 /** Ciò che un eroe ha comprato prima di partire: oggetti (id del catalogo) e pozioni. Le monete rimaste sono 300 meno il costo. */

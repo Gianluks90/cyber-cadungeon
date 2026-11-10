@@ -78,18 +78,18 @@ export class Exploration {
     const onMap = pieces.filter((p) => !p.city);
     const everyone = onMap.flatMap((p) => footprint(p).map(cellKey)); // un mostro grande blocca la vista su tutte le sue caselle
     const visibleNow = new Set<string>();
-    for (const hero of onMap.filter((p) => p.team === 'hero')) {
+    for (const mercenary of onMap.filter((p) => p.team === 'mercenary')) {
       // Le altre creature bloccano la vista (anche i compagni), non quella da cui si guarda.
       const blockers = new Set(everyone);
-      blockers.delete(cellKey(hero.cell));
-      for (const k of visibleCells(board, hero.cell, blockers)) {
+      blockers.delete(cellKey(mercenary.cell));
+      for (const k of visibleCells(board, mercenary.cell, blockers)) {
         if (sightRange < Infinity) {
           const [x, y] = k.split(',').map(Number);
-          if (Math.max(Math.abs(x - hero.cell.x), Math.abs(y - hero.cell.y)) > sightRange) continue; // Raffica di vento
+          if (Math.max(Math.abs(x - mercenary.cell.x), Math.abs(y - mercenary.cell.y)) > sightRange) continue; // Raffica di vento
         }
         visibleNow.add(k);
       }
-      this.seeThroughStairs(board, hero.cell, blockers, visibleNow);
+      this.seeThroughStairs(board, mercenary.cell, blockers, visibleNow);
     }
 
     const reveal: Reveal = { cells: [], obstacles: [], doors: [], markers: [], monsters: [], areas: [] };

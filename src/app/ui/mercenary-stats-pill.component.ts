@@ -4,7 +4,7 @@ import { IconComponent } from './icon.component';
 
 /** Una pillola con la velocità (impronte, verde) e l'overclock (goccia, arancione) di un eroe, come nei tab della partita. Chi la usa la posiziona (di solito sopra il piede di una carta). */
 @Component({
-  selector: 'app-hero-stats-pill',
+  selector: 'app-mercenary-stats-pill',
   imports: [IconComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -18,7 +18,7 @@ import { IconComponent } from './icon.component';
     .overclock { color: var(--c-overclock); }
   `,
 })
-export class HeroStatsPillComponent {
+export class MercenaryStatsPillComponent {
   readonly speed = input.required<number>();
   readonly overclock = input.required<number>();
 }

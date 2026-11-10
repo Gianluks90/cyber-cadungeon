@@ -1,10 +1,10 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
-import { HeroSheet } from '../game/heroes/hero-sheet';
-import { HeroStats } from '../game/heroes/hero-stats';
+import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
+import { MercenaryStats } from '../game/mercenaries/mercenary-stats';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { HeartsComponent } from './hearts.component';
-import { HeroStatsPillComponent } from './hero-stats-pill.component';
+import { MercenaryStatsPillComponent } from './mercenary-stats-pill.component';
 import { ValueStarComponent } from './value-star.component';
 
 /**
@@ -12,15 +12,15 @@ import { ValueStarComponent } from './value-star.component';
  * il Valore e l'armatura a destra. Riempie il contenitore che la ospita (che la ritaglia e la inclina). `armor` sostituisce l'armatura base (con gli oggetti comprati).
  */
 @Component({
-  selector: 'app-hero-face',
-  imports: [CatalogTextPipe, HeartsComponent, HeroStatsPillComponent, TranslatePipe, ValueStarComponent],
+  selector: 'app-mercenary-face',
+  imports: [CatalogTextPipe, HeartsComponent, MercenaryStatsPillComponent, TranslatePipe, ValueStarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (hero(); as h) {
+    @if (mercenary(); as h) {
       <img [src]="h.portraitFull" [alt]="h.name" />
       <app-hearts class="hearts" [wounds]="shown().wounds" [max]="shown().wounds" [size]="18" />
       <div class="cap">
-        <app-hero-stats-pill class="stats" [speed]="shown().speed" [overclock]="shown().overclock" />
+        <app-mercenary-stats-pill class="stats" [speed]="shown().speed" [overclock]="shown().overclock" />
         <app-value-star class="value" [value]="h.value" />
         <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + shown().armor">
           <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
@@ -46,9 +46,9 @@ import { ValueStarComponent } from './value-star.component';
     .armor em { position: relative; margin-top: -2px; font: 700 14px/1 var(--font-mono); font-style: normal; color: var(--c-text); }
   `,
 })
-export class HeroFaceComponent {
-  readonly hero = input.required<HeroSheet>();
-  /** I parametri con abilità e oggetti (`heroStats`); senza, quelli base della scheda. */
-  readonly stats = input<HeroStats | null>(null);
-  protected readonly shown = computed<HeroStats>(() => this.stats() ?? { wounds: this.hero().wounds, overclock: this.hero().overclock, speed: this.hero().speed, armor: this.hero().armor });
+export class MercenaryFaceComponent {
+  readonly mercenary = input.required<MercenarySheet>();
+  /** I parametri con abilità e oggetti (`mercenaryStats`); senza, quelli base della scheda. */
+  readonly stats = input<MercenaryStats | null>(null);
+  protected readonly shown = computed<MercenaryStats>(() => this.stats() ?? { wounds: this.mercenary().wounds, overclock: this.mercenary().overclock, speed: this.mercenary().speed, armor: this.mercenary().armor });
 }

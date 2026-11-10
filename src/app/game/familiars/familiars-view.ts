@@ -10,7 +10,7 @@ import { LINE, theme } from '../theme';
 import type { Familiar } from './familiar';
 
 /** Con chi condivide la casella un famiglio: nessuno (è un segnalino tondo come un eroe) o un eroe/mostro (diventa un piccolo segnalino nell'angolo, sopra la pedina). */
-export type Cohabitant = 'hero' | 'monster' | null;
+export type Cohabitant = 'mercenary' | 'monster' | null;
 
 interface FamiliarNode {
   root: Container;
@@ -87,7 +87,7 @@ export class FamiliarsView {
     /** Chi occupa la casella (visibile): un eroe, un mostro che si vede, o niente. */
     private readonly cohabitant: (cell: Cell) => Cohabitant,
     /** Dove sta la pedina di un eroe in questo momento (in pixel del mondo): i famigli portati la seguono. */
-    private readonly heroPos: (heroId: string) => { x: number; y: number } | null = () => null,
+    private readonly mercenaryPos: (mercenaryId: string) => { x: number; y: number } | null = () => null,
   ) {
     this.container.addChild(this.pathLayer, this.reachLayer);
     // Il contorno "respira" piano, come quello degli eroi.
@@ -96,7 +96,7 @@ export class FamiliarsView {
       for (const id of this.carriedIds) {
         const n = this.nodes.get(id);
         const owner = this.carriedBy.get(id);
-        const at = owner ? this.heroPos(owner) : null;
+        const at = owner ? this.mercenaryPos(owner) : null;
         if (n?.slot && at) n.root.position.set(at.x + (n.slot.x - 0.5) * CELL_SIZE, at.y + (n.slot.y - 0.5) * CELL_SIZE);
       }
       if (!this.pulsing) return;
@@ -113,10 +113,10 @@ export class FamiliarsView {
     const carried: Familiar[] = [];
     for (const def of this.state.familiarDefs.values()) {
       if (!def.item) continue;
-      const hero = this.state.pieces.find((p) => p.team === 'hero' && !p.city && p.wounds > 0 && p.equipped.includes(def.item!));
-      if (!hero) continue;
-      carried.push({ id: def.id, owner: hero.id, cell: hero.cell });
-      this.carriedBy.set(def.id, hero.id);
+      const mercenary = this.state.pieces.find((p) => p.team === 'mercenary' && !p.city && p.wounds > 0 && p.equipped.includes(def.item!));
+      if (!mercenary) continue;
+      carried.push({ id: def.id, owner: mercenary.id, cell: mercenary.cell });
+      this.carriedBy.set(def.id, mercenary.id);
     }
     const all = [...carried, ...this.state.familiars];
     const live = new Set(all.map((f) => f.id));

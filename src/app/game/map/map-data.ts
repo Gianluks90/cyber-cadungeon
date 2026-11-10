@@ -95,7 +95,7 @@ export interface VariableCondition {
 /** Una condizione su un oggetto del catalogo: in questo momento è con un eroe, a terra (un segnalino sulla mappa) o con un mostro (o, con `not`, non lo è). */
 export interface ItemCondition {
   item: string;
-  at: 'hero' | 'ground' | 'monster';
+  at: 'mercenary' | 'ground' | 'monster';
   /** Vale se l'oggetto NON sta lì (per esempio "non è con un eroe": a terra o con un mostro). */
   not?: boolean;
 }
@@ -160,7 +160,7 @@ export type EventEffect =
   /** Un eroe a scelta del gruppo riceve un oggetto (una dialog chiede chi; con un solo eroe lo riceve lui): per l'oggetto con cui si comincia, con "gli eroi rivelano l'area di partenza". Se non ha posto cade a terra. */
   | { kind: 'giveChosen'; itemId: string }
   /** Il turno degli eroi finisce adesso: chi non ha ancora agito perde ciò che gli resta (movimento, attacchi) e comincia subito il turno del Maligno. Se scatta fuori dal turno degli eroi non fa niente. */
-  | { kind: 'endHeroesTurn' }
+  | { kind: 'endMercenariesTurn' }
   /** Cambia l'Odio del Maligno (anche in negativo, mai sotto 0). */
   | { kind: 'alarm'; amount: number }
   /** Il Maligno pesca `count` carte (1 se manca) dal suo mazzo, come a inizio turno (la mano non supera il limite). */

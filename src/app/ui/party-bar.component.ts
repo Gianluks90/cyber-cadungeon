@@ -2,11 +2,11 @@ import { tr } from '../i18n/catalog-text';
 import { TrPipe } from '../i18n/tr.pipe';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, input, output } from '@angular/core';
-import { HeroAction, HeroOrder, ORDER_ICONS, ORDER_NAMES } from '../game/pieces/piece';
+import { MercenaryAction, MercenaryOrder, ORDER_ICONS, ORDER_NAMES } from '../game/pieces/piece';
 import { HeartsComponent } from './hearts.component';
 import { CityEvent, CityPanelComponent } from './city-panel.component';
-import { HeroPanelComponent, PanelKind } from './hero-panel.component';
-import { HeroDetails, HeroSheetComponent } from './hero-sheet.component';
+import { MercenaryPanelComponent, PanelKind } from './mercenary-panel.component';
+import { MercenaryDetails, MercenarySheetComponent } from './mercenary-sheet.component';
 import { PieceStatus } from '../game/pieces/piece';
 import { InventoryPanelComponent } from './inventory-panel.component';
 import { MonsterDetails, MonsterSheetComponent } from './monster-sheet.component';
@@ -16,7 +16,7 @@ import { IconComponent } from './icon.component';
 export interface BarMember {
   id: string;
   name: string;
-  kind: 'hero' | 'adversary';
+  kind: 'mercenary' | 'adversary';
   /** Percorso dell'immagine del ritratto (in public/). Senza, il pallino mostra un'icona. */
   portrait?: string;
   /** È il suo turno: il pallino si espande in scheda. */
@@ -37,20 +37,20 @@ export interface BarMember {
   /** È in città: la sua pedina non è sulla mappa. `cityPanel`: c'è anche il pannello Città (non quando deve tornare). */
   inCity: boolean;
   cityPanel: boolean;
-  action: HeroAction;
+  action: MercenaryAction;
   /** I segnalini di stato (fiamma, rete, stordimento, veleno). */
   status?: PieceStatus;
   /** L'ordine piazzato con Prepararsi (Mira, Schivata, Guardia), se c'è. */
-  order?: HeroOrder | null;
+  order?: MercenaryOrder | null;
   /** Ha l'abilità di cambiare ordine quando vuole (Ordini flessibili): il nome dell'ordine diventa un tasto. */
   canChangeOrder?: boolean;
   /** Ha almeno un'abilità che si può usare adesso (un puntino sul tasto della scheda). */
   skillsReady?: boolean;
   /** La scheda completa (solo per gli eroi). */
-  details?: HeroDetails;
+  details?: MercenaryDetails;
 }
 
-const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { return tr('Correre'); }, get fight() { return tr('Combattere'); }, get prepare() { return tr('Prepararsi'); } };
+const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() { return tr('Correre'); }, get fight() { return tr('Combattere'); }, get prepare() { return tr('Prepararsi'); } };
 
 /**
  * La barra in basso: una striscia di tab attaccati, uno per ogni eroe e uno per il Maligno, ognuno con lo stile del contenitore
@@ -61,27 +61,27 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
  */
 @Component({
   selector: 'app-party-bar',
-  imports: [TrPipe, CityPanelComponent, HeartsComponent, HeroPanelComponent, HeroSheetComponent, IconComponent, InventoryPanelComponent, MonsterSheetComponent, NgTemplateOutlet],
+  imports: [TrPipe, CityPanelComponent, HeartsComponent, MercenaryPanelComponent, MercenarySheetComponent, IconComponent, InventoryPanelComponent, MonsterSheetComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.public]': 'publicView()', '[class.compact]': 'compact()' },
   template: `
     <nav class="bar" [attr.aria-label]="'Eroi' | tr">
       <!-- Gli eroi sono un gruppo: la scheda completa (o quella di un mostro) sta sopra tutto il gruppo, lunga quanto l'elenco degli eroi. -->
-      <div class="heroes">
+      <div class="mercenaries">
         @if (panelMember(); as m) {
-          <app-hero-panel [hero]="m.details!" [active]="panel()!.kind" [kinds]="publicView() ? ['info'] : null" (closed)="sheetClosed.emit()" (switch)="panelSwitch.emit($event)">
-            @if (panel()!.kind === 'info') { <app-hero-sheet [hero]="m.details!" (skillUse)="skillUse.emit($event)" (denied)="denied.emit($event)" /> }
-            @else if (panel()!.kind === 'inventory') { <app-inventory-panel [hero]="m.details!" (itemAction)="itemAction.emit($event)" (denied)="denied.emit($event)" /> }
-            @else { <app-city-panel [hero]="m.details!" (cityAction)="cityAction.emit($event)" (denied)="denied.emit($event)" /> }
-          </app-hero-panel>
+          <app-mercenary-panel [mercenary]="m.details!" [active]="panel()!.kind" [kinds]="publicView() ? ['info'] : null" (closed)="sheetClosed.emit()" (switch)="panelSwitch.emit($event)">
+            @if (panel()!.kind === 'info') { <app-mercenary-sheet [mercenary]="m.details!" (skillUse)="skillUse.emit($event)" (denied)="denied.emit($event)" /> }
+            @else if (panel()!.kind === 'inventory') { <app-inventory-panel [mercenary]="m.details!" (itemAction)="itemAction.emit($event)" (denied)="denied.emit($event)" /> }
+            @else { <app-city-panel [mercenary]="m.details!" (cityAction)="cityAction.emit($event)" (denied)="denied.emit($event)" /> }
+          </app-mercenary-panel>
         }
         <!-- La scheda di un mostro (solo nella vista del Maligno): stessa cornice di quella di un eroe, sopra l'elenco degli eroi; mai insieme alla loro. -->
         @if (monster(); as mon) {
-          <app-hero-panel [hero]="mon" active="info" [kinds]="['info']" (closed)="monsterClosed.emit()">
+          <app-mercenary-panel [mercenary]="mon" active="info" [kinds]="['info']" (closed)="monsterClosed.emit()">
             <app-monster-sheet [monster]="mon" />
-          </app-hero-panel>
+          </app-mercenary-panel>
         }
-        @for (m of heroes(); track m.id) {
+        @for (m of mercenaries(); track m.id) {
           <ng-container [ngTemplateOutlet]="tab" [ngTemplateOutletContext]="{ $implicit: m }" />
         }
         <!-- Vista del Maligno: un piccolo footer comune a tutti gli eroi con la Conquista del gruppo, che il Maligno non gioca ma tiene d'occhio. -->
@@ -94,7 +94,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
     </nav>
     <ng-template #tab let-m>
       <div class="tab" [class.active]="m.active" [class.done]="m.done" [class.in-town]="m.inCity" [attr.aria-current]="m.active ? 'true' : null">
-        @if (m.kind === 'hero' && (!m.active || compact())) {
+        @if (m.kind === 'mercenary' && (!m.active || compact())) {
           <!-- Il tab chiuso è tutto un bottone: sceglie l'eroe. In modalità compatta (telefono) sono tutti chiusi e il tocco apre la scheda: non conta come "fuori dal pannello". -->
           <button type="button" class="select" [attr.data-sheet-toggle]="compact() ? '' : null" [attr.aria-label]="'Scegli {name}' | tr: { name: m.name }" [title]="m.name + (m.done ? (' (ha agito)' | tr) : '')" (click)="selected.emit(m.id)"></button>
         }
@@ -110,7 +110,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
           <span class="info"><span class="content">
             <span class="head">
               <span class="name">{{ m.name }}@if (m.inCity) { <span class="in-city">{{ 'In città' | tr }}</span> }@if (m.order) { <span class="order" [class.flex]="m.canChangeOrder" [attr.role]="m.canChangeOrder ? 'button' : null" [attr.tabindex]="m.canChangeOrder ? 0 : null" [title]="(m.canChangeOrder ? 'Ordine: {name} (clic per cambiarlo)' : 'Ordine: {name}') | tr: { name: orderName(m.order) }" (click)="swapOrder($event, m)" (keydown.enter)="swapOrder($event, m)"><app-icon [name]="orderIcon(m.order)" [size]="16" /></span> }</span>
-              @if (m.kind === 'hero') {
+              @if (m.kind === 'mercenary') {
                 <span class="head-btns">
                   @if (m.cityPanel && !publicView()) { <button type="button" class="info-btn" data-sheet-toggle [attr.aria-label]="'Città di {name}' | tr: { name: m.name }" [title]="'Città' | tr" (click)="city.emit(m.id)"><app-icon name="castle" [size]="18" /></button> }
                   <span class="potion-count" [title]="'Pozioni' | tr"><app-icon name="tokens/potion" [size]="20" />{{ m.potions }}</span>
@@ -118,7 +118,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
                 </span>
               }
             </span>
-            @if (m.kind === 'hero') {
+            @if (m.kind === 'mercenary') {
               <app-hearts [wounds]="m.wounds" [max]="m.maxWounds" [poison]="m.status?.poison ?? 0" [size]="16" />
               <span class="stats">
                 <span class="stat movement" [title]="'Punti movimento' | tr"><app-icon name="footprint" [size]="16" />{{ m.points }}</span>
@@ -152,7 +152,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
     @keyframes bar-in-top { from { transform: translateY(-100%); opacity: 0; } }
     :host(.public) { bottom: auto; top: calc(12px + env(safe-area-inset-top)); animation-name: bar-in-top; }
     :host(.public) .bar { margin-right: 0; }
-    :host(.public) app-hero-panel { bottom: auto; top: calc(100% + 6px + var(--foot-height)); } /* sotto il piccolo footer della Conquista */
+    :host(.public) app-mercenary-panel { bottom: auto; top: calc(100% + 6px + var(--foot-height)); } /* sotto il piccolo footer della Conquista */
     /* Il piccolo footer comune agli eroi: attaccato sotto i tab, largo come loro, con la Conquista. */
     :host { --foot-height: 26px; }
     .foot {
@@ -190,8 +190,8 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
     }
     .pass:hover, .pass:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     .pass.off { opacity: 0.45; }
-    .heroes { position: relative; display: flex; align-items: flex-end; }
-    .tab + .tab, .heroes + .tab { margin-left: -1px; } /* il bordo fra due tab è uno solo */
+    .mercenaries { position: relative; display: flex; align-items: flex-end; }
+    .tab + .tab, .mercenaries + .tab { margin-left: -1px; } /* il bordo fra due tab è uno solo */
     .tab.active { padding-right: 7px; } /* + 2-3 px di margine interno dei tasti = lo stesso respiro del ritratto a sinistra (9 px) */
 
     .portrait { position: relative; display: inline-flex; flex: none; }
@@ -241,12 +241,12 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
     :host(.compact) { top: calc(12px + env(safe-area-inset-top) + 44px + 8px); }
     :host(.compact) { left: 12px; right: 12px; } /* tutta la larghezza disponibile, a 12 px dai bordi */
     :host(.compact) .bar { --tab-size: 56px; --avatar-size: 44px; width: 100%; }
-    :host(.compact) .heroes { flex: 1 1 auto; min-width: 0; }
+    :host(.compact) .mercenaries { flex: 1 1 auto; min-width: 0; }
     :host(.compact) .tab { flex: 1 1 0; justify-content: center; min-width: 0; }
     :host(.compact) .tab.active { min-width: 0; padding-right: calc((var(--tab-size) - var(--avatar-size) - 2px) / 2); }
     :host(.compact) .details { display: none; }
     :host(.compact) .tab.active .avatar { box-shadow: 0 0 0 2px var(--c-text-dim); }
-    :host(.compact) app-hero-panel {
+    :host(.compact) app-mercenary-panel {
       --panel-height: 100%; position: fixed; left: 12px; right: 12px; width: auto;
       top: calc(12px + env(safe-area-inset-top) + 44px + 8px + var(--tab-size, 56px) + var(--foot-height) + 6px);
       bottom: calc(var(--footer-height, 0px) + env(safe-area-inset-bottom) + 12px + 76px + 95px + 8px);
@@ -297,9 +297,9 @@ export class PartyBarComponent {
   /** Un'azione su un oggetto, dalla scheda completa. */
   readonly itemAction = output<{ action: 'equip' | 'stow' | 'drop' | 'use'; itemId: string }>();
 
-  protected readonly heroes = computed(() => this.members().filter((m) => m.kind === 'hero'));
+  protected readonly mercenaries = computed(() => this.members().filter((m) => m.kind === 'mercenary'));
   /** L'eroe di cui si mostra la scheda completa. */
-  protected readonly panelMember = computed(() => this.heroes().find((m) => m.id === this.panel()?.id && m.details) ?? null);
+  protected readonly panelMember = computed(() => this.mercenaries().find((m) => m.id === this.panel()?.id && m.details) ?? null);
   /** Le icone degli stati sotto forma di elenco (le prime tre) e quelle che non ci stanno. */
   protected statusIcons(m: BarMember): { shown: { kind: string; icon: string; color: string; n: number; label: string }[]; more: string[] } {
     const s = m.status;
@@ -317,15 +317,15 @@ export class PartyBarComponent {
     this.changeOrder.emit(m.id);
   }
 
-  protected orderIcon(order: HeroOrder): string {
+  protected orderIcon(order: MercenaryOrder): string {
     return ORDER_ICONS[order];
   }
 
-  protected orderName(order: HeroOrder): string {
+  protected orderName(order: MercenaryOrder): string {
     return ORDER_NAMES[order];
   }
 
-  protected label(action: HeroAction): string {
+  protected label(action: MercenaryAction): string {
     return ACTION_LABEL[action];
   }
 }

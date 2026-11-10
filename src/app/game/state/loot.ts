@@ -55,7 +55,7 @@ export function settleRemoval(state: GameState, monster: Piece, killer?: Piece):
       continue;
     }
     const item = state.items.get(l.itemId);
-    if (killer && killer.team === 'hero' && canReceiveItem(state, killer, l.itemId)) {
+    if (killer && killer.team === 'mercenary' && canReceiveItem(state, killer, l.itemId)) {
       const where = receiveItem(state, killer, l.itemId);
       lines.push(`${item?.name ?? 'Un oggetto'} (${where === 'equipped' ? 'equipaggiato' : 'nello zaino'})`);
     } else {

@@ -1,8 +1,8 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, viewChild } from '@angular/core';
 import { EQUIP_HANDS, POTION_LIMIT, POTION_PRICES } from '../game/constants';
-import { HeroSheet } from '../game/heroes/hero-sheet';
-import { heroStats } from '../game/heroes/hero-stats';
-import { Loadout, ShopData, TREASURE_KEYS, equippedDefs, loadoutCost, placeItems, stockLeft, treasureRoom } from '../game/heroes/party-setup';
+import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
+import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
+import { Loadout, ShopData, TREASURE_KEYS, equippedDefs, loadoutCost, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
 import { ChestTier } from '../game/board/marker';
 import { TREASURE_PRICES } from '../game/constants';
 import { translate } from '../i18n/i18n.service';
@@ -12,7 +12,7 @@ import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { SkillDef } from '../game/skills/skill';
-import { HeroFaceComponent } from './hero-face.component';
+import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
 import { DialogComponent } from './dialog.component';
@@ -28,12 +28,12 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, DialogComponent, HeroFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, TranslatePipe],
+  imports: [AttackDiceComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-dialog [kicker]="'shop.kicker' | t" [title]="hero().name" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
+    <app-dialog [kicker]="'shop.kicker' | t" [title]="mercenary().name" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
       <!-- A sinistra la carta dell'eroe con i suoi parametri, a destra le sue abilità secondarie (già assegnate) in una carta che scorre da sola. Sono inclinate e infilate sotto il pannello. -->
-      <figure dialogSide class="card left"><app-hero-face [hero]="hero()" [stats]="stats()" /></figure>
+      <figure dialogSide class="card left"><app-mercenary-face [mercenary]="mercenary()" [stats]="stats()" /></figure>
       <figure dialogSide class="card right">
         <figcaption class="head">{{ 'detail.secondary' | t }}</figcaption>
         <div class="scroller" #scroller>
@@ -44,7 +44,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
       <!-- Seconda intestazione fissa: i dadi d'attacco extra dell'eroe, per sapere che armi conviene comprare. -->
       <div dialogSub class="dice">
         <span class="cap">{{ 'detail.dice' | t }}</span>
-        <app-attack-dice [dice]="hero().dice" />
+        <app-attack-dice [dice]="mercenary().dice" />
       </div>
 
       <h3>{{ 'shop.potions' | t }} <small>{{ 'shop.potionsHint' | t: { n: potionLimit } }}</small></h3>
@@ -107,7 +107,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         @if (!loadout().items.length && !loadout().potions.length && !loadout().treasures?.length) { <p class="none">{{ 'shop.nothing' | t }}</p> }
       </div>
       <!-- Le monete a sinistra del piede, con le due mani (una specchiata): si accendono in base alle mani occupate dalle armi scelte. -->
-      <div dialogFooterStart class="coins" [title]="'shop.coins' | t"><app-icon name="tokens/gold_pile" [size]="20" /><b>{{ coinsLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: hero().coins } }}</small></div>
+      <div dialogFooterStart class="coins" [title]="'shop.coins' | t"><app-icon name="tokens/gold_pile" [size]="20" /><b>{{ coinsLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: mercenary().coins } }}</small></div>
       <div dialogFooterStart class="hands" [title]="'shop.hands' | t: { used: handsUsed(), max: handsMax }">
         <span class="hand left" [class.on]="handsUsed() >= 1"><app-icon name="back_hand" [size]="22" /></span>
         <span class="hand right" [class.on]="handsUsed() >= 2"><app-icon name="back_hand" [size]="22" /></span>
@@ -149,7 +149,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
   `,
 })
 export class PregameShopDialogComponent {
-  readonly hero = input.required<HeroSheet>();
+  readonly mercenary = input.required<MercenarySheet>();
   readonly loadout = input.required<Loadout>();
   readonly shop = input.required<ShopData>();
   /** Ciò che hanno comprato gli altri eroi della squadra: le copie in vendita sono comuni. */
@@ -163,7 +163,7 @@ export class PregameShopDialogComponent {
   private readonly i18n = inject(I18nService);
   protected readonly potionKinds = POTIONS;
   /** I parametri che avrà, con le abilità assegnate e gli oggetti comprati (per la carta a sinistra). */
-  protected readonly stats = computed(() => heroStats(this.hero(), this.skills(), equippedDefs(this.loadout(), this.shop())));
+  protected readonly stats = computed(() => mercenaryStats(this.mercenary(), this.skills(), equippedDefs(this.loadout(), this.shop())));
   protected readonly handsMax = EQUIP_HANDS;
   /** Le mani occupate dagli oggetti che l'eroe riesce a equipaggiare (armi e scudi). */
   protected readonly handsUsed = computed(() => {
@@ -174,7 +174,7 @@ export class PregameShopDialogComponent {
   protected readonly potionLimit = POTION_LIMIT;
   /** I tipi di tesoro che questa avventura vende già in preparazione. */
   protected readonly treasureTiers = computed(() => this.shop().treasureTiers);
-  protected readonly coinsLeft = computed(() => this.hero().coins - loadoutCost(this.loadout(), this.shop()));
+  protected readonly coinsLeft = computed(() => this.mercenary().coins - loadoutCost(this.loadout(), this.shop()));
   private readonly left = computed(() => stockLeft(this.shop(), [...this.others(), this.loadout()]));
 
   protected readonly offers = computed(() => {

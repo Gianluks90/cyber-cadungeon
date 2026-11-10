@@ -17,7 +17,7 @@ export interface AttackSide {
   subtitle: string;
   portrait?: string;
   /** Un mostro o un eroe: decide l'icona se manca l'immagine. */
-  team: 'hero' | 'monster';
+  team: 'mercenary' | 'monster';
   /** Un mostro potenziato: la carta ha il contorno rosso. */
   enhanced?: boolean;
   wounds: number;

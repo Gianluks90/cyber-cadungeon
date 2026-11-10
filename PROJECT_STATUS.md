@@ -15,7 +15,7 @@ Documento di contesto per chi non vede il codice. Fotografia presa leggendo il r
   - login finto, **mappa del mondo** come home (MapLibre + Protomaps, tema cyberpunk, geolocalizzazione);
   - 3 eroi, 4 mostri e cataloghi provvisori e originali (niente materiale del gioco da tavolo che ispirava CADungeon);
   - glossario rinominato in interfaccia (Maligno → Megacorp, Odio → Allarme, ecc.).
-- Nel codice i vecchi nomi restano (`evil`, `hatred`, `magic`…): sono rinominati solo nell'interfaccia. I nomi dei dati e del codice cambiano solo con un piano a parte.
+- I nomi nel codice e nei dati sono quelli nuovi (`adversary`, `alarm`, `intrusion`, `mercenary`, `overclock`); restano da aggiornare alcuni testi visibili (TODO L0.2).
 - Il vecchio materiale (regole, schede, avventure fantasy, immagini) sta in `docs/legacy/`: solo fonte, non vincolante.
 
 ## 2. Stack e struttura
@@ -29,43 +29,43 @@ Documento di contesto per chi non vede il codice. Fotografia presa leggendo il r
 - ~36k righe di TypeScript in `src/`.
 
 **Cartelle**
-- `src/app/game/` — motore: `board/`, `state/`, `map/`, `pieces/`, `markers/`, `doors/`, `obstacles/`, `evil/`, `heroes/`, `items/`, `monsters/`, `skills/`, `dice/`, `torches/`, `familiars/` (residuo), più `game-scene.component.ts` (scena Pixi + HUD).
+- `src/app/game/` — motore: `board/`, `state/`, `map/`, `pieces/`, `markers/`, `doors/`, `obstacles/`, `adversary/`, `mercenaries/`, `items/`, `monsters/`, `skills/`, `dice/`, `torches/`, `familiars/` (residuo), più `game-scene.component.ts` (scena Pixi + HUD).
 - `src/app/editor/` — editor completo (tessere, porte, ostacoli, oggetti, nemici, aree, zone, eventi, verifica).
 - `src/app/lobby/` — lobby PeerJS. `src/app/auth/` — login finto. `src/app/world-map/` — mappa del mondo. `src/app/adventures/` — scelta avventura e squadra.
 - `src/app/ui/` — componenti HTML sopra il canvas. `src/app/i18n/` — traduzioni (`it.json`, `en.json`, pipe `t`, `tr`, `ct`).
-- `public/` — dati: `tiles/`, `maps/`, `heroes/`, `monsters/`, `items/`, `skills/`, `evil/`, `shops/`, `icons/` (SVG), `characters/`, `mobs/`, `dice/`.
+- `public/` — dati: `tiles/`, `maps/`, `mercenaries/`, `monsters/`, `items/`, `skills/`, `adversary/`, `shops/`, `icons/` (SVG), `characters/`, `mobs/`, `dice/`.
 - `docs/` — `style-guide.md`, `PIANO-DESIGN.md`, `PIANO-CHIAVI-I18N.md`, `legacy/`.
 - `scripts/i18n-check.mjs` — controlla che ogni testo `tr()` abbia la riga in entrambe le lingue (`npm run i18n:check`).
 
 **Rotte** (`app.routes.ts`, tutte lazy; tutte dietro `authGuard` tranne `/login`)
-- `/login`, `/` (mappa del mondo), `/adventures`, `/party/:map`, `/lobby/:code`, `/editor`, `/play/:map`, `/evil/:map` (stessa scena vista dalla Megacorp, per sviluppo; `?party=a,b,…`).
+- `/login`, `/` (mappa del mondo), `/adventures`, `/party/:map`, `/lobby/:code`, `/editor`, `/play/:map`, `/adversary/:map` (stessa scena vista dalla Megacorp, per sviluppo; `?party=a,b,…`).
 
 ## 3. Architettura del motore
 
 Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modificano, Pixi = solo disegno che lo legge.
 
 - **`game/board/`** — `Board`: muri a segmenti, porte, ostacoli → `canStep`, raggiungibilità, linea di vista (`sight.ts`). Non conosce le pedine.
-- **`game/state/`** — le regole (~30 file): `game-state.ts` (stato), `actions.ts` (porte, scrigni, passi, esplorazione), `combat.ts`, `status.ts` (burn/web/stun/poison), `effects.ts`, `activation.ts`, `events.ts` (eventi d'avventura), `evil.ts` + `evil-deck.ts` (Megacorp), `setup.ts` (preparazione pre-partita), `loot.ts`, `traps.ts`, `vigilance.ts`, `reactions.ts`.
+- **`game/state/`** — le regole (~30 file): `game-state.ts` (stato), `actions.ts` (porte, scrigni, passi, esplorazione), `combat.ts`, `status.ts` (burn/web/stun/poison), `effects.ts`, `activation.ts`, `events.ts` (eventi d'avventura), `adversary.ts` + `adversary-deck.ts` (Megacorp), `setup.ts` (preparazione pre-partita), `loot.ts`, `traps.ts`, `vigilance.ts`, `reactions.ts`.
 - **`game/map/`** — tile, snap, muri, aree, disegno del pavimento. `map-data.ts` definisce il formato mappa/avventura.
 - **`game/pieces|markers|doors|obstacles|torches/`** — viste Pixi + regole locali di ogni elemento.
 - **`game-scene.component.ts`** — orchestratore: carica mappa e cataloghi, costruisce `Board` e `GameState`, collega input → regole → ridisegno, ospita l'HUD (`ui/`).
 - **Comunicazione**: la scena chiama le funzioni di regole passando `(state, board, piece, …)`; le regole restituiscono esiti (`StepOutcome`, `DoorResult`, `ChestResult`…) che la scena traduce in animazioni/dialog. Nessun bus di eventi: chiamate dirette + signals per l'HUD.
 - **Casualità**: `GameState.random()` (mulberry32, `rngState` nello stato) → l'host decide ogni estrazione, partite ripetibili.
-- **Megacorp**: ruolo, non persona. Stesse azioni per script (`state/evil.ts`: `planMonsterMove`, `chooseMonsterTarget`…) e per umano (`/evil/:map`, flag `evilManual`).
+- **Megacorp**: ruolo, non persona. Stesse azioni per script (`state/adversary.ts`: `planMonsterMove`, `chooseMonsterTarget`…) e per umano (`/adversary/:map`, flag `adversaryManual`).
 - **Nebbia/scoperta**: `Exploration` + `veil-view.ts`: si scoprono gli elementi singoli, non le stanze.
 - **Rete (progettata)**: host autoritativo, i client mandano intenzioni; il contenuto delle stanze non scoperte resta sull'host.
 
 ## 4. Modelli dati principali
 
-- **`GameState`** (`state/game-state.ts`): `round`, `phase: 'heroes'|'evil'`, `progress` ("Conquista", contatore comunitario: a 0 gli eroi perdono), `status`, `activeId`, cataloghi (`items`, `skills`, `monsters`, `evilCards`), mazzi (tesori, abilità), `evil: EvilState {deck, hand, discard, inPlay, traps, hatred}`, `walls`, `events`, `zones`, `rngState`, `objective`, `setup`. Costruttore: `(seed, doors, obstacles, markers, pieces, party, exploration, activeId?)`. Serializzato come `GameSnapshot`.
-- **`Piece`** (`pieces/piece.ts`): eroe o mostro (`team: 'hero'|'monster'`): `cell`, `size`, `speed/points/attacks`, `action` (`advance|run|fight|prepare`), `wounds/maxWounds`, `armor`, `energy`, `value`, `coins`, `equipped/backpack`, `skills`, `status`, `city`. `PieceData` è la forma salvata nella mappa.
+- **`GameState`** (`state/game-state.ts`): `round`, `phase: 'mercenaries'|'adversary'`, `progress` ("Conquista", contatore comunitario: a 0 gli eroi perdono), `status`, `activeId`, cataloghi (`items`, `skills`, `monsters`, `adversaryCards`), mazzi (tesori, abilità), `adversary: EvilState {deck, hand, discard, inPlay, traps, alarm}`, `walls`, `events`, `zones`, `rngState`, `objective`, `setup`. Costruttore: `(seed, doors, obstacles, markers, pieces, party, exploration, activeId?)`. Serializzato come `GameSnapshot`.
+- **`Piece`** (`pieces/piece.ts`): eroe o mostro (`team: 'mercenary'|'monster'`): `cell`, `size`, `speed/points/attacks`, `action` (`advance|run|fight|prepare`), `wounds/maxWounds`, `armor`, `overclock`, `value`, `coins`, `equipped/backpack`, `skills`, `status`, `city`. `PieceData` è la forma salvata nella mappa.
 - **`MapData`** (`map/map-data.ts`): formato mappa **e** avventura:
   ```ts
   { seed, tiles: MapTileRef[{tile,x,y,rot,area?}], areas?, doors?, obstacles?, walls?,
     markers?, pieces?, zones?, torches?, events?, variables?, objective?, title?, intro?,
     rules?, setup?, chestTable?, itemMods?, behaviors?, party?, progress?, start? }
   ```
-- **Eventi**: `AdventureEvent {when, orWhen?, once?, if?, then, else?}`; trigger (`defeated`, `chestOpened`, `areaRevealed`, `interact`, `zoneEntered`, `evilTurnEnd`…) ed effetti (`message`, `progress`, `check`, `openDoor`, `enterPiece`, `win`…) sono unioni discriminate. Le variabili sono interruttori on/off.
+- **Eventi**: `AdventureEvent {when, orWhen?, once?, if?, then, else?}`; trigger (`defeated`, `chestOpened`, `areaRevealed`, `interact`, `zoneEntered`, `adversaryTurnEnd`…) ed effetti (`message`, `progress`, `check`, `openDoor`, `enterPiece`, `win`…) sono unioni discriminate. Le variabili sono interruttori on/off.
 - **Tile** (`public/tiles/*.json`, tipo `TileDef`): dimensione in celle, forma (`size` o `rects`), aperture (lato, posizione, larghezza 2). Rotazione a scatti di 90°; due tile si agganciano se le aperture si guardano. Pavimento/muri disegnati da codice. 11 tile oggi (corridoi, croce, T, gomito, vicolo cieco, stanze 4x4…8x8).
 - **Unità**: la cella, 64 px (`CELL_SIZE`).
 - **Cataloghi** (JSON in `public/`, testi in italiano perché li legge anche il motore, tradotti solo in visualizzazione): eroi (`bastion`, `vesper`, `halo`), mostri (`corp-guard`, `rogue-netrunner`, `sentry-drone`, `war-mech`), oggetti, abilità, Carte della Megacorp, negozio.
@@ -75,7 +75,7 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 
 **Funzionante (ereditato e adattato)**
 - Motore di partita completo: movimento a punti, porte/serrature, ostacoli, scrigni e tesori, combattimento con dadi, stati, abilità, oggetti e livelli, trappole, vigilanza, imboscate, knockback, città/negozio, salvataggio/ripresa.
-- Megacorp automatica (script + mazzo di carte + Allarme) e interfaccia manuale in `/evil/:map`.
+- Megacorp automatica (script + mazzo di carte + Allarme) e interfaccia manuale in `/adversary/:map`.
 - Editor completo con validatore e import/export; HUD e dialog; i18n it/en con controllo automatico.
 
 **Fake login** (`auth/`)
@@ -106,7 +106,7 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 - Vibe coding: cambiamenti piccoli, gioco sempre avviabile, nessun dev server lanciato dall'assistente.
 
 **Debito / limiti**
-- **Nomenclatura doppia**: nomi decisi Avversario/Allarme/Intrusione/Mercenari/Overclock (vedi glossario in `CLAUDE.md`); dati e codice ancora `evil/hatred/magic/hero/energy` finché non si fa la rinomina (`docs/TODO-v2.md` L1.9). Lista "da rinominare" in `CLAUDE.md` (glifo, runa, scrigno, Conquista, città/Tempio, famigli, ramo `magic`…).
+- **Nomenclatura doppia**: nomi decisi Avversario/Allarme/Intrusione/Mercenari/Overclock (vedi glossario in `CLAUDE.md`); dati e codice rinominati (`adversary/alarm/intrusion/mercenary/overclock`, TODO L1.9 completata); restano da aggiornare i **testi visibili** (L0.2). Lista "da rinominare" in `CLAUDE.md` (glifo, runa, scrigno, Conquista, città/Tempio, famigli, ramo `magic`…).
 - **Residui fantasy**: `familiars/`, `state/familiar*.ts`, `city.ts`, `telekinesis.ts` ancora nel codice benché i famigli siano "tolti".
 - **`game-scene.component.ts` e `game-state.ts` sono molto grandi** (monoliti): rischio di accoppiamento.
 - **Mappa del mondo**: tile e quote da server pubblici (`data.source.coop`, AWS Terrain) **solo per sviluppo**; in produzione servono file propri con Range e CORS.
@@ -119,11 +119,11 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 ## 7. Punti di estensione previsti
 
 - **Missioni geolocalizzate**: la mappa del mondo ha già posizione utente, consenso e stile; manca tutto il resto. Probabile strada: luoghi/missioni come dati (con coordinate) mostrati come marker su `WorldMapComponent`, che aprono `/party/:map` → `/play/:map`, e `AdventureCard` (oggi vuoto) come ponte. Serve una decisione di architettura (dove vivono i dati: Firestore dietro interfaccia).
-- **Eroi**: schede JSON in `public/heroes/` (`index.json` + una per eroe) caricate da `heroes/`; la squadra predefinita è `DEFAULT_PARTY`. Eroi persistenti/collezionabili sono fuori scope per ora; l'interfaccia `SaveStore` è il punto dove agganciare eroi salvati.
+- **Eroi**: schede JSON in `public/mercenaries/` (`index.json` + una per eroe) caricate da `mercenaries/`; la squadra predefinita è `DEFAULT_PARTY`. Eroi persistenti/collezionabili sono fuori scope per ora; l'interfaccia `SaveStore` è il punto dove agganciare eroi salvati.
 - **Fixer**: **non c'è ancora nulla nel codice** (nessun riferimento trovato). Da definire cosa sia (PNG/ruolo/negozio/mediatore di missioni?). Candidati naturali: il ruolo "città/negozio" (`state/city.ts`, `shops/`, `ui/city-panel`) o un nuovo tipo di segnalino/evento (`encounter`, `zone`, `interact`).
 - **Rete**: completare gioco in rete su `LobbyHost` (stato autoritativo) / `LobbyClient` (intenzioni), con filtro delle parti non scoperte.
 - **Backend**: Firebase Auth al posto di `FakeAuthBackend`; Firestore al posto di `LocalSaveStore`/`LocalLobbyStore`/`DraftStore` (avventure, mappe, eroi, checkpoint).
-- **Contenuti**: nuove avventure con l'editor → `public/maps/` + voce in `ADVENTURES`; nuove voci nei cataloghi richiedono traduzione (`item.<id>`, `skill.<id>`, `monster.<id>`, `evil.<id>`).
+- **Contenuti**: nuove avventure con l'editor → `public/maps/` + voce in `ADVENTURES`; nuove voci nei cataloghi richiedono traduzione (`item.<id>`, `skill.<id>`, `monster.<id>`, `adversary.<id>`).
 - **Temi**: `MapTheme` della mappa del mondo e token di interfaccia sono già strutturati per più temi.
 
 ## Note per chi continua

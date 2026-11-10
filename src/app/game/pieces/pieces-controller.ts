@@ -6,7 +6,7 @@ import {
   CELL_SIZE,
   FX,
   GLYPH_TRAVEL_MS,
-  HERO_DEATH_FADE_MS,
+  MERCENARY_DEATH_FADE_MS,
   PAWN_PORTRAIT_INSET_PX,
   PIT_FALL_WOUNDS,
   LOOK_FADE_MS,
@@ -204,9 +204,9 @@ export class PiecesController {
     return !!this.moving;
   }
 
-  /** Il turno degli eroi finisce adesso, per un evento (vedi actions.endHeroesTurn): tutti quelli che non hanno agito passano. */
-  endHeroesTurn(): act.PassResult | null {
-    const result = act.endHeroesTurn(this.state);
+  /** Il turno degli eroi finisce adesso, per un evento (vedi actions.endMercenariesTurn): tutti quelli che non hanno agito passano. */
+  endMercenariesTurn(): act.PassResult | null {
+    const result = act.endMercenariesTurn(this.state);
     if (!result) return null;
     for (const p of this.pieces) this.drawPiece(p);
     this.onChange(this.active);
@@ -225,7 +225,7 @@ export class PiecesController {
     if (!this.enabled || this.moving || !this.board) return;
     const other = this.pieceAt(cell);
     if (other) {
-      if (other.team === 'hero' && other.id !== this.state.activeId && !this.viewOnly) this.select(other);
+      if (other.team === 'mercenary' && other.id !== this.state.activeId && !this.viewOnly) this.select(other);
       else if (other.team === 'monster') this.onMonsterClick?.(other);
       return;
     }
@@ -312,15 +312,15 @@ export class PiecesController {
    * Un eroe è morto per un evento (effetto `killActor`) senza essere camminato: muore come per una caduta (Conquista persa, città) e svanisce in rosso. Restituisce le pedine
    * che la sua morte ha tolto di mezzo (Giustizia divina e simili).
    */
-  killHeroByEvent(piece: Piece): Piece[] {
+  killMercenaryByEvent(piece: Piece): Piece[] {
     piece.wounds = 0;
-    const slain = act.killHero(this.state, piece);
-    this.heroDied(piece, slain);
+    const slain = act.killMercenary(this.state, piece);
+    this.mercenaryDied(piece, slain);
     return slain;
   }
 
-  /** Un eroe è morto fuori da un passo (per un evento, per la maledizione di fine turno): svanisce in rosso e chi la sua morte ha tolto di mezzo svanisce con lui. La morte (`killHero`) l'ha già decisa chi chiama. */
-  heroDied(piece: Piece, slain: Piece[]): void {
+  /** Un eroe è morto fuori da un passo (per un evento, per la maledizione di fine turno): svanisce in rosso e chi la sua morte ha tolto di mezzo svanisce con lui. La morte (`killMercenary`) l'ha già decisa chi chiama. */
+  mercenaryDied(piece: Piece, slain: Piece[]): void {
     this.dyingPieces.set(piece.id, piece);
     this.dying.set(piece.id, 0);
     this.monstersSlain(slain.filter((p) => p !== piece));
@@ -444,7 +444,7 @@ export class PiecesController {
     for (const p of this.pieces) {
       // Chi è in città non è sulla mappa: la sua pedina non si vede.
       const view = this.views.get(p.id);
-      if (view) view.root.visible = (!p.city || this.dying.has(p.id)) && (p.team === 'hero' || !this.visibleMonsters || this.visibleMonsters.has(p.id));
+      if (view) view.root.visible = (!p.city || this.dying.has(p.id)) && (p.team === 'mercenary' || !this.visibleMonsters || this.visibleMonsters.has(p.id));
     }
   }
 
@@ -930,14 +930,14 @@ export class PiecesController {
   }
 
   /** Sceglie un eroe dall'interfaccia (il pallino nella barra). */
-  selectHero(id: string) {
+  selectMercenary(id: string) {
     const piece = this.pieces.find((p) => p.id === id);
-    if (piece && piece.team === 'hero' && piece.id !== this.state.activeId && !this.moving && this.enabled) this.select(piece);
+    if (piece && piece.team === 'mercenary' && piece.id !== this.state.activeId && !this.moving && this.enabled) this.select(piece);
   }
 
   private select(piece: Piece) {
     const previous = this.active;
-    if (!act.selectHero(this.state, piece.id)) {
+    if (!act.selectMercenary(this.state, piece.id)) {
       this.onNotice(tr('{name} ha già agito in questo round', { name: piece.name }), 'warning');
       return;
     }
@@ -1002,7 +1002,7 @@ export class PiecesController {
     // Senza immagine, un segnaposto al posto del ritratto.
     if (!view.portrait) this.shape(view.base, a * 0.62, b * 0.62).fill(c.token.portrait);
     else {
-      view.portrait.alpha = p.team === 'hero' && !active ? theme.alpha.portraitIdle : 1; // gli eroi non attivi più tenui
+      view.portrait.alpha = p.team === 'mercenary' && !active ? theme.alpha.portraitIdle : 1; // gli eroi non attivi più tenui
       view.portrait.filters = look === 'stone' || this.grayMonsters?.has(p.id) ? [this.stoneFilter] : []; // aspetto di pietra (o mostro non ancora scoperto, per il Maligno): immagine senza colore
       const tex = view.portrait.texture;
       // Un'immagine allungata (la salamandra è in verticale) ruota di 90° quando la pedina è girata dall'altra parte, e copre tutta la forma.
@@ -1033,7 +1033,7 @@ export class PiecesController {
       const r = 7;
       view.badges.addChild(new Graphics().circle(-a + r + 2, b - r - 2, r).fill(theme.color.activation[activation]).stroke({ width: 1.5, color: theme.color.token.fill }));
     }
-    if (p.team === 'hero' && p.order) {
+    if (p.team === 'mercenary' && p.order) {
       const r = 10;
       const x = a - r;
       const y = b - r;
@@ -1111,7 +1111,7 @@ export class PiecesController {
 
     // Chi ha cambiato ordine (piazzato, usato, perso) ridisegna il suo cerchietto.
     for (const p of this.pieces) {
-      if (p.team !== 'hero' || this.dying.has(p.id)) continue;
+      if (p.team !== 'mercenary' || this.dying.has(p.id)) continue;
       const shown = p.order ?? '';
       if (this.shownOrder.get(p.id) === shown) continue;
       this.shownOrder.set(p.id, shown);
@@ -1161,7 +1161,7 @@ export class PiecesController {
 
     // Gli eroi morti sfumano e diventano rossi, poi spariscono (la loro pedina è già fuori dalla mappa per le regole).
     for (const [id, p] of this.dying) {
-      const next = p + deltaMs / HERO_DEATH_FADE_MS;
+      const next = p + deltaMs / MERCENARY_DEATH_FADE_MS;
       const piece = this.dyingPieces.get(id) ?? this.pieces.find((q) => q.id === id)!;
       const view = this.views.get(id)!;
       if (next >= 1) {
@@ -1244,10 +1244,10 @@ export class PiecesController {
       return;
     }
     this.onChange(m.piece);
-    const heroStop = (this.onStepped?.(m.piece, outcome) ?? false) && m.piece.team === 'hero'; // es. è comparso un mostro: ci si ferma qui (ai mostri non succede)
+    const mercenaryStop = (this.onStepped?.(m.piece, outcome) ?? false) && m.piece.team === 'mercenary'; // es. è comparso un mostro: ci si ferma qui (ai mostri non succede)
     // Un mostro si ferma se un eroe può usare la Vigilanza; ma non sopra un'altra pedina (ci passa attraverso, non ci si ferma): in quel caso l'interruzione aspetta il passo dopo.
     const onTop = m.piece.team === 'monster' && this.pieces.some((o) => o !== m.piece && !o.city && footprint(o).some((c) => occupies(m.piece, c)));
-    const stop = heroStop || (m.piece.team === 'monster' && !onTop && (this.onMonsterStep?.(m.piece, before) ?? false));
+    const stop = mercenaryStop || (m.piece.team === 'monster' && !onTop && (this.onMonsterStep?.(m.piece, before) ?? false));
     m.index++;
     m.elapsed = 0;
     if (stop || m.index >= m.steps.length) {

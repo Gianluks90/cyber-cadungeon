@@ -1,20 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import type { AdventureSetup } from '../game/map/map-data';
-import { HeroSheet, loadAllHeroSheets } from '../game/heroes/hero-sheet';
-import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/heroes/party-setup';
+import { MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
+import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { DotTrailComponent } from '../ui/dot-trail.component';
-import { HeroStatsPillComponent } from '../ui/hero-stats-pill.component';
-import { HeroDetailDialogComponent } from '../ui/hero-detail-dialog.component';
+import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
+import { MercenaryDetailDialogComponent } from '../ui/mercenary-detail-dialog.component';
 import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
 import { FamiliarDef, familiarsOfSheet, loadFamiliarCatalog } from '../game/familiars/familiar';
 import { HeartsComponent } from '../ui/hearts.component';
-import { HeroLoadoutComponent } from '../ui/hero-loadout.component';
+import { MercenaryLoadoutComponent } from '../ui/mercenary-loadout.component';
 import { IconComponent } from '../ui/icon.component';
 import { PageNavComponent } from '../ui/page-nav.component';
 import { ADVENTURES } from './adventures';
@@ -29,7 +29,7 @@ export const PARTY_MAX = 4;
  */
 @Component({
   selector: 'app-party',
-  imports: [CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, HeroDetailDialogComponent, HeroStatsPillComponent, HeroLoadoutComponent, IconComponent, PageNavComponent, TranslatePipe],
+  imports: [CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, IconComponent, PageNavComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -47,7 +47,7 @@ export const PARTY_MAX = 4;
     <main>
       @if (step() === 'pick') {
         <div class="row" role="group" [attr.aria-label]="'party.title' | t">
-          @for (h of heroes(); track h.id) {
+          @for (h of mercenaries(); track h.id) {
             <div class="card" role="button" tabindex="0" [class.on]="order(h.id) > 0" [attr.aria-pressed]="order(h.id) > 0" [attr.aria-disabled]="!order(h.id) && full() ? 'true' : null" (click)="toggle(h.id)" (keydown.enter)="toggle(h.id)" (keydown.space)="toggle(h.id); $event.preventDefault()">
               <img [src]="h.portraitFull" [alt]="h.name" />
               <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
@@ -55,7 +55,7 @@ export const PARTY_MAX = 4;
               <div class="cap">
                 <app-value-star class="value" [value]="h.value" />
                 @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                <app-hero-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
+                <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
                 <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + h.armor">
                 <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
                 <em>{{ h.armor }}</em>
@@ -65,7 +65,7 @@ export const PARTY_MAX = 4;
               </div>
             </div>
           }
-          @if (heroes().length) {
+          @if (mercenaries().length) {
             <!-- Solo a eroi caricati: con la fila vuota lo scorrimento si agganciava a questa card e restava in fondo. -->
             <div class="more">
               <p>{{ 'party.more' | t }}</p>
@@ -76,7 +76,7 @@ export const PARTY_MAX = 4;
       } @else {
         <div class="squad">
           @for (h of squad(); track h.id) {
-            <app-hero-loadout [hero]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" (changed)="setLoadout(h.id, $event)" />
+            <app-mercenary-loadout [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" (changed)="setLoadout(h.id, $event)" />
           }
         </div>
       }
@@ -90,7 +90,7 @@ export const PARTY_MAX = 4;
       }
     </footer>
     <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
-    <app-hero-detail-dialog [hero]="detail()" (closed)="detail.set(null)" />
+    <app-mercenary-detail-dialog [mercenary]="detail()" (closed)="detail.set(null)" />
     <app-confirm-dialog [open]="askUnspent()" [danger]="false" [title]="'party.unspentTitle' | t" [text]="'party.unspentText' | t: { names: unspentNames() }" [confirmLabel]="'party.startAnyway' | t" (confirmed)="askUnspent.set(false); go()" (cancel)="askUnspent.set(false)" />
   `,
   styles: `
@@ -158,20 +158,20 @@ export class PartyComponent {
   protected readonly title = ADVENTURES.find((a) => a.map === this.map)?.title ?? this.map;
   protected readonly min = PARTY_MIN;
   protected readonly max = PARTY_MAX;
-  private readonly rawHeroes = signal<HeroSheet[]>([]);
+  private readonly rawMercenaries = signal<MercenarySheet[]>([]);
   /** La variante di preparazione dell'avventura (monete in più, tesori in negozio): letta dal file della mappa. */
   private readonly adventureSetup = signal<AdventureSetup>({});
   /** Le schede con le monete di preparazione (300 più il bonus dell'avventura). */
-  protected readonly heroes = computed(() => this.rawHeroes().map((h) => ({ ...h, coins: coinsWithSetup(h.coins, this.adventureSetup()) })));
+  protected readonly mercenaries = computed(() => this.rawMercenaries().map((h) => ({ ...h, coins: coinsWithSetup(h.coins, this.adventureSetup()) })));
   /** Gli eroi scelti, nell'ordine in cui si sono toccati. */
   protected readonly chosen = signal<string[]>([]);
   protected readonly ready = computed(() => this.chosen().length >= PARTY_MIN);
   /** Le schede degli eroi scelti, nell'ordine della squadra, e ciò che ognuno ha comprato. */
-  protected readonly squad = computed(() => this.chosen().flatMap((id) => this.heroes().find((h) => h.id === id) ?? []));
+  protected readonly squad = computed(() => this.chosen().flatMap((id) => this.mercenaries().find((h) => h.id === id) ?? []));
   protected readonly shop = signal<ShopData | null>(null);
   /** I famigli del catalogo: una carta eroe che ne dà uno lo mostra già nella scelta (pillola "Famiglio"). */
   private readonly familiarDefs = signal<ReadonlyMap<string, FamiliarDef>>(new Map());
-  protected familiarsOf(h: HeroSheet): FamiliarDef[] {
+  protected familiarsOf(h: MercenarySheet): FamiliarDef[] {
     return familiarsOfSheet(h, this.familiarDefs());
   }
   /** Il catalogo delle carte abilità e quelle assegnate a ogni eroe della squadra (pescate quando si conferma la scelta). */
@@ -184,7 +184,7 @@ export class PartyComponent {
   protected readonly full = computed(() => this.chosen().length >= PARTY_MAX);
 
   constructor() {
-    void loadAllHeroSheets().then((h) => this.rawHeroes.set(h));
+    void loadAllMercenarySheets().then((h) => this.rawMercenaries.set(h));
     void loadAdventureSetup(this.map).then(async (setup) => {
       this.adventureSetup.set(setup);
       this.shop.set(await loadPregameShop(setup));
@@ -201,7 +201,7 @@ export class PartyComponent {
   protected toggle(id: string) {
     this.chosen.update((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < PARTY_MAX ? [...c, id] : c));
     // Un eroe lasciato a casa rimette in negozio ciò che aveva comprato.
-    this.loadouts.update((l) => Object.fromEntries(Object.entries(l).filter(([hero]) => this.chosen().includes(hero))));
+    this.loadouts.update((l) => Object.fromEntries(Object.entries(l).filter(([mercenary]) => this.chosen().includes(mercenary))));
   }
 
   protected loadoutOf(id: string): Loadout {
@@ -210,7 +210,7 @@ export class PartyComponent {
 
   /** Gli acquisti degli altri eroi della squadra: le copie in vendita sono comuni. */
   protected othersOf(id: string): Loadout[] {
-    return Object.entries(this.loadouts()).filter(([hero]) => hero !== id).map(([, l]) => l);
+    return Object.entries(this.loadouts()).filter(([mercenary]) => mercenary !== id).map(([, l]) => l);
   }
 
   protected setLoadout(id: string, l: Loadout) {
@@ -261,7 +261,7 @@ export class PartyComponent {
   /** Entrando nell'Equipaggiamento una dialog avvisa che le abilità secondarie sono state assegnate a caso. */
   protected readonly skillNotice = signal(false);
   /** La scheda di dettaglio aperta dal tasto "i" di una carta. */
-  protected readonly detail = signal<HeroSheet | null>(null);
+  protected readonly detail = signal<MercenarySheet | null>(null);
 
   protected start() {
     if (!this.ready()) return;

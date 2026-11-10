@@ -54,7 +54,7 @@ export interface PendingCheck {
   onSuccess: EventEffect[];
   onFail: EventEffect[];
   /** L'eroe che la tira (quello che ha fatto scattare l'evento). */
-  heroId: string | null;
+  mercenaryId: string | null;
   /** Il nemico dell'evento (sconfitto o con cui si interagisce): è ciò che "il nemico dell'evento" indica negli effetti dei rami. */
   thisId?: string;
   /** L'evento da cui viene: se l'eroe rinuncia, un evento "una sola volta" torna disponibile. */
@@ -75,13 +75,13 @@ export interface EventState {
   /** Le pedine appena entrate in gioco da un evento: la scena le presenta (camera, comparsa) e svuota l'elenco. */
   entered: Piece[];
   /** Gli eroi che un evento ha fatto morire (effetto `killActor`, gli id): chi sta camminando lo chiude `applyStep`, gli altri la scena. */
-  killHeroes?: string[];
+  killMercenaries?: string[];
   /** Gli oggetti (id) che un evento (`giveChosen`) deve consegnare a un eroe scelto dal gruppo: la scena chiede chi, uno alla volta. */
   pendingGifts?: string[];
   /** Un oggetto è cresciuto (effetto `levelItem`): la scena rifà l'inventario e le carte. */
   itemsChanged?: boolean;
-  /** Un evento ha chiesto di finire il turno degli eroi (effetto `endHeroesTurn`): la scena lo fa dopo aver mostrato i messaggi e svuota il flag. */
-  endHeroesTurn?: boolean;
+  /** Un evento ha chiesto di finire il turno degli eroi (effetto `endMercenariesTurn`): la scena lo fa dopo aver mostrato i messaggi e svuota il flag. */
+  endMercenariesTurn?: boolean;
   /** I messaggi in coda da mostrare (la scena li svuota uno alla volta). */
   messages: EventMessage[];
   /** Frasi brevi in coda (il bottino di una sconfitta decisa da un evento), da mostrare come notifiche. */
@@ -121,9 +121,9 @@ export function interactionsOn(state: GameState, pieceId: string): Extract<Event
  * Un eroe interagisce con la pedina: scattano i suoi eventi e l'interazione non c'è più. `before` sono i punti dell'eroe prima di pagare il costo: se l'evento è una prova a cui
  * l'eroe rinuncia (`refuseCheck`) gli vengono restituiti.
  */
-export function runInteraction(state: GameState, pieceId: string, hero: Piece, before: { points: number; pointsUsed: number; attacks: number }): EventReport {
+export function runInteraction(state: GameState, pieceId: string, mercenary: Piece, before: { points: number; pointsUsed: number; attacks: number }): EventReport {
   (state.events.interacted ??= []).push(pieceId);
-  return runEvents(state, { kind: 'interact', pieceId }, undefined, { actor: hero.id, interaction: { pieceId, before } });
+  return runEvents(state, { kind: 'interact', pieceId }, undefined, { actor: mercenary.id, interaction: { pieceId, before } });
 }
 
 /** Gli eventi di una mappa: le definizioni e tutte le variabili spente. */
@@ -190,8 +190,8 @@ function nothingToDo(state: GameState, effects: EventEffect[], thisId?: string):
 }
 
 /** Dove si trova un oggetto: con un eroe, con un mostro, a terra (un segnalino non raccolto) o da nessuna parte (`none`). */
-export function itemLocation(state: GameState, itemId: string): 'hero' | 'monster' | 'ground' | 'none' {
-  if (state.pieces.some((p) => p.team === 'hero' && (p.equipped?.includes(itemId) || p.backpack?.includes(itemId)))) return 'hero';
+export function itemLocation(state: GameState, itemId: string): 'mercenary' | 'monster' | 'ground' | 'none' {
+  if (state.pieces.some((p) => p.team === 'mercenary' && (p.equipped?.includes(itemId) || p.backpack?.includes(itemId)))) return 'mercenary';
   if (state.pieces.some((p) => p.team === 'monster' && p.equipped?.includes(itemId))) return 'monster';
   if (state.markers.some((m) => m.type === 'item' && m.itemId === itemId && !m.collected)) return 'ground';
   return 'none';
@@ -359,7 +359,7 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
         noOverclock: !!effect.noOverclock,
         onSuccess: copy(effect.onSuccess),
         onFail: copy(effect.onFail),
-        heroId: report.actor ?? state.activeId,
+        mercenaryId: report.actor ?? state.activeId,
         ...(report.thisId ? { thisId: report.thisId } : {}),
         ...(report.eventId ? { eventId: report.eventId } : {}),
         ...(report.interaction ? { interaction: report.interaction } : {}),
@@ -413,10 +413,10 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
       return;
     }
     case 'give': {
-      const hero = state.pieces.find((p) => p.id === (report.actor ?? state.activeId));
+      const mercenary = state.pieces.find((p) => p.id === (report.actor ?? state.activeId));
       const reward = effect.reward;
-      if (reward.kind === 'item' && hero) handItem(state, hero, reward.itemId);
-      else ev.notices.push(...collectLoot(state, [reward], hero));
+      if (reward.kind === 'item' && mercenary) handItem(state, mercenary, reward.itemId);
+      else ev.notices.push(...collectLoot(state, [reward], mercenary));
       return;
     }
     case 'giveChosen':
@@ -450,12 +450,12 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
       const overlaps = (p: Piece) => !p.city && footprint(p).some((c) => footprint(piece).some((f) => f.x === c.x && f.y === c.y));
       if (board) {
         // Un eroe che si trova dove compare il nemico (anche su una sola delle sue caselle) si sposta sulla casella libera più vicina, fuori dalla sagoma.
-        for (const hero of state.pieces.filter((p) => p.team === 'hero' && overlaps(p))) {
-          const out = freeCellAround(state, board, piece, hero.cell);
+        for (const mercenary of state.pieces.filter((p) => p.team === 'mercenary' && overlaps(p))) {
+          const out = freeCellAround(state, board, piece, mercenary.cell);
           if (!out) continue;
-          hero.cell = out;
-          ev.notices.push(tr('{name} è sbalzato su una casella vicina', { name: hero.name }));
-          ev.pieceChanges.push({ piece: hero, kind: 'modified' }); // la scena ridisegna la pedina nella nuova casella
+          mercenary.cell = out;
+          ev.notices.push(tr('{name} è sbalzato su una casella vicina', { name: mercenary.name }));
+          ev.pieceChanges.push({ piece: mercenary, kind: 'modified' }); // la scena ridisegna la pedina nella nuova casella
         }
         // Se resta qualcun altro sotto di lui (un altro nemico, o nessun posto per l'eroe), è il nuovo arrivato a spostarsi.
         if (state.pieces.some(overlaps)) piece.cell = freeAdjacentCell(state, board, piece.cell) ?? piece.cell;
@@ -509,11 +509,11 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
         stairs.collapsed = collapsed || undefined;
         if (!collapsed || stairs.leaves === 'none') continue; // senza ostacolo al posto non c'è nessuno da spostare
         // Chi stava sulla scala si ritrova su una casella vicina libera.
-        for (const hero of state.pieces.filter((p) => p.team === 'hero' && !p.city && p.cell.x === stairs.x && p.cell.y === stairs.y)) {
-          const out = state.board ? freeAdjacentCell(state, state.board, hero.cell) : null;
+        for (const mercenary of state.pieces.filter((p) => p.team === 'mercenary' && !p.city && p.cell.x === stairs.x && p.cell.y === stairs.y)) {
+          const out = state.board ? freeAdjacentCell(state, state.board, mercenary.cell) : null;
           if (!out) continue;
-          hero.cell = out;
-          ev.notices.push(tr('{name} è sbalzato su una casella vicina', { name: hero.name }));
+          mercenary.cell = out;
+          ev.notices.push(tr('{name} è sbalzato su una casella vicina', { name: mercenary.name }));
         }
       }
       ev.groundItems = true;
@@ -548,12 +548,12 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
     }
     case 'killActor':
       {
-        const id = report.actor ?? (state.phase === 'heroes' ? state.activeId : null); // senza un eroe che l'ha causato, quello di turno
-        if (id) (ev.killHeroes ??= []).push(id);
+        const id = report.actor ?? (state.phase === 'mercenaries' ? state.activeId : null); // senza un eroe che l'ha causato, quello di turno
+        if (id) (ev.killMercenaries ??= []).push(id);
       }
       return;
-    case 'endHeroesTurn':
-      if (state.phase === 'heroes' && state.status === 'playing') ev.endHeroesTurn = true; // fuori dal turno degli eroi non c'è niente da finire
+    case 'endMercenariesTurn':
+      if (state.phase === 'mercenaries' && state.status === 'playing') ev.endMercenariesTurn = true; // fuori dal turno degli eroi non c'è niente da finire
       return;
     case 'permadeath':
       if (!!ev.permadeath !== effect.on) ev.notices.push(effect.on ? tr('Da ora la morte degli eroi è permanente') : tr('La morte degli eroi non è più permanente'));
@@ -591,14 +591,14 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
 
 /** I dadi che l'eroe tira per una prova: i dadi in più del suo attacco scelto (nessuno se non ne ha). */
 export function checkDiceCount(state: GameState, check: PendingCheck): number {
-  const hero = state.pieces.find((p) => p.id === check.heroId);
-  return Math.max(0, hero?.dice[check.dice] ?? 0);
+  const mercenary = state.pieces.find((p) => p.id === check.mercenaryId);
+  return Math.max(0, mercenary?.dice[check.dice] ?? 0);
 }
 
 /** La prova è stata giocata: con almeno `needs` scintille valgono gli effetti di `onSuccess`, altrimenti quelli di `onFail`. Restituisce l'esito e ciò che gli effetti hanno cambiato. */
 export function resolveCheck(state: GameState, check: PendingCheck, sparks: number): { success: boolean; report: EventReport } {
   const success = sparks >= check.needs;
-  const report: EventReport = { revive: null, modified: [], ...(check.heroId ? { actor: check.heroId } : {}), ...(check.thisId ? { thisId: check.thisId } : {}) };
+  const report: EventReport = { revive: null, modified: [], ...(check.mercenaryId ? { actor: check.mercenaryId } : {}), ...(check.thisId ? { thisId: check.thisId } : {}) };
   for (const effect of success ? check.onSuccess : check.onFail) apply(state, effect, report);
   return { success, report };
 }
@@ -607,11 +607,11 @@ export function resolveCheck(state: GameState, check: PendingCheck, sparks: numb
 export function refuseCheck(state: GameState, check: PendingCheck): Piece | undefined {
   const it = check.interaction;
   if (!it) return undefined;
-  const hero = state.pieces.find((p) => p.id === check.heroId);
-  if (hero) {
-    hero.points = it.before.points;
-    hero.pointsUsed = it.before.pointsUsed;
-    hero.attacks = it.before.attacks;
+  const mercenary = state.pieces.find((p) => p.id === check.mercenaryId);
+  if (mercenary) {
+    mercenary.points = it.before.points;
+    mercenary.pointsUsed = it.before.pointsUsed;
+    mercenary.attacks = it.before.attacks;
   }
   state.events.interacted = (state.events.interacted ?? []).filter((id) => id !== it.pieceId);
   if (check.eventId) state.events.fired = (state.events.fired ?? []).filter((id) => id !== check.eventId); // un evento "una sola volta" a cui si è rinunciato non è scattato davvero
@@ -633,7 +633,7 @@ export function isWaitingToRevive(state: GameState, pieceId: string): boolean {
  * lontane almeno `distance` caselle da ogni eroe; se non ce n'è nessuna, la più lontana possibile. Null se non c'è nessuno spazio libero.
  */
 export function revivalCell(state: GameState, board: Board, piece: Piece, distance: number): Cell | null {
-  const heroes = state.pieces.filter((p) => p.team === 'hero' && !p.city);
+  const mercenaries = state.pieces.filter((p) => p.team === 'mercenary' && !p.city);
   const occupied = new Set(state.pieces.filter((p) => !p.city).flatMap((p) => footprint(p).map(cellKey)));
   const ok = (c: Cell) => {
     const area = board.areaAt(c);
@@ -641,7 +641,7 @@ export function revivalCell(state: GameState, board: Board, piece: Piece, distan
     const marker = board.markerAt(c);
     return board.isWalkable(c) && revealed && !occupied.has(cellKey(c)) && !board.obstacleAt(c) && (!marker || !['glyph', 'chest', 'stairs', 'encounter'].includes(marker.type));
   };
-  const away = (cells: Cell[]) => Math.min(...heroes.flatMap((h) => cells.map((c) => Math.max(Math.abs(c.x - h.cell.x), Math.abs(c.y - h.cell.y)))), Infinity);
+  const away = (cells: Cell[]) => Math.min(...mercenaries.flatMap((h) => cells.map((c) => Math.max(Math.abs(c.x - h.cell.x), Math.abs(c.y - h.cell.y)))), Infinity);
   const spots = board
     .walkableCells()
     .map((c) => ({ c, far: away(footprint({ cell: c, size: piece.size })) }))
@@ -707,23 +707,23 @@ export const zoneCost = (state: GameState, zone: Zone): number => (zoneOutcome(s
  * Le zone che `piece` può usare adesso: un evento "usa una zona" farebbe qualcosa (vedi `zoneOutcome`) e una loro casella è quella dell'eroe o gli è adiacente (senza un muro in mezzo). Solo gli eroi.
  */
 export function usableZones(state: GameState, board: Board, piece: Piece): Zone[] {
-  if (piece.team !== 'hero') return [];
+  if (piece.team !== 'mercenary') return [];
   return (state.zones ?? []).filter(
     (z) => zoneOutcome(state, z) !== 'none' && z.cells.some((c) => (c.x === piece.cell.x && c.y === piece.cell.y) || board.canStep(piece.cell, c)),
   );
 }
 
 /** L'eroe usa la zona (il costo lo paga chi chiama): scattano gli eventi. La zona non si consuma: resta usabile finché un evento non la disattiva. */
-export function runZoneUsed(state: GameState, zone: Zone, hero: Piece): EventReport {
-  return runEvents(state, { kind: 'zoneUsed', zoneId: zone.id }, undefined, { actor: hero.id });
+export function runZoneUsed(state: GameState, zone: Zone, mercenary: Piece): EventReport {
+  return runEvents(state, { kind: 'zoneUsed', zoneId: zone.id }, undefined, { actor: mercenary.id });
 }
 
 /** Un eroe è appena entrato in `to` venendo da `from`: scattano gli eventi delle zone attive in cui è entrato (da fuori, o a ogni passo se l'evento lo chiede). */
-export function runZonesEntered(state: GameState, hero: Piece, from: Cell, to: Cell): void {
+export function runZonesEntered(state: GameState, mercenary: Piece, from: Cell, to: Cell): void {
   const inside = (z: Zone, c: Cell) => z.cells.some((k) => k.x === c.x && k.y === c.y);
   for (const zone of state.zones ?? []) {
     if (zone.off || !inside(zone, to)) continue;
-    runEvents(state, { kind: 'zoneEntered', zoneId: zone.id, fromOutside: !inside(zone, from) }, undefined, { actor: hero.id });
+    runEvents(state, { kind: 'zoneEntered', zoneId: zone.id, fromOutside: !inside(zone, from) }, undefined, { actor: mercenary.id });
   }
 }
 
@@ -731,12 +731,12 @@ export function runZonesEntered(state: GameState, hero: Piece, from: Cell, to: C
  * Consegna un oggetto a un eroe (da un evento): lo riceve se ha posto (un oggetto maledetto si autoequipaggia), altrimenti l'oggetto non si perde: cade a terra nella sua casella, o in una vicina
  * libera se lì c'è già qualcosa (una scala, un glifo…), dove lo può raccogliere. Le notizie vanno in `events.notices`.
  */
-export function handItem(state: GameState, hero: Piece, itemId: string): void {
+export function handItem(state: GameState, mercenary: Piece, itemId: string): void {
   const ev = state.events;
-  if (!canReceiveItem(state, hero, itemId)) {
-    const [spot] = groundCells(state, footprint(hero), hero.cell, 1, hero);
+  if (!canReceiveItem(state, mercenary, itemId)) {
+    const [spot] = groundCells(state, footprint(mercenary), mercenary.cell, 1, mercenary);
     state.markers.push({ type: 'item', itemId, x: spot.x, y: spot.y });
     ev.groundItems = true;
-    ev.notices.push(tr('{item}: {name} non ha posto, cade a terra', { item: state.items.get(itemId)?.name ?? tr('Un oggetto'), name: hero.name }));
-  } else ev.notices.push(...collectLoot(state, [{ kind: 'item', itemId }], hero));
+    ev.notices.push(tr('{item}: {name} non ha posto, cade a terra', { item: state.items.get(itemId)?.name ?? tr('Un oggetto'), name: mercenary.name }));
+  } else ev.notices.push(...collectLoot(state, [{ kind: 'item', itemId }], mercenary));
 }

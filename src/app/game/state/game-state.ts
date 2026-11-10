@@ -7,7 +7,7 @@ import { Obstacle } from '../board/obstacle';
 import { Exploration, ExplorationData } from '../exploration';
 import { AdventureObjective, AdventureSetup, MapData } from '../map/map-data';
 import { Party, PartyData } from '../party';
-import { HeroSheet } from '../heroes/hero-sheet';
+import { MercenarySheet } from '../mercenaries/mercenary-sheet';
 import { ItemDef, ItemMod, applyItemMods, itemAtLevel } from '../items/item';
 import { MonsterDef } from '../monsters/monster';
 import { AdversaryCardDef } from '../adversary/card';
@@ -36,7 +36,7 @@ export class GameState {
   /** Il round in corso, da 1. */
   round = 1;
   /** Di chi è il turno: gli eroi (ordine libero) oppure il Maligno. */
-  phase: Phase = 'heroes';
+  phase: Phase = 'mercenaries';
   /** La Conquista: contatore comunitario degli eroi. Se arriva a zero, gli eroi perdono. */
   progress = DEFAULT_PROGRESS;
   /** Come sta andando la partita. */
@@ -94,7 +94,7 @@ export class GameState {
     readonly exploration: Exploration,
     activeId?: string | null,
   ) {
-    this.activeId = activeId === undefined ? (pieces.find((p) => p.team === 'hero')?.id ?? null) : activeId;
+    this.activeId = activeId === undefined ? (pieces.find((p) => p.team === 'mercenary')?.id ?? null) : activeId;
   }
 
   /** Il prossimo numero casuale da 0 a 1. Lo decide lo stato (l'host), mai il client. */
@@ -180,40 +180,40 @@ export class GameState {
       }
     }
     // Le carte già assegnate prima di partire (nella fase Equipaggiamento) escono dai mazzi e danno subito i loro bonus permanenti.
-    for (const hero of this.pieces) {
-      if (hero.team !== 'hero') continue;
-      for (const id of hero.skillCards) {
+    for (const mercenary of this.pieces) {
+      if (mercenary.team !== 'mercenary') continue;
+      for (const id of mercenary.skillCards) {
         const card = this.skills.get(id);
         if (!card) continue;
         const k = decks[card.school].indexOf(id);
         if (k >= 0) decks[card.school].splice(k, 1);
-        applyPermanentStats(hero, card.effects);
-        this.grantSkillItems(hero, card.effects);
+        applyPermanentStats(mercenary, card.effects);
+        this.grantSkillItems(mercenary, card.effects);
       }
     }
     this.skillDecks = decks;
-    for (const hero of this.pieces) {
-      if (hero.team !== 'hero' || hero.skillCards.length) continue;
-      for (const school of SKILL_SCHOOLS) for (let n = 0; n < hero.skills[school]; n++) this.drawSkill(hero, school);
+    for (const mercenary of this.pieces) {
+      if (mercenary.team !== 'mercenary' || mercenary.skillCards.length) continue;
+      for (const school of SKILL_SCHOOLS) for (let n = 0; n < mercenary.skills[school]; n++) this.drawSkill(mercenary, school);
     }
   }
 
-  /** `hero` pesca una carta abilità dal mazzo del ramo `school`. Restituisce la carta, o null se il mazzo è finito. */
-  drawSkill(hero: Piece, school: SkillSchool): SkillDef | null {
+  /** `mercenary` pesca una carta abilità dal mazzo del ramo `school`. Restituisce la carta, o null se il mazzo è finito. */
+  drawSkill(mercenary: Piece, school: SkillSchool): SkillDef | null {
     const id = this.skillDecks[school].shift();
     const card = id ? this.skills.get(id) : undefined;
     if (!card) return null;
-    hero.skillCards.push(card.id);
-    applyPermanentStats(hero, card.effects); // per esempio Resistente: +4 ferite massime
-    this.grantSkillItems(hero, card.effects);
+    mercenary.skillCards.push(card.id);
+    applyPermanentStats(mercenary, card.effects); // per esempio Resistente: +4 ferite massime
+    this.grantSkillItems(mercenary, card.effects);
     return card;
   }
 
   /** Una carta con l'effetto `startItem` (Zanna) mette subito quell'oggetto fra quelli equipaggiati dell'eroe. */
-  private grantSkillItems(hero: Piece, effects: readonly { kind: string; [key: string]: unknown }[]): void {
+  private grantSkillItems(mercenary: Piece, effects: readonly { kind: string; [key: string]: unknown }[]): void {
     for (const e of effects) {
       const id = e.kind === 'startItem' ? e['itemId'] : undefined;
-      if (typeof id === 'string' && this.items.has(id) && !hero.equipped.includes(id)) hero.equipped.push(id);
+      if (typeof id === 'string' && this.items.has(id) && !mercenary.equipped.includes(id)) mercenary.equipped.push(id);
     }
   }
 
@@ -300,7 +300,7 @@ export class GameState {
   }
 
   /** L'inizio di una partita dai dati della mappa. `fallbackPieces` serve se la mappa non ha pedine; `sheets` sono le schede degli eroi. */
-  static fromMap(data: MapData, fallbackPieces: PieceData[], sheets: ReadonlyMap<string, HeroSheet> = new Map(), items: ReadonlyMap<string, ItemDef> = new Map(), shopStock: Readonly<Record<string, number>> = {}, skills: ReadonlyMap<string, SkillDef> = new Map(), monsters: ReadonlyMap<string, MonsterDef> = new Map(), adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map()): GameState {
+  static fromMap(data: MapData, fallbackPieces: PieceData[], sheets: ReadonlyMap<string, MercenarySheet> = new Map(), items: ReadonlyMap<string, ItemDef> = new Map(), shopStock: Readonly<Record<string, number>> = {}, skills: ReadonlyMap<string, SkillDef> = new Map(), monsters: ReadonlyMap<string, MonsterDef> = new Map(), adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map()): GameState {
     const state = new GameState(
       data.seed,
       data.doors ?? [],
@@ -441,7 +441,7 @@ export interface AdversaryState {
   gust: boolean;
 }
 
-export type Phase = 'heroes' | 'adversary';
+export type Phase = 'mercenaries' | 'adversary';
 
 /** In corso, persa (la Conquista è arrivata a zero) o vinta (l'obiettivo dell'avventura è raggiunto). */
 export type Status = 'playing' | 'defeat' | 'victory';
