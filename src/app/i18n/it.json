@@ -2010,7 +2010,7 @@
   "c.giocaQuestaCartaNelTuo_fe757": "Gioca questa carta nel tuo turno prima di attivare i mostri. Puoi evocare 2 Netrunner ostili, seguendo le normali regole per evocare i mostri.",
   "location.title": "Posizione necessaria",
   "location.lead": "CyberCadungeon si gioca nel mondo reale: la tua posizione è necessaria ai fini del gioco. Senza di essa la mappa resta ferma sul punto di partenza e non si può muovere.",
-  "location.denied": "Il browser non ci permette di leggere la posizione. Abilitala dalle impostazioni del sito, poi premi Accetta.",
+  "location.denied": "Il browser non ci permette di leggere la posizione. Consenti la localizzazione per questo sito dalle impostazioni del browser, poi ricarica la pagina e premi Accetta.",
   "location.unavailable": "Questo dispositivo non riesce a fornire la posizione. Controlla che i servizi di localizzazione siano attivi, poi premi Accetta.",
   "location.noticeTitle": "Informativa sul trattamento dei dati (Regolamento UE 2016/679, art. 13)",
   "location.controller": "Titolare del trattamento",

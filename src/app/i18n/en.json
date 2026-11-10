@@ -2010,7 +2010,7 @@
   "c.giocaQuestaCartaNelTuo_fe757": "Play this card on your turn before activating monsters. You may summon 2 Hostile netrunners, following the normal rules for summoning monsters.",
   "location.title": "Location required",
   "location.lead": "CyberCadungeon is played in the real world: your location is necessary for the game. Without it the map stays fixed on the starting point and cannot be moved.",
-  "location.denied": "The browser is not letting us read your location. Enable it in the site settings, then press Accept.",
+  "location.denied": "The browser is not letting us read your location. Allow location for this site in your browser settings, then reload the page and press Accept.",
   "location.unavailable": "This device cannot provide a location. Check that location services are on, then press Accept.",
   "location.noticeTitle": "Information on data processing (Regulation (EU) 2016/679, Art. 13)",
   "location.controller": "Data controller",
