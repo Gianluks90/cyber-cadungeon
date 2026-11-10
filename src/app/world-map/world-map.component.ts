@@ -5,7 +5,9 @@ import { Protocol } from 'pmtiles';
 import { AuthService } from '../auth/auth.service';
 import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { setGraphics, type GraphicsOptions } from '../game/graphics-settings';
 import { DropdownMenuComponent, type DropdownItem } from '../ui/dropdown-menu.component';
+import { GraphicsDialogComponent } from '../ui/graphics-dialog.component';
 import { IconComponent } from '../ui/icon.component';
 import { START_VIEW } from './map-config';
 import { LocationConsentComponent } from './location-consent.component';
@@ -39,7 +41,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent],
+  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -52,7 +54,7 @@ const USER_ZOOM = 16;
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
         <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />
       </button>
-      <button dropdown-actions type="button" class="hbtn" disabled [attr.aria-label]="'worldMap.menu.settings' | t" [title]="'worldMap.menu.settings' | t">
+      <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="'worldMap.menu.settings' | t" [title]="'worldMap.menu.settings' | t" (click)="openSettings()">
         <app-icon name="settings" [size]="18" />
       </button>
     </app-dropdown-menu>
@@ -62,6 +64,7 @@ const USER_ZOOM = 16;
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
+    <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
       <p class="status">{{ 'location.searching' | t }}</p>
     } @else if (lowAccuracy(); as meters) {
@@ -142,6 +145,8 @@ export class WorldMapComponent {
   protected readonly swapping = signal(false);
   /** Il pannello laterale aperto: uno solo alla volta (aprirne uno chiude l'altro). */
   protected readonly panel = signal<'filters' | 'menu' | null>(null);
+  /** La dialog della grafica (tasto impostazioni del menu) è aperta. */
+  protected readonly settingsOpen = signal(false);
   /** La dialog dei crediti (voce Attribuzione del menu) è aperta. */
   protected readonly creditsOpen = signal(false);
   /** Le voci della tendina in alto a destra, nell'ordine in cui compaiono (si ricalcolano al cambio di lingua). */
@@ -262,6 +267,17 @@ export class WorldMapComponent {
   /** Un pannello dice che si apre o si chiude: aprendosi prende il posto dell'altro, chiudendosi lascia stare quello che c'è. */
   protected setPanel(which: 'filters' | 'menu', open: boolean): void {
     this.panel.update((current) => (open ? which : current === which ? null : current));
+  }
+
+  /** Il tasto impostazioni: chiude il menu e apre la dialog della grafica. */
+  protected openSettings(): void {
+    this.setPanel('menu', false);
+    this.settingsOpen.set(true);
+  }
+
+  protected saveSettings(options: GraphicsOptions): void {
+    setGraphics(options);
+    this.settingsOpen.set(false);
   }
 
   protected onMenu(id: string): void {

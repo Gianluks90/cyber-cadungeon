@@ -1,7 +1,6 @@
 import { Container, Graphics } from 'pixi.js';
 import {
   CELL_SIZE,
-  FLOOR_CRACK_CHANCE,
   JAMB_POST_LENGTH_PX,
   PERIMETER_PILLARS,
   PERIMETER_PILLAR_CHAMFER,
@@ -13,12 +12,10 @@ import {
   WALL_WIDTH_PX,
 } from '../constants';
 import { LINE, theme } from '../theme';
-import { makeCracks } from './cracks';
 import { graphics } from '../graphics-settings';
 import { SceneryContext, drawScenery } from './scenery';
 import { PlacedTile } from './map-data';
 import { tileCells, tileRects } from './tile';
-import { mixSeed, mulberry32 } from './rng';
 import { MapWalls, WallSegment, buildWalls, passageShifts } from './walls';
 import { drawWallHatch } from './wall-hatch';
 
@@ -42,20 +39,20 @@ export function mapBounds(placed: PlacedTile[]): MapBounds {
  * Disegna la mappa a livelli: prima i pavimenti di tutti i tile, poi tutti i muri sopra.
  * `highlight` è un tile da far risaltare (quello che si sta per agganciare).
  */
-/** `noCracks`: caselle ("x,y" della mappa) senza crepe né altri dettagli, come quelle dei glifi. */
+/** `noDetail`: caselle ("x,y" della mappa) senza dettagli scenici, come quelle dei glifi. */
 /** `extraWalls`: muri in più, in celle (i lati chiusi delle scale), disegnati insieme agli altri così si fondono con loro. */
 export function createMapView(
   seed: number,
   placed: PlacedTile[],
   highlight?: PlacedTile,
-  noCracks?: ReadonlySet<string>,
+  noDetail?: ReadonlySet<string>,
   extraWalls: readonly WallSegment[] = [],
   scenery: SceneryContext = {},
 ): Container {
   const view = new Container();
-  const parts = createMapParts(seed, placed, highlight, noCracks, extraWalls, scenery);
+  const parts = createMapParts(seed, placed, highlight, noDetail, extraWalls, scenery);
   for (const f of parts.floors) view.addChild(f);
-  for (const s of parts.sceneries) view.addChild(s); // livello 3: sopra pavimento e fratture, sotto i muri
+  for (const s of parts.sceneries) view.addChild(s); // livello 3: sopra il pavimento, sotto i muri
   view.addChild(parts.hatch, parts.walls); // la retinatura sta fuori dai tile, sotto i muri
   return view;
 }
@@ -68,7 +65,7 @@ export function createMapParts(
   seed: number,
   placed: PlacedTile[],
   highlight?: PlacedTile,
-  noCracks?: ReadonlySet<string>,
+  noDetail?: ReadonlySet<string>,
   extraWalls: readonly WallSegment[] = [],
   scenery: SceneryContext = {},
 ): { floors: Graphics[]; sceneries: Container[]; walls: Graphics; hatch: Container } {
@@ -76,8 +73,8 @@ export function createMapParts(
   const cells = allCells(placed);
   return {
     hatch: WALL_HATCH.enabled && graphics().hatch ? drawWallHatch(cells) : new Container(),
-    floors: placed.map((tile) => drawFloor(tile, seed, tile === highlight, noCracks)),
-    sceneries: placed.map((tile) => drawScenery(tile, seed, { skip: noCracks, ...scenery })),
+    floors: placed.map((tile) => drawFloor(tile, tile === highlight)),
+    sceneries: placed.map((tile) => drawScenery(tile, seed, { skip: noDetail, ...scenery })),
     walls: drawWalls({ walls, passages }, extraWalls, PERIMETER_WALLS_OUTSIDE ? cells : null),
   };
 }
@@ -93,10 +90,8 @@ function allCells(placed: PlacedTile[]): Set<string> {
 }
 
 /** Pavimento in tinta unita (opaco, copre i puntini) con la griglia delle celle a linee sottili. */
-function drawFloor(tile: PlacedTile, seed: number, highlighted: boolean, noCracks?: ReadonlySet<string>): Graphics {
-  const { w, h } = tile.def.size;
+function drawFloor(tile: PlacedTile, highlighted: boolean): Graphics {
   const rects = tileRects(tile.def);
-  const cells = tileCells(tile.def);
   const g = new Graphics();
   g.position.set(tile.x * CELL_SIZE, tile.y * CELL_SIZE);
   for (const r of rects) g.rect(r.x * CELL_SIZE, r.y * CELL_SIZE, r.w * CELL_SIZE, r.h * CELL_SIZE);
@@ -111,27 +106,6 @@ function drawFloor(tile: PlacedTile, seed: number, highlighted: boolean, noCrack
   // pixelLine: la linea resta spessa 1 pixel a schermo a qualsiasi zoom.
   g.stroke({ width: LINE.hairline, color: theme.color.lineSecondary, alpha: theme.alpha.grid, pixelLine: true });
 
-  // Fratture: solo su alcune lastre. Il seme della mappa le rende uguali su ogni client.
-  const rng = mulberry32(mixSeed(seed, tile.x, tile.y));
-  for (let cy = 0; cy < h; cy++) {
-    for (let cx = 0; cx < w; cx++) {
-      if (!cells.has(`${cx},${cy}`) || rng() >= FLOOR_CRACK_CHANCE) continue;
-      // Un bordo è "interno" se oltre c'è un'altra cella dello stesso tile; altrimenti c'è il muro.
-      const edges = {
-        n: cells.has(`${cx},${cy - 1}`),
-        s: cells.has(`${cx},${cy + 1}`),
-        w: cells.has(`${cx - 1},${cy}`),
-        e: cells.has(`${cx + 1},${cy}`),
-      };
-      const lines = makeCracks(rng, edges); // si generano comunque: così le crepe delle altre caselle non cambiano
-      if (noCracks?.has(`${tile.x + cx},${tile.y + cy}`)) continue;
-      for (const line of lines) {
-        g.moveTo(cx * CELL_SIZE + line[0], cy * CELL_SIZE + line[1]);
-        for (let i = 2; i < line.length; i += 2) g.lineTo(cx * CELL_SIZE + line[i], cy * CELL_SIZE + line[i + 1]);
-      }
-    }
-  }
-  g.stroke({ width: LINE.hairline, color: theme.color.lineDetail, alpha: theme.alpha.crack, pixelLine: true });
   return g;
 }
 

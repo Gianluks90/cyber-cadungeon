@@ -1937,7 +1937,7 @@
   "graphics.resHigh": "Piena (quella dello schermo)",
   "graphics.antialias": "Bordi smussati",
   "graphics.hatch": "Retinatura dei muri",
-  "graphics.scenery": "Dettagli del pavimento (ragnatele, sassi)",
+  "graphics.scenery": "Dettagli del pavimento (sassi)",
   "graphics.animations": "Animazioni (acqua, terminali)",
   "graphics.hint": "Su un computer con poca memoria, \"Leggera\" alleggerisce molto. La scelta vale dalla prossima volta che apri l'editor o una partita.",
   "c.nameProteggeTargetDalWeapon_d29a3": "{name} protegge {target} dal {weapon}",

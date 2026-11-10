@@ -10,7 +10,7 @@ export interface GraphicsOptions {
   antialias: boolean;
   /** Le linee oblique fuori dai muri perimetrali. */
   hatch: boolean;
-  /** Ragnatele, sassi e detriti sul pavimento. */
+  /** Sassi e detriti sul pavimento. */
   scenery: boolean;
   /** Acqua che scorre e glifi che pulsano. */
   animations: boolean;

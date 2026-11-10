@@ -178,7 +178,7 @@ export class EditorMapLayer {
     // Le tessere: ognuna è un gruppo con il suo pavimento, i suoi dettagli e i muri della sua zona.
     let tilesLayer: Container | null = null;
     if (this.placed.length) {
-      const parts = createMapParts(this.seed, this.placed, undefined, this.noCracks(), this.stairsExtraWalls(), this.scenery());
+      const parts = createMapParts(this.seed, this.placed, undefined, this.noDetail(), this.stairsExtraWalls(), this.scenery());
       tilesLayer = new Container();
       const pad = WALL_WIDTH_PX; // la zona dei muri di una tessera sporge dal suo bordo di mezzo muro (e un po' di più)
       this.placed.forEach((t, i) => {
@@ -581,7 +581,7 @@ export class EditorMapLayer {
   }
 
   /** Le caselle senza crepe né ragnatele: quelle con un ostacolo. */
-  private noCracks(): ReadonlySet<string> {
+  private noDetail(): ReadonlySet<string> {
     return new Set(this.obstacles.flatMap((o) => obstacleCells(o).map((c) => `${c.x},${c.y}`)));
   }
 
@@ -877,13 +877,13 @@ export class EditorMapLayer {
     const target = this.target();
     if (target) {
       // Con il tile agganciato si vede la mappa com'è, con il nuovo pezzo evidenziato e le sue uscite (verdi dove si collegano).
-      this.holder.addChild(createMapView(this.seed, [...this.placed, target], target, this.noCracks(), this.stairsExtraWalls(), this.scenery()));
+      this.holder.addChild(createMapView(this.seed, [...this.placed, target], target, this.noDetail(), this.stairsExtraWalls(), this.scenery()));
       this.holder.addChild(drawExitMarkers(target, connectedOpenings(this.placed, target)));
       this.drawOpenExits([...this.placed, target], target);
       return;
     }
     if (this.placed.length) {
-      this.holder.addChild(createMapView(this.seed, this.placed, undefined, this.noCracks(), this.stairsExtraWalls(), this.scenery()));
+      this.holder.addChild(createMapView(this.seed, this.placed, undefined, this.noDetail(), this.stairsExtraWalls(), this.scenery()));
       this.drawOpenExits(this.placed);
     }
     if (this.carry && this.hover) {

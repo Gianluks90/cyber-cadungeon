@@ -24,7 +24,7 @@ export class TilePlacer {
   private hover: Cell | null = null;
   private drawnKey = '';
   /** Caselle senza crepe (quelle dei glifi). */
-  private noCracks: ReadonlySet<string> = new Set();
+  private noDetail: ReadonlySet<string> = new Set();
   /** Le rocce e le caselle senza sassi, per i dettagli scenici. */
   private scenery: SceneryContext = {};
   /** Muri in più da disegnare con gli altri (i lati chiusi delle scale già scoperte). */
@@ -42,8 +42,8 @@ export class TilePlacer {
   }
 
   /** Quali caselle restano senza crepe né altri dettagli; ridisegna la mappa. */
-  setNoCrackCells(cells: ReadonlySet<string>) {
-    this.noCracks = cells;
+  setNoDetailCells(cells: ReadonlySet<string>) {
+    this.noDetail = cells;
     this.refresh();
   }
 
@@ -122,10 +122,10 @@ export class TilePlacer {
     for (const child of this.layer.removeChildren()) child.destroy({ children: true });
     if (snap) {
       // Mostra la mappa com'è con il tile agganciato, evidenziato.
-      this.layer.addChild(createMapView(this.seed, [...this.placed, snap], snap, this.noCracks, this.extraWalls, this.scenery));
+      this.layer.addChild(createMapView(this.seed, [...this.placed, snap], snap, this.noDetail, this.extraWalls, this.scenery));
       this.layer.addChild(drawExitMarkers(snap, connectedOpenings(this.placed, snap)));
     } else {
-      this.layer.addChild(createMapView(this.seed, this.placed, undefined, this.noCracks, this.extraWalls, this.scenery));
+      this.layer.addChild(createMapView(this.seed, this.placed, undefined, this.noDetail, this.extraWalls, this.scenery));
       if (free) {
         const ghost = createMapView(this.seed, [free]);
         ghost.alpha = theme.alpha.ghost;

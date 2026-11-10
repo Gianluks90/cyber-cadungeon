@@ -641,9 +641,9 @@ export class GameSceneComponent implements OnDestroy {
       }
       this.placer = new TilePlacer(data.seed, placed, defs, mapLayer);
       // La cella di un glifo è liscia: niente crepe né altri dettagli ambientali.
-      // ...e così le caselle con un segnalino o un ostacolo: niente crepe né ragnatele. Intorno alle rocce cadono sassi e detriti, ma non in acqua, in buche o sui glifi.
+      // ...e così le caselle con un segnalino o un ostacolo: niente dettagli scenici. Intorno alle rocce cadono sassi e detriti, ma non in acqua, in buche o sui glifi.
       const keyOf = (c: Cell) => `${c.x},${c.y}`;
-      this.placer.setNoCrackCells(new Set([...this.markers.map(keyOf), ...this.obstacles.flatMap((o) => obstacleCells(o).map(keyOf))]));
+      this.placer.setNoDetailCells(new Set([...this.markers.map(keyOf), ...this.obstacles.flatMap((o) => obstacleCells(o).map(keyOf))]));
       this.placer.setScenery({
         rocks: new Set(this.obstacles.filter((o) => o.type === 'rock').flatMap((o) => obstacleCells(o).map(keyOf))),
         noPebbles: new Set([...this.obstacles.filter((o) => o.type !== 'rock').flatMap((o) => obstacleCells(o).map(keyOf)), ...this.markers.filter((m) => m.type === 'glyph').map(keyOf)]),

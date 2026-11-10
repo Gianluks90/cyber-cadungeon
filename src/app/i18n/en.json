@@ -1937,7 +1937,7 @@
   "graphics.resHigh": "Full (the screen's own)",
   "graphics.antialias": "Smooth edges",
   "graphics.hatch": "Wall hatching",
-  "graphics.scenery": "Floor details (cobwebs, stones)",
+  "graphics.scenery": "Floor details (stones)",
   "graphics.animations": "Animations (water, terminals)",
   "graphics.hint": "On a computer with little memory, \"Light\" helps a lot. The choice applies the next time you open the editor or a game.",
   "c.nameProteggeTargetDalWeapon_d29a3": "{name} protects {target} from the {weapon}",
