@@ -249,7 +249,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                   <button type="button" class="btn adversary" [class.off]="!o.enabled" [attr.aria-disabled]="!o.enabled" [title]="o.reason ?? ''" (click)="decide.emit(o.id)"><app-cost-text [text]="o.label" /></button>
                 }
               } @else if (v.step === 'preview') {
-                @if (v.auto) { <span class="wait">{{ 'Il Maligno si prepara…' | tr }}</span> } @else { <button type="button" class="btn" (click)="cancel.emit()">{{ 'Annulla' | tr }}</button> }
+                @if (v.auto) { <span class="wait">{{ 'L\\'Avversario si prepara…' | tr }}</span> } @else { <button type="button" class="btn" (click)="cancel.emit()">{{ 'Annulla' | tr }}</button> }
               } @else if (v.step === 'rolling') {
                 <span class="wait">{{ 'I dadi rotolano…' | tr }}</span>
               } @else if (!v.auto) {

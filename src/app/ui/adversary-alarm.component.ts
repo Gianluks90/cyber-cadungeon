@@ -12,9 +12,9 @@ import { IconComponent } from './icon.component';
   imports: [TrPipe, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <span class="pill" role="status" tabindex="0" [title]="'Odio: il budget per carte e mostri' | tr">
+    <span class="pill" role="status" tabindex="0" [title]="'Allarme: il budget per carte e mostri' | tr">
       <app-icon name="skull" [size]="18" />
-      <span class="caption">{{ 'Odio' | tr }}</span>
+      <span class="caption">{{ 'Allarme' | tr }}</span>
       <span class="value">{{ shown() }}</span>
     </span>
   `,

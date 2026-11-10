@@ -27,7 +27,7 @@
       "copies": 1,
       "cost": 25,
       "value": 5,
-      "text": "Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te. Ogni turno pesca 1 Carta del Male aggiuntiva.",
+      "text": "Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te. Ogni turno pesca 1 Carta dell'Avversario aggiuntiva.",
       "ready": true
     },
     {
@@ -57,7 +57,7 @@
       "copies": 3,
       "cost": 2,
       "value": 1,
-      "text": "Gioca questa carta dopo che un eroe ha attaccato un mostro. Il mostro è in grado di schivare l'attacco.",
+      "text": "Gioca questa carta dopo che un mercenario ha attaccato un mostro. Il mostro è in grado di schivare l'attacco.",
       "ready": true
     },
     {
@@ -77,7 +77,7 @@
       "copies": 2,
       "cost": 3,
       "value": 2,
-      "text": "Gioca questa carta quando un eroe entra in uno spazio vuoto. Piazza in quello spazio un segnalino fossa 1x1. A meno che l'eroe non ottenga una faccia vuota tirando un dado competenza, egli cade nella fossa e subisce 2 ferite (ignorando l'armatura). Se l'eroe ottiene una faccia vuota, si sposta subito in uno spazio vuoto a sua scelta.",
+      "text": "Gioca questa carta quando un mercenario entra in uno spazio vuoto. Piazza in quello spazio un segnalino fossa 1x1. A meno che il mercenario non ottenga una faccia vuota tirando un dado competenza, egli cade nella fossa e subisce 2 ferite (ignorando l'armatura). Se il mercenario ottiene una faccia vuota, si sposta subito in uno spazio vuoto a sua scelta.",
       "target": "cell",
       "ready": true
     },
@@ -88,7 +88,7 @@
       "copies": 1,
       "cost": 7,
       "value": 3,
-      "text": "Gioca questa carta quando un eroe entra in uno spazio vuoto non adiacente ad alcun ostacolo. Piazza in quello spazio un segnalino macerie 1x1. L'eroe subisce 4 ferite (ignorando l'armatura) diminuite di 1 ferita per ogni scintilla ottenuta tirando 4 dadi competenza. Poi muovi l'eroe in uno spazio adiacente a tua scelta.",
+      "text": "Gioca questa carta quando un mercenario entra in uno spazio vuoto non adiacente ad alcun ostacolo. Piazza in quello spazio un segnalino macerie 1x1. Il mercenario subisce 4 ferite (ignorando l'armatura) diminuite di 1 ferita per ogni scintilla ottenuta tirando 4 dadi competenza. Poi muovi il mercenario in uno spazio adiacente a tua scelta.",
       "target": "cell",
       "ready": true
     },
@@ -99,7 +99,7 @@
       "copies": 1,
       "cost": 9,
       "value": 3,
-      "text": "Gioca questa carta quando un eroe apre una porta. Ogni eroe adiacente alla porta subisce 4 ferite (ignorando l'armatura). Ogni eroe colpito può tirare 4 dadi competenza e diminuire di 1 il danno per ogni scintilla ottenuta.",
+      "text": "Gioca questa carta quando un mercenario apre una porta. Ogni mercenario adiacente alla porta subisce 4 ferite (ignorando l'armatura). Ogni mercenario colpito può tirare 4 dadi competenza e diminuire di 1 il danno per ogni scintilla ottenuta.",
       "target": "door",
       "ready": true
     },
@@ -110,7 +110,7 @@
       "copies": 1,
       "cost": 5,
       "value": 3,
-      "text": "Gioca questa carta quando un eroe apre una porta. L'eroe tira 1 dado competenza: se non ottiene una faccia vuota, il suo turno termina subito e si piazza 1 segnalino stordito su di esso. Altrimenti questa carta non ha effetto.",
+      "text": "Gioca questa carta quando un mercenario apre una porta. Il mercenario tira 1 dado competenza: se non ottiene una faccia vuota, il suo turno termina subito e si piazza 1 segnalino stordito su di esso. Altrimenti questa carta non ha effetto.",
       "target": "door",
       "ready": true
     },
@@ -121,7 +121,7 @@
       "copies": 1,
       "cost": 12,
       "value": 4,
-      "text": "Gioca questa carta quando un eroe apre uno scrigno. Ogni eroe adiacente allo scrigno subisce 6 ferite (ignorando l'armatura). Ogni eroe colpito può tirare 3 dadi competenza e diminuire di 2 il danno per ogni scintilla ottenuta.",
+      "text": "Gioca questa carta quando un mercenario apre una cassa. Ogni mercenario adiacente alla cassa subisce 6 ferite (ignorando l'armatura). Ogni mercenario colpito può tirare 3 dadi competenza e diminuire di 2 il danno per ogni scintilla ottenuta.",
       "target": "chest",
       "ready": true
     },

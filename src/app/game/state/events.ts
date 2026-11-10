@@ -530,7 +530,7 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
         g.sealed = effect.state === 'blocked' || undefined;
       }
       ev.groundItems = true;
-      if (effect.state === 'blocked') ev.notices.push(tr('Il glifo si sigilla'));
+      if (effect.state === 'blocked') ev.notices.push(tr('Il terminale si sigilla'));
       return;
     }
     case 'setZone': {
@@ -556,7 +556,7 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
       if (state.phase === 'mercenaries' && state.status === 'playing') ev.endMercenariesTurn = true; // fuori dal turno degli eroi non c'è niente da finire
       return;
     case 'permadeath':
-      if (!!ev.permadeath !== effect.on) ev.notices.push(effect.on ? tr('Da ora la morte degli eroi è permanente') : tr('La morte degli eroi non è più permanente'));
+      if (!!ev.permadeath !== effect.on) ev.notices.push(effect.on ? tr('Da ora la morte dei mercenari è permanente') : tr('La morte dei mercenari non è più permanente'));
       ev.permadeath = effect.on;
       return;
     case 'removePiece': {
@@ -572,12 +572,12 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
       const o = state.adversary;
       const before = o.alarm;
       o.alarm = Math.max(0, o.alarm + effect.amount);
-      if (o.alarm !== before) ev.notices.push(o.alarm > before ? tr('Il Maligno guadagna {n} Odio', { n: Math.abs(o.alarm - before) }) : tr('Il Maligno perde {n} Odio', { n: Math.abs(o.alarm - before) }));
+      if (o.alarm !== before) ev.notices.push(o.alarm > before ? tr('L\'Avversario guadagna {n} Allarme', { n: Math.abs(o.alarm - before) }) : tr('L\'Avversario perde {n} Allarme', { n: Math.abs(o.alarm - before) }));
       return;
     }
     case 'drawCard': {
       const n = drawAdversaryCards(state, Math.max(1, effect.count ?? 1));
-      if (n > 0) ev.notices.push(n === 1 ? tr('Il Maligno pesca 1 carta') : tr('Il Maligno pesca {n} carte', { n }));
+      if (n > 0) ev.notices.push(n === 1 ? tr('L\'Avversario pesca 1 carta') : tr('L\'Avversario pesca {n} carte', { n }));
       return;
     }
     case 'addEnding':

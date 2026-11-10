@@ -57,7 +57,7 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
           <figcaption>
             @if (h.value !== undefined) {
               <!-- Il Valore: una stella a molte punte, nera, con il numero al centro, appena sopra il piede dell'immagine. -->
-              <span class="value" [title]="'Valore: la Conquista che si perde se muore' | tr" [attr.aria-label]="'Valore {n}' | tr: { n: h.value }">
+              <span class="value" [title]="'Valore: la Fama che si perde se muore' | tr" [attr.aria-label]="'Valore {n}' | tr: { n: h.value }">
                 <svg viewBox="0 0 50 50" aria-hidden="true"><polygon [attr.points]="burst" /></svg>
                 <b>{{ h.value }}</b>
               </span>

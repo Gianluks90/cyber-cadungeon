@@ -57,7 +57,7 @@ const FLIP_AFTER_MS = 650;
             <div class="side front">
               <div class="face">
                 <header>
-                  <span class="pill cost" [title]="'Costo in Odio' | tr"><app-icon name="skull" [size]="14" />{{ c.cost }}</span>
+                  <span class="pill cost" [title]="'Costo in Allarme' | tr"><app-icon name="skull" [size]="14" />{{ c.cost }}</span>
                   <span class="kind">{{ kindName(c.kind) }}</span>
                 </header>
                 <h3><span>{{ c.name }}</span></h3>
@@ -71,9 +71,9 @@ const FLIP_AFTER_MS = 650;
                       <button type="button" class="act play" [class.off]="!p.enabled" [attr.aria-disabled]="!p.enabled" [title]="p.reason ?? ''" (click)="p.enabled ? act($event, play, $index) : refuse($event, p.reason)">{{ 'Gioca' | tr }}</button>
                     }
                     @if (step() === 'hand') {
-                      <button type="button" class="pill value act-pill" [title]="'Odio se consumata' | tr" (click)="act($event, consume, $index)"><app-icon name="skull" [size]="12" />+{{ c.value }}</button>
+                      <button type="button" class="pill value act-pill" [title]="'Allarme se consumata' | tr" (click)="act($event, consume, $index)"><app-icon name="skull" [size]="12" />+{{ c.value }}</button>
                     } @else {
-                      <span class="pill value" [title]="'Odio se consumata' | tr"><app-icon name="skull" [size]="12" />+{{ c.value }}</span>
+                      <span class="pill value" [title]="'Allarme se consumata' | tr"><app-icon name="skull" [size]="12" />+{{ c.value }}</span>
                     }
                   }
                 </footer>

@@ -693,7 +693,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
   const here = board.markerAt(piece.cell);
   if (here?.type === 'chest' && !here.open) {
     const reason = costReason(CHEST_OPEN_COST) ?? (chestItemsBlocked(state, piece, here) ? tr('Non hai posto per ciò che contiene') : undefined);
-    out.push({ id: 'chest', kind: 'chest', icon: 'inventory_2', label: tr('Apri lo scrigno'), cost: CHEST_OPEN_COST, enabled: !reason, reason });
+    out.push({ id: 'chest', kind: 'chest', icon: 'inventory_2', label: tr('Apri la cassa'), cost: CHEST_OPEN_COST, enabled: !reason, reason });
   }
 
   // Un oggetto a terra nella sua casella: raccoglierlo è un'azione, senza costo (così un eroe può anche lasciarlo lì).

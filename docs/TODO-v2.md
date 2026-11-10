@@ -42,6 +42,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Serve**: portare in `it.json`/`en.json` i nomi nuovi (Avversario o Megacorp, Allarme, Fama, Intrusione, Terminale, Overclock, Mercenari, "Briefing"…). Oggi "Maligno", "Odio", "Conquista", "Energia", "Avversario" compaiono 105 volte in `it.json` e 34 in `en.json` (conteggio righe che li contengono).
 - **Tocca**: `src/app/i18n/it.json`, `en.json`; i testi passati a `tr()` (cambiare una parola cambia la chiave: riga nuova in entrambi i file); catalogo Carte della Megacorp (`public/evil/catalog.json`, chiavi `evil.<id>`).
 - **Dipende da**: L0.1.
+- **Fatto (parziale)**: Maligno→Avversario, Odio→Allarme, eroe→mercenario in `it.json`/`en.json` (anche Evil One→Adversary, Hatred→Alarm, hero→mercenary), nei testi passati a `tr()` e in `public/adversary/catalog.json`. Build e `i18n:check` verdi. Poi anche: Conquista→Fama, Mazzo/Carte del Male→Mazzo Avversario/Carte dell'Avversario, scrigno e baule→cassa, glifo→terminale (nei testi; `en`: Fame, Adversary deck/cards, Terminal; "chest" resta). Decisi: "città" e "dadi competenza" restano. **Restano**: Intrusione/Overclock nei testi (oggi nessun testo dice Energia/Fatica), "Briefing", Megacorp.
 
 ### L0.3 — Schede dei Mercenari — **a cura dell'utente**
 - **Stato**: i Mercenari li modella l'utente; gli eroi di test attuali si ignorano. Questa voce resta per riferimento sul formato (campi nuovi: Q5 ✔).

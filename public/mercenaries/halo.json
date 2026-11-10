@@ -23,7 +23,7 @@
     "intrusion": 1
   },
   "abilityName": "Rete tattica",
-  "ability": "Guadagni l'abilità **Comando**: quando un eroe entro 3 spazi da te (te compreso) attacca, ottiene **+1 danno** e **+1 gittata**.",
+  "ability": "Guadagni l'abilità **Comando**: quando un mercenario entro 3 spazi da te (te compreso) attacca, ottiene **+1 danno** e **+1 gittata**.",
   "effects": [
     {
       "kind": "grant",

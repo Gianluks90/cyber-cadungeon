@@ -163,8 +163,8 @@ const RUNE_NAMES = { get red() { return tr('rossa'); }, get blue() { return tr('
 /** Cosa dire quando un'azione in città non va a buon fine. */
 const CITY_TEXTS: Record<string, string> = {
   get soon() { return tr('Presto disponibile'); }, get late() { return tr('Devi tornare nel dungeon'); }, get coins() { return tr('Non hai abbastanza monete'); }, get full() { return tr('Non hai posto'); }, get 'sold-out'() { return tr('Esaurito'); }, get stock() { return tr('Esaurito'); }, get already() { return tr('Hai già scelto un servizio'); },
-  get 'full-health'() { return tr('Sei già in piena salute'); }, get 'not-yet'() { return tr('Potrai tornare nel dungeon al prossimo turno'); }, get occupied() { return tr('Quel glifo non è libero'); }, get busy() { return tr('Ora non puoi'); },
-  get 'wrong-service'() { return tr('Prima scegli questo servizio'); }, get maxed() { return tr('Hai già il massimo di dadi'); }, get locked() { return tr('Apri prima uno scrigno di quel tipo'); }, get none() { return tr('Non hai questo oggetto'); }, get unknown() { return tr('Non è possibile'); },
+  get 'full-health'() { return tr('Sei già in piena salute'); }, get 'not-yet'() { return tr('Potrai tornare nel dungeon al prossimo turno'); }, get occupied() { return tr('Quel terminale non è libero'); }, get busy() { return tr('Ora non puoi'); },
+  get 'wrong-service'() { return tr('Prima scegli questo servizio'); }, get maxed() { return tr('Hai già il massimo di dadi'); }, get locked() { return tr('Apri prima una cassa di quel tipo'); }, get none() { return tr('Non hai questo oggetto'); }, get unknown() { return tr('Non è possibile'); },
 };
 
 type Mode = 'play' | 'tiles' | 'doors' | 'obstacles';
@@ -221,7 +221,7 @@ const HINTS: Record<Mode, string> = {
       <div class="end" role="dialog" aria-modal="true" [attr.aria-label]="(victory() ? 'Vittoria' : 'Sconfitta') | tr">
         <div class="end-box">
           <h2>{{ (victory() ? 'Vittoria!' : 'Sconfitta') | tr }}</h2>
-          @if (victory()) { <p class="reward">{{ 'Conquista finale: {n}' | tr: { n: progress() } }}</p> }
+          @if (victory()) { <p class="reward">{{ 'Fama finale: {n}' | tr: { n: progress() } }}</p> }
           @if (victory() && conclusion()) { <div class="md" [innerHTML]="conclusion() | markdown"></div> } @else { <p>{{ endText() }}</p> }
           <div class="end-actions">
             <button type="button" (click)="endDismissed.set(true)">{{ 'Guarda la mappa' | tr }}</button>
@@ -240,7 +240,7 @@ const HINTS: Record<Mode, string> = {
     <!-- Contatori sul bordo sinistro (come i comandi della camera sul destro): solo icona e valore, l'etichetta si apre al passaggio. -->
     @if (!adversaryMode) {
       <div class="rail">
-        <app-pill rail primary icon="brightness_empty" [label]="'Conquista' | tr" [value]="progress()" [class.alert]="defeated()" />
+        <app-pill rail primary icon="brightness_empty" [label]="'Fama' | tr" [value]="progress()" [class.alert]="defeated()" />
         <app-pill rail primary icon="autorenew" [label]="'Round' | tr" [value]="round()" />
         <app-pill rail icon="tokens/little_key" [label]="'Chiavi' | tr" [value]="keys()" />
       </div>
@@ -370,7 +370,7 @@ export class GameSceneComponent implements OnDestroy {
     return [this.state.objective?.conclusion ?? '', ...this.state.endingExtras.map((x) => x.text)].filter((t) => t.trim()).join('\n\n'); // la conclusione e, dopo, i pezzi aggiunti dagli eventi
   }
   protected endText(): string {
-    return this.victory() ? (this.state.objective?.text ? tr('Obiettivo raggiunto: {text}.', { text: this.state.objective.text }) : tr('L\'obiettivo dell\'avventura è raggiunto.')) : tr('La Conquista è arrivata a zero: gli eroi hanno perso.');
+    return this.victory() ? (this.state.objective?.text ? tr('Obiettivo raggiunto: {text}.', { text: this.state.objective.text }) : tr('L\'obiettivo dell\'avventura è raggiunto.')) : tr('La Fama è arrivata a zero: i mercenari hanno perso.');
   }
   protected restart() {
     location.reload();
@@ -626,7 +626,7 @@ export class GameSceneComponent implements OnDestroy {
       }
       const resumed = this.adversaryMode ? null : this.resumeGame(data, items, skills, monsters, adversaryCards);
       this.resumedGame = !!resumed;
-      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Eroe 1'), team: 'mercenary', x: start.x, y: start.y }], sheets, items, shopStock, skills, monsters, adversaryCards);
+      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Mercenario 1'), team: 'mercenary', x: start.x, y: start.y }], sheets, items, shopStock, skills, monsters, adversaryCards);
       this.state.familiarDefs = familiarDefs;
       // I tesori comprati in preparazione: ora che i mazzi esistono si pesca la carta (come in città); a mazzo vuoto le monete tornano all'eroe.
       if (!resumed && !hasMercenaries) {
@@ -1478,7 +1478,7 @@ export class GameSceneComponent implements OnDestroy {
     const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
     const by = attacker.team === 'monster' ? 'adversary' : 'mercenary';
     if (outcome.alarmLoss) this.showHud(this.pieces?.active ?? null);
-    if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('Il Maligno perde 1 punto Odio') : tr('Il Maligno perde {n} punti Odio', { n: outcome.alarmLoss }), 'skull', 'adversary');
+    if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('L\'Avversario perde 1 punto Allarme') : tr('L\'Avversario perde {n} punti Allarme', { n: outcome.alarmLoss }), 'skull', 'adversary');
     if (result.killed && target.team === 'mercenary') this.showNotice(this.fallenNotice(target), 'skull', by);
     else this.showNotice(text, result.killed ? 'skull' : 'swords', by);
     this.pieces?.afterCombat(attacker, target, result.killed);
@@ -1611,7 +1611,7 @@ export class GameSceneComponent implements OnDestroy {
   private async endMercenariesTurnNow() {
     const s = this.state;
     if (s.phase !== 'mercenaries' || s.status !== 'playing' || this.adversaryBusy() || this.settingUp() || this.destroyed) return;
-    this.showNotice(tr('Il turno degli eroi finisce'), 'skip_next', 'game');
+    this.showNotice(tr('Il turno dei mercenari finisce'), 'skip_next', 'game');
     await this.waitUntil(() => !this.pieces?.isMoving, 5000);
     await this.sleep(900); // il tempo di leggere l'avviso
     if (this.destroyed || s.phase !== 'mercenaries' || s.status !== 'playing') return;
@@ -1885,8 +1885,8 @@ export class GameSceneComponent implements OnDestroy {
   /** La notizia di un eroe caduto: torna dalla città, o è eliminato se la morte è permanente. */
   private fallenNotice(mercenary: Piece): string {
     return this.state.events.permadeath
-      ? tr('{name} è caduto: il gruppo perde {value} di Conquista ed è eliminato dalla partita', { name: mercenary.name, value: mercenary.value })
-      : tr('{name} è caduto: il gruppo perde {value} di Conquista e torna dalla città', { name: mercenary.name, value: mercenary.value });
+      ? tr('{name} è caduto: il gruppo perde {value} di Fama ed è eliminato dalla partita', { name: mercenary.name, value: mercenary.value })
+      : tr('{name} è caduto: il gruppo perde {value} di Fama e torna dalla città', { name: mercenary.name, value: mercenary.value });
   }
 
   /**
@@ -1981,7 +1981,7 @@ export class GameSceneComponent implements OnDestroy {
     this.cameraScripted = true; // da qui la camera la muove lo script: quella dell'utente resta quella di prima
     try {
       const recharge = alarmPerTurn(this.state); // 1 Odio per eroe, meno Prudente (lo riceve `adversaryUpkeep`)
-      this.showNotice((recharge === 1 ? tr('Turno del Maligno: ricarica 1 punto Odio') : tr('Turno del Maligno: ricarica {recharge} punti Odio', { recharge })), 'skull', 'adversary');
+      this.showNotice((recharge === 1 ? tr('Turno dell\'Avversario: ricarica 1 punto Allarme') : tr('Turno dell\'Avversario: ricarica {recharge} punti Allarme', { recharge })), 'skull', 'adversary');
       await this.sleep(900);
       try {
         await this.adversaryCards();
@@ -2005,7 +2005,7 @@ export class GameSceneComponent implements OnDestroy {
         await this.flushEvents(); // messaggi e avvisi degli eventi di fine turno
         this.pieces?.roundStarted();
         if (revived.length) await this.presentSpawned(revived, tr('Ritorno in vita'), (revived.length === 1 ? tr('{join} torna in vita.', { join: revived[0].name }) : tr('{join} tornano in vita.', { join: revived.map((m) => m.name).join(', ') })));
-        this.showNotice(tr('Round {n}: tocca agli eroi', { n: this.state.round }), 'autorenew', 'game');
+        this.showNotice(tr('Round {n}: tocca ai mercenari', { n: this.state.round }), 'autorenew', 'game');
         // Ricomincia il turno degli eroi: ognuno ritrova la sua camera (zoom e pan di prima); senza, si va sul primo eroe.
         if (this.userCam) void this.restoreUserCamera();
         else {
@@ -2081,7 +2081,7 @@ export class GameSceneComponent implements OnDestroy {
       const cost = cardCost(this.state, card);
       const enough = cost <= this.state.adversary.alarm;
       const label = id === 'charge' ? tr('Carica · {alarm:{n}}', { n: cost }) : tr('Furore · {alarm:{n}}', { n: cost });
-      return [{ id, kind: 'attack' as const, icon: id === 'charge' ? 'directions_run' : 'swords', label, cost: 0, enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }];
+      return [{ id, kind: 'attack' as const, icon: id === 'charge' ? 'directions_run' : 'swords', label, cost: 0, enabled: enough, reason: enough ? undefined : tr('Allarme insufficiente') }];
     });
     if (!cards.length) {
       void this.startActivation(monster);
@@ -2198,14 +2198,14 @@ export class GameSceneComponent implements OnDestroy {
     const o = this.state.adversary;
     o.gust = false; // la Raffica di vento dura fino all'inizio di questo turno
     const up = adversaryUpkeep(this.state);
-    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'adversary');
+    if (up.deckEnded) this.showNotice(tr('Il Mazzo Avversario è finito: il gruppo perde Fama'), 'warning', 'adversary');
     const power = playPowerCard(this.state);
     if (power) {
       await this.announce(power.name, catalogText(power.text.replace(/^Gioca questa carta all'inizio del tuo turno e piazzala a faccia in su davanti a te\.\s*/, '')));
     }
     if (!o.gust && this.state.random() < 0.5 && playEvent(this.state, 'gust')) {
       o.gust = true;
-      await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno gli eroi non vedono oltre 5 spazi.'), 'warning');
+      await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno i mercenari non vedono oltre 5 spazi.'), 'warning');
     }
     await this.seduction();
     const armed = armTrap(this.state, this.board); // le trappole si armano in segreto: i giocatori non lo sanno
@@ -2264,7 +2264,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Schivare giocata: il mostro evita il colpo e l'eroe ripete i dadi migliori (resta il secondo risultato). */
   private async dodgeReroll(rolls: FaceRoll[]): Promise<FaceRoll[]> {
-    await this.announceEvent(tr('Schivare'), tr('Il mostro evita il colpo: l\'eroe ripete i dadi migliori.'), 'shield');
+    await this.announceEvent(tr('Schivare'), tr('Il mostro evita il colpo: il mercenario ripete i dadi migliori.'), 'shield');
     const strong = rolls.map((r, i) => i).filter((i) => rolls[i].face.hearts >= 2 || rolls[i].face.spark > 0);
     return this.rerollDice(rolls, strong.length ? strong : rolls.map((r, i) => i).filter((i) => rolls[i].face.hearts >= 1));
   }
@@ -2286,7 +2286,7 @@ export class GameSceneComponent implements OnDestroy {
     const enough = cost <= this.state.adversary.alarm;
     const picked = await new Promise<string>((resolve) => {
       this.adversaryDecided = resolve;
-      this.adversaryDecision.set({ options: [{ id, label: label.replace('{n}', String(cost)), enabled: enough, reason: enough ? undefined : tr('Odio insufficiente') }, { id: 'skip', label: skipLabel, enabled: true }] });
+      this.adversaryDecision.set({ options: [{ id, label: label.replace('{n}', String(cost)), enabled: enough, reason: enough ? undefined : tr('Allarme insufficiente') }, { id: 'skip', label: skipLabel, enabled: true }] });
     });
     this.adversaryDecision.set(null);
     if (picked !== id || !playEvent(this.state, id)) return false;
@@ -2324,7 +2324,7 @@ export class GameSceneComponent implements OnDestroy {
   private announce(title: string, text: string, icon = 'skull'): Promise<void> {
     const shown = this.announceChain.then(async () => {
       const id = ++this.announceSeq;
-      this.announcement.set({ id, by: 'Maligno', icon, title, text });
+      this.announcement.set({ id, by: 'Avversario', icon, title, text });
       setTimeout(() => {
         if (this.announcement()?.id === id) this.announcement.set(null);
       }, FX.announceMs);
@@ -2491,7 +2491,7 @@ export class GameSceneComponent implements OnDestroy {
         const chest = board.markerAt(mercenary.cell);
         const out = freeAdjacentCell(this.state, board, mercenary.cell);
         if (chest?.type !== 'chest' || !out) {
-          this.showNotice(tr('Lo scrigno resta immobile'), 'inventory_2', 'adversary');
+          this.showNotice(tr('La cassa resta immobile'), 'inventory_2', 'adversary');
           break;
         }
         this.markers.splice(this.markers.indexOf(chest), 1);
@@ -2501,7 +2501,7 @@ export class GameSceneComponent implements OnDestroy {
         const textures = await loadPortraits([mimic.portrait]);
         this.rebuildBoard();
         this.pieces?.addPiece(mimic, textures);
-        await this.announce('Mimic', tr('Lo scrigno era vivo!'));
+        await this.announce('Mimic', tr('La cassa era viva!'));
         await this.pieces?.enter(mimic);
         await this.sleep(500);
         await this.monsterTurn(mimic);
@@ -2856,7 +2856,7 @@ export class GameSceneComponent implements OnDestroy {
     })).sort(byName);
     const familiarEntries = [...s.familiarDefs.values()].map((d): CatalogEntry => ({ kind: 'familiar', id: d.id, name: d.name, def: d, search: [d.name, tr('Famiglio'), d.ability ?? ''].join(' ') })).sort(byName);
     return [
-      { id: 'mercenaries', group: tr('Personaggi'), name: tr('Eroi'), entries: mercenaryEntries },
+      { id: 'mercenaries', group: tr('Personaggi'), name: tr('Mercenari'), entries: mercenaryEntries },
       { id: 'familiars', group: tr('Personaggi'), name: tr('Famigli'), entries: familiarEntries },
       { id: 'monsters', group: tr('Personaggi'), name: tr('Mostri'), entries: monsterEntries },
       { id: 'shop', group: tr('Oggetti'), name: tr('Negozio'), entries: itemsOf((d) => d.id in s.shop, (d) => s.shop[d.id] ?? 0) },
@@ -2885,7 +2885,7 @@ export class GameSceneComponent implements OnDestroy {
     this.adversaryView.update((v) => !v);
     this.monsterPanel.set(null);
     this.applyVisibility(); // ciò che non è scoperto compare (o sparisce) per intero: mostri, aree, scale, porte, oggetti
-    this.showNotice(this.adversaryView() ? tr('Vista del Maligno: tocca un mostro per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'adversary');
+    this.showNotice(this.adversaryView() ? tr('Vista dell\'Avversario: tocca un mostro per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'adversary');
   }
 
   /** Un clic sul pallino di un eroe nella barra. */
@@ -2957,7 +2957,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     const answer = await this.askChoice({
       title: tr('Prepararsi: piazza un ordine'),
-      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o sei ferito. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'overclock torna al massimo, se non sei ferito. Guardia: interrompi il turno del Maligno con un attacco, fino al tuo prossimo turno.'),
+      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o sei ferito. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'overclock torna al massimo, se non sei ferito. Guardia: interrompi il turno dell\'Avversario con un attacco, fino al tuo prossimo turno.'),
       choices: [
         { id: 'aim', label: tr('Mira'), primary: true }, { id: 'dodge', label: tr('Schivata'), primary: true }, { id: 'rest', label: tr('Riposo'), primary: true }, { id: 'guard', label: tr('Guardia'), primary: true },
         { id: 'no', label: tr('Nessuno per ora') },
@@ -3101,7 +3101,7 @@ export class GameSceneComponent implements OnDestroy {
 
   private async pass() {
     if (this.returnMode() && this.returnOptions().length) {
-      this.showNotice(tr('Devi tornare nel dungeon: scegli un glifo'), 'warning');
+      this.showNotice(tr('Devi tornare nel dungeon: scegli un terminale'), 'warning');
       return;
     }
     if (this.adversaryBusy() || this.choiceView() || this.familiarMove()) return;
@@ -3136,7 +3136,7 @@ export class GameSceneComponent implements OnDestroy {
     if (r.toadEnded) this.showNotice(tr('La maledizione è finita: torna normale'), 'autorenew', 'adversary');
     this.autosave(); // un eroe ha passato: la partita è in un punto tranquillo
     const next = this.state.pieces.find((p) => p.id === r.nextActive);
-    this.showNotice(r.roundStarted ? tr('Round {n}: tocca agli eroi', { n: this.state.round }) : tr('Tocca a {name}', { name: next?.name ?? '—' }), 'autorenew', 'game');
+    this.showNotice(r.roundStarted ? tr('Round {n}: tocca ai mercenari', { n: this.state.round }) : tr('Tocca a {name}', { name: next?.name ?? '—' }), 'autorenew', 'game');
   }
 
   /** Le maledizioni di fine turno (`ItemDef.curse`): quante ferite ha preso chi porta l'oggetto e, se è morto, svanisce in rosso. */
@@ -3186,7 +3186,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Chi firma la notifica. */
   private noticeAuthor(by: 'mercenary' | 'adversary' | 'game'): ToastAuthor {
-    if (by === 'adversary') return { name: tr('Maligno'), portrait: 'characters/adversary-token.webp' };
+    if (by === 'adversary') return { name: tr('Avversario'), portrait: 'characters/adversary-token.webp' };
     const mercenary = by === 'mercenary' ? this.state.pieces.find((p) => p.id === this.state.activeId && p.team === 'mercenary') : undefined;
     return mercenary ? { name: mercenary.name, portrait: mercenary.portrait } : { name: tr('Gioco') };
   }
@@ -3493,7 +3493,7 @@ export class GameSceneComponent implements OnDestroy {
   private async beginAdversaryTurn() {
     const from = this.state.adversary.alarm;
     const up = adversaryUpkeep(this.state, false); // la mano può restare oltre il limite: scarta il Maligno, senza Odio
-    if (up.deckEnded) this.showNotice(tr('Il Mazzo del Male è finito: il gruppo perde Conquista'), 'warning', 'adversary');
+    if (up.deckEnded) this.showNotice(tr('Il Mazzo Avversario è finito: il gruppo perde Fama'), 'warning', 'adversary');
     await new Promise<void>((resolve) => {
       this.adversaryTurnDone = resolve;
       this.adversaryTurnDialog.set({ from, to: this.state.adversary.alarm });
@@ -3605,7 +3605,7 @@ export class GameSceneComponent implements OnDestroy {
     const s = this.state;
     const atStart = c.kind === 'power' || c.id === 'gust' || c.id === 'dark-allure'; // i Poteri e le carte "all'inizio del tuo turno"
     if (!(step === 'hand' ? atStart : step === 'summon' ? c.kind === 'summon' || this.isArmable(c) : false)) return null;
-    if (this.playCost(c) > s.adversary.alarm) return { enabled: false, reason: tr('Odio insufficiente') };
+    if (this.playCost(c) > s.adversary.alarm) return { enabled: false, reason: tr('Allarme insufficiente') };
     if (this.isArmable(c) && trapLimitReached(s, c)) return { enabled: false, reason: tr('Troppe trappole armate di questo tipo') };
     if ((c.kind === 'power' && s.adversary.inPlay.includes(c.id)) || (c.id === 'gust' && s.adversary.gust)) return { enabled: false, reason: tr('Già in gioco') };
     if (c.kind === 'summon' && this.summonedRound === s.round) return { enabled: false, reason: tr('Una sola Evocazione per round') };
@@ -3618,7 +3618,7 @@ export class GameSceneComponent implements OnDestroy {
     const name = cardOf(this.state, this.state.adversary.hand[index])?.name ?? '';
     const gained = consumeCard(this.state, index);
     if (gained === null) return;
-    this.showNotice(tr('{name} consumata: +{n} Odio', { name, n: gained }), 'skull', 'adversary');
+    this.showNotice(tr('{name} consumata: +{n} Allarme', { name, n: gained }), 'skull', 'adversary');
     this.showHud(this.pieces?.active ?? null);
   }
 
@@ -3654,7 +3654,7 @@ export class GameSceneComponent implements OnDestroy {
       } else if (c.id === 'gust') {
         if (!s.adversary.gust && playEvent(s, 'gust')) {
           s.adversary.gust = true;
-          await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno gli eroi non vedono oltre 5 spazi.'), 'warning');
+          await this.announceEvent(tr('Raffica di vento'), tr('Le torce si spengono: fino al prossimo turno i mercenari non vedono oltre 5 spazi.'), 'warning');
         }
       }
     });
@@ -3739,7 +3739,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     if (!sel.paid && sel.card) {
       if (!paySummon(this.state, sel.card)) {
-        this.showNotice(tr('Odio insufficiente'), 'warning', 'adversary');
+        this.showNotice(tr('Allarme insufficiente'), 'warning', 'adversary');
         this.endSummon();
         return;
       }
@@ -3780,7 +3780,7 @@ export class GameSceneComponent implements OnDestroy {
     this.panel.set(null);
     this.monsterPanel.set(null);
     this.adversaryTrap = { card, spots };
-    const what = card.target === 'door' ? tr('Piazza {name}: tocca una porta evidenziata', { name: card.name }) : card.target === 'chest' ? tr('Piazza {name}: tocca uno scrigno evidenziato', { name: card.name }) : tr('Piazza {name}: tocca una casella evidenziata', { name: card.name });
+    const what = card.target === 'door' ? tr('Piazza {name}: tocca una porta evidenziata', { name: card.name }) : card.target === 'chest' ? tr('Piazza {name}: tocca una cassa evidenziata', { name: card.name }) : tr('Piazza {name}: tocca una casella evidenziata', { name: card.name });
     this.adversaryTrapInfo.set(what);
     this.pieces?.showMonsterReach(spots.flatMap((s) => this.spotCells(s)));
   }
@@ -3819,7 +3819,7 @@ export class GameSceneComponent implements OnDestroy {
     const armed = armTrapAt(this.state, sel.card, spot);
     this.endTrap();
     if (!armed) {
-      this.showNotice(tr('Odio insufficiente'), 'warning', 'adversary');
+      this.showNotice(tr('Allarme insufficiente'), 'warning', 'adversary');
       return;
     }
     this.showNotice(tr('Trappola armata: {name}', { name: sel.card.name }), 'warning', 'adversary'); // solo il Maligno lo sa: i giocatori non vedono niente
@@ -3906,10 +3906,10 @@ export class GameSceneComponent implements OnDestroy {
     const optionsOf = (h: Piece, t: Piece) => controlledAttackOptions(s, board, h, t).filter((o) => o.enabled);
     const candidates = mercenaries.filter((h) => mercenaries.some((t) => t !== h && optionsOf(h, t).length));
     if (!candidates.length) {
-      this.showNotice(tr('Nessun eroe può colpirne un altro'), 'warning', 'adversary');
+      this.showNotice(tr('Nessun mercenario può colpirne un altro'), 'warning', 'adversary');
       return;
     }
-    const mercenary = await this.pickPiece(tr('Seduzione oscura: scegli l\'eroe che deve tirare'), candidates, true);
+    const mercenary = await this.pickPiece(tr('Seduzione oscura: scegli il mercenario che deve tirare'), candidates, true);
     if (!mercenary) return;
     playEvent(s, card.id);
     this.showHud(this.pieces?.active ?? null);
@@ -4125,7 +4125,7 @@ export class GameSceneComponent implements OnDestroy {
     const r = this.pieces?.useChest();
     if (!r) return;
     if (r.code === 'opened') {
-      this.showNotice([r.ticket ? tr('Scrigno aperto ({ticket})', { ticket: r.ticket }) : tr('Scrigno aperto'), ...(r.found ?? [])].join(' · '), 'inventory_2');
+      this.showNotice([r.ticket ? tr('Cassa aperta ({ticket})', { ticket: r.ticket }) : tr('Cassa aperta'), ...(r.found ?? [])].join(' · '), 'inventory_2');
       const mercenary = this.pieces?.active;
       if (r.trap && mercenary) void this.resolveTrap(mercenary, r.trap);
     }
@@ -4134,9 +4134,9 @@ export class GameSceneComponent implements OnDestroy {
       const mercenary = this.pieces?.active;
       if (mercenary) void this.resolveTrap(mercenary, r.trap);
     } else if (r.code === 'curse') void this.offerChestTrap(r.found ?? []);
-    else if (r.code === 'already') this.showNotice(tr('Lo scrigno è già aperto'), 'inventory_2');
+    else if (r.code === 'already') this.showNotice(tr('La cassa è già aperta'), 'inventory_2');
     else if (r.code === 'cost') this.showNotice(tr('Servono {mov:{cost}}', { cost: r.cost }), 'warning');
-    else if (r.code === 'full') this.showNotice(tr('Non hai posto per ciò che contiene lo scrigno'), 'warning');
+    else if (r.code === 'full') this.showNotice(tr('Non hai posto per ciò che contiene la cassa'), 'warning');
   }
 
   /**
@@ -4154,7 +4154,7 @@ export class GameSceneComponent implements OnDestroy {
     if (unique.length) {
       const answer = await this.askChoice({
         title: tr('Maledizione!'),
-        text: tr('Gli eroi hanno aperto uno scrigno con una Maledizione: ricevi Odio. Vuoi spenderlo armando subito una trappola su questo scrigno?'),
+        text: tr('I mercenari hanno aperto una cassa con una Maledizione: ricevi Allarme. Vuoi spenderlo armando subito una trappola su questa cassa?'),
         choices: [...unique.map((c) => ({ id: c.id, label: tr('{name} · {alarm:{cost}}', { name: c.name, cost: trapCost(s, c) }), primary: true })), { id: 'no', label: tr('No') }],
       });
       const card = unique.find((c) => c.id === answer);
@@ -4285,7 +4285,7 @@ export class GameSceneComponent implements OnDestroy {
       this.showNotice(tr('{name} è in città', { name: active.name }), 'castle');
       this.exploreAndNotify(); // la pedina non c'è più: la vista del gruppo cambia
       this.panel.set({ id: active.id, kind: 'city' });
-    } else this.showNotice(r.code === 'cost' ? tr('Serve almeno {mov:1}') : tr('Serve un glifo acceso'), 'warning');
+    } else this.showNotice(r.code === 'cost' ? tr('Serve almeno {mov:1}') : tr('Serve un terminale acceso'), 'warning');
   }
 
   /** Un'azione in città, dal pannello Città: servizi, acquisti, vendite, concludere la visita o tornare nel dungeon. */
@@ -4331,14 +4331,14 @@ export class GameSceneComponent implements OnDestroy {
       const key = `${active.id}:${this.state.round}`;
       if (this.noGlyphFor !== key) {
         this.noGlyphFor = key;
-        this.showNotice(tr('Nessun glifo acceso è libero: puoi solo passare il turno'), 'warning');
+        this.showNotice(tr('Nessun terminale acceso è libero: puoi solo passare il turno'), 'warning');
       }
       return;
     }
     this.returnMode.set(true);
     this.panel.set(null);
-    this.hint.set(tr('Scegli il glifo su cui tornare: clic su uno di quelli che brillano'));
-    this.showNotice(tr('{name} torna nel dungeon: il glifo di partenza è gratis, gli altri costano {cityTeleportCo} monete', { name: active.name, cityTeleportCo: cityRules.CITY_TELEPORT_COST_TEXT }), 'castle');
+    this.hint.set(tr('Scegli il terminale su cui tornare: clic su uno di quelli che brillano'));
+    this.showNotice(tr('{name} torna nel dungeon: il terminale di partenza è gratis, gli altri costano {cityTeleportCo} monete', { name: active.name, cityTeleportCo: cityRules.CITY_TELEPORT_COST_TEXT }), 'castle');
     this.focusCell(choices.find((c) => c.coins === 0)?.cell ?? choices[0].cell);
   }
 
@@ -4365,7 +4365,7 @@ export class GameSceneComponent implements OnDestroy {
     if (!active || !this.board) return;
     const choice = this.returnOptions().find((c) => c.cell.x === cell.x && c.cell.y === cell.y);
     if (!choice) {
-      this.showNotice(tr('Scegli uno dei glifi accesi che brillano'), 'warning');
+      this.showNotice(tr('Scegli uno dei terminali accesi che brillano'), 'warning');
       return;
     }
     const r = this.pieces?.cityDo((s, b, p) => cityRules.returnFromCity(s, b, p, choice.cell));

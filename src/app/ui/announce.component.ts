@@ -5,7 +5,7 @@ import { IconComponent } from './icon.component';
 /** Un messaggio al centro dello schermo: una carta giocata dal Maligno, una trappola scattata. */
 export interface Announcement {
   id: number;
-  /** Chi parla (per esempio "Maligno"). */
+  /** Chi parla (per esempio "Avversario"). */
   by: string;
   icon: string;
   /** Il titolo: il nome della carta. */

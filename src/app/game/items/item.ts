@@ -237,7 +237,7 @@ export function applyItemMods(items: ReadonlyMap<string, ItemDef>, mods: readonl
     if (m.cursed) {
       copy.cursed = true;
       copy.giveCost = m.giveCost ?? ITEM_GIVE_COST;
-      rules.push(tr('Maledetto: non si può scartare, posare né mettere nello zaino. Si cede a un eroe adiacente per {mov:{cost}}: chi lo riceve lo equipaggia subito, e l\'oggetto che gli fa posto va nello zaino.', { cost: copy.giveCost }));
+      rules.push(tr('Maledetto: non si può scartare, posare né mettere nello zaino. Si cede a un mercenario adiacente per {mov:{cost}}: chi lo riceve lo equipaggia subito, e l\'oggetto che gli fa posto va nello zaino.', { cost: copy.giveCost }));
     } else if (m.giveCost !== undefined) copy.giveCost = m.giveCost;
     if (m.curse) {
       copy.curse = { fraction: m.curse.fraction };

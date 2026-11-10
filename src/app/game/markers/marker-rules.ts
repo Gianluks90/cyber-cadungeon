@@ -39,10 +39,10 @@ export function enterCell(board: Board, piece: Piece, state: GameState): MarkerE
       twin.active = true; // i gemelli si accendono sempre insieme, e la Conquista vale una volta sola per la coppia
       state.exploration.markers.add(twin); // si rivela: la camera lo mostra
       state.addProgress(GLYPH_PROGRESS);
-      return { kind: 'glyph-activated', marker, twin, notice: tr('Glifi gemelli accesi · +{glyphProgress} alla Conquista', { glyphProgress: GLYPH_PROGRESS }) };
+      return { kind: 'glyph-activated', marker, twin, notice: tr('Terminali gemelli accesi · +{glyphProgress} alla Fama', { glyphProgress: GLYPH_PROGRESS }) };
     }
     state.addProgress(GLYPH_PROGRESS);
-    return { kind: 'glyph-activated', marker, notice: tr('Glifo acceso · +{glyphProgress} alla Conquista', { glyphProgress: GLYPH_PROGRESS }) };
+    return { kind: 'glyph-activated', marker, notice: tr('Terminale acceso · +{glyphProgress} alla Fama', { glyphProgress: GLYPH_PROGRESS }) };
   }
   return null; // gli oggetti a terra non si raccolgono passando: è un'azione (`pickUp`)
 }
@@ -111,18 +111,18 @@ export function collectLoot(state: GameState, loot: readonly Loot[], receiver?: 
   return loot.map((l) => {
     if (l.kind === 'progress') {
       state.addProgress(l.amount);
-      return tr('+{amount} alla Conquista', { amount: l.amount });
+      return tr('+{amount} alla Fama', { amount: l.amount });
     }
     if (l.kind === 'coins') {
       const amount = l.amount ?? COINS_PER_TOKEN;
       for (const mercenary of state.pieces) if (mercenary.team === 'mercenary') mercenary.coins += amount;
-      return tr('Denaro: +{amount} monete a ogni eroe', { amount });
+      return tr('Denaro: +{amount} monete a ogni mercenario', { amount });
     }
     if (l.kind === 'curse') {
       // Ogni Maledizione dà al Maligno tanto Odio quanti sono gli eroi (docs/REGOLE.md, sezione 3c).
       const alarm = l.amount * state.pieces.filter((p) => p.team === 'mercenary').length;
       state.adversary.alarm += alarm;
-      return tr('Maledizione ×{amount}: il Maligno guadagna {alarm} Odio', { amount: l.amount, alarm });
+      return tr('Maledizione ×{amount}: l\'Avversario guadagna {alarm} Allarme', { amount: l.amount, alarm });
     }
     if (l.kind === 'item') {
       const item = state.items.get(l.itemId);

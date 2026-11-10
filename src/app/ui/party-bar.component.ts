@@ -65,7 +65,7 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.public]': 'publicView()', '[class.compact]': 'compact()' },
   template: `
-    <nav class="bar" [attr.aria-label]="'Eroi' | tr">
+    <nav class="bar" [attr.aria-label]="'Mercenari' | tr">
       <!-- Gli eroi sono un gruppo: la scheda completa (o quella di un mostro) sta sopra tutto il gruppo, lunga quanto l'elenco degli eroi. -->
       <div class="mercenaries">
         @if (panelMember(); as m) {
@@ -86,7 +86,7 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
         }
         <!-- Vista del Maligno: un piccolo footer comune a tutti gli eroi con la Conquista del gruppo, che il Maligno non gioca ma tiene d'occhio. -->
         @if (publicView()) {
-          <div class="foot" [class.alert]="defeated()" role="status"><span class="lab"><app-icon name="brightness_empty" [size]="14" />{{ 'Conquista' | tr }}</span><span class="v">{{ progress() }}</span></div>
+          <div class="foot" [class.alert]="defeated()" role="status"><span class="lab"><app-icon name="brightness_empty" [size]="14" />{{ 'Fama' | tr }}</span><span class="v">{{ progress() }}</span></div>
         }
       </div>
       <!-- Passa: un tab quadrato in fondo alla striscia, fuori dal flusso così non sposta il centro della barra né i pannelli. -->
@@ -103,7 +103,7 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
             @if (m.portrait) { <img [src]="m.portrait" [alt]="m.name" draggable="false" /> } @else { <app-icon name="skull" [size]="28" /> }
           </span>
           <!-- Nel tab chiuso l'ordine si vede come un cerchietto sull'immagine: resta finché l'ordine non decade. -->
-          @if (publicView() && m.current) { <span class="turn-dot" [title]="'Eroe di turno' | tr"></span> }
+          @if (publicView() && m.current) { <span class="turn-dot" [title]="'Mercenario di turno' | tr"></span> }
           @if (m.order && !m.active) { <span class="order-dot" [title]="'Ordine: {name}' | tr: { name: orderName(m.order) }"><app-icon [name]="orderIcon(m.order)" [size]="12" /></span> }
         </span>
         <span class="details">

@@ -254,7 +254,7 @@ export function cityView(state: GameState, piece: Piece): CityView | null {
       treasures: (['copper', 'silver', 'gold'] as ChestTier[]).map((t) => ({
         id: t, name: TIER_NAMES[t], price: TREASURE_PRICES[t],
         enabled: state.openedTiers.includes(t) && state.decks[t].length > 0 && piece.coins >= TREASURE_PRICES[t],
-        reason: !state.openedTiers.includes(t) ? tr('Apri prima uno scrigno {t}', { t: TIER_ADJ[t] }) : state.decks[t].length === 0 ? tr('Esaurito') : coins(TREASURE_PRICES[t]),
+        reason: !state.openedTiers.includes(t) ? tr('Apri prima una cassa {t}', { t: TIER_ADJ[t] }) : state.decks[t].length === 0 ? tr('Esaurito') : coins(TREASURE_PRICES[t]),
       })),
       items: [...state.items.values()].filter((i) => i.id in state.shop).map((i) => {
         const stock = state.shop[i.id] ?? 0;

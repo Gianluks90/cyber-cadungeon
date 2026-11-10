@@ -238,7 +238,7 @@ export class PiecesController {
       return;
     }
     const steps = pathTo(this.reach, cell);
-    if (steps.some((s) => s.kind === 'travel')) this.onNotice(tr('Viaggio da glifo a glifo: spendi tutti i punti movimento'), 'brightness_empty');
+    if (steps.some((s) => s.kind === 'travel')) this.onNotice(tr('Viaggio da terminale a terminale: spendi tutti i punti movimento'), 'brightness_empty');
     else if (steps.some((s) => s.kind === 'stairs')) this.onNotice(tr('Scale: {mov:1}'), 'stairs');
     this.moving = { piece: active, steps, index: 0, elapsed: 0, arcs: this.planArcs(active, steps) };
     this.highlight.clear();
