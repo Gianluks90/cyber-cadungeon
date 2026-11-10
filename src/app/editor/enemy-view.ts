@@ -1,14 +1,14 @@
 import { ColorMatrixFilter, Container, Graphics, Sprite, Texture } from 'pixi.js';
 import { CELL_SIZE, EDITOR_BADGE_RADIUS_PX, ENCOUNTER, PAWN_PORTRAIT_INSET_PX, PAWN_RADIUS_RATIO } from '../game/constants';
-import type { MonsterDef } from '../game/monsters/monster';
+import type { EnemyDef } from '../game/enemies/enemy';
 import { createFilledIcon } from '../game/icons/icon-loader';
 import { drawPawnDetails, lookBorder, lookSeed, pawnPath, type PawnLook } from '../game/pieces/pawn-look';
 import { fitPortrait } from '../game/pieces/portraits';
 import { LINE, theme } from '../game/theme';
 
-/** Un mostro in mappa (o in anteprima): quale, dove (casella in alto a sinistra), quanto occupa e se è potenziato. */
-export interface PlacedMonster {
-  def: MonsterDef;
+/** Un nemico in mappa (o in anteprima): quale, dove (casella in alto a sinistra), quanto occupa e se è potenziato. */
+export interface PlacedEnemy {
+  def: EnemyDef;
   x: number;
   y: number;
   w: number;
@@ -18,7 +18,7 @@ export interface PlacedMonster {
   custom?: boolean;
   /** L'aspetto visivo (pietra o cristallo): contorno e dettagli diversi, e il badge palette in basso a sinistra. */
   look?: PawnLook;
-  /** L'id della pedina: dà il seme del contorno (senza, quello del mostro). */
+  /** L'id della pedina: dà il seme del contorno (senza, quello del nemico). */
   id?: string;
   /** Un evento riguarda questo nemico: compare il badge del fulmine in alto a destra, e il genetics si sposta accanto. */
   events?: boolean;
@@ -28,10 +28,10 @@ export interface PlacedMonster {
 const BADGE_GAP_PX = 4;
 
 /**
- * Disegna i mostri nell'editor come in partita: una pedina con l'immagine del mostro ritagliata nella forma (cerchio per 1×1 e 2×2 più grande, capsula per 1×2 e 2×3) e l'anello,
+ * Disegna i nemici nell'editor come in partita: una pedina con l'immagine del nemico ritagliata nella forma (cerchio per 1×1 e 2×2 più grande, capsula per 1×2 e 2×3) e l'anello,
  * grigio per i normali e rosso per i potenziati. Le immagini (`<image>-token.webp`) arrivano già caricate.
  */
-export class MonsterView {
+export class EnemyView {
   readonly container = new Container();
   private readonly preview = new Container();
   /** Il filtro dell'aspetto di pietra: toglie il colore all'immagine (lo stesso della partita). */
@@ -44,20 +44,20 @@ export class MonsterView {
   constructor(private textures: ReadonlyMap<string, Texture>) {}
 
   /** L'url dell'immagine della pedina. */
-  static tokenUrl(def: MonsterDef): string {
+  static tokenUrl(def: EnemyDef): string {
     return `${def.image}-token.webp`;
   }
 
-  /** Ridisegna i mostri piazzati (l'anteprima sta in un livello a parte, sopra). */
-  setMonsters(list: readonly PlacedMonster[]) {
+  /** Ridisegna i nemici piazzati (l'anteprima sta in un livello a parte, sopra). */
+  setEnemies(list: readonly PlacedEnemy[]) {
     // Il contenitore dell'anteprima non si distrugge (si riusa): distrutto e rimesso nella scena farebbe fallire il disegno.
     for (const child of this.container.removeChildren()) if (child !== this.preview) child.destroy({ children: true });
     for (const m of list) this.container.addChild(this.token(m));
     this.container.addChild(this.preview);
   }
 
-  /** L'anteprima del mostro in mano: tenue, e rossastra se lì non si può metterlo. */
-  setPreview(m: PlacedMonster | null, valid = true) {
+  /** L'anteprima del nemico in mano: tenue, e rossastra se lì non si può metterlo. */
+  setPreview(m: PlacedEnemy | null, valid = true) {
     for (const child of this.preview.removeChildren()) child.destroy({ children: true });
     if (!m) return;
     const t = this.token(m);
@@ -66,7 +66,7 @@ export class MonsterView {
     this.preview.addChild(t);
   }
 
-  private token(m: PlacedMonster): Container {
+  private token(m: PlacedEnemy): Container {
     const margin = CELL_SIZE * (0.5 - PAWN_RADIUS_RATIO);
     const a = (m.w * CELL_SIZE) / 2 - margin;
     const b = (m.h * CELL_SIZE) / 2 - margin;
@@ -75,7 +75,7 @@ export class MonsterView {
     const root = new Container();
     const base = shape(new Graphics(), a, b).fill(theme.color.token.fill);
     root.addChild(base);
-    const tex = this.textures.get(MonsterView.tokenUrl(m.def));
+    const tex = this.textures.get(EnemyView.tokenUrl(m.def));
     if (tex) {
       const sprite = new Sprite(tex);
       sprite.anchor.set(0.5);

@@ -35,7 +35,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 ### L0.1 — Glossario fissato
 - **Serve**: decidere e scrivere i nomi definitivi (Avversario/Megacorp, Incursore/Spettro, Fama/Conquista, Terminale/glifo, Overclock/Fatica/Energia ✔) in un solo posto. Già decisi: Avversario, Incursore, Mercenari, Overclock.
 - **Tocca**: sezione "Glossario provvisorio" di `CLAUDE.md`; tabella §1 di `docs/REGOLE-v2.md`; `PROJECT_STATUS.md` (nella radice; nota "Nomenclatura doppia").
-- **Fatto**: glossario aggiornato in `CLAUDE.md`, `docs/REGOLE-v2.md` §1 e `PROJECT_STATUS.md` (Fama, cassa, terminale, Mazzo Avversario, Overclock nel codice). Decisi: Briefing si tiene (fase di negozio del setup), Megacorp/corp sono parole dell'ambientazione, Spettro decade (solo Incursore). "Mostro"→"nemico" (`enemy` nel codice): rinomina ancora da fare.
+- **Fatto**: glossario aggiornato in `CLAUDE.md`, `docs/REGOLE-v2.md` §1 e `PROJECT_STATUS.md` (Fama, cassa, terminale, Mazzo Avversario, Overclock nel codice). Decisi: Briefing si tiene (fase di negozio del setup), Megacorp/corp sono parole dell'ambientazione, Spettro decade (solo Incursore). "Mostro"→"nemico" (`enemy` nel codice): rinomina fatta (codice, cartelle, chiavi i18n `enemy.*`/`enemyDialog.*`, dati, testi UI); restano "monster/mostro" solo nei testi delle Carte dell'Avversario. Cartella immagini `public/mobs/` non rinominata.
 - **Dipende da**: niente. **Sblocca**: L0.2, L1.5, tutto il resto per i nomi.
 - **Decisione**: sì → **Q1, Q2, Q3**.
 

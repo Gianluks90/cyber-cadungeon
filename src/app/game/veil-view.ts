@@ -6,7 +6,7 @@ import { Board, Cell, cellKey } from './board/board';
 /**
  * Il velo sulle caselle non ancora esplorate: un rettangolo del colore dello sfondo, leggermente opaco, che le lascia
  * "vuote e un po' spente". Quando una casella viene scoperta il velo svanisce piano. Gli elementi (rocce, porte,
- * mostri) non si disegnano finché non sono rivelati: il velo non nasconde niente, spegne soltanto.
+ * nemici) non si disegnano finché non sono rivelati: il velo non nasconde niente, spegne soltanto.
  */
 export class VeilView {
   readonly graphics = new Graphics();

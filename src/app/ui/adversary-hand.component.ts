@@ -27,7 +27,7 @@ export interface HandCardView {
   play: { enabled: boolean; reason?: string } | null;
 }
 
-/** Il passo del turno del Maligno: Mano (pesca, scarto, consumo e carte a inizio turno), Evocazione, Attivazione dei mostri. */
+/** Il passo del turno del Maligno: Mano (pesca, scarto, consumo e carte a inizio turno), Evocazione, Attivazione dei nemici. */
 export type AdversaryStep = 'hand' | 'summon' | 'activate';
 
 /** La larghezza di una carta (come il dorso del mazzo), il passo massimo fra due carte vicine e i tempi dell'arrivo di una carta pescata (millisecondi). */

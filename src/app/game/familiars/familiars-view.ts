@@ -9,8 +9,8 @@ import type { GameState } from '../state/game-state';
 import { LINE, theme } from '../theme';
 import type { Familiar } from './familiar';
 
-/** Con chi condivide la casella un famiglio: nessuno (è un segnalino tondo come un eroe) o un eroe/mostro (diventa un piccolo segnalino nell'angolo, sopra la pedina). */
-export type Cohabitant = 'mercenary' | 'monster' | null;
+/** Con chi condivide la casella un famiglio: nessuno (è un segnalino tondo come un eroe) o un eroe/nemico (diventa un piccolo segnalino nell'angolo, sopra la pedina). */
+export type Cohabitant = 'mercenary' | 'enemy' | null;
 
 interface FamiliarNode {
   root: Container;
@@ -84,7 +84,7 @@ export class FamiliarsView {
     private readonly ticker: Ticker,
     private readonly state: GameState,
     private readonly textures: ReadonlyMap<string, Texture>,
-    /** Chi occupa la casella (visibile): un eroe, un mostro che si vede, o niente. */
+    /** Chi occupa la casella (visibile): un eroe, un nemico che si vede, o niente. */
     private readonly cohabitant: (cell: Cell) => Cohabitant,
     /** Dove sta la pedina di un eroe in questo momento (in pixel del mondo): i famigli portati la seguono. */
     private readonly mercenaryPos: (mercenaryId: string) => { x: number; y: number } | null = () => null,

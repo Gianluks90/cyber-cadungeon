@@ -94,7 +94,7 @@ export type Loot =
 
 /**
  * Oggetti a terra: un eroe fermo nella loro casella li raccoglie con l'azione "Raccogli" del menu, senza spendere
- * punti movimento (solo gli eroi: i mostri non raccolgono). Raccolti spariscono (`collected`).
+ * punti movimento (solo gli eroi: i nemici non raccolgono). Raccolti spariscono (`collected`).
  */
 interface Pickup {
   /** Il nome con cui gli eventi lo riconoscono (`oggetto-1`…): lo dà l'editor quando lo si mette e resta se lo si sposta. */
@@ -189,7 +189,7 @@ export interface ItemPickup extends Pickup {
 }
 
 /**
- * Scale: due segnalini con la stessa etichetta (`link`) sono i due capi di una scalinata. Un eroe (non un mostro) fermo su un
+ * Scale: due segnalini con la stessa etichetta (`link`) sono i due capi di una scalinata. Un eroe (non un nemico) fermo su un
  * capo passa all'altro per 1 punto movimento. Le parti di mappa collegate possono stare ovunque e restare separate: non ci
  * sono piani, tutto è visibile insieme. Chi è su un capo rivela l'altro capo e le 8 caselle intorno, chi è adiacente a un
  * capo vede l'altro capo (come se fossero vicini). I lati chiusi (tre su quattro) sono muri. Un filo tratteggiato unisce i capi.

@@ -6,7 +6,7 @@ import { ChangeDetectionStrategy, Component, ElementRef, computed, input, output
 import { DoorSampleComponent } from '../ui/door-sample.component';
 import { ObstacleSampleComponent } from '../ui/obstacle-sample.component';
 import type { ObstacleType } from '../game/board/obstacle';
-import type { MonsterDef } from '../game/monsters/monster';
+import type { EnemyDef } from '../game/enemies/enemy';
 import { CHEST_TABLE_MAX } from '../game/board/marker';
 import { MARKER_LIMITS, MARKER_MINIMUMS, MarkerSpec, markerKey } from './tile-editor';
 import { IconComponent } from '../ui/icon.component';
@@ -16,7 +16,7 @@ import { tilePreview } from './tile-preview';
 
 /** Gli strumenti di costruzione: ognuno ha un tasto nella barra e, quando è acceso, mostra la sua cassetta. */
 interface Tool {
-  id: 'tiles' | 'doors' | 'obstacles' | 'markers' | 'specials' | 'monsters' | 'areas' | 'events';
+  id: 'tiles' | 'doors' | 'obstacles' | 'markers' | 'specials' | 'enemies' | 'areas' | 'events';
   icon: string;
   label: string;
 }
@@ -27,7 +27,7 @@ const TOOLS: Tool[] = [
   { id: 'areas', icon: 'select_all', get label() { return t('tools.areas'); } },
   { id: 'obstacles', icon: 'landslide', get label() { return t('tools.obstaclesAndWalls'); } },
   { id: 'markers', icon: 'inventory_2', get label() { return t('tools.items'); } },
-  { id: 'monsters', icon: 'skull', get label() { return t('tools.enemies'); } },
+  { id: 'enemies', icon: 'skull', get label() { return t('tools.enemies'); } },
   { id: 'specials', icon: 'brightness_empty', get label() { return t('tools.glyphsAndMore'); } },
   { id: 'events', icon: 'bolt', get label() { return t('tools.events'); } },
 ];
@@ -183,21 +183,21 @@ const PREVIEW_MAX_CELLS = 6;
         </ul>
       </div>
     }
-    @if (tool() === 'monsters') {
+    @if (tool() === 'enemies') {
       <div class="tray" role="region" [attr.aria-label]="'tools.enemies' | t" (wheel)="hscroll($event)">
         <header>
           <span class="title">{{ 'tools.enemies' | t }}</span>
           <span class="actions">
             <button type="button" class="act" [class.on]="customizing()" [attr.aria-pressed]="customizing()" [attr.aria-label]="'common.customize' | t" [title]="'tools.customizeEnemy' | t" (click)="toggleCustomize.emit()"><app-icon name="genetics" [size]="18" /></button>
-            <button type="button" class="act" [class.off]="!carryingMonster()" [attr.aria-disabled]="!carryingMonster()" [attr.aria-label]="'common.rotate' | t" [title]="'tools.rotateEnemy' | t" (click)="carryingMonster() && rotate.emit()"><app-icon name="rotate_right" [size]="18" /></button>
+            <button type="button" class="act" [class.off]="!carryingEnemy()" [attr.aria-disabled]="!carryingEnemy()" [attr.aria-label]="'common.rotate' | t" [title]="'tools.rotateEnemy' | t" (click)="carryingEnemy() && rotate.emit()"><app-icon name="rotate_right" [size]="18" /></button>
             <button type="button" class="act" [class.on]="deleting()" [attr.aria-pressed]="deleting()" [attr.aria-label]="'common.delete' | t" [title]="'tools.deleteEnemies' | t" (click)="toggleDelete.emit()"><app-icon name="delete" [size]="18" /></button>
           </span>
         </header>
         <ul>
-          @for (c of monsterCards(); track c.key) {
+          @for (c of enemyCards(); track c.key) {
             <li>
-              <button type="button" class="item monster" [class.enhanced]="c.enhanced" [class.carrying]="carryingMonster()?.id === c.def.id && carryingMonster()?.enhanced === c.enhanced" [attr.aria-pressed]="carryingMonster()?.id === c.def.id && carryingMonster()?.enhanced === c.enhanced" [title]="c.def.name + (c.enhanced ? ('tools.enhancedSuffix' | t) : '')" (click)="pickMonster.emit({ id: c.def.id, enhanced: c.enhanced })">
-                <span class="count" [title]="'tools.onMap' | t">×{{ monsterCounts()[c.key] ?? 0 }}</span>
+              <button type="button" class="item enemy" [class.enhanced]="c.enhanced" [class.carrying]="carryingEnemy()?.id === c.def.id && carryingEnemy()?.enhanced === c.enhanced" [attr.aria-pressed]="carryingEnemy()?.id === c.def.id && carryingEnemy()?.enhanced === c.enhanced" [title]="c.def.name + (c.enhanced ? ('tools.enhancedSuffix' | t) : '')" (click)="pickEnemy.emit({ id: c.def.id, enhanced: c.enhanced })">
+                <span class="count" [title]="'tools.onMap' | t">×{{ enemyCounts()[c.key] ?? 0 }}</span>
                 <span class="dim" [title]="'tools.occupiedCells' | t">{{ c.def.size.w }}×{{ c.def.size.h }}@if (c.enhanced) { <b class="pot" [title]="'tools.enhanced' | t">P</b> }</span>
                 <span class="token">
                   @if (!brokenImages().has(c.def.id)) { <img [src]="c.def.image + '-token.webp'" alt="" draggable="false" (error)="imageFailed(c.def.id)" /> }
@@ -380,15 +380,15 @@ const PREVIEW_MAX_CELLS = 6;
     .item.marker.off { opacity: 0.4; cursor: default; }
     .item.marker.carrying { border-color: var(--tone); }
     .item.marker .name { text-align: center; }
-    .item.monster .token { display: inline-flex; box-sizing: border-box; width: 56px; height: 56px; overflow: hidden; border-radius: var(--radius-1); border: 2px solid var(--c-line-strong); background: var(--c-surface); }
-    .item.monster.enhanced .token { border-color: var(--c-faction-adversary); }
+    .item.enemy .token { display: inline-flex; box-sizing: border-box; width: 56px; height: 56px; overflow: hidden; border-radius: var(--radius-1); border: 2px solid var(--c-line-strong); background: var(--c-surface); }
+    .item.enemy.enhanced .token { border-color: var(--c-faction-adversary); }
     /* Tutte le schede dei nemici sono uguali: immagine sempre alla stessa altezza e nome su due righe al massimo (poi i puntini). */
-    .item.monster { justify-content: flex-start; padding-top: 26px; }
-    .item.monster .name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; width: 100%; min-height: 2.4em; max-height: 2.4em; line-height: 1.2; }
-    .item.monster .pot { margin-left: 4px; color: var(--c-faction-adversary); font-weight: 700; }
-    .item.monster .dim { position: absolute; top: 6px; left: 7px; color: var(--c-text-dim); font: 600 11px/1 var(--font-mono); }
-    .item.monster .placeholder-icon { margin: auto; color: var(--c-text-dim); }
-    .item.monster .token img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .item.enemy { justify-content: flex-start; padding-top: 26px; }
+    .item.enemy .name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; text-overflow: ellipsis; box-sizing: border-box; width: 100%; min-height: 2.4em; max-height: 2.4em; line-height: 1.2; }
+    .item.enemy .pot { margin-left: 4px; color: var(--c-faction-adversary); font-weight: 700; }
+    .item.enemy .dim { position: absolute; top: 6px; left: 7px; color: var(--c-text-dim); font: 600 11px/1 var(--font-mono); }
+    .item.enemy .placeholder-icon { margin: auto; color: var(--c-text-dim); }
+    .item.enemy .token img { width: 100%; height: 100%; object-fit: cover; display: block; }
     .item.door.carrying { border-color: var(--tone); }
     .item.stairs.carrying { border-color: var(--c-interact); }
     .stairs-sample, .wall-sample { width: 56px; height: 56px; }
@@ -557,10 +557,10 @@ export class EditorToolsComponent {
   readonly carryingWall = input<number | null>(null);
   readonly pickWall = output<number>();
   /** I nemici del catalogo, quanti ne sono in mappa (chiave `id` per i normali e `id+` per i potenziati), quale si porta in mano e il tasto per prenderne uno. */
-  readonly monsters = input<MonsterDef[]>([]);
-  readonly monsterCounts = input<Record<string, number>>({});
-  readonly carryingMonster = input<{ id: string; enhanced: boolean } | null>(null);
-  readonly pickMonster = output<{ id: string; enhanced: boolean }>();
+  readonly enemies = input<EnemyDef[]>([]);
+  readonly enemyCounts = input<Record<string, number>>({});
+  readonly carryingEnemy = input<{ id: string; enhanced: boolean } | null>(null);
+  readonly pickEnemy = output<{ id: string; enhanced: boolean }>();
   /** Gli oggetti e i tesori: quanti ce ne sono in mappa per tipo (chiave `markerKey`), quale si porta in mano e il tasto per prenderne uno. */
   readonly markerCounts = input<Record<string, number>>({});
   readonly carryingMarker = input<MarkerSpec | null>(null);
@@ -620,7 +620,7 @@ export class EditorToolsComponent {
     list.scrollLeft += e.deltaY;
   }
   /** Per ogni nemico due schede, una dopo l'altra: la normale e la potenziata, ognuna con il suo contatore. */
-  protected readonly monsterCards = computed(() => this.monsters().flatMap((def) => [{ def, enhanced: false, key: def.id }, { def, enhanced: true, key: `${def.id}+` }]));
+  protected readonly enemyCards = computed(() => this.enemies().flatMap((def) => [{ def, enhanced: false, key: def.id }, { def, enhanced: true, key: `${def.id}+` }]));
   /** Modalità separa (accesa o no) e il suo tasto. */
   readonly separating = input(false);
   readonly toggleSeparate = output<void>();
@@ -657,7 +657,7 @@ export class EditorToolsComponent {
   private readonly doorTotal = computed(() => Object.values(this.doorCounts()).reduce((a, b) => a + b, 0));
 
   protected badge(tool: Tool['id']): number {
-    return tool === 'markers' || tool === 'specials' ? Object.entries(this.markerCounts()).filter(([k]) => (tool === 'specials') === ['glyph', 'glyph:active', 'glyph:twin', 'start'].includes(k)).reduce((a, [, b]) => a + b, 0) : tool === 'tiles' ? this.total() : tool === 'doors' ? this.doorTotal() : tool === 'obstacles' ? Object.values(this.obstacleCounts()).reduce((a, b) => a + b, 0) : tool === 'monsters' ? Object.values(this.monsterCounts()).reduce((a, b) => a + b, 0) : tool === 'events' ? this.events().length : this.areas().length;
+    return tool === 'markers' || tool === 'specials' ? Object.entries(this.markerCounts()).filter(([k]) => (tool === 'specials') === ['glyph', 'glyph:active', 'glyph:twin', 'start'].includes(k)).reduce((a, [, b]) => a + b, 0) : tool === 'tiles' ? this.total() : tool === 'doors' ? this.doorTotal() : tool === 'obstacles' ? Object.values(this.obstacleCounts()).reduce((a, b) => a + b, 0) : tool === 'enemies' ? Object.values(this.enemyCounts()).reduce((a, b) => a + b, 0) : tool === 'events' ? this.events().length : this.areas().length;
   }
 
   protected toggle(id: Tool['id']) {

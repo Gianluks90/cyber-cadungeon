@@ -181,8 +181,8 @@ export function playPowerCard(state: GameState): AdversaryCardDef | null {
 const distance = (a: Cell, b: Cell) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
 /**
- * Dove possono apparire i mostri evocati (manuale, "Creare i mostri"): caselle libere da personaggi e ostacoli (roccia, buca, acqua), in un'area già rivelata
- * (o, nei tile senza area, già esplorate) e che nessun eroe vede. Per il piazzamento gli altri mostri NON interrompono il campo visivo degli eroi
+ * Dove possono apparire i nemici evocati (manuale, "Creare i nemici"): caselle libere da personaggi e ostacoli (roccia, buca, acqua), in un'area già rivelata
+ * (o, nei tile senza area, già esplorate) e che nessun eroe vede. Per il piazzamento gli altri nemici NON interrompono il campo visivo degli eroi
  * (gli altri eroi sì). Si può evocare sopra oggetti a terra, ma non su glifi, scrigni e scale. L'elenco è ordinato dalla più vicina agli eroi.
  */
 export function summonCells(state: GameState, board: Board): Cell[] {
@@ -215,23 +215,23 @@ export function summonCells(state: GameState, board: Board): Cell[] {
     .sort((a, b) => near(a) - near(b));
 }
 
-/** Una evocazione pronta: quale mostro e dove. */
+/** Una evocazione pronta: quale nemico e dove. */
 export interface SummonPlan {
-  monster: string;
+  enemy: string;
   enhanced: boolean;
   cell: Cell;
 }
 
 /** Quante miniature di questo tipo (normali o potenziate) restano nella scatola: il limite meno quelle in mappa. Infinito se il tipo non ha limite. */
-export function miniaturesLeft(state: GameState, monster: string, enhanced: boolean): number {
-  const limit = state.monsters.get(monster)?.limit;
+export function miniaturesLeft(state: GameState, enemy: string, enhanced: boolean): number {
+  const limit = state.enemies.get(enemy)?.limit;
   if (!limit) return Infinity;
-  const onMap = state.pieces.filter((p) => p.team === 'monster' && p.monster === monster && !!p.enhanced === enhanced).length;
+  const onMap = state.pieces.filter((p) => p.team === 'enemy' && p.enemy === enemy && !!p.enhanced === enhanced).length;
   return Math.max(0, (enhanced ? limit.enhanced : limit.normal) - onMap);
 }
 
 /**
- * Dove piazzare i mostri della carta. Può essere meno del dovuto: se manca posto, o se le miniature nella scatola non bastano (`miniaturesLeft`: la carta si gioca
+ * Dove piazzare i nemici della carta. Può essere meno del dovuto: se manca posto, o se le miniature nella scatola non bastano (`miniaturesLeft`: la carta si gioca
  * lo stesso e costa uguale, ma ne arrivano meno). Vuoto se non c'è nessuna casella valida o nessuna miniatura.
  */
 export function planSummon(state: GameState, board: Board, card: AdversaryCardDef): SummonPlan[] {
@@ -240,7 +240,7 @@ export function planSummon(state: GameState, board: Board, card: AdversaryCardDe
   const plans: SummonPlan[] = [];
   const used = new Map<string, number>(); // le miniature già prese da questa carta, per tipo e versione
   for (const group of card.summon ?? []) {
-    const def = state.monsters.get(group.monster);
+    const def = state.enemies.get(group.enemy);
     if (!def) continue;
     const key = `${def.id}|${!!group.enhanced}`;
     for (let n = 0; n < group.count; n++) {
@@ -251,7 +251,7 @@ export function planSummon(state: GameState, board: Board, card: AdversaryCardDe
       });
       if (!cell) continue;
       footprint({ cell, size: def.size }).forEach((f) => taken.add(cellKey(f)));
-      plans.push({ monster: def.id, enhanced: !!group.enhanced, cell });
+      plans.push({ enemy: def.id, enhanced: !!group.enhanced, cell });
       used.set(key, (used.get(key) ?? 0) + 1);
     }
   }
@@ -265,7 +265,7 @@ export interface PlayResult {
 
 /**
  * Lo script gioca una carta Evocazione: la più cara che può pagare e per cui c'è posto. Paga l'Odio, mette la carta negli scarti e
- * aggiunge i mostri allo stato. Null se non gioca niente.
+ * aggiunge i nemici allo stato. Null se non gioca niente.
  */
 export function playSummonCard(state: GameState, board: Board): PlayResult | null {
   const o = state.adversary;
@@ -280,43 +280,43 @@ export function playSummonCard(state: GameState, board: Board): PlayResult | nul
   return null;
 }
 
-/** Evoca i mostri di una carta Evocazione che è in mano: piazzamento (`planSummon`, limiti compresi), Odio pagato e carta negli scarti. Null se non c'è posto o miniature. */
+/** Evoca i nemici di una carta Evocazione che è in mano: piazzamento (`planSummon`, limiti compresi), Odio pagato e carta negli scarti. Null se non c'è posto o miniature. */
 function castSummon(state: GameState, board: Board, card: AdversaryCardDef): PlayResult | null {
   const o = state.adversary;
   const plans = planSummon(state, board, card);
   if (!plans.length) return null;
-  const spawned = plans.map((plan) => spawnMonster(state, plan.monster, plan.enhanced, plan.cell));
+  const spawned = plans.map((plan) => spawnEnemy(state, plan.enemy, plan.enhanced, plan.cell));
   o.alarm -= cardCost(state, card);
   o.hand.splice(o.hand.indexOf(card.id), 1);
   o.discard.push(card.id);
   return { card, spawned };
 }
 
-/** Mette in gioco un mostro (con la sua scheda del catalogo e gli eroi di adesso per i suoi scaglioni) nella casella data. */
-export function spawnMonster(state: GameState, monster: string, enhanced: boolean, cell: Cell): Piece {
+/** Mette in gioco un nemico (con la sua scheda del catalogo e gli eroi di adesso per i suoi scaglioni) nella casella data. */
+export function spawnEnemy(state: GameState, enemy: string, enhanced: boolean, cell: Cell): Piece {
   const mercenaries = state.pieces.filter((p) => p.team === 'mercenary').length;
-  const [piece] = createPieces([{ id: newMonsterId(state, monster), team: 'monster', monster, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.monsters, mercenaries);
+  const [piece] = createPieces([{ id: newEnemyId(state, enemy), team: 'enemy', enemy, enhanced, x: cell.x, y: cell.y }], new Map(), state.items, state.enemies, mercenaries);
   state.pieces.push(piece);
   return piece;
 }
 
-/** I mostri che una carta Evocazione fa piazzare, uno per uno, nell'ordine della carta: meno del dovuto se le miniature in scatola non bastano (`miniaturesLeft`). */
-export function summonQueue(state: GameState, card: AdversaryCardDef): { monster: string; enhanced: boolean }[] {
+/** I nemici che una carta Evocazione fa piazzare, uno per uno, nell'ordine della carta: meno del dovuto se le miniature in scatola non bastano (`miniaturesLeft`). */
+export function summonQueue(state: GameState, card: AdversaryCardDef): { enemy: string; enhanced: boolean }[] {
   const used = new Map<string, number>();
-  const queue: { monster: string; enhanced: boolean }[] = [];
+  const queue: { enemy: string; enhanced: boolean }[] = [];
   for (const group of card.summon ?? []) {
-    const def = state.monsters.get(group.monster);
+    const def = state.enemies.get(group.enemy);
     if (!def) continue;
     const key = `${def.id}|${!!group.enhanced}`;
     for (let n = 0; n < group.count && (used.get(key) ?? 0) < miniaturesLeft(state, def.id, !!group.enhanced); n++) {
-      queue.push({ monster: def.id, enhanced: !!group.enhanced });
+      queue.push({ enemy: def.id, enhanced: !!group.enhanced });
       used.set(key, (used.get(key) ?? 0) + 1);
     }
   }
   return queue;
 }
 
-/** Il Maligno gioca la carta Evocazione: paga l'Odio e la mette negli scarti (i mostri li piazza lui, uno alla volta). Falso se non è in mano o l'Odio non basta. */
+/** Il Maligno gioca la carta Evocazione: paga l'Odio e la mette negli scarti (i nemici li piazza lui, uno alla volta). Falso se non è in mano o l'Odio non basta. */
 export function paySummon(state: GameState, card: AdversaryCardDef): boolean {
   const o = state.adversary;
   const index = o.hand.indexOf(card.id);
@@ -327,8 +327,8 @@ export function paySummon(state: GameState, card: AdversaryCardDef): boolean {
   return true;
 }
 
-export function newMonsterId(state: GameState, monster: string): string {
+export function newEnemyId(state: GameState, enemy: string): string {
   let n = state.pieces.length;
-  while (state.pieces.some((p) => p.id === `${monster}-${n}`)) n++;
-  return `${monster}-${n}`;
+  while (state.pieces.some((p) => p.id === `${enemy}-${n}`)) n++;
+  return `${enemy}-${n}`;
 }

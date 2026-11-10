@@ -19,9 +19,9 @@ export function telekinesisMoves(state: GameState, board: Board, model: Piece): 
   } else {
     steps = [...reachable(board, model.cell, 1, others).values()].filter((r) => r.cost === 1);
   }
-  // Un mostro non si ferma su un glifo acceso né su uno scrigno (come quando si muove da solo).
+  // Un nemico non si ferma su un glifo acceso né su uno scrigno (come quando si muove da solo).
   return steps
-    .filter((s) => model.team !== 'monster' || !footprint({ cell: s.cell, size: s.size ?? model.size }).some((c) => {
+    .filter((s) => model.team !== 'enemy' || !footprint({ cell: s.cell, size: s.size ?? model.size }).some((c) => {
       const m = board.markerAt(c);
       return (m?.type === 'glyph' && m.active) || m?.type === 'chest' || m?.type === 'encounter';
     }))

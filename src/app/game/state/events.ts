@@ -159,7 +159,7 @@ const same = (a: EventTrigger, b: EventTrigger, round: number): boolean => {
   return a.area === (b as { area: string }).area;
 };
 
-const TARGETED = ['activate', 'removePiece', 'modifyMonster', 'finishRevival', 'makeVulnerable', 'removeImmunity', 'setLook', 'setBehavior', 'heal'];
+const TARGETED = ['activate', 'removePiece', 'modifyEnemy', 'finishRevival', 'makeVulnerable', 'removeImmunity', 'setLook', 'setBehavior', 'heal'];
 
 /** I nemici su cui un effetto con bersagli può ancora agire adesso (`$this` è il nemico dell'evento). */
 function liveTargets(state: GameState, effect: Extract<EventEffect, { pieceId: string }>, thisId?: string): string[] {
@@ -174,7 +174,7 @@ function liveTargets(state: GameState, effect: Extract<EventEffect, { pieceId: s
       if (effect.kind === 'setLook') return !!piece && piece.look !== effect.look; // già con quell'aspetto: niente da cambiare
       if (effect.kind === 'removeImmunity') return !!piece?.immune?.includes(effect.immunity);
       if (effect.kind === 'finishRevival') return state.events.revivals.some((r) => r.piece.id === id);
-      if (effect.kind === 'modifyMonster') return !!piece || state.events.revivals.some((r) => r.piece.id === id);
+      if (effect.kind === 'modifyEnemy') return !!piece || state.events.revivals.some((r) => r.piece.id === id);
       return !!piece;
     });
 }
@@ -189,10 +189,10 @@ function nothingToDo(state: GameState, effects: EventEffect[], thisId?: string):
   return targeted.every((e) => liveTargets(state, e, thisId).length === 0);
 }
 
-/** Dove si trova un oggetto: con un eroe, con un mostro, a terra (un segnalino non raccolto) o da nessuna parte (`none`). */
-export function itemLocation(state: GameState, itemId: string): 'mercenary' | 'monster' | 'ground' | 'none' {
+/** Dove si trova un oggetto: con un eroe, con un nemico, a terra (un segnalino non raccolto) o da nessuna parte (`none`). */
+export function itemLocation(state: GameState, itemId: string): 'mercenary' | 'enemy' | 'ground' | 'none' {
   if (state.pieces.some((p) => p.team === 'mercenary' && (p.equipped?.includes(itemId) || p.backpack?.includes(itemId)))) return 'mercenary';
-  if (state.pieces.some((p) => p.team === 'monster' && p.equipped?.includes(itemId))) return 'monster';
+  if (state.pieces.some((p) => p.team === 'enemy' && p.equipped?.includes(itemId))) return 'enemy';
   if (state.markers.some((m) => m.type === 'item' && m.itemId === itemId && !m.collected)) return 'ground';
   return 'none';
 }
@@ -244,7 +244,7 @@ export function runEvents(state: GameState, trigger: EventTrigger, subject?: Pie
 
 /** Quanti nemici di questo evento "non c'è più nessuno" ci sono adesso: nella mappa (o nell'area) e, se la lista è scritta, fra quelli scelti. Chi aspetta di tornare in vita conta come presente. */
 function presentCount(state: GameState, when: Extract<EventTrigger, { kind: 'cleared' }>): number {
-  const chosen = (p: Piece) => p.team === 'monster' && (!when.pieceIds?.length || when.pieceIds.includes(p.id));
+  const chosen = (p: Piece) => p.team === 'enemy' && (!when.pieceIds?.length || when.pieceIds.includes(p.id));
   const inArea = (p: Piece) => !when.area || footprint(p).some((c) => state.board?.areaAt(c) === when.area);
   const onMap = state.pieces.filter((p) => !p.city && chosen(p) && inArea(p)).length;
   const waiting = when.area ? 0 : state.events.revivals.filter((r) => chosen(r.piece)).length + (state.events.delayed ?? []).filter(chosen).length;
@@ -277,7 +277,7 @@ const clearedKey = (e: AdventureEvent, index: number): string => (index === 0 ? 
 
 /**
  * Guarda gli eventi "non c'è più nessuno": se il gruppo c'era e adesso non c'è più, l'evento scatta. Va chiamata dopo ciò che può svuotare un gruppo (una sconfitta, una rimozione,
- * un mostro che esce camminando): la scena lo fa a ogni aggiornamento. Un evento può svuotare un altro gruppo, quindi si ripete finché non cambia più niente.
+ * un nemico che esce camminando): la scena lo fa a ogni aggiornamento. Un evento può svuotare un altro gruppo, quindi si ripete finché non cambia più niente.
  */
 export function checkCleared(state: GameState): EventReport {
   const report: EventReport = { revive: null, modified: [] };
@@ -321,7 +321,7 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
     case 'setVariable':
       ev.variables[effect.variable] = effect.value;
       return;
-    case 'modifyMonster': {
+    case 'modifyEnemy': {
       for (const id of targetIds(effect, report)) {
         const piece = state.pieces.find((p) => p.id === id) ?? ev.revivals.find((r) => r.piece.id === id)?.piece;
         if (!piece) continue;

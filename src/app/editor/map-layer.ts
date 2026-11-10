@@ -6,7 +6,7 @@ import { Door, DoorSpan } from '../game/board/door';
 import { DoorView } from '../game/doors/door-view';
 import { Obstacle, obstacleCells, pitGroups } from '../game/board/obstacle';
 import { ObstacleView } from '../game/obstacles/obstacle-view';
-import { MonsterView, PlacedMonster } from './monster-view';
+import { EnemyView, PlacedEnemy } from './enemy-view';
 import { MissingItem, MissingView } from './missing-view';
 import type { Marker, Stairs } from '../game/board/marker';
 import { ChestView } from '../game/markers/chest-view';
@@ -110,9 +110,9 @@ export class EditorMapLayer {
   private readonly previewPickup: PickupView;
   private markers: Marker[] = [];
   private markerProvider: ((cell: Cell) => { marker?: Marker; startCell?: Cell; valid: boolean } | null) | null = null;
-  private monsterView: MonsterView | null = null;
+  private enemyView: EnemyView | null = null;
   private readonly missingView = new MissingView();
-  private monsterProvider: ((at: Cell) => { shown: PlacedMonster; valid: boolean } | null) | null = null;
+  private enemyProvider: ((at: Cell) => { shown: PlacedEnemy; valid: boolean } | null) | null = null;
   private obstacles: Obstacle[] = [];
   /** I muri dell'avventura, e l'anteprima di quello in mano. */
   private walls: Wall[] = [];
@@ -687,25 +687,25 @@ export class EditorMapLayer {
     this.drawStart(this.previewStart, r?.startCell ? [r.startCell] : [], r && !r.valid ? theme.color.invalid : theme.color.accentReach);
   }
 
-  /** Le immagini dei mostri (già caricate): da qui in poi si possono disegnare. */
-  setMonsterTextures(textures: ReadonlyMap<string, import('pixi.js').Texture>) {
-    this.monsterView = new MonsterView(textures);
-    this.container.addChildAt(this.monsterView.container, this.container.getChildIndex(this.areaGraphics));
+  /** Le immagini dei nemici (già caricate): da qui in poi si possono disegnare. */
+  setEnemyTextures(textures: ReadonlyMap<string, import('pixi.js').Texture>) {
+    this.enemyView = new EnemyView(textures);
+    this.container.addChildAt(this.enemyView.container, this.container.getChildIndex(this.areaGraphics));
   }
 
-  setMonsters(list: readonly PlacedMonster[]) {
-    this.monsterView?.setMonsters(list);
+  setEnemies(list: readonly PlacedEnemy[]) {
+    this.enemyView?.setEnemies(list);
   }
 
-  /** Attiva (o spegne con null) l'anteprima del mostro in mano: per il punto sotto il puntatore `provider` dice dove andrebbe e se si può. */
-  setMonsterProvider(provider: ((at: Cell) => { shown: PlacedMonster; valid: boolean } | null) | null) {
-    this.monsterProvider = provider;
-    this.updateMonsterPreview();
+  /** Attiva (o spegne con null) l'anteprima del nemico in mano: per il punto sotto il puntatore `provider` dice dove andrebbe e se si può. */
+  setEnemyProvider(provider: ((at: Cell) => { shown: PlacedEnemy; valid: boolean } | null) | null) {
+    this.enemyProvider = provider;
+    this.updateEnemyPreview();
   }
 
-  private updateMonsterPreview() {
-    const r = this.monsterProvider && this.hover ? this.monsterProvider(this.hover) : null;
-    this.monsterView?.setPreview(r ? r.shown : null, r?.valid ?? true);
+  private updateEnemyPreview() {
+    const r = this.enemyProvider && this.hover ? this.enemyProvider(this.hover) : null;
+    this.enemyView?.setPreview(r ? r.shown : null, r?.valid ?? true);
   }
 
   /** Fra due caselle vicine (in orizzontale o in verticale) non c'è un muro? Le porte non contano. */
@@ -811,7 +811,7 @@ export class EditorMapLayer {
     this.updateDoorPreview();
     this.updateObstaclePreview();
     this.updateWallPreview();
-    this.updateMonsterPreview();
+    this.updateEnemyPreview();
     this.updateMarkerPreview();
     this.redraw();
   }

@@ -107,7 +107,7 @@ export class MarkerView {
     this.held.add(marker);
   }
 
-  /** Lascia che il glifo mostri il suo stato vero: se è acceso parte l'animazione dell'accensione. */
+  /** Lascia che il glifo nemici il suo stato vero: se è acceso parte l'animazione dell'accensione. */
   release(marker: Glyph) {
     this.held.delete(marker);
   }

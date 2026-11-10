@@ -2,11 +2,11 @@ import { translate as t } from '../../i18n/i18n.service';
 import type { Obstacle } from '../board/obstacle';
 
 /**
- * Un comportamento speciale di un nemico: un vincolo su dove può fermarsi, uguale per lo script e per il Maligno umano (`monsterMayStop` in `state/adversary.ts`).
+ * Un comportamento speciale di un nemico: un vincolo su dove può fermarsi, uguale per lo script e per il Maligno umano (`enemyMayStop` in `state/adversary.ts`).
  * - `stay`: non lascia la sua casella (attacca solo chi gli è a portata).
  * - `endNear`: finisce sempre il turno accanto all'ostacolo che ha come casella (`x`, `y`: quella da cui parte, come nell'avventura); può muoversi e attaccare, ma solo per fermarsi in una casella accanto.
  * - `carry`: raccoglie gli oggetti trasportabili (`ItemDef.carried`): si ferma sulla loro casella e li prende (non è un vincolo ma una capacità, vedi `state/behaviors.ts`); con `itemId` solo quell'oggetto, senza qualsiasi oggetto trasportabile.
- * - `useItem`: attacca come un eroe con quell'oggetto (arma del catalogo, che non va nel suo equipaggiamento): i suoi dadi e le sue scintille, più `melee`/`ranged`/`intrusion` dadi competenza (neri) per quel tipo di attacco, che i mostri normalmente non hanno. Non è un vincolo sulle caselle.
+ * - `useItem`: attacca come un eroe con quell'oggetto (arma del catalogo, che non va nel suo equipaggiamento): i suoi dadi e le sue scintille, più `melee`/`ranged`/`intrusion` dadi competenza (neri) per quel tipo di attacco, che i nemici normalmente non hanno. Non è un vincolo sulle caselle.
  * Senza comportamento il nemico gioca come sempre.
  */
 export interface UseItemDice { melee?: number; ranged?: number; intrusion?: number }
@@ -14,10 +14,10 @@ export interface UseItemDice { melee?: number; ranged?: number; intrusion?: numb
 export type UseItemMode = 'alternate' | 'random';
 export type PawnBehavior = { kind: 'stay' } | { kind: 'endNear'; x: number; y: number } | { kind: 'carry'; itemId?: string } | ({ kind: 'useItem'; itemId: string; mode?: UseItemMode } & UseItemDice);
 
-/** Un comportamento valido per tutta l'avventura (`MapData.behaviors`): per i mostri dei tipi elencati (id del catalogo) o, senza elenco, per tutti; un mostro può ignorarlo (Personalizza). */
+/** Un comportamento valido per tutta l'avventura (`MapData.behaviors`): per i nemici dei tipi elencati (id del catalogo) o, senza elenco, per tutti; un nemico può ignorarlo (Personalizza). */
 export interface GlobalBehavior {
   behavior: PawnBehavior;
-  monsters?: string[];
+  enemies?: string[];
 }
 
 export type BehaviorKind = PawnBehavior['kind'];

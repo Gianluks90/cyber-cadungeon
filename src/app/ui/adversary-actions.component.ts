@@ -4,7 +4,7 @@ import { IconComponent } from './icon.component';
 
 /**
  * Gli strumenti del Maligno, in una fila appena sopra il suo footer, a sinistra (come i comandi degli eroi sopra la loro barra: stessa altezza dei
- * tasti, 34 px, 44 col dito). Qui i tasti hanno anche l'etichetta. Per ora uno: "Mostri automatici", acceso/spento al volo. Su un telefono (`inline`) sta
+ * tasti, 34 px, 44 col dito). Qui i tasti hanno anche l'etichetta. Per ora uno: "Nemici automatici", acceso/spento al volo. Su un telefono (`inline`) sta
  * nell'intestazione in alto, nella stessa riga di logo e Salva.
  */
 @Component({
@@ -13,10 +13,10 @@ import { IconComponent } from './icon.component';
   imports: [TrPipe, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <button type="button" class="tool" [class.on]="autoMonsters()" [attr.aria-pressed]="autoMonsters()" [title]="'Se acceso, i mostri agiscono da soli a ogni inizio del tuo turno.' | tr" (click)="toggleAuto.emit()">
+    <button type="button" class="tool" [class.on]="autoEnemies()" [attr.aria-pressed]="autoEnemies()" [title]="'Se acceso, i nemici agiscono da soli a ogni inizio del tuo turno.' | tr" (click)="toggleAuto.emit()">
       <app-icon name="autorenew" [size]="20" />
-      <span class="label">{{ 'Mostri automatici' | tr }}</span>
-      <span class="state">{{ (autoMonsters() ? 'ON' : 'OFF') | tr }}</span>
+      <span class="label">{{ 'Nemici automatici' | tr }}</span>
+      <span class="state">{{ (autoEnemies() ? 'ON' : 'OFF') | tr }}</span>
       <kbd>A</kbd>
     </button>
   `,
@@ -51,8 +51,8 @@ import { IconComponent } from './icon.component';
   `,
 })
 export class AdversaryActionsComponent {
-  /** I mostri agiscono da soli a inizio turno. */
-  readonly autoMonsters = input(false);
+  /** I nemici agiscono da soli a inizio turno. */
+  readonly autoEnemies = input(false);
   /** Dentro l'intestazione in alto (telefono) invece che sopra il footer. */
   readonly inline = input(false);
   readonly toggleAuto = output<void>();

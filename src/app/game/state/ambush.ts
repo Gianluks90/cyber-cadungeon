@@ -13,6 +13,6 @@ export function snapshotSeen(state: GameState): void {
   for (const mercenary of state.pieces) {
     if (mercenary.team !== 'mercenary' || mercenary.city) continue;
     if (!effectsOf(state, mercenary).some((x) => x.effect.kind === 'attack' && x.effect['ifUnseenAtStart'])) continue;
-    mercenary.seenAtStart = state.pieces.filter((p: Piece) => p.team === 'monster' && !p.city && canSeeTarget(state, board, mercenary, p)).map((p) => p.id);
+    mercenary.seenAtStart = state.pieces.filter((p: Piece) => p.team === 'enemy' && !p.city && canSeeTarget(state, board, mercenary, p)).map((p) => p.id);
   }
 }

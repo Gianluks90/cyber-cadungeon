@@ -62,7 +62,7 @@ import { ChestView } from './markers/chest-view';
 import { StairsView } from './markers/stairs-view';
 import { stairsWalls } from './markers/stairs-walls';
 import { loadTokenImages, tokenImage, tokenPortraitUrl } from './markers/token-looks';
-import { monsterTakesItem } from './state/behaviors';
+import { enemyTakesItem } from './state/behaviors';
 import { PickupView } from './markers/pickup-view';
 import { handItem } from './state/events';
 import { ActionChange, ContextAction, CurseHit, drawTreasureFor, armorOf, killMercenary, transformToad, canActOnMap, contextActions, endAdversaryTurn, explore, overclockForMovement, inventoryOf, speedOf, adjacentMercenaries, placeOrder, loseOrdersOnWounds, changeOrder, orderChangeCost } from './state/actions';
@@ -71,21 +71,21 @@ import { FamiliarsView } from './familiars/familiars-view';
 import { loadFamiliarCatalog } from './familiars/familiar';
 import { familiarCost, familiarHas, familiarPath, familiarReach, familiarsOf, spawnFamiliars, weakening } from './state/familiars';
 import { FAMILIAR_CARRY_COST, familiarContextActions, familiarDrop, familiarGive, familiarPickUp } from './state/familiar-carry';
-import { Spot, chooseMonsterTarget, monsterStops, planMonsterMove, settleOverlap } from './state/adversary';
+import { Spot, chooseEnemyTarget, enemyStops, planEnemyMove, settleOverlap } from './state/adversary';
 import { STATUS_NAMES, applyTurnStart, describeStatus, hasStatus, shedStatus, shedStatusCost } from './state/status';
 import { SkillAction, skillActions, useSkill } from './state/skills';
-import { RemovalResult, removeMonster } from './state/loot';
+import { RemovalResult, removeEnemy } from './state/loot';
 import { applyKnockback, knockbackCells, knockbackSteps, pushAway } from './state/knockback';
 import { SETUP_PLAYERS, confirmReading, hasSetup, objectiveText, placeMercenary, startCells, startSetup } from './state/setup';
 import * as cityRules from './state/city';
 import { CityEvent } from '../ui/city-panel.component';
 import { PanelKind } from '../ui/mercenary-panel.component';
-import { MonsterDetails } from '../ui/monster-sheet.component';
+import { EnemyDetails } from '../ui/enemy-sheet.component';
 import { AttackDialogComponent, AttackView, DecisionView } from '../ui/attack-dialog.component';
 import { CatalogCategory, CatalogEntry, ComponentsDialogComponent } from '../ui/components-dialog.component';
 import { MenuItem } from '../ui/logo-button.component';
 import { ItemDef, itemDetail } from './items/item';
-import { AttackOption, AttackPlan, Breath, applyAttack, areaCells, areaVictims, attackOptions, breathDirTo, controlledAttackOptions, monsterAttackOption, planAttack, scriptSparks, resolveAttack } from './state/combat';
+import { AttackOption, AttackPlan, Breath, applyAttack, areaCells, areaVictims, attackOptions, breathDirTo, controlledAttackOptions, enemyAttackOption, planAttack, scriptSparks, resolveAttack } from './state/combat';
 import { POTION_NAMES } from './markers/marker-rules';
 import { MercenaryAction, ORDER_NAMES, Piece, PieceData, StatusKind, createPieces, footprint, occupies } from './pieces/piece';
 import { PillComponent } from '../ui/pill.component';
@@ -140,14 +140,14 @@ import { composeRules } from './state/setup-text';
 import { DEFAULT_PARTY, MercenarySheet, loadAllMercenarySheets, loadMercenarySheets } from './mercenaries/mercenary-sheet';
 import { loadItemCatalog, loadShopStock } from './items/item';
 import { loadSkillCatalog } from './skills/skill';
-import { MonsterDef, loadMonsterCatalog } from './monsters/monster';
+import { EnemyDef, loadEnemyCatalog } from './enemies/enemy';
 import { loadAdversaryCatalog } from './adversary/card';
-import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, adversaryUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnMonster, summonCells, summonQueue, alarmPerTurn } from './state/adversary-deck';
+import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, adversaryUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnEnemy, summonCells, summonQueue, alarmPerTurn } from './state/adversary-deck';
 import { ruleAmount } from './state/effects';
 import { DieColor } from './items/item';
 import { FaceRoll } from './dice/faces';
 import { ArmedTrap, TrapSpot, armTrap, armTrapAt, consumeTrap, freeAdjacentCell, isBlank, trapCost, trapDamageBonus, trapLimitReached, trapSpots, sparks, woundIgnoringArmor } from './state/traps';
-import { HORDE_TYPES, hordeAnchors, isDormant, monstersIn, revealArea, upgradeMonster, upgradeOptions } from './state/areas';
+import { HORDE_TYPES, hordeAnchors, isDormant, enemiesIn, revealArea, upgradeEnemy, upgradeOptions } from './state/areas';
 import { PendingCheck, armCleared, checkCleared, checkDiceCount, refuseCheck, resolveCheck, runEvents } from './state/events';
 import { inflictStatus, keywordLevel } from './state/status';
 import { DiceService } from './dice/dice.service';
@@ -213,7 +213,7 @@ const HINTS: Record<Mode, string> = {
     @if (adversaryTrapInfo(); as t) {
       <div class="summon-bar" role="status"><span>{{ t }}</span><button type="button" (click)="endTrap()">{{ 'Annulla' | tr }}</button></div>
     }
-    @if (adversarySelInfo(); as a) { <app-adversary-activation [monster]="a" [slots]="mercenarySlots()" (done)="endAdversaryActivation()" /> }
+    @if (adversarySelInfo(); as a) { <app-adversary-activation [enemy]="a" [slots]="mercenarySlots()" (done)="endAdversaryActivation()" /> }
     @if (knockback(); as k) {
       <div class="knockback" role="status">{{ 'Contraccolpo: tocca una casella evidenziata per spostare {name} (fino a 3 spazi)' | tr: { name: k.name } }}<button type="button" (click)="chooseKnockback(null)">{{ 'Resta fermo' | tr }}</button></div>
     }
@@ -233,8 +233,8 @@ const HINTS: Record<Mode, string> = {
     <div class="top" [class.adversary]="adversaryMode">
       <app-logo-button [items]="menuItems" (chosen)="onMenu($event)" />
       <button type="button" class="save" [class.done]="justSaved()" [attr.aria-label]="'Salva la partita' | tr" [title]="'Salva la partita' | tr" (click)="save()"><app-icon [name]="justSaved() ? 'check' : 'save'" [size]="20" /><span class="label">{{ 'Salva' | tr }}</span></button>
-      <!-- Telefono, vista del Maligno: lo strumento "Mostri automatici" sta nell'intestazione, con il logo e Salva. -->
-      @if (barsIn() && adversaryMode && narrow()) { <app-adversary-actions [inline]="true" [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
+      <!-- Telefono, vista del Maligno: lo strumento "Nemici automatici" sta nell'intestazione, con il logo e Salva. -->
+      @if (barsIn() && adversaryMode && narrow()) { <app-adversary-actions [inline]="true" [autoEnemies]="enemiesAuto()" (toggleAuto)="enemiesAuto.set(!enemiesAuto())" /> }
       @if (defeated()) { <app-pill icon="skull" [label]="'Sconfitta' | tr" class="alert" /> }
     </div>
     <!-- Contatori sul bordo sinistro (come i comandi della camera sul destro): solo icona e valore, l'etichetta si apre al passaggio. -->
@@ -249,11 +249,11 @@ const HINTS: Record<Mode, string> = {
     @if (barsIn() && adversaryMode) { <app-adversary-footer [round]="round()" [phase]="stepName()" [passLabel]="passLabel()" [passBusy]="commandsBusy()" (pass)="adversaryPass()" /> }
     @if (barsIn() && adversaryMode) { <app-adversary-hand [cards]="handCards()" [step]="adversaryStep()" [discarding]="adversaryStep() === 'hand' && handExcessN() > 0" (consume)="consumeAt($event)" (play)="playAt($event)" (discard)="discardAt($event)" (denied)="showNotice($event, 'warning', 'adversary')" /> }
     @if (barsIn() && adversaryMode) { <app-adversary-deck [count]="deckLeft()" /> }
-    @if (barsIn() && adversaryMode && !narrow()) { <app-adversary-actions [autoMonsters]="monstersAuto()" (toggleAuto)="monstersAuto.set(!monstersAuto())" /> }
+    @if (barsIn() && adversaryMode && !narrow()) { <app-adversary-actions [autoEnemies]="enemiesAuto()" (toggleAuto)="enemiesAuto.set(!enemiesAuto())" /> }
     @if (adversaryAreaInfo(); as a) { <app-adversary-area-dialog [area]="a" (closed)="adversaryAreaInfo.set(null)" /> }
     @if (adversaryTurnDialog(); as t) { <app-adversary-turn-dialog [from]="t.from" [to]="t.to" (ok)="closeAdversaryTurnDialog()" /> }
     @if (barsIn() && !adversaryMode) { <app-adversary-panel [slots]="mercenarySlots()" [hasObjective]="hasObjective()" (objective)="showObjective()" [view]="adversaryView()" [playing]="adversaryBusy()" [alarm]="alarm()" [deck]="deckLeft()" [hand]="handCount()" (toggle)="toggleAdversaryView()" /> }
-    @if (barsIn()) { <app-party-bar [publicView]="adversaryMode" [compact]="adversaryMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [monster]="monsterInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendOverclock)="spendOverclockForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (monsterClosed)="monsterPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
+    @if (barsIn()) { <app-party-bar [publicView]="adversaryMode" [compact]="adversaryMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [enemy]="enemyInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendOverclock)="spendOverclockForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (enemyClosed)="enemyPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
     <!-- Footer temporaneo: tiene i comandi a schermo fuori dalla barra degli eroi. -->
     @if (hint()) { <footer class="footer keyboard-hints"><p class="hint">{{ hint() }}</p></footer> }
     @if (barsIn() && !settingUp() && !adversaryMode) { <app-action-controls [style.visibility]="familiarMove() ? 'hidden' : null" [slots]="mercenarySlots()" [runes]="runes()" [action]="activeAction()" [busy]="commandsBusy()" (chosen)="tapCommand($event)" /> }
@@ -288,7 +288,7 @@ const HINTS: Record<Mode, string> = {
     /* Contraccolpo: la barra in basso al centro (sopra i tab) che dice cosa fare; in alto al centro ci sono le notifiche */
     /* La scelta della casella di partenza: la barra in alto al centro che dice cosa fare */
     .setup-prompt { position: absolute; z-index: 12; top: calc(12px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); padding: 8px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-interact); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); text-align: center; pointer-events: none; }
-    /* La barra dell'evocazione (vista del Maligno): sotto la barra degli eroi come la box del mostro in attivazione, bordo rosso. */
+    /* La barra dell'evocazione (vista del Maligno): sotto la barra degli eroi come la box del nemico in attivazione, bordo rosso. */
     .summon-bar { position: absolute; z-index: 24; left: 50%; transform: translateX(-50%); top: calc(12px + env(safe-area-inset-top) + 76px + 26px + 8px); display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-faction-adversary); color: var(--c-text); font: 13px/1.3 var(--font-ui); max-width: calc(100vw - 24px); }
     .summon-bar strong { font-weight: 600; }
     .summon-bar button { padding: 4px 14px; border-radius: var(--radius-1); background: none; color: var(--c-faction-adversary); cursor: pointer; border: 1px solid var(--c-faction-adversary); font: 600 12px/1.2 var(--font-ui); text-transform: uppercase; letter-spacing: var(--label-tracking); }
@@ -297,7 +297,7 @@ const HINTS: Record<Mode, string> = {
     .knockback button { padding: 4px 12px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 12px/1.2 var(--font-ui); }
     .knockback button:hover { border-color: var(--c-interact); color: var(--c-interact); }
     @media (max-width: 720px) { .top { max-width: calc(100% - 232px) !important; } }
-    /* Vista del Maligno su un telefono: un'intestazione sola in alto (logo, Salva e "Mostri automatici" in una riga, senza la scritta di Salva); sotto, la barra degli eroi e le barre delle scelte (44 px di intestazione + 8 di distanza + 56 della barra + 26 della Conquista). */
+    /* Vista del Maligno su un telefono: un'intestazione sola in alto (logo, Salva e "Nemici automatici" in una riga, senza la scritta di Salva); sotto, la barra degli eroi e le barre delle scelte (44 px di intestazione + 8 di distanza + 56 della barra + 26 della Conquista). */
     @media (max-width: 760px) {
       .top.adversary { width: calc(100% - 24px); max-width: calc(100% - 24px) !important; flex-wrap: nowrap; align-items: center; }
       .top.adversary .save .label { display: none; }
@@ -386,15 +386,15 @@ export class GameSceneComponent implements OnDestroy {
   protected readonly barsIn = signal(false);
   /** Il pannello aperto (informazioni o inventario) dal tab di un eroe, se ce n'è uno. */
   protected readonly panel = signal<{ id: string; kind: PanelKind } | null>(null);
-  /** La vista del Maligno (provvisoria: toccando il tab del Maligno): si vedono tutti i mostri e toccandone uno si apre la sua scheda. I giocatori non conoscono i parametri dei nemici. */
+  /** La vista del Maligno (provvisoria: toccando il tab del Maligno): si vedono tutti i nemici e toccandone uno si apre la sua scheda. I giocatori non conoscono i parametri dei nemici. */
   protected readonly adversaryView = signal(false);
   /** "Inizia il tuo turno" (`/adversary/<map>`): l'Odio prima e dopo aver ricevuto quello del turno. Finché c'è, la dialog non si chiude se non con OK. */
   protected readonly adversaryTurnDialog = signal<{ from: number; to: number } | null>(null);
   private adversaryTurnDone: (() => void) | null = null;
-  /** "Mostri automatici" (`/adversary/<map>`, tasto A): acceso, a inizio turno i mostri agiscono da soli. Parte spento. */
-  protected readonly monstersAuto = signal(false);
-  /** Il mostro che il Maligno sta attivando a mano (`/adversary/<map>`) e dove può fermarsi, per casella. */
-  private adversarySel: { monster: Piece; stops: Map<string, Spot> } | null = null;
+  /** "Nemici automatici" (`/adversary/<map>`, tasto A): acceso, a inizio turno i nemici agiscono da soli. Parte spento. */
+  protected readonly enemiesAuto = signal(false);
+  /** Il nemico che il Maligno sta attivando a mano (`/adversary/<map>`) e dove può fermarsi, per casella. */
+  private adversarySel: { enemy: Piece; stops: Map<string, Spot> } | null = null;
   /** Per la barra dell'attivazione: nome, punti movimento e attacchi che restano. */
   protected readonly adversarySelInfo = signal<ActivationView | null>(null);
   /** La descrizione di un'area aperta con la `i` della sua etichetta (vista del Maligno). */
@@ -413,10 +413,10 @@ export class GameSceneComponent implements OnDestroy {
   /** La domanda "Concludere la partita?" è aperta. */
   protected readonly confirmQuit = signal(false);
   protected readonly catalog = signal<CatalogCategory[]>([]);
-  /** Il catalogo dei mostri caricato all'avvio (per il catalogo dei componenti). */
+  /** Il catalogo dei nemici caricato all'avvio (per il catalogo dei componenti). */
   /** Nome e testo delle aree dell'avventura (dalla mappa). */
   private areaInfo = new Map<string, { name?: string; subtitle?: string; text?: string; label?: { x: number; y: number } }>();
-  private monsterDefs: ReadonlyMap<string, MonsterDef> = new Map();
+  private enemyDefs: ReadonlyMap<string, EnemyDef> = new Map();
   /** Il nemico toccato per attaccarlo (il menu delle armi è aperto sopra di lui) e le armi che si possono usare. */
   protected readonly attackTarget = signal<string | null>(null);
   protected readonly attackActions = signal<ContextAction[]>([]);
@@ -458,12 +458,12 @@ export class GameSceneComponent implements OnDestroy {
     const target = this.state?.pieces.find((p) => p.id === se?.targetId);
     if (!se || !attacker || !target) return null;
     const outcome = se.step === 'rolled' ? resolveAttack(this.state, target, se.plan, se.rolls, se.choices, se.spent, se.sorcery) : null;
-    const side = (p: Piece) => ({ name: p.name, subtitle: p.team === 'mercenary' ? p.mercenaryClass : p.enhanced ? tr('Mostro potenziato') : tr('Mostro'), portrait: p.portraitFull ?? p.portrait, team: p.team, enhanced: p.enhanced, wounds: p.wounds, maxWounds: p.maxWounds });
+    const side = (p: Piece) => ({ name: p.name, subtitle: p.team === 'mercenary' ? p.mercenaryClass : p.enhanced ? tr('Nemico potenziato') : tr('Nemico'), portrait: p.portraitFull ?? p.portrait, team: p.team, enhanced: p.enhanced, wounds: p.wounds, maxWounds: p.maxWounds });
     return {
       attacker: side(attacker),
       target: { ...side(target), armor: target.team === 'mercenary' ? armorOf(this.state, target, se.option.attack) : target.armor, invincible: !!target.invincible },
       auto: !!se.auto,
-      weapon: { lead: attacker.team === 'monster' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), intrusion: tr('di Intrusione') }[se.option.attack], dice: se.option.dice },
+      weapon: { lead: attacker.team === 'enemy' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), intrusion: tr('di Intrusione') }[se.option.attack], dice: se.option.dice },
       distance: se.plan.distance, needsRange: se.plan.needsRange, bonuses: se.plan.sources, step: se.step,
       overclock: attacker.overclock, blackDice: se.rolls.filter((r) => r.color === 'black').length,
       sweep: se.step === 'preview' && !se.auto && attacker.team === 'mercenary' && se.option.attack === 'melee' && ruleAmount(this.state, attacker, 'sweepAttack') > 0 && (!se.plan.area.sweep || !!se.sweepPaid) // un'arma che ha già Spazzata non ne ha bisogno
@@ -485,14 +485,14 @@ export class GameSceneComponent implements OnDestroy {
       outcome,
     };
   });
-  protected readonly monsterPanel = signal<string | null>(null);
-  protected readonly monsterInfo = computed<MonsterDetails | null>(() => {
+  protected readonly enemyPanel = signal<string | null>(null);
+  protected readonly enemyInfo = computed<EnemyDetails | null>(() => {
     void this.members(); // si ricalcola a ogni cambio dello stato (ferite, ecc.)
-    const p = this.state?.pieces.find((q) => q.id === this.monsterPanel() && q.team === 'monster');
-    if (!p) return null; // le carte dei mostri sono pubbliche: la scheda si apre anche nella vista dei giocatori
+    const p = this.state?.pieces.find((q) => q.id === this.enemyPanel() && q.team === 'enemy');
+    if (!p) return null; // le carte dei nemici sono pubbliche: la scheda si apre anche nella vista dei giocatori
     const attack = p.attackType ? { melee: tr('Mischia'), ranged: tr('Distanza'), intrusion: tr('Intrusione') }[p.attackType] : '—';
     return {
-      id: p.id, name: p.name, mercenaryClass: p.enhanced ? tr('Mostro potenziato') : tr('Mostro'), enhanced: p.enhanced, portrait: p.portrait, portraitFull: p.portraitFull,
+      id: p.id, name: p.name, mercenaryClass: p.enhanced ? tr('Nemico potenziato') : tr('Nemico'), enhanced: p.enhanced, portrait: p.portrait, portraitFull: p.portraitFull,
       wounds: p.wounds, maxWounds: p.maxWounds, speed: p.speed, armor: p.armor, invincible: !!p.invincible, attack, dice: p.attackDice, abilities: p.traits, size: `${p.size.w}×${p.size.h}`, states: describeStatus(p.status), poison: p.status.poison,
     };
   });
@@ -614,8 +614,8 @@ export class GameSceneComponent implements OnDestroy {
       const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards } : {}) }));
       const mapData = party.length ? { ...data, pieces: [...party, ...(data.pieces ?? [])] } : data;
       const sheets = await loadMercenarySheets((mapData.pieces ?? []).map((p) => p.mercenary));
-      const [items, shopStock, skills, monsters, adversaryCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadMonsterCatalog(), loadAdversaryCatalog(), loadFamiliarCatalog()]);
-      this.monsterDefs = monsters;
+      const [items, shopStock, skills, enemies, adversaryCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadEnemyCatalog(), loadAdversaryCatalog(), loadFamiliarCatalog()]);
+      this.enemyDefs = enemies;
       const names = areaNames(data.areas ?? []);
       this.areaInfo = new Map((data.areas ?? []).map((a) => [a.id, { ...a, name: names.get(a.id) }]));
       this.areaOrder = (data.areas ?? []).map((a) => ({ id: a.id, start: !!a.start }));
@@ -624,9 +624,9 @@ export class GameSceneComponent implements OnDestroy {
         this.saves.clear(mapName);
         void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true }); // così un refresh riprende l'autosalvataggio
       }
-      const resumed = this.adversaryMode ? null : this.resumeGame(data, items, skills, monsters, adversaryCards);
+      const resumed = this.adversaryMode ? null : this.resumeGame(data, items, skills, enemies, adversaryCards);
       this.resumedGame = !!resumed;
-      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Mercenario 1'), team: 'mercenary', x: start.x, y: start.y }], sheets, items, shopStock, skills, monsters, adversaryCards);
+      this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Mercenario 1'), team: 'mercenary', x: start.x, y: start.y }], sheets, items, shopStock, skills, enemies, adversaryCards);
       this.state.familiarDefs = familiarDefs;
       // I tesori comprati in preparazione: ora che i mazzi esistono si pesca la carta (come in città); a mazzo vuoto le monete tornano all'eroe.
       if (!resumed && !hasMercenaries) {
@@ -665,11 +665,11 @@ export class GameSceneComponent implements OnDestroy {
       );
       this.familiarsView = new FamiliarsView(app.ticker, this.state, portraits, (cell) => this.familiarCohabitant(cell), (id) => this.pieces?.worldPosOf(id) ?? null);
       this.familiarsLayer.addChild(this.familiarsView.container);
-      // Dopo ogni passo di un eroe si ricalcola cosa vede il gruppo; se compare un mostro, il movimento si ferma.
+      // Dopo ogni passo di un eroe si ricalcola cosa vede il gruppo; se compare un nemico, il movimento si ferma.
       this.markerView!.stateProvider = () => this.glyphState();
-      this.pieces.onMonsterClick = (piece) => {
+      this.pieces.onEnemyClick = (piece) => {
         if (this.adversaryMode) {
-          this.adversaryMonsterClick(piece); // il Maligno: un mostro da attivare si attiva, gli altri aprono la scheda
+          this.adversaryEnemyClick(piece); // il Maligno: un nemico da attivare si attiva, gli altri aprono la scheda
           return;
         }
         if (!this.adversaryView()) {
@@ -677,9 +677,9 @@ export class GameSceneComponent implements OnDestroy {
           return;
         }
         this.panel.set(null); // un solo pannello alla volta
-        this.monsterPanel.set(piece.id);
+        this.enemyPanel.set(piece.id);
       };
-      this.pieces.onMonsterStep = (m, before) => !!this.board && (vigilanceChances(this.state, this.board, m, before).length > 0 || guardChances(this.state, this.board, m, this.guardDeclined).length > 0) && ((this.vigilanceFrom = before), true);
+      this.pieces.onEnemyStep = (m, before) => !!this.board && (vigilanceChances(this.state, this.board, m, before).length > 0 || guardChances(this.state, this.board, m, this.guardDeclined).length > 0) && ((this.vigilanceFrom = before), true);
       this.pieces.onDied = (piece) => {
         this.showNotice(this.fallenNotice(piece), 'skull');
         this.pass();
@@ -692,7 +692,7 @@ export class GameSceneComponent implements OnDestroy {
           if (event.kind === 'picked-up') this.pickupView?.redraw(this.board!, (m) => !this.fogOn() || this.exploration.markers.has(m));
         }
         this.afterDrop(outcome.drop);
-        if (outcome.opened?.length) this.monsterOpenedDoors(_piece, outcome.opened);
+        if (outcome.opened?.length) this.enemyOpenedDoors(_piece, outcome.opened);
         if (outcome.trap && _piece.team === 'mercenary') {
           void this.resolveTrap(_piece, outcome.trap); // una trappola armata scatta: il movimento si ferma
           return true;
@@ -712,7 +712,7 @@ export class GameSceneComponent implements OnDestroy {
         this.pieces?.setViewOnly(true); // il Maligno guarda gli eroi, non li comanda
         this.areaLabelView.setTools(true); // accanto a ogni etichetta d'area: inquadra e informazioni
         this.state.adversaryManual = true; // le trappole le arma il Maligno, non lo script
-        this.pieces?.setActivationDots((m) => activationOf(this.state, this.board ?? null, m)); // il pallino verde / giallo / grigio sui mostri
+        this.pieces?.setActivationDots((m) => activationOf(this.state, this.board ?? null, m)); // il pallino verde / giallo / grigio sui nemici
       }
       this.rebuildBoard();
       this.hasObjective.set(!!this.state.objective);
@@ -828,7 +828,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * Nel turno del Maligno, quando un mostro attacca un eroe: la camera si adatta (pan e, se serve, zoom indietro) perché entrambe le pedine stiano
+   * Nel turno del Maligno, quando un nemico attacca un eroe: la camera si adatta (pan e, se serve, zoom indietro) perché entrambe le pedine stiano
    * nell'area libera dello schermo (sotto i contatori e sopra la barra degli eroi). Se ci stanno già, non si muove.
    */
   private async frameBoth(a: Piece, b: Piece) {
@@ -904,7 +904,7 @@ export class GameSceneComponent implements OnDestroy {
     const revealed = explore(this.state, this.board); // quello che si vede subito, senza animazione
     this.applyVisibility();
     this.refreshContext();
-    return revealed; // chi vuole può mostrare le aree appena rivelate (la descrizione, i poteri dei mostri): lo fa `finishSetup`
+    return revealed; // chi vuole può mostrare le aree appena rivelate (la descrizione, i poteri dei nemici): lo fa `finishSetup`
   }
 
   /** Giocando si vede solo ciò che gli eroi hanno visto; negli strumenti di piazzamento si vede tutto, perché l'autore deve poter lavorare. */
@@ -933,7 +933,7 @@ export class GameSceneComponent implements OnDestroy {
     g.pickups.redraw(board, on ? hidden : () => false);
   }
 
-  /** Ridisegna ostacoli, porte, velo e mostri secondo ciò che è rivelato. */
+  /** Ridisegna ostacoli, porte, velo e nemici secondo ciò che è rivelato. */
   private applyVisibility() {
     const board = this.board;
     if (!board) return;
@@ -949,7 +949,7 @@ export class GameSceneComponent implements OnDestroy {
     this.pickupView?.redraw(board, fog ? (m) => this.exploration.markers.has(m) : undefined);
     this.veil?.setState(board, fog ? this.exploration.cells : null);
     this.syncTorches();
-    this.syncMonsterVisibility(fog);
+    this.syncEnemyVisibility(fog);
     this.pieces?.setKnownMarkers(fog ? this.exploration.markers : null); // si viaggia solo verso glifi già scoperti
   }
 
@@ -1031,7 +1031,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /**
    * Ricalcola cosa vede il gruppo e mostra le novità: il velo svanisce sulle caselle nuove, compaiono ostacoli, porte
-   * e mostri rivelati. Restituisce true se è comparso un mostro (chi si sta muovendo deve fermarsi).
+   * e nemici rivelati. Restituisce true se è comparso un nemico (chi si sta muovendo deve fermarsi).
    */
   private exploreAndNotify(): boolean {
     if (!this.board || !this.fogOn()) return false;
@@ -1048,20 +1048,20 @@ export class GameSceneComponent implements OnDestroy {
     }
     this.veil?.reveal(r.cells);
     if (r.cells.length) this.syncTorches(); // la luce segue ciò che si vede
-    if (r.monsters.length) {
-      this.syncMonsterVisibility(true);
-      this.pieces?.revealMonsters(r.monsters.map((m) => m.id));
-      this.showNotice(tr('Compare: {names}', { names: r.monsters.map((m) => m.name).join(', ') }), 'skull', 'adversary');
+    if (r.enemies.length) {
+      this.syncEnemyVisibility(true);
+      this.pieces?.revealEnemies(r.enemies.map((m) => m.id));
+      this.showNotice(tr('Compare: {names}', { names: r.enemies.map((m) => m.name).join(', ') }), 'skull', 'adversary');
     }
     if (r.areas.length) {
-      this.syncMonsterVisibility(); // i mostri dell'area rivelata riprendono i colori (vista del Maligno)
+      this.syncEnemyVisibility(); // i nemici dell'area rivelata riprendono i colori (vista del Maligno)
       void this.areasRevealed(r.areas);
     }
     this.refreshContext(); // una porta appena vista può diventare un'azione
-    return r.monsters.length > 0 || !!this.state.events.endMercenariesTurn; // un evento che finisce il turno degli eroi ferma anche chi si sta muovendo
+    return r.enemies.length > 0 || !!this.state.events.endMercenariesTurn; // un evento che finisce il turno degli eroi ferma anche chi si sta muovendo
   }
 
-  /** Le aree rivelate per la prima volta: il testo dell'avventura (se c'è), i mostri si svegliano e agiscono Orda di Creature e Abile comandante. */
+  /** Le aree rivelate per la prima volta: il testo dell'avventura (se c'è), i nemici si svegliano e agiscono Orda di Creature e Abile comandante. */
   private async areasRevealed(areas: string[]) {
     if (!this.board) return;
     for (const id of areas) {
@@ -1077,7 +1077,7 @@ export class GameSceneComponent implements OnDestroy {
         await this.announce(tr('Abile comandante'), tr('{names} diventa potenziato.', { names: res.upgraded.map((m) => m.name).join(', ') }));
       }
       if (res.spawned.length) await this.presentSpawned(res.spawned, tr('Orda di Creature'), tr('Appaiono: {names}.', { names: res.spawned.map((m) => m.name).join(', ') }));
-      if (res.spawned.length || res.upgraded.length) this.exploreAndNotify(); // i nuovi mostri possono essere in vista
+      if (res.spawned.length || res.upgraded.length) this.exploreAndNotify(); // i nuovi nemici possono essere in vista
       if (this.state.adversaryManual) {
         await this.manualAreaPowers(id); // Abile comandante e Orda di Creature: li sceglie il Maligno
         this.exploreAndNotify();
@@ -1221,7 +1221,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /** I tasti "i" e della cassa del tab: aprono la scheda con le informazioni o l'inventario dell'eroe, o li chiudono se sono già aperti. */
   protected togglePanel(id: string, kind: PanelKind) {
-    this.monsterPanel.set(null); // un solo pannello alla volta
+    this.enemyPanel.set(null); // un solo pannello alla volta
     this.panel.update((cur) => (cur?.id === id && cur.kind === kind ? null : { id, kind }));
   }
 
@@ -1229,9 +1229,9 @@ export class GameSceneComponent implements OnDestroy {
   private selectAttackTarget(target: Piece) {
     const mercenary = this.pieces?.active;
     if (!mercenary || mercenary.team !== 'mercenary' || !this.board || this.attackSession() || this.adversaryBusy()) return;
-    if (this.fogOn() && !this.exploration.monsters.has(target.id)) return; // un nemico non ancora scoperto non si può toccare
+    if (this.fogOn() && !this.exploration.enemies.has(target.id)) return; // un nemico non ancora scoperto non si può toccare
     if (target.inactive) return; // un nemico inattivo è come un ostacolo: non si attacca
-    // Le carte dei mostri sono pubbliche (come sul tavolo, manuale 3B): oltre alle armi c'è sempre la voce Scheda; se non si può attaccare resta solo quella.
+    // Le carte dei nemici sono pubbliche (come sul tavolo, manuale 3B): oltre alle armi c'è sempre la voce Scheda; se non si può attaccare resta solo quella.
     const options = canActOnMap(this.state, mercenary) ? attackOptions(this.state, this.board, mercenary, target) : [];
     this.attackTarget.set(target.id);
     this.attackActions.set([
@@ -1250,19 +1250,19 @@ export class GameSceneComponent implements OnDestroy {
   protected async startAttack(optionId: string) {
     if (optionId === 'sheet') {
       // La scheda del nemico: stessa cornice dei pannelli degli eroi, sopra la barra.
-      const monster = this.attackTarget();
+      const enemy = this.attackTarget();
       this.closeAttackMenu();
-      if (monster) {
+      if (enemy) {
         this.panel.set(null);
-        this.monsterPanel.set(monster);
+        this.enemyPanel.set(enemy);
       }
       return;
     }
     if (this.adversaryMode) {
-      // Il menu rosso di un mostro del Maligno: Avanza, Carica, Furore.
-      const monster = this.state.pieces.find((p) => p.id === this.attackTarget());
+      // Il menu rosso di un nemico del Maligno: Avanza, Carica, Furore.
+      const enemy = this.state.pieces.find((p) => p.id === this.attackTarget());
       this.closeAttackMenu();
-      if (monster) void this.startActivation(monster, optionId === 'charge' || optionId === 'fury' ? optionId : undefined);
+      if (enemy) void this.startActivation(enemy, optionId === 'charge' || optionId === 'fury' ? optionId : undefined);
       return;
     }
     const mercenary = this.pieces?.active;
@@ -1325,7 +1325,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     const victim = this.state.pieces.find((p) => p.id === cur.targetId);
     // Schivare (non vale vicino a Nero il Corvo): lo script a caso, il Maligno a mano quando lo decide lui, dopo aver visto il tiro.
-    const final = victim?.team === 'monster' && !weakening(this.state, victim).noDodge
+    const final = victim?.team === 'enemy' && !weakening(this.state, victim).noDodge
       ? this.adversaryMode ? ((await this.adversaryPlays('dodge', tr('Schivare · {alarm:{n}}'), tr('Non schivare'))) ? await this.dodgeReroll(rolls) : rolls) : await this.maybeDodge(rolls, cur.plan)
       : rolls;
     if (!this.attackSession()) return;
@@ -1451,7 +1451,7 @@ export class GameSceneComponent implements OnDestroy {
       const left = await this.reduceWounds(target, outcome.damage);
       if (left !== outcome.damage) outcome = { ...outcome, damage: left, poison: outcome.poison > 0 ? left : 0 };
     }
-    // Immortale: se il colpo sarebbe mortale si tira un dado competenza; con una scintilla il mostro si rialza.
+    // Immortale: se il colpo sarebbe mortale si tira un dado competenza; con una scintilla il nemico si rialza.
     let undying = false;
     if (outcome.damage > 0 && outcome.damage >= target.wounds && !outcome.kill && target.traits.some((t) => /^Immortale$/i.test(t))) { // il Tocco della morte ignora Immortale
       const roll = await this.dice.rollFaces(['black']);
@@ -1461,7 +1461,7 @@ export class GameSceneComponent implements OnDestroy {
     // Chi altro è colpito (Spazzata, Esplosione, Soffio): si calcola prima, perché il bersaglio può uscire dalla mappa.
     const hit = !outcome.miss && outcome.inRange && !outcome.feared;
     const shield = se.plan.effects.find((e) => e.blockedBy)?.blockedBy; // la Corazza runica contro il Tocco della morte
-    if (hit && shield) this.showNotice(tr('{name} protegge {target} dal {weapon}', { name: shield, target: target.name, weapon: se.option.name }), 'shield', attacker.team === 'monster' ? 'adversary' : 'mercenary');
+    if (hit && shield) this.showNotice(tr('{name} protegge {target} dal {weapon}', { name: shield, target: target.name, weapon: se.option.name }), 'shield', attacker.team === 'enemy' ? 'adversary' : 'mercenary');
     const victims = hit && this.board ? areaVictims(this.state, this.board, attacker, target, se.plan, se.spent, se.breathDir) : [];
     // Le scintille spese possono allargare un'Esplosione oltre la sagoma già mostrata: in quel caso si fa lampeggiare di nuovo.
     if (hit && this.board && areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir).length > areaCells(this.board, attacker, target, se.plan, [], se.breathDir).length) await this.flashCells(areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir));
@@ -1476,7 +1476,7 @@ export class GameSceneComponent implements OnDestroy {
     if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'water_drop', 'mercenary'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
     const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
-    const by = attacker.team === 'monster' ? 'adversary' : 'mercenary';
+    const by = attacker.team === 'enemy' ? 'adversary' : 'mercenary';
     if (outcome.alarmLoss) this.showHud(this.pieces?.active ?? null);
     if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('L\'Avversario perde 1 punto Allarme') : tr('L\'Avversario perde {n} punti Allarme', { n: outcome.alarmLoss }), 'skull', 'adversary');
     if (result.killed && target.team === 'mercenary') this.showNotice(this.fallenNotice(target), 'skull', by);
@@ -1492,12 +1492,12 @@ export class GameSceneComponent implements OnDestroy {
       const vr = applyAttack(this.state, attacker, v, vo, { extra: true, option: se.option });
       this.pieces?.floatText(v, vo.miss || !vo.inRange ? tr('Mancato') : vo.damage > 0 ? `-${vo.damage}` : '0', vo.damage > 0 ? 'damage' : 'miss');
       this.pieces?.afterCombat(attacker, v, vr.killed);
-      this.pieces?.monstersSlain(vr.slain);
+      this.pieces?.enemiesSlain(vr.slain);
       this.afterDrop(vr.drop);
       this.showNotice(vr.killed ? `${v.name} è ${v.team === 'mercenary' ? 'caduto' : 'sconfitto'}!` : `${se.option.name}: ${vo.damage} ${vo.damage === 1 ? 'ferita' : 'ferite'} a ${v.name}`, vr.killed ? 'skull' : 'swords', by);
     }
     if (result.slain.length) {
-      this.pieces?.monstersSlain(result.slain);
+      this.pieces?.enemiesSlain(result.slain);
       this.showNotice(result.slain.length > 1 ? tr('Giustizia divina: {names} sono uccisi', { names: result.slain.map((m) => m.name).join(', ') }) : tr('Giustizia divina: {names} è ucciso', { names: result.slain.map((m) => m.name).join(', ') }), 'skull', 'mercenary');
     }
     this.exploreAndNotify(); // un nemico in meno cambia cosa si vede
@@ -1541,7 +1541,7 @@ export class GameSceneComponent implements OnDestroy {
     return left;
   }
 
-  /** Il bottino di un mostro appena uscito dalla mappa: si dice cosa ha lasciato e, se un oggetto è caduto a terra, si ridisegna la mappa. */
+  /** Il bottino di un nemico appena uscito dalla mappa: si dice cosa ha lasciato e, se un oggetto è caduto a terra, si ridisegna la mappa. */
   private afterDrop(drop: RemovalResult | null | undefined) {
     if (!drop) return;
     if (drop.lines.length) this.showNotice(tr('Bottino: {lines}', { lines: drop.lines.join(' · ') }), 'inventory_2', 'game');
@@ -1787,7 +1787,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Dopo un attacco con Contraccolpo: l'eroe sceglie dove spostare il bersaglio (o resta fermo), lo script lo spinge lontano. */
   private async startKnockback(attacker: Piece, target: Piece) {
     if (!this.board) return;
-    if (attacker.team === 'monster') {
+    if (attacker.team === 'enemy') {
       const dest = pushAway(this.state, this.board, attacker, target);
       if (dest) {
         await this.sleep(500);
@@ -1821,7 +1821,7 @@ export class GameSceneComponent implements OnDestroy {
     this.afterDrop(out.drop);
     if (out.died) {
       this.pieces?.afterCombat(target, target, true);
-      this.pieces?.monstersSlain(out.slain);
+      this.pieces?.enemiesSlain(out.slain);
       this.showNotice(target.team === 'mercenary' ? this.fallenNotice(target) : tr('{name} è sconfitto!', { name: target.name }), 'skull');
     }
     this.exploreAndNotify();
@@ -1852,7 +1852,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * Gli stati all'inizio del turno di una creatura (un eroe a inizio round, un mostro quando viene attivato): per fiamma e rete un dado competenza per segnalino
+   * Gli stati all'inizio del turno di una creatura (un eroe a inizio round, un nemico quando viene attivato): per fiamma e rete un dado competenza per segnalino
    * (ogni scintilla ne toglie uno), le ferite della fiamma rimasta, la rete che toglie il movimento, uno stordimento che si scarta. Restituisce true se muore.
    */
   private async resolveTurnStart(piece: Piece): Promise<boolean> {
@@ -1874,9 +1874,9 @@ export class GameSceneComponent implements OnDestroy {
     if (r.stunned) this.showNotice((piece.team === 'mercenary' ? tr('{name} è stordito: può solo muoversi o attaccare', { name: piece.name }) : tr('{name} è stordito: perde il turno', { name: piece.name })), 'warning', by);
     if (r.killed) {
       const slain = piece.team === 'mercenary' ? killMercenary(this.state, piece) : [];
-      if (piece.team !== 'mercenary') this.afterDrop(removeMonster(this.state, piece));
+      if (piece.team !== 'mercenary') this.afterDrop(removeEnemy(this.state, piece));
       this.pieces?.afterCombat(piece, piece, true);
-      this.pieces?.monstersSlain(slain);
+      this.pieces?.enemiesSlain(slain);
       this.showNotice(piece.team === 'mercenary' ? this.fallenNotice(piece) : tr('{name} è sconfitto!', { name: piece.name }), 'skull', by);
     } else this.pieces?.roundStarted();
     return r.killed;
@@ -1911,7 +1911,7 @@ export class GameSceneComponent implements OnDestroy {
     this.showNotice(tr('{name} si rigenera: {state} −1', { name: mercenary.name, state: STATUS_NAMES[kind] }), 'water_drop', 'mercenary');
   }
 
-  /** Tocca al Maligno: ogni mostro, uno alla volta, si muove verso l'eroe più vicino e attacca; poi comincia il nuovo round. */
+  /** Tocca al Maligno: ogni nemico, uno alla volta, si muove verso l'eroe più vicino e attacca; poi comincia il nuovo round. */
   /** La scena è pronta: il loader si dissolve (dopo un fotogramma, perché sotto ci sia già il disegno) e poi esce dalla pagina. */
   private finishLoading() {
     // Il loader dura almeno un secondo: con pochi elementi da caricare, altrimenti, sparirebbe così in fretta da sembrare un errore.
@@ -1955,11 +1955,11 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /** La partita salvata di questa avventura, ricostruita; `null` se non c'è o è di una versione che non si legge (allora si comincia da capo). I testi dell'avventura tornano dalla mappa. */
-  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, monsters: Map<string, MonsterDef>, cards: Map<string, AdversaryCardDef>): GameState | null {
+  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, enemies: Map<string, EnemyDef>, cards: Map<string, AdversaryCardDef>): GameState | null {
     const save = this.saves.load(this.mapName);
     if (!save) return null;
     try {
-      const state = GameState.restore(save.snapshot, items, skills, monsters, cards);
+      const state = GameState.restore(save.snapshot, items, skills, enemies, cards);
       state.title = data.title;
       state.intro = data.intro;
       state.rules = composeRules(data.rules, data.setup, (id) => cards.get(id)?.name ?? id);
@@ -1976,7 +1976,7 @@ export class GameSceneComponent implements OnDestroy {
     if (this.adversaryBusy()) return;
     this.adversaryBusy.set(true);
     this.panel.set(null);
-    this.monsterPanel.set(null);
+    this.enemyPanel.set(null);
     this.closeAttackMenu();
     this.cameraScripted = true; // da qui la camera la muove lo script: quella dell'utente resta quella di prima
     try {
@@ -1988,9 +1988,9 @@ export class GameSceneComponent implements OnDestroy {
       } catch (err) {
         console.error('Errore nelle Carte del Male', err); // un errore nelle carte non deve fermare il turno
       }
-      runEvents(this.state, { kind: 'adversaryTurnStart' }); // gli eventi "comincia il turno del Maligno" (dopo Odio e carte, prima dei mostri)
+      runEvents(this.state, { kind: 'adversaryTurnStart' }); // gli eventi "comincia il turno del Maligno" (dopo Odio e carte, prima dei nemici)
       await this.flushEvents();
-      await this.playMonsters();
+      await this.playEnemies();
       if (!this.destroyed && this.state.status === 'playing') {
         const overclockBefore = new Map(this.state.pieces.map((p) => [p.id, p.overclock] as const));
         const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
@@ -2026,30 +2026,30 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  /** Ogni mostro gioca il suo turno, uno alla volta, con lo script (decisioni di `state/adversary.ts`). */
-  private async playMonsters() {
-    for (const id of this.state.pieces.filter((p) => p.team === 'monster').map((p) => p.id)) {
+  /** Ogni nemico gioca il suo turno, uno alla volta, con lo script (decisioni di `state/adversary.ts`). */
+  private async playEnemies() {
+    for (const id of this.state.pieces.filter((p) => p.team === 'enemy').map((p) => p.id)) {
       if (this.destroyed || this.state.status !== 'playing') break;
-      const monster = this.state.pieces.find((p) => p.id === id);
-      if (monster?.done && this.adversaryMode) continue; // già attivato a mano
+      const enemy = this.state.pieces.find((p) => p.id === id);
+      if (enemy?.done && this.adversaryMode) continue; // già attivato a mano
       await this.waitUntil(() => !this.pieces?.isDying(), 6000);
-      if (monster && this.board) await this.monsterTurn(monster);
-      if (monster) monster.done = true; // attivazione completata (il pallino diventa grigio fino al round dopo)
-      await this.waitUntil(() => !this.pieces?.isDying(), 6000); // le miniature morte svaniscono del tutto prima del mostro dopo
+      if (enemy && this.board) await this.enemyTurn(enemy);
+      if (enemy) enemy.done = true; // attivazione completata (il pallino diventa grigio fino al round dopo)
+      await this.waitUntil(() => !this.pieces?.isDying(), 6000); // le miniature morte svaniscono del tutto prima del nemico dopo
       await this.flushEvents();
     }
   }
 
-  /** `/adversary/<map>` con "Mostri automatici" acceso: i mostri giocano da soli, con la camera dello script; poi il turno torna al Maligno, che lo chiude con Passa. */
-  private async autoMonstersTurn() {
+  /** `/adversary/<map>` con "Nemici automatici" acceso: i nemici giocano da soli, con la camera dello script; poi il turno torna al Maligno, che lo chiude con Passa. */
+  private async autoEnemiesTurn() {
     if (this.adversaryBusy()) return;
     this.adversaryBusy.set(true);
     this.panel.set(null);
-    this.monsterPanel.set(null);
+    this.enemyPanel.set(null);
     this.closeAttackMenu();
     this.cameraScripted = true;
     try {
-      await this.playMonsters();
+      await this.playEnemies();
     } finally {
       setTimeout(() => {
         this.cameraScripted = false;
@@ -2059,20 +2059,20 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  // --- `/adversary/<map>`: il Maligno attiva i mostri a mano ---
+  // --- `/adversary/<map>`: il Maligno attiva i nemici a mano ---
 
-  /** Un mostro toccato dal Maligno: se è da attivare si attiva (con un menu rosso se ha le carte Carica o Furore e può pagarle), altrimenti si apre la sua scheda. */
-  private adversaryMonsterClick(monster: Piece) {
-    if (this.adversaryBusy() || this.adversarySel || this.state.phase !== 'adversary' || this.adversaryStep() !== 'activate') { // i mostri si attivano solo nel passo Attivazione
+  /** Un nemico toccato dal Maligno: se è da attivare si attiva (con un menu rosso se ha le carte Carica o Furore e può pagarle), altrimenti si apre la sua scheda. */
+  private adversaryEnemyClick(enemy: Piece) {
+    if (this.adversaryBusy() || this.adversarySel || this.state.phase !== 'adversary' || this.adversaryStep() !== 'activate') { // i nemici si attivano solo nel passo Attivazione
       if (!this.adversarySel && !this.adversaryBusy()) {
         this.panel.set(null);
-        this.monsterPanel.set(monster.id);
+        this.enemyPanel.set(enemy.id);
       }
       return;
     }
-    if (activationOf(this.state, this.board ?? null, monster) !== 'ready') {
+    if (activationOf(this.state, this.board ?? null, enemy) !== 'ready') {
       this.panel.set(null);
-      this.monsterPanel.set(monster.id);
+      this.enemyPanel.set(enemy.id);
       return;
     }
     const cards = (['charge', 'fury'] as const).flatMap((id) => {
@@ -2084,10 +2084,10 @@ export class GameSceneComponent implements OnDestroy {
       return [{ id, kind: 'attack' as const, icon: id === 'charge' ? 'directions_run' : 'swords', label, cost: 0, enabled: enough, reason: enough ? undefined : tr('Allarme insufficiente') }];
     });
     if (!cards.length) {
-      void this.startActivation(monster);
+      void this.startActivation(enemy);
       return;
     }
-    this.attackTarget.set(monster.id);
+    this.attackTarget.set(enemy.id);
     this.attackActions.set([
       { id: 'advance', kind: 'attack' as const, icon: 'bolt', label: tr('Avanza'), cost: 0, enabled: true },
       ...cards,
@@ -2097,77 +2097,77 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * Comincia l'attivazione manuale di un mostro: risolve gli stati di inizio turno (fiamma, rete, stordimento), gioca la carta scelta (Carica: velocità doppia; Furore:
+   * Comincia l'attivazione manuale di un nemico: risolve gli stati di inizio turno (fiamma, rete, stordimento), gioca la carta scelta (Carica: velocità doppia; Furore:
    * due attacchi, quattro con Colpo veloce) e mostra l'area dove può andare. Poi il Maligno lo muove, lo fa attaccare, e chiude l'attivazione con "Fine attivazione".
    */
-  private async startActivation(monster: Piece, card?: 'charge' | 'fury') {
+  private async startActivation(enemy: Piece, card?: 'charge' | 'fury') {
     if (this.adversaryBusy() || this.adversarySel || !this.board) return;
     this.panel.set(null);
-    this.monsterPanel.set(null);
+    this.enemyPanel.set(null);
     this.adversaryBusy.set(true);
     try {
       this.guardDeclined = new Set();
-      if (await this.resolveTurnStart(monster)) {
-        monster.done = true; // morto per la fiamma
+      if (await this.resolveTurnStart(enemy)) {
+        enemy.done = true; // morto per la fiamma
         return;
       }
       if (card === 'charge' && playEvent(this.state, 'charge')) {
-        monster.points *= 2;
-        await this.announceEvent(tr('Carica'), tr('{name} corre il doppio.', { name: monster.name }));
+        enemy.points *= 2;
+        await this.announceEvent(tr('Carica'), tr('{name} corre il doppio.', { name: enemy.name }));
       } else if (card === 'fury' && playEvent(this.state, 'fury')) {
-        monster.attacks = keywordLevel(this.state, monster, 'Colpo veloce') > 0 ? 4 : 2;
-        await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: monster.name }));
+        enemy.attacks = keywordLevel(this.state, enemy, 'Colpo veloce') > 0 ? 4 : 2;
+        await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: enemy.name }));
       }
       this.showHud(this.pieces?.active ?? null); // l'Odio speso
-      this.adversarySel = { monster, stops: new Map() };
+      this.adversarySel = { enemy, stops: new Map() };
       this.refreshAdversaryActivation();
     } finally {
       this.adversaryBusy.set(false);
     }
   }
 
-  /** Ricalcola dove può andare il mostro in attivazione (con i punti movimento che gli restano), il contorno rosso e la barra; se non ha più né punti né attacchi, l'attivazione finisce. */
+  /** Ricalcola dove può andare il nemico in attivazione (con i punti movimento che gli restano), il contorno rosso e la barra; se non ha più né punti né attacchi, l'attivazione finisce. */
   private refreshAdversaryActivation() {
     const sel = this.adversarySel;
     if (!sel || !this.board) return;
-    const m = sel.monster;
+    const m = sel.enemy;
     if (!this.state.pieces.includes(m) || m.wounds <= 0) {
       this.endAdversaryActivation();
       return;
     }
-    const stops = m.points >= 1 ? monsterStops(this.state, this.board, m) : [];
+    const stops = m.points >= 1 ? enemyStops(this.state, this.board, m) : [];
     sel.stops = new Map(stops.map((s) => [cellKey(s.cell), s] as const));
-    this.pieces?.showMonsterReach(stops.length ? [m.cell, ...stops.map((s) => s.cell)] : null);
+    this.pieces?.showEnemyReach(stops.length ? [m.cell, ...stops.map((s) => s.cell)] : null);
     this.adversarySelInfo.set({ name: m.name, portrait: m.portrait, wounds: m.wounds, maxWounds: m.maxWounds, points: m.points, attacks: m.attacks, abilities: [...m.traits] });
     if (m.points < 1 && m.attacks < 1) this.endAdversaryActivation();
   }
 
-  /** Una casella toccata mentre un mostro è in attivazione: un eroe che può colpire si attacca, una casella raggiungibile ci muove il mostro. */
+  /** Una casella toccata mentre un nemico è in attivazione: un eroe che può colpire si attacca, una casella raggiungibile ci muove il nemico. */
   private async adversaryActivationClick(cell: Cell) {
     const sel = this.adversarySel;
     if (!sel || this.adversaryBusy() || !this.board) return;
-    const m = sel.monster;
+    const m = sel.enemy;
     const mercenary = this.state.pieces.find((p) => p.team === 'mercenary' && !p.city && footprint(p).some((c) => c.x === cell.x && c.y === cell.y));
     if (mercenary) {
-      const option = monsterAttackOption(this.state, this.board, m, mercenary);
+      const option = enemyAttackOption(this.state, this.board, m, mercenary);
       if (m.attacks < 1) this.showNotice(tr('Nessun attacco rimasto'), 'warning', 'adversary');
       else if (!option?.enabled) this.showNotice(option?.reason ?? tr('{name} non può attaccare {target}', { name: m.name, target: mercenary.name }), 'warning', 'adversary');
-      else await this.adversaryScripted(async () => this.monsterAttack(m, mercenary, option));
+      else await this.adversaryScripted(async () => this.enemyAttack(m, mercenary, option));
       this.refreshAdversaryActivation();
       return;
     }
     const spot = sel.stops.get(cellKey(cell));
     if (!spot) return;
-    this.pieces?.showMonsterReach(null);
+    this.pieces?.showEnemyReach(null);
     await this.adversaryScripted(async () => {
-      await this.walkMonster(m, spot.path());
+      await this.walkEnemy(m, spot.path());
       if (this.state.pieces.includes(m) && settleOverlap(this.state, this.board!, m)) this.pieces?.redraw(m);
-      this.monsterPicksUp(m);
+      this.enemyPicksUp(m);
     });
     this.refreshAdversaryActivation();
   }
 
-  /** Fa qualcosa con la camera dello script e i comandi fermi (un passo, un attacco), come il turno automatico dei mostri. */
+  /** Fa qualcosa con la camera dello script e i comandi fermi (un passo, un attacco), come il turno automatico dei nemici. */
   private async adversaryScripted(run: () => Promise<void>) {
     this.adversaryBusy.set(true);
     this.cameraScripted = true;
@@ -2182,13 +2182,13 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  /** "Fine attivazione" (o niente più da spendere): il mostro ha finito, il suo pallino diventa grigio. */
+  /** "Fine attivazione" (o niente più da spendere): il nemico ha finito, il suo pallino diventa grigio. */
   protected endAdversaryActivation() {
     const sel = this.adversarySel;
     this.adversarySel = null;
     this.adversarySelInfo.set(null);
-    this.pieces?.showMonsterReach(null);
-    if (sel) sel.monster.done = true;
+    this.pieces?.showEnemyReach(null);
+    if (sel) sel.enemy.done = true;
     this.showHud(this.pieces?.active ?? null);
   }
 
@@ -2235,7 +2235,7 @@ export class GameSceneComponent implements OnDestroy {
     // Fra le sue opzioni, l'attacco con più dadi contro il bersaglio più ferito.
     const mine = options.filter((x) => x.h === pick.h).sort((a, b) => b.option.dice.length - a.option.dice.length || a.t.wounds / a.t.maxWounds - b.t.wounds / b.t.maxWounds)[0];
     this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: mine.h.name, name2: mine.t.name }), 'swords', 'adversary');
-    await this.monsterAttack(mine.h, mine.t, mine.option);
+    await this.enemyAttack(mine.h, mine.t, mine.option);
   }
 
   /** Ripete il tiro dei dadi `indices` di `rolls` (Mirare, Schivare): resta il secondo risultato. */
@@ -2251,7 +2251,7 @@ export class GameSceneComponent implements OnDestroy {
     return out;
   }
 
-  /** Schivare: dopo l'attacco di un eroe a un mostro, lo script può obbligare l'eroe a ripetere i dadi migliori. Restituisce le facce (nuove o le stesse). */
+  /** Schivare: dopo l'attacco di un eroe a un nemico, lo script può obbligare l'eroe a ripetere i dadi migliori. Restituisce le facce (nuove o le stesse). */
   private async maybeDodge(rolls: FaceRoll[], plan: AttackPlan): Promise<FaceRoll[]> {
     // Se il tiro è già fallito (un Mancato, o una gittata che nemmeno al meglio arriva) un giocatore vero non spenderebbe punti per Schivare: lo script nemmeno.
     const bestRange = rolls.reduce((n, r) => n + r.face.range, 0) + plan.bonusRange + plan.effects.reduce((n, e) => n + (e.supported ? e.range : 0), 0) + plan.sorcery;
@@ -2262,9 +2262,9 @@ export class GameSceneComponent implements OnDestroy {
     return this.dodgeReroll(rolls);
   }
 
-  /** Schivare giocata: il mostro evita il colpo e l'eroe ripete i dadi migliori (resta il secondo risultato). */
+  /** Schivare giocata: il nemico evita il colpo e l'eroe ripete i dadi migliori (resta il secondo risultato). */
   private async dodgeReroll(rolls: FaceRoll[]): Promise<FaceRoll[]> {
-    await this.announceEvent(tr('Schivare'), tr('Il mostro evita il colpo: il mercenario ripete i dadi migliori.'), 'shield');
+    await this.announceEvent(tr('Schivare'), tr('Il nemico evita il colpo: il mercenario ripete i dadi migliori.'), 'shield');
     const strong = rolls.map((r, i) => i).filter((i) => rolls[i].face.hearts >= 2 || rolls[i].face.spark > 0);
     return this.rerollDice(rolls, strong.length ? strong : rolls.map((r, i) => i).filter((i) => rolls[i].face.hearts >= 1));
   }
@@ -2354,7 +2354,7 @@ export class GameSceneComponent implements OnDestroy {
     await this.sleep(ms + 50);
   }
 
-  /** Il centro del tile (in pixel del mondo) che contiene la casella: da lì escono i mostri evocati. */
+  /** Il centro del tile (in pixel del mondo) che contiene la casella: da lì escono i nemici evocati. */
   private tileCenterOf(cell: Cell): Point {
     for (const t of this.placed) {
       const cells = [...tileCells(t.def)].map((k) => k.split(',').map(Number));
@@ -2367,7 +2367,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * Dei mostri appaiono (evocazione, Orda di Creature): messaggio al centro, la camera va sulla zona, poi i mostri escono dall'ombra
+   * Dei nemici appaiono (evocazione, Orda di Creature): messaggio al centro, la camera va sulla zona, poi i nemici escono dall'ombra
    * (arrivano dall'alto: scala da 1,5 a 1) e restano visibili a tutti prima che qualcuno si attivi.
    */
   private async presentSpawned(spawned: Piece[], title: string, text: string, zoom?: number) {
@@ -2379,8 +2379,8 @@ export class GameSceneComponent implements OnDestroy {
     await this.panCamera(mid, FX.cameraPanMs, zoom);
     await this.sleep(FX.summonDelayMs);
     const textures = await loadPortraits(spawned.map((p) => p.portrait));
-    for (const m of spawned) this.exploration.monsters.add(m.id);
-    this.syncMonsterVisibility(true);
+    for (const m of spawned) this.exploration.enemies.add(m.id);
+    this.syncEnemyVisibility(true);
     for (const m of spawned) this.pieces?.addPiece(m, textures);
     await Promise.all(spawned.map((m) => this.pieces?.enter(m)));
     await this.sleep(FX.afterSummonMs);
@@ -2431,7 +2431,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     const slain = killMercenary(this.state, mercenary);
     this.pieces?.afterCombat(mercenary, mercenary, true);
-    this.pieces?.monstersSlain(slain);
+    this.pieces?.enemiesSlain(slain);
     this.showNotice(this.fallenNotice(mercenary), 'skull', 'adversary');
     return true;
   }
@@ -2495,16 +2495,16 @@ export class GameSceneComponent implements OnDestroy {
           break;
         }
         this.markers.splice(this.markers.indexOf(chest), 1);
-        const [mimic] = createPieces([{ id: this.newPieceId('mimic'), team: 'monster', monster: 'mimic', x: out.x, y: out.y, drop: chest.contents ?? [], chestTier: chest.random === false ? undefined : chest.tier, chestDraws: chest.treasures }], new Map(), this.state.items, this.state.monsters, this.state.pieces.filter((p) => p.team === 'mercenary').length);
+        const [mimic] = createPieces([{ id: this.newPieceId('mimic'), team: 'enemy', enemy: 'mimic', x: out.x, y: out.y, drop: chest.contents ?? [], chestTier: chest.random === false ? undefined : chest.tier, chestDraws: chest.treasures }], new Map(), this.state.items, this.state.enemies, this.state.pieces.filter((p) => p.team === 'mercenary').length);
         this.state.pieces.push(mimic);
-        this.exploration.monsters.add(mimic.id);
+        this.exploration.enemies.add(mimic.id);
         const textures = await loadPortraits([mimic.portrait]);
         this.rebuildBoard();
         this.pieces?.addPiece(mimic, textures);
         await this.announce('Mimic', tr('La cassa era viva!'));
         await this.pieces?.enter(mimic);
         await this.sleep(500);
-        await this.monsterTurn(mimic);
+        await this.enemyTurn(mimic);
         break;
       }
       case 'toad-curse': {
@@ -2533,61 +2533,61 @@ export class GameSceneComponent implements OnDestroy {
     if (fallen.includes(mercenary) || endTurn) this.pass();
   }
 
-  /** Un mostro: si muove se serve e, se può, attacca. */
-  /** Com'era un mostro prima dell'ultimo passo, quando un eroe può usare la Vigilanza (il suo movimento si ferma lì). */
-  /** Gli eroi che hanno rifiutato la Guardia contro il mostro che sta agendo (si azzera a ogni sua attivazione). */
+  /** Un nemico: si muove se serve e, se può, attacca. */
+  /** Com'era un nemico prima dell'ultimo passo, quando un eroe può usare la Vigilanza (il suo movimento si ferma lì). */
+  /** Gli eroi che hanno rifiutato la Guardia contro il nemico che sta agendo (si azzera a ogni sua attivazione). */
   private guardDeclined = new Set<string>();
   private vigilanceFrom: { cell: Cell; size: { w: number; h: number } } | null = null;
 
   /**
-   * Il mostro cammina lungo il suo percorso; se a un passo un eroe può usare la Vigilanza (è entrato accanto a lui), il movimento si ferma, l'eroe sceglie
-   * se attaccare, e se il mostro sopravvive riprende da dove era arrivato.
+   * Il nemico cammina lungo il suo percorso; se a un passo un eroe può usare la Vigilanza (è entrato accanto a lui), il movimento si ferma, l'eroe sceglie
+   * se attaccare, e se il nemico sopravvive riprende da dove era arrivato.
    */
-  private async walkMonster(monster: Piece, steps: Reach[]) {
+  private async walkEnemy(enemy: Piece, steps: Reach[]) {
     let rest = steps;
     for (let guard = 0; guard < 24 && rest.length && !this.destroyed; guard++) {
       this.vigilanceFrom = null;
-      await this.pieces?.walk(monster, rest);
-      if (!this.state.pieces.includes(monster)) return; // morto per strada
-      const at = rest.findIndex((s) => s.cell.x === monster.cell.x && s.cell.y === monster.cell.y && (!s.size || (s.size.w === monster.size.w && s.size.h === monster.size.h)));
+      await this.pieces?.walk(enemy, rest);
+      if (!this.state.pieces.includes(enemy)) return; // morto per strada
+      const at = rest.findIndex((s) => s.cell.x === enemy.cell.x && s.cell.y === enemy.cell.y && (!s.size || (s.size.w === enemy.size.w && s.size.h === enemy.size.h)));
       rest = at < 0 ? [] : rest.slice(at + 1);
       const from = this.vigilanceFrom;
       if (!rest.length || !from) return;
-      await this.resolveVigilance(monster, from);
-      if (!this.state.pieces.includes(monster) || monster.wounds <= 0 || this.state.status !== 'playing') return;
+      await this.resolveVigilance(enemy, from);
+      if (!this.state.pieces.includes(enemy) || enemy.wounds <= 0 || this.state.status !== 'playing') return;
     }
   }
 
-  /** Vigilanza: a ogni eroe che può, si chiede se spendere l'overclock per attaccare il mostro appena arrivato accanto a lui (e con quale arma). */
-  private async resolveVigilance(monster: Piece, from: { cell: Cell; size: { w: number; h: number } }) {
+  /** Vigilanza: a ogni eroe che può, si chiede se spendere l'overclock per attaccare il nemico appena arrivato accanto a lui (e con quale arma). */
+  private async resolveVigilance(enemy: Piece, from: { cell: Cell; size: { w: number; h: number } }) {
     if (!this.board) return;
-    for (const chance of vigilanceChances(this.state, this.board, monster, from)) {
-      if (!this.state.pieces.includes(monster)) return;
+    for (const chance of vigilanceChances(this.state, this.board, enemy, from)) {
+      if (!this.state.pieces.includes(enemy)) return;
       const answer = await this.askChoice({
         title: tr('Vigilanza'),
-        text: tr('{name} è entrato accanto a {name2}. Spendere {overclock:{cost}} per attaccarlo subito?', { name: monster.name, name2: chance.mercenary.name, cost: chance.cost }),
+        text: tr('{name} è entrato accanto a {name2}. Spendere {overclock:{cost}} per attaccarlo subito?', { name: enemy.name, name2: chance.mercenary.name, cost: chance.cost }),
         choices: [...chance.options.map((o) => ({ id: o.id, label: o.name, primary: true })), { id: 'no', label: tr('Rinuncia') }],
       });
       const option = chance.options.find((o) => o.id === answer);
-      if (option) await this.vigilanceAttack(chance.mercenary, monster, option, chance.cost);
+      if (option) await this.vigilanceAttack(chance.mercenary, enemy, option, chance.cost);
     }
-    await this.resolveGuard(monster);
+    await this.resolveGuard(enemy);
   }
 
-  /** Guardia: gli eroi con quell'ordine scelgono se interrompere il mostro con un attacco gratuito; l'ordine si perde dopo l'uso. */
-  /** Il cambio d'ordine di Ordini flessibili (Anarien): si sceglie fra gli altri due ordini, pagando l'overclock. `monster` c'è se l'eroe sta per essere attaccato. */
-  private async offerOrderChange(mercenary: Piece, monster?: Piece) {
+  /** Guardia: gli eroi con quell'ordine scelgono se interrompere il nemico con un attacco gratuito; l'ordine si perde dopo l'uso. */
+  /** Il cambio d'ordine di Ordini flessibili (Anarien): si sceglie fra gli altri due ordini, pagando l'overclock. `enemy` c'è se l'eroe sta per essere attaccato. */
+  private async offerOrderChange(mercenary: Piece, enemy?: Piece) {
     const cost = orderChangeCost(this.state, mercenary);
     if (cost === null || !mercenary.order) return;
     if (mercenary.overclock < cost) {
-      if (!monster) this.showNotice(tr('Non hai abbastanza overclock per cambiare ordine'), 'warning');
+      if (!enemy) this.showNotice(tr('Non hai abbastanza overclock per cambiare ordine'), 'warning');
       return;
     }
     const others = (['aim', 'dodge', 'rest', 'guard'] as const).filter((o) => o !== mercenary.order);
     const answer = await this.askChoice({
       title: tr('Cambiare ordine?'),
-      text: monster
-        ? tr('{name} sta per essere attaccato da {name2}. Ordine attuale: {order}. Spendere {overclock:{cost}} per cambiarlo?', { name: mercenary.name, name2: monster.name, order: ORDER_NAMES[mercenary.order], cost })
+      text: enemy
+        ? tr('{name} sta per essere attaccato da {name2}. Ordine attuale: {order}. Spendere {overclock:{cost}} per cambiarlo?', { name: mercenary.name, name2: enemy.name, order: ORDER_NAMES[mercenary.order], cost })
         : tr('Ordine attuale di {name}: {order}. Spendere {overclock:{cost}} per cambiarlo?', { name: mercenary.name, order: ORDER_NAMES[mercenary.order], cost }),
       choices: [...others.map((o) => ({ id: o, label: ORDER_NAMES[o], primary: true })), { id: 'no', label: tr('Tieni {order}', { order: ORDER_NAMES[mercenary.order] }) }],
     });
@@ -2606,13 +2606,13 @@ export class GameSceneComponent implements OnDestroy {
     await this.offerOrderChange(mercenary);
   }
 
-  private async resolveGuard(monster: Piece) {
+  private async resolveGuard(enemy: Piece) {
     if (!this.board) return;
-    for (const chance of guardChances(this.state, this.board, monster, this.guardDeclined)) {
-      if (!this.state.pieces.includes(monster) || monster.wounds <= 0) return;
+    for (const chance of guardChances(this.state, this.board, enemy, this.guardDeclined)) {
+      if (!this.state.pieces.includes(enemy) || enemy.wounds <= 0) return;
       const answer = await this.askChoice({
         title: tr('Guardia'),
-        text: tr('{name} è in Guardia: può interrompere {name2} con un attacco. Perde l\'ordine dopo averlo usato.', { name: chance.mercenary.name, name2: monster.name }),
+        text: tr('{name} è in Guardia: può interrompere {name2} con un attacco. Perde l\'ordine dopo averlo usato.', { name: chance.mercenary.name, name2: enemy.name }),
         choices: [...chance.options.map((o) => ({ id: o.id, label: o.name, primary: true })), { id: 'no', label: tr('Rinuncia') }],
       });
       const option = chance.options.find((o) => o.id === answer);
@@ -2621,65 +2621,65 @@ export class GameSceneComponent implements OnDestroy {
         continue;
       }
       chance.mercenary.order = null;
-      await this.vigilanceAttack(chance.mercenary, monster, option, 0);
+      await this.vigilanceAttack(chance.mercenary, enemy, option, 0);
       this.showHud(this.pieces?.active ?? null);
     }
   }
 
   /** L'attacco della Vigilanza: la finestra normale dell'attacco (l'eroe tira i dadi), fuori turno e senza consumare i suoi attacchi; l'overclock si paga all'applicazione. */
-  private async vigilanceAttack(mercenary: Piece, monster: Piece, option: AttackOption, pay: number) {
-    await this.frameBoth(mercenary, monster);
-    const plan = planAttack(this.state, mercenary, monster, option);
-    await this.attackIntro(mercenary, monster, option);
-    this.attackSession.set({ attackerId: mercenary.id, targetId: monster.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, free: { pay } });
+  private async vigilanceAttack(mercenary: Piece, enemy: Piece, option: AttackOption, pay: number) {
+    await this.frameBoth(mercenary, enemy);
+    const plan = planAttack(this.state, mercenary, enemy, option);
+    await this.attackIntro(mercenary, enemy, option);
+    this.attackSession.set({ attackerId: mercenary.id, targetId: enemy.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, free: { pay } });
     await this.waitUntil(() => !this.attackSession() && !this.applyingAttack, 120000);
-    await this.waitUntil(() => !this.knockback(), 60000); // un Contraccolpo dell'arma si risolve prima che il mostro riprenda
+    await this.waitUntil(() => !this.knockback(), 60000); // un Contraccolpo dell'arma si risolve prima che il nemico riprenda
   }
 
-  private async monsterTurn(monster: Piece) {
+  private async enemyTurn(enemy: Piece) {
     this.guardDeclined = new Set();
-    if (monster.inactive) return; // un nemico inattivo non agisce
-    if (await this.resolveTurnStart(monster)) return; // morto per la fiamma
-    // Stordito: un mostro normale perde il turno; uno potenziato può solo muoversi oppure attaccare.
-    if (monster.stunned && !monster.enhanced) return;
-    if (isDormant(this.state, this.board!, monster)) return; // dorme finché la sua area non è rivelata
+    if (enemy.inactive) return; // un nemico inattivo non agisce
+    if (await this.resolveTurnStart(enemy)) return; // morto per la fiamma
+    // Stordito: un nemico normale perde il turno; uno potenziato può solo muoversi oppure attaccare.
+    if (enemy.stunned && !enemy.enhanced) return;
+    if (isDormant(this.state, this.board!, enemy)) return; // dorme finché la sua area non è rivelata
     // Carica: se non ha nessuno da colpire, la velocità di questa attivazione è raddoppiata.
-    if (!chooseMonsterTarget(this.state, this.board!, monster) && this.state.random() < 0.6 && playEvent(this.state, 'charge')) {
-      monster.points *= 2;
-      await this.announceEvent(tr('Carica'), tr('{name} corre il doppio.', { name: monster.name }));
+    if (!chooseEnemyTarget(this.state, this.board!, enemy) && this.state.random() < 0.6 && playEvent(this.state, 'charge')) {
+      enemy.points *= 2;
+      await this.announceEvent(tr('Carica'), tr('{name} corre il doppio.', { name: enemy.name }));
     }
-    const steps = monster.stunned && chooseMonsterTarget(this.state, this.board!, monster) ? [] : planMonsterMove(this.state, this.board!, monster);
+    const steps = enemy.stunned && chooseEnemyTarget(this.state, this.board!, enemy) ? [] : planEnemyMove(this.state, this.board!, enemy);
     if (steps.length) {
-      await this.walkMonster(monster, steps);
-      if (this.state.pieces.includes(monster) && settleOverlap(this.state, this.board!, monster)) this.pieces?.redraw(monster); // rete di sicurezza: mai sopra un'altra pedina
+      await this.walkEnemy(enemy, steps);
+      if (this.state.pieces.includes(enemy) && settleOverlap(this.state, this.board!, enemy)) this.pieces?.redraw(enemy); // rete di sicurezza: mai sopra un'altra pedina
       await this.sleep(250);
     }
-    this.monsterPicksUp(monster); // se si è fermato su un oggetto trasportabile (la Principessa) lo prende
+    this.enemyPicksUp(enemy); // se si è fermato su un oggetto trasportabile (la Principessa) lo prende
     let attacked = false;
     // Furore: due attacchi in questa attivazione (quattro con Colpo veloce).
-    if (!(monster.stunned && steps.length) && monster.attacks > 0 && chooseMonsterTarget(this.state, this.board!, monster) && this.state.random() < 0.7 && playEvent(this.state, 'fury')) {
-      monster.attacks = keywordLevel(this.state, monster, 'Colpo veloce') > 0 ? 4 : 2;
-      await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: monster.name }));
+    if (!(enemy.stunned && steps.length) && enemy.attacks > 0 && chooseEnemyTarget(this.state, this.board!, enemy) && this.state.random() < 0.7 && playEvent(this.state, 'fury')) {
+      enemy.attacks = keywordLevel(this.state, enemy, 'Colpo veloce') > 0 ? 4 : 2;
+      await this.announceEvent(tr('Furore'), tr('{name} attacca più volte.', { name: enemy.name }));
     }
     // Colpo veloce: fino a due attacchi (uno solo per chi non lo ha).
-    for (let i = 0; i < 5 && monster.attacks > 0 && !this.destroyed; i++) {
-      const target = monster.stunned && steps.length ? null : chooseMonsterTarget(this.state, this.board!, monster);
+    for (let i = 0; i < 5 && enemy.attacks > 0 && !this.destroyed; i++) {
+      const target = enemy.stunned && steps.length ? null : chooseEnemyTarget(this.state, this.board!, enemy);
       if (!target) break;
-      await this.monsterAttack(monster, target);
+      await this.enemyAttack(enemy, target);
       attacked = true;
       if (this.state.status !== 'playing') break;
     }
     if (!attacked) await this.sleep(150);
   }
 
-  /** Un mostro che sa trasportare e si è fermato sulla casella di un oggetto trasportabile lo prende: sparisce dalla mappa e lo si dice. */
-  private monsterPicksUp(monster: Piece) {
+  /** Un nemico che sa trasportare e si è fermato sulla casella di un oggetto trasportabile lo prende: sparisce dalla mappa e lo si dice. */
+  private enemyPicksUp(enemy: Piece) {
     if (!this.board) return;
-    const item = monsterTakesItem(this.state, this.board, monster);
+    const item = enemyTakesItem(this.state, this.board, enemy);
     if (!item) return;
     this.rebuildBoard();
-    this.pieces?.redraw(monster);
-    this.showNotice(`${monster.name} afferra ${item.name}!`, item.icon ?? 'person', 'adversary');
+    this.pieces?.redraw(enemy);
+    this.showNotice(`${enemy.name} afferra ${item.name}!`, item.icon ?? 'person', 'adversary');
   }
 
   /**
@@ -2726,52 +2726,52 @@ export class GameSceneComponent implements OnDestroy {
     else await this.pieces.finishShot(hit, show);
   }
 
-  /** L'attacco di un mostro con la stessa finestra degli eroi: tira il Maligno, chi guarda vede e prosegue (o aspetta qualche secondo). */
-  private async monsterAttack(monster: Piece, target: Piece, forced?: AttackOption) {
-    const option = forced ?? monsterAttackOption(this.state, this.board!, monster, target);
+  /** L'attacco di un nemico con la stessa finestra degli eroi: tira il Maligno, chi guarda vede e prosegue (o aspetta qualche secondo). */
+  private async enemyAttack(enemy: Piece, target: Piece, forced?: AttackOption) {
+    const option = forced ?? enemyAttackOption(this.state, this.board!, enemy, target);
     if (!option?.enabled) return;
-    if (monster.team === 'monster') {
-      this.exploration.monsters.add(monster.id); // chi attacca si fa vedere
-      this.pieces?.showMonster(monster);
+    if (enemy.team === 'enemy') {
+      this.exploration.enemies.add(enemy.id); // chi attacca si fa vedere
+      this.pieces?.showEnemy(enemy);
     }
-    if (monster.team === 'monster' && target.team === 'mercenary') {
+    if (enemy.team === 'enemy' && target.team === 'mercenary') {
       // La camera contiene i due che combattono; se l'attacco passa per una scala sono lontani: si inquadra prima l'attaccante con la sua scala, poi (all'impatto) il bersaglio.
-      if (option.via) await this.frameCells([...footprint(monster), option.via.from]);
-      else await this.frameBoth(monster, target);
+      if (option.via) await this.frameCells([...footprint(enemy), option.via.from]);
+      else await this.frameBoth(enemy, target);
     }
     // Ordini flessibili: prima dell'attacco chi ha l'abilità può cambiare ordine (anche per passare a Guardia e interrompere, o a Schivata).
-    if (monster.team === 'monster' && target.team === 'mercenary') await this.offerOrderChange(target, monster);
-    // Guardia: gli eroi in guardia possono interrompere prima che l'attacco si svolga; se il mostro cade, l'attacco salta.
-    if (monster.team === 'monster' && target.team === 'mercenary') {
-      await this.resolveGuard(monster);
-      if (!this.state.pieces.includes(monster) || monster.wounds <= 0 || !this.state.pieces.includes(target) || this.state.status !== 'playing') return;
+    if (enemy.team === 'enemy' && target.team === 'mercenary') await this.offerOrderChange(target, enemy);
+    // Guardia: gli eroi in guardia possono interrompere prima che l'attacco si svolga; se il nemico cade, l'attacco salta.
+    if (enemy.team === 'enemy' && target.team === 'mercenary') {
+      await this.resolveGuard(enemy);
+      if (!this.state.pieces.includes(enemy) || enemy.wounds <= 0 || !this.state.pieces.includes(target) || this.state.status !== 'playing') return;
     }
     // Mirare: l'attacco è mirato, cioè i dadi che non servono si ripetono (resta il secondo risultato). Contro un eroe con Schivata si annullano a vicenda.
-    const dodging = target.team === 'mercenary' && target.order === 'dodge' && monster.team === 'monster';
-    const manual = this.adversaryMode && monster.team === 'monster' && target.team === 'mercenary'; // il Maligno a mano decide lui, nella finestra dell'attacco
-    let aimed = !manual && monster.team === 'monster' && !weakening(this.state, monster).noAim && this.state.random() < 0.8 && playEvent(this.state, 'aim'); // vicino a Nero il Corvo non si mira
+    const dodging = target.team === 'mercenary' && target.order === 'dodge' && enemy.team === 'enemy';
+    const manual = this.adversaryMode && enemy.team === 'enemy' && target.team === 'mercenary'; // il Maligno a mano decide lui, nella finestra dell'attacco
+    let aimed = !manual && enemy.team === 'enemy' && !weakening(this.state, enemy).noAim && this.state.random() < 0.8 && playEvent(this.state, 'aim'); // vicino a Nero il Corvo non si mira
     if (aimed && dodging) {
       aimed = false;
       target.order = null;
       this.showNotice(tr('{name}: la Schivata annulla l\'attacco mirato', { name: target.name }), 'tactic');
     }
     let canDodge = dodging && target.order === 'dodge';
-    if (aimed) await this.announceEvent(tr('Mirare'), tr('{name} fa un attacco mirato: ripete i dadi che non servono.', { name: monster.name }), 'swords');
-    const plan = planAttack(this.state, monster, target, option);
-    const breathDir = plan.area.breath ? breathDirTo(this.state, this.board!, monster, target) : null;
-    await this.announceAttack(monster, target, plan, breathDir);
-    if (!plan.area.breath) await this.attackIntro(monster, target, option); // il Soffio non ha scatto né tratteggio di tiro
-    this.attackSession.set({ attackerId: monster.id, targetId: target.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, auto: true, breathDir });
+    if (aimed) await this.announceEvent(tr('Mirare'), tr('{name} fa un attacco mirato: ripete i dadi che non servono.', { name: enemy.name }), 'swords');
+    const plan = planAttack(this.state, enemy, target, option);
+    const breathDir = plan.area.breath ? breathDirTo(this.state, this.board!, enemy, target) : null;
+    await this.announceAttack(enemy, target, plan, breathDir);
+    if (!plan.area.breath) await this.attackIntro(enemy, target, option); // il Soffio non ha scatto né tratteggio di tiro
+    this.attackSession.set({ attackerId: enemy.id, targetId: target.id, option, plan, step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, auto: true, breathDir });
     await this.sleep(700);
     // Il Maligno a mano: se ha Mirare e può pagarla, il tiro aspetta la sua scelta (contro un eroe in Schivata la mira e la Schivata si annullano).
-    if (manual && !weakening(this.state, monster).noAim && (await this.adversaryPlays('aim', tr('Mirare · {alarm:{n}}')))) {
+    if (manual && !weakening(this.state, enemy).noAim && (await this.adversaryPlays('aim', tr('Mirare · {alarm:{n}}')))) {
       if (dodging) {
         target.order = null;
         canDodge = false;
         this.showNotice(tr('{name}: la Schivata annulla l\'attacco mirato', { name: target.name }), 'tactic');
       } else {
         aimed = true;
-        await this.announceEvent(tr('Mirare'), tr('{name} fa un attacco mirato: ripete i dadi che non servono.', { name: monster.name }), 'swords');
+        await this.announceEvent(tr('Mirare'), tr('{name} fa un attacco mirato: ripete i dadi che non servono.', { name: enemy.name }), 'swords');
       }
     }
     const cur = this.attackSession();
@@ -2790,7 +2790,7 @@ export class GameSceneComponent implements OnDestroy {
     // Schivata: l'eroe sceglie quali dadi dell'attacco far ripetere (una sola volta; l'ordine resta fino al suo prossimo turno).
     if (canDodge) {
       await this.sleep(1400);
-      const picked = await this.pickDice({ title: tr('Schivata'), text: tr('Scegli i dadi di {name} da far ripetere: varrà il secondo risultato.', { name: monster.name }), dice: rolls, confirm: tr('Ripeti i dadi scelti'), skip: tr('Tieni il tiro') });
+      const picked = await this.pickDice({ title: tr('Schivata'), text: tr('Scegli i dadi di {name} da far ripetere: varrà il secondo risultato.', { name: enemy.name }), dice: rolls, confirm: tr('Ripeti i dadi scelti'), skip: tr('Tieni il tiro') });
       if (picked?.length) rolls = await this.rerollDice(rolls, picked);
     }
     // Sulle facce multivalenti del dado competenza sceglie lo script: la gittata se serve per arrivare, altrimenti il cuore.
@@ -2851,14 +2851,14 @@ export class GameSceneComponent implements OnDestroy {
     const mercenaryEntries = mercenaries.map((h): CatalogEntry => ({
       kind: 'mercenary', id: h.id, name: h.name, sheet: h, search: [h.name, h.class].join(' '),
     })).sort(byName);
-    const monsterEntries = [...this.monsterDefs.values()].map((m): CatalogEntry => ({
-      kind: 'monster', id: m.id, name: m.name, def: m, search: [m.name, ...m.normal.abilities, ...m.enhanced.abilities].join(' '),
+    const enemyEntries = [...this.enemyDefs.values()].map((m): CatalogEntry => ({
+      kind: 'enemy', id: m.id, name: m.name, def: m, search: [m.name, ...m.normal.abilities, ...m.enhanced.abilities].join(' '),
     })).sort(byName);
     const familiarEntries = [...s.familiarDefs.values()].map((d): CatalogEntry => ({ kind: 'familiar', id: d.id, name: d.name, def: d, search: [d.name, tr('Famiglio'), d.ability ?? ''].join(' ') })).sort(byName);
     return [
       { id: 'mercenaries', group: tr('Personaggi'), name: tr('Mercenari'), entries: mercenaryEntries },
       { id: 'familiars', group: tr('Personaggi'), name: tr('Famigli'), entries: familiarEntries },
-      { id: 'monsters', group: tr('Personaggi'), name: tr('Mostri'), entries: monsterEntries },
+      { id: 'enemies', group: tr('Personaggi'), name: tr('Nemici'), entries: enemyEntries },
       { id: 'shop', group: tr('Oggetti'), name: tr('Negozio'), entries: itemsOf((d) => d.id in s.shop, (d) => s.shop[d.id] ?? 0) },
       { id: 'potions', group: tr('Consumabili'), name: tr('Pozioni'), entries: potionEntries },
       { id: 'copper', group: tr('Tesori'), name: tr('Rame'), entries: itemsOf((d) => d.deck === 'copper', (d) => d.copies ?? 1) },
@@ -2871,21 +2871,21 @@ export class GameSceneComponent implements OnDestroy {
     ];
   }
 
-  /** Quali mostri si vedono: quelli scoperti dagli eroi (o tutti, se non c'è la nebbia); nella vista del Maligno tutti. */
-  private syncMonsterVisibility(fog = this.fogOn()) {
-    this.pieces?.setVisibleMonsters(fog && !this.adversaryView() ? this.exploration.monsters : null);
-    // Vista del Maligno: i mostri di un'area non ancora scoperta (inattivi) si vedono senza colore.
+  /** Quali nemici si vedono: quelli scoperti dagli eroi (o tutti, se non c'è la nebbia); nella vista del Maligno tutti. */
+  private syncEnemyVisibility(fog = this.fogOn()) {
+    this.pieces?.setVisibleEnemies(fog && !this.adversaryView() ? this.exploration.enemies : null);
+    // Vista del Maligno: i nemici di un'area non ancora scoperta (inattivi) si vedono senza colore.
     const board = this.board;
-    const dormant = fog && this.adversaryView() && board ? new Set(this.state.pieces.filter((p) => p.team === 'monster' && !p.awake && !!board.areaAt(p.cell) && !this.state.exploration.areas.has(board.areaAt(p.cell)!)).map((p) => p.id)) : null;
-    this.pieces?.setGrayMonsters(dormant);
+    const dormant = fog && this.adversaryView() && board ? new Set(this.state.pieces.filter((p) => p.team === 'enemy' && !p.awake && !!board.areaAt(p.cell) && !this.state.exploration.areas.has(board.areaAt(p.cell)!)).map((p) => p.id)) : null;
+    this.pieces?.setGrayEnemies(dormant);
   }
 
   /** Accende e spegne la vista del Maligno (provvisorio, dal tab del Maligno). */
   protected toggleAdversaryView() {
     this.adversaryView.update((v) => !v);
-    this.monsterPanel.set(null);
-    this.applyVisibility(); // ciò che non è scoperto compare (o sparisce) per intero: mostri, aree, scale, porte, oggetti
-    this.showNotice(this.adversaryView() ? tr('Vista dell\'Avversario: tocca un mostro per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'adversary');
+    this.enemyPanel.set(null);
+    this.applyVisibility(); // ciò che non è scoperto compare (o sparisce) per intero: nemici, aree, scale, porte, oggetti
+    this.showNotice(this.adversaryView() ? tr('Vista dell\'Avversario: tocca un nemico per vederne la scheda') : tr('Vista Giocatore'), 'skull', 'adversary');
   }
 
   /** Un clic sul pallino di un eroe nella barra. */
@@ -2902,7 +2902,7 @@ export class GameSceneComponent implements OnDestroy {
       this.members.update((list) => list.map((m) => ({ ...m, active: m.id === id })));
       if (this.narrow()) {
         // Telefono: gli avatar non si allargano, un tocco apre (o chiude) la scheda dell'eroe.
-        this.monsterPanel.set(null);
+        this.enemyPanel.set(null);
         this.panel.set(wasOpen ? null : { id, kind: 'info' });
       } else this.panel.set(null);
       return;
@@ -2998,10 +2998,10 @@ export class GameSceneComponent implements OnDestroy {
   private familiarReachNow: ReturnType<typeof familiarReach> | null = null;
   private familiarDone: ((r: 'moved' | 'acted' | 'skip') => void) | null = null;
 
-  /** Chi occupa la casella e si vede: un eroe, un mostro già rivelato, o nessuno (per mettere il famiglio in un angolo). */
-  private familiarCohabitant(cell: Cell): 'mercenary' | 'monster' | null {
+  /** Chi occupa la casella e si vede: un eroe, un nemico già rivelato, o nessuno (per mettere il famiglio in un angolo). */
+  private familiarCohabitant(cell: Cell): 'mercenary' | 'enemy' | null {
     if (this.state.pieces.some((p) => p.team === 'mercenary' && !p.city && occupies(p, cell))) return 'mercenary';
-    if (this.state.pieces.some((p) => p.team === 'monster' && occupies(p, cell) && (!this.fogOn() || this.exploration.monsters.has(p.id)))) return 'monster';
+    if (this.state.pieces.some((p) => p.team === 'enemy' && occupies(p, cell) && (!this.fogOn() || this.exploration.enemies.has(p.id)))) return 'enemy';
     return null;
   }
 
@@ -3105,21 +3105,21 @@ export class GameSceneComponent implements OnDestroy {
       return;
     }
     if (this.adversaryBusy() || this.choiceView() || this.familiarMove()) return;
-    // Al termine del turno si può usare un oggetto che lo prevede (il Flauto del riposo: stordisce i mostri vicini e si scarta).
+    // Al termine del turno si può usare un oggetto che lo prevede (il Flauto del riposo: stordisce i nemici vicini e si scarta).
     const mercenary = this.pieces?.active;
     if (mercenary && mercenary.team === 'mercenary' && !mercenary.city && this.state.phase === 'mercenaries') {
       for (const item of turnEndItems(this.state, mercenary)) {
         const answer = await this.askChoice({
           title: item.name,
-          text: item.amount === 1 ? tr('Scartarlo per mettere 1 segnalino stordito su ogni mostro entro {range} spazi da {name}?', { range: item.range, name: mercenary.name }) : tr('Scartarlo per mettere {n} segnalini storditi su ogni mostro entro {range} spazi da {name}?', { n: item.amount, range: item.range, name: mercenary.name }),
+          text: item.amount === 1 ? tr('Scartarlo per mettere 1 segnalino stordito su ogni nemico entro {range} spazi da {name}?', { range: item.range, name: mercenary.name }) : tr('Scartarlo per mettere {n} segnalini storditi su ogni nemico entro {range} spazi da {name}?', { n: item.amount, range: item.range, name: mercenary.name }),
           choices: [{ id: 'use', label: tr('Usa {name}', { name: item.name }), primary: true }, { id: 'no', label: tr('Non ora') }],
         });
         if (answer !== 'use') continue;
         const used = useTurnEndItem(this.state, mercenary, item.id);
         if (!used) continue;
-        const seen = (m: Piece) => !this.fogOn() || this.exploration.monsters.has(m.id);
+        const seen = (m: Piece) => !this.fogOn() || this.exploration.enemies.has(m.id);
         const names = used.stunned.filter(seen).map((m) => m.name);
-        this.showNotice(names.length ? tr('{name}: storditi {names}', { name: item.name, names: names.join(', ') }) : tr('{name}: nessun mostro in vista è stato stordito', { name: item.name }), 'stun');
+        this.showNotice(names.length ? tr('{name}: storditi {names}', { name: item.name, names: names.join(', ') }) : tr('{name}: nessun nemico in vista è stato stordito', { name: item.name }), 'stun');
         for (const m of used.stunned) this.pieces?.redraw(m);
         this.pieces?.refreshActive();
       }
@@ -3230,7 +3230,7 @@ export class GameSceneComponent implements OnDestroy {
         return;
       }
       if (this.adversarySel) {
-        void this.adversaryActivationClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // un mostro è in attivazione: le caselle sono sue
+        void this.adversaryActivationClick({ x: Math.floor(c.x), y: Math.floor(c.y) }); // un nemico è in attivazione: le caselle sono sue
         return;
       }
     }
@@ -3519,7 +3519,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /**
    * Il tasto del footer del Maligno (`/adversary/<map>`): "Avanti" nei primi due passi del turno (Mano, poi Evocazione; dalla Mano non si esce con più carte del limite), "Passa" nell'ultimo
-   * (Attivazione): finisce il turno, comincia il round dopo e gli eroi passano da soli. Entrando nell'Attivazione, con "Mostri automatici" acceso i mostri giocano da soli.
+   * (Attivazione): finisce il turno, comincia il round dopo e gli eroi passano da soli. Entrando nell'Attivazione, con "Nemici automatici" acceso i nemici giocano da soli.
    */
   protected async adversaryPass() {
     if (!this.adversaryMode || this.state.phase !== 'adversary' || this.state.status !== 'playing' || this.commandsBusy() || this.adversaryTurnDialog() || this.adversaryAreaInfo()) return;
@@ -3534,10 +3534,10 @@ export class GameSceneComponent implements OnDestroy {
       const next = step === 'hand' ? 'summon' : 'activate';
       this.adversaryStep.set(next);
       this.showHud(this.pieces?.active ?? null);
-      if (next === 'activate' && this.monstersAuto()) await this.autoMonstersTurn();
+      if (next === 'activate' && this.enemiesAuto()) await this.autoEnemiesTurn();
       return;
     }
-    if (this.adversarySel) this.endAdversaryActivation(); // un mostro in attivazione: la chiude
+    if (this.adversarySel) this.endAdversaryActivation(); // un nemico in attivazione: la chiude
     this.adversaryStep.set(null);
     this.showHud(this.pieces?.active ?? null);
     this.adversaryBusy.set(true);
@@ -3635,7 +3635,7 @@ export class GameSceneComponent implements OnDestroy {
     const step = this.adversaryStep();
     if (!c || !this.board || this.commandsBusy() || !this.handPlay(c, step)?.enabled) return;
     if (c.kind === 'summon') {
-      this.startSummon(c); // i mostri si piazzano a mano sulla mappa
+      this.startSummon(c); // i nemici si piazzano a mano sulla mappa
       return;
     }
     if (this.isArmable(c)) {
@@ -3661,21 +3661,21 @@ export class GameSceneComponent implements OnDestroy {
     this.showHud(this.pieces?.active ?? null);
   }
 
-  // --- Evocazione a mano: le caselle valide si evidenziano e si tocca dove mettere ogni mostro ---
+  // --- Evocazione a mano: le caselle valide si evidenziano e si tocca dove mettere ogni nemico ---
 
-  /** L'evocazione in corso: la carta, i mostri ancora da piazzare e se la carta è già stata pagata (si paga al primo mostro: senza mostri piazzati si può rinunciare gratis). */
+  /** L'evocazione in corso: la carta, i nemici ancora da piazzare e se la carta è già stata pagata (si paga al primo nemico: senza nemici piazzati si può rinunciare gratis). */
   private adversarySummon: {
     /** La carta Evocazione (null per l'Orda di Creature, un Potere già in gioco che non si paga) e il titolo della barra. */
     card: AdversaryCardDef | null;
     title: string;
-    queue: { monster: string; enhanced: boolean }[];
+    queue: { enemy: string; enhanced: boolean }[];
     paid: boolean;
-    /** Solo per l'Orda: le caselle valide per un mostro (accanto a un mostro dell'area), e i nuovi mostri nascono svegli. */
+    /** Solo per l'Orda: le caselle valide per un nemico (accanto a un nemico dell'area), e i nuovi nemici nascono svegli. */
     anchors?: (def: { size: { w: number; h: number } }) => Cell[];
     /** Chi aspetta la fine del piazzamento. */
     done?: () => void;
   } | null = null;
-  /** Per la barra dell'evocazione: il titolo, quale mostro tocca piazzare e quanti ne restano. */
+  /** Per la barra dell'evocazione: il titolo, quale nemico tocca piazzare e quanti ne restano. */
   protected readonly adversarySummonInfo = signal<{ name: string; next: string; left: number } | null>(null);
 
   private startSummon(card: AdversaryCardDef) {
@@ -3690,45 +3690,45 @@ export class GameSceneComponent implements OnDestroy {
       return;
     }
     this.panel.set(null);
-    this.monsterPanel.set(null);
+    this.enemyPanel.set(null);
     this.adversarySummon = { card, title: tr('Evoca {name}', { name: card.name }), queue, paid: false };
     this.refreshSummon();
   }
 
-  /** Orda di Creature: il Maligno ha scelto il tipo; piazza 2 mostri (meno se le miniature non bastano) accanto a un mostro dell'area rivelata. Finisce quando ha piazzato tutto o con "Termina". */
-  private startHorde(monster: string, inArea: Piece[]): Promise<void> {
-    const queue = Array.from({ length: Math.min(2, miniaturesLeft(this.state, monster, false)) }, () => ({ monster, enhanced: false }));
+  /** Orda di Creature: il Maligno ha scelto il tipo; piazza 2 nemici (meno se le miniature non bastano) accanto a un nemico dell'area rivelata. Finisce quando ha piazzato tutto o con "Termina". */
+  private startHorde(enemy: string, inArea: Piece[]): Promise<void> {
+    const queue = Array.from({ length: Math.min(2, miniaturesLeft(this.state, enemy, false)) }, () => ({ enemy, enhanced: false }));
     if (!queue.length || !this.board) return Promise.resolve();
     return new Promise<void>((resolve) => {
       this.panel.set(null);
-      this.monsterPanel.set(null);
+      this.enemyPanel.set(null);
       this.adversarySummon = { card: null, title: tr('Orda di Creature'), queue, paid: true, anchors: (def) => hordeAnchors(this.state, this.board!, def.size, inArea.filter((m) => this.state.pieces.includes(m))), done: resolve };
       this.refreshSummon();
     });
   }
 
-  /** Le caselle dove si può ancora piazzare (ricalcolate: i mostri messi cambiano chi vede cosa e cosa è occupato) e la barra; senza più mostri o caselle, l'evocazione finisce. */
+  /** Le caselle dove si può ancora piazzare (ricalcolate: i nemici messi cambiano chi vede cosa e cosa è occupato) e la barra; senza più nemici o caselle, l'evocazione finisce. */
   private refreshSummon() {
     const sel = this.adversarySummon;
     if (!sel || !this.board) return;
-    const nextDef = sel.queue[0] ? this.state.monsters.get(sel.queue[0].monster) : undefined;
+    const nextDef = sel.queue[0] ? this.state.enemies.get(sel.queue[0].enemy) : undefined;
     const free = sel.anchors ? (nextDef ? sel.anchors(nextDef) : []) : summonCells(this.state, this.board);
     if (!sel.queue.length || !free.length) {
       this.endSummon();
       return;
     }
-    this.pieces?.showMonsterReach(free);
+    this.pieces?.showEnemyReach(free);
     const next = sel.queue[0];
-    const name = nextDef?.name ?? next.monster;
+    const name = nextDef?.name ?? next.enemy;
     this.adversarySummonInfo.set({ name: sel.title, next: next.enhanced ? tr('{name} (potenziato)', { name }) : name, left: sel.queue.length });
   }
 
-  /** Una casella toccata durante l'evocazione: il prossimo mostro si mette lì (con tutta la sua sagoma, la casella è quella in alto a sinistra) se tutte le sue caselle sono valide. */
+  /** Una casella toccata durante l'evocazione: il prossimo nemico si mette lì (con tutta la sua sagoma, la casella è quella in alto a sinistra) se tutte le sue caselle sono valide. */
   private async summonClick(cell: Cell) {
     const sel = this.adversarySummon;
     if (!sel || !this.board || this.adversaryBusy()) return;
     const next = sel.queue[0];
-    const def = this.state.monsters.get(next.monster);
+    const def = this.state.enemies.get(next.enemy);
     if (!def) return;
     const valid = sel.anchors
       ? sel.anchors(def).some((a) => a.x === cell.x && a.y === cell.y)
@@ -3745,16 +3745,16 @@ export class GameSceneComponent implements OnDestroy {
       }
       sel.paid = true;
       this.showHud(this.pieces?.active ?? null); // l'Odio speso e la carta che lascia la mano
-      await this.announce(sel.card.name, tr('Evoca: {names}', { names: sel.queue.map((q) => this.state.monsters.get(q.monster)?.name ?? q.monster).join(', ') }));
+      await this.announce(sel.card.name, tr('Evoca: {names}', { names: sel.queue.map((q) => this.state.enemies.get(q.enemy)?.name ?? q.enemy).join(', ') }));
     }
     sel.queue.shift();
-    const piece = spawnMonster(this.state, next.monster, next.enhanced, cell);
-    if (sel.anchors) piece.awake = true; // l'Orda arriva in un'area già rivelata: i mostri sono svegli
-    this.pieces?.showMonsterReach(null);
+    const piece = spawnEnemy(this.state, next.enemy, next.enhanced, cell);
+    if (sel.anchors) piece.awake = true; // l'Orda arriva in un'area già rivelata: i nemici sono svegli
+    this.pieces?.showEnemyReach(null);
     await this.adversaryScripted(async () => {
       const textures = await loadPortraits([piece.portrait]);
-      this.exploration.monsters.add(piece.id);
-      this.syncMonsterVisibility(true);
+      this.exploration.enemies.add(piece.id);
+      this.syncEnemyVisibility(true);
       this.pieces?.addPiece(piece, textures);
       await this.pieces?.enter(piece);
     });
@@ -3778,11 +3778,11 @@ export class GameSceneComponent implements OnDestroy {
       return;
     }
     this.panel.set(null);
-    this.monsterPanel.set(null);
+    this.enemyPanel.set(null);
     this.adversaryTrap = { card, spots };
     const what = card.target === 'door' ? tr('Piazza {name}: tocca una porta evidenziata', { name: card.name }) : card.target === 'chest' ? tr('Piazza {name}: tocca una cassa evidenziata', { name: card.name }) : tr('Piazza {name}: tocca una casella evidenziata', { name: card.name });
     this.adversaryTrapInfo.set(what);
-    this.pieces?.showMonsterReach(spots.flatMap((s) => this.spotCells(s)));
+    this.pieces?.showEnemyReach(spots.flatMap((s) => this.spotCells(s)));
   }
 
   /** Le caselle da evidenziare per un bersaglio: la casella o lo scrigno, o i due lati di una porta. */
@@ -3830,7 +3830,7 @@ export class GameSceneComponent implements OnDestroy {
   protected endTrap() {
     this.adversaryTrap = null;
     this.adversaryTrapInfo.set(null);
-    this.pieces?.showMonsterReach(null);
+    this.pieces?.showEnemyReach(null);
   }
 
   /** Le trappole armate, solo per il Maligno: un segnale rosso sul bersaglio (casella o scrigno: in alto a destra; porta: a metà). Si ridisegna solo quando cambiano. */
@@ -3867,10 +3867,10 @@ export class GameSceneComponent implements OnDestroy {
   private pickPiece(prompt: string, candidates: Piece[], cancellable: boolean): Promise<Piece | null> {
     return new Promise((resolve) => {
       this.panel.set(null);
-      this.monsterPanel.set(null);
+      this.enemyPanel.set(null);
       this.adversaryPick = { candidates, resolve };
       this.adversaryPickInfo.set({ prompt, cancellable });
-      this.pieces?.showMonsterReach(candidates.flatMap((p) => footprint(p)));
+      this.pieces?.showEnemyReach(candidates.flatMap((p) => footprint(p)));
     });
   }
 
@@ -3879,7 +3879,7 @@ export class GameSceneComponent implements OnDestroy {
     if (!sel) return;
     this.adversaryPick = null;
     this.adversaryPickInfo.set(null);
-    this.pieces?.showMonsterReach(null);
+    this.pieces?.showEnemyReach(null);
     sel.resolve(piece);
   }
 
@@ -3926,52 +3926,52 @@ export class GameSceneComponent implements OnDestroy {
     if (!target) return;
     const option = optionsOf(mercenary, target).sort((a, b) => b.dice.length - a.dice.length)[0];
     this.showNotice(tr('{name} attacca {name2} contro la sua volontà', { name: mercenary.name, name2: target.name }), 'swords', 'adversary');
-    await this.adversaryScripted(async () => this.monsterAttack(mercenary, target, option));
+    await this.adversaryScripted(async () => this.enemyAttack(mercenary, target, option));
   }
 
   /**
-   * I Poteri che scattano quando gli eroi rivelano un'area, con il Maligno a mano: Abile comandante (sceglie lui quale mostro dell'area diventa potenziato, toccandolo sulla mappa)
-   * e Orda di Creature (un avviso dice cosa fare, sceglie il tipo e poi piazza i 2 mostri accanto a un altro mostro dell'area). La camera inquadra i mostri dell'area.
+   * I Poteri che scattano quando gli eroi rivelano un'area, con il Maligno a mano: Abile comandante (sceglie lui quale nemico dell'area diventa potenziato, toccandolo sulla mappa)
+   * e Orda di Creature (un avviso dice cosa fare, sceglie il tipo e poi piazza i 2 nemici accanto a un altro nemico dell'area). La camera inquadra i nemici dell'area.
    */
   private async manualAreaPowers(area: string) {
     const s = this.state;
     const board = this.board;
     if (!board) return;
-    const inArea = monstersIn(s, board, area);
+    const inArea = enemiesIn(s, board, area);
     if (!inArea.length) return;
     const where = inArea.flatMap((m) => footprint(m));
     if (s.adversary.inPlay.includes('able-commander')) {
       const options = upgradeOptions(s, inArea);
       if (options.length) {
         await this.frameCells(where);
-        const pick = await this.pickPiece(tr('Abile comandante: scegli il mostro da potenziare'), options, false);
+        const pick = await this.pickPiece(tr('Abile comandante: scegli il nemico da potenziare'), options, false);
         if (pick) {
-          upgradeMonster(s, pick);
+          upgradeEnemy(s, pick);
           this.pieces?.redraw(pick);
           await this.announce(tr('Abile comandante'), tr('{names} diventa potenziato.', { names: pick.name }));
         }
       }
     }
     if (s.adversary.inPlay.includes('horde')) {
-      const types = HORDE_TYPES.filter((t) => s.monsters.has(t) && miniaturesLeft(s, t, false) > 0);
+      const types = HORDE_TYPES.filter((t) => s.enemies.has(t) && miniaturesLeft(s, t, false) > 0);
       if (types.length) {
         await this.frameCells(where);
         const answer = await this.askChoice({
           title: tr('Orda di Creature'),
-          text: tr('Hai rivelato una nuova area: aggiungi 2 mostri a tua scelta accanto a un altro mostro dell\'area. Quali?'),
-          choices: types.map((t) => ({ id: t, label: s.monsters.get(t)!.name, primary: true })),
+          text: tr('Hai rivelato una nuova area: aggiungi 2 nemici a tua scelta accanto a un altro nemico dell\'area. Quali?'),
+          choices: types.map((t) => ({ id: t, label: s.enemies.get(t)!.name, primary: true })),
         });
         await this.startHorde(answer, inArea);
       }
     }
   }
 
-  /** "Termina" (o niente più da piazzare): se almeno un mostro è stato messo, la carta conta come l'Evocazione del round. */
+  /** "Termina" (o niente più da piazzare): se almeno un nemico è stato messo, la carta conta come l'Evocazione del round. */
   protected endSummon() {
     const sel = this.adversarySummon;
     this.adversarySummon = null;
     this.adversarySummonInfo.set(null);
-    this.pieces?.showMonsterReach(null);
+    this.pieces?.showEnemyReach(null);
     if (sel?.paid && sel.card) this.summonedRound = this.state.round; // l'Orda non conta come Evocazione del round
     this.showHud(this.pieces?.active ?? null);
     sel?.done?.();
@@ -4027,7 +4027,7 @@ export class GameSceneComponent implements OnDestroy {
       this.pieces?.addPiece(next.piece);
     }
     this.finishSetup();
-    this.syncMonsterVisibility(); // vista del Maligno: tutti i mostri
+    this.syncEnemyVisibility(); // vista del Maligno: tutti i nemici
   }
 
   /** Tutti gli eroi sono in campo: la preparazione finisce, si scopre ciò che vedono e comincia il primo turno. */
@@ -4046,7 +4046,7 @@ export class GameSceneComponent implements OnDestroy {
     this.showWholeMap();
     void this.waitUntil(() => !this.camTween, 5000).then(() => {
       this.barsIn.set(true);
-      // Le aree viste fin dal piazzamento (l'area di partenza, o una collegata senza porta) si presentano come tutte le altre: la descrizione da leggere e i poteri dei mostri; solo dopo il turno degli eroi (o la sua passata automatica).
+      // Le aree viste fin dal piazzamento (l'area di partenza, o una collegata senza porta) si presentano come tutte le altre: la descrizione da leggere e i poteri dei nemici; solo dopo il turno degli eroi (o la sua passata automatica).
       if (revealed.areas.length) void this.areasRevealed(revealed.areas).then(() => (this.adversaryMode ? this.adversaryMercenariesPass() : undefined));
       else if (this.adversaryMode) void this.adversaryMercenariesPass();
     });
@@ -4072,12 +4072,12 @@ export class GameSceneComponent implements OnDestroy {
     else if (r.code === 'needs-event') this.showNotice(tr('La porta è sigillata: si aprirà quando succederà qualcosa'), 'lock');
   }
 
-  /** Un mostro ha aperto delle porte lungo la strada: si ridisegnano (parte l'animazione dell'anta) e, se i giocatori le vedono, lo si dice. */
-  private monsterOpenedDoors(monster: Piece, indexes: number[]) {
+  /** Un nemico ha aperto delle porte lungo la strada: si ridisegnano (parte l'animazione dell'anta) e, se i giocatori le vedono, lo si dice. */
+  private enemyOpenedDoors(enemy: Piece, indexes: number[]) {
     if (!this.board) return;
     this.doorView?.redraw(this.board, (d) => !this.fogOn() || this.exploration.doors.has(d));
     const seen = indexes.some((i) => !this.fogOn() || this.exploration.doors.has(this.board!.doors[i].door));
-    if (seen) this.showNotice(`${monster.name} apre ${indexes.length > 1 ? 'delle porte' : 'una porta'}`, 'door_front', 'adversary');
+    if (seen) this.showNotice(`${enemy.name} apre ${indexes.length > 1 ? 'delle porte' : 'una porta'}`, 'door_front', 'adversary');
     this.exploreAndNotify(); // una porta aperta può far vedere cose nuove agli eroi
   }
 
@@ -4192,7 +4192,7 @@ export class GameSceneComponent implements OnDestroy {
       this.showNotice(action.reason ?? tr('Non è possibile'), 'warning');
       return;
     }
-    const known = (p: Piece) => p.team === 'mercenary' || !this.fogOn() || this.exploration.monsters.has(p.id);
+    const known = (p: Piece) => p.team === 'mercenary' || !this.fogOn() || this.exploration.enemies.has(p.id);
     const targets = telekinesisTargets(this.state, this.board, mercenary, known);
     if (!targets.length) {
       this.showNotice(tr('Nessun modello in vista che si possa spostare'), 'warning');
@@ -4760,7 +4760,7 @@ export class GameSceneComponent implements OnDestroy {
       else if (key === 'o') this.setMode('obstacles');
       else if (key === 'z' && !e.repeat) this.showWholeMap();
       else if (key === 'f' && !e.repeat) this.centerOnActive();
-      else if (key === 'a' && !e.repeat && this.adversaryMode) this.monstersAuto.update((v) => !v); // "Mostri automatici"
+      else if (key === 'a' && !e.repeat && this.adversaryMode) this.enemiesAuto.update((v) => !v); // "Nemici automatici"
       else if (this.mode === 'obstacles') {
         if (key === 'r') this.obstacleVertical = !this.obstacleVertical;
         else if (key === 't') this.obstacleVariant = (this.obstacleVariant + 1) % OBSTACLE_VARIANTS.length;

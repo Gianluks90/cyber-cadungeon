@@ -3,25 +3,25 @@ import { TrPipe } from '../i18n/tr.pipe';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { DieColor } from '../game/items/item';
-import { MonsterDef, MonsterTier } from '../game/monsters/monster';
+import { EnemyDef, EnemyTier } from '../game/enemies/enemy';
 import { IconComponent } from './icon.component';
 import { PictureComponent } from './picture.component';
 
 const ATTACK = { get melee() { return tr('Mischia'); }, get ranged() { return tr('Distanza'); }, get intrusion() { return tr('Intrusione'); } } as const;
 
-/** La card di un mostro nel catalogo: immagine, nome, dimensione, attacco, e le due versioni (normale e potenziata) una sotto l'altra. */
+/** La card di un nemico nel catalogo: immagine, nome, dimensione, attacco, e le due versioni (normale e potenziata) una sotto l'altra. */
 @Component({
-  selector: 'app-monster-card',
+  selector: 'app-enemy-card',
   imports: [TrPipe, CatalogTextPipe, IconComponent, PictureComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (monster(); as m) {
+    @if (enemy(); as m) {
       <article class="card">
         <header>
           <span class="pic"><app-picture [src]="m.image + '-token.webp'" icon="skull" [iconSize]="30" /></span>
           <div class="who">
             <h4>{{ m.name }}</h4>
-            <span class="meta">{{ 'Mostro' | tr }} · {{ attack(m) }} · {{ m.size.w }}×{{ m.size.h }}</span>
+            <span class="meta">{{ 'Nemico' | tr }} · {{ attack(m) }} · {{ m.size.w }}×{{ m.size.h }}</span>
           </div>
         </header>
         <div class="tiers">
@@ -62,14 +62,14 @@ const ATTACK = { get melee() { return tr('Mischia'); }, get ranged() { return tr
     ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; color: var(--c-text-dim); font-size: 12px; }
   `,
 })
-export class MonsterCardComponent {
-  readonly monster = input<MonsterDef | null>(null);
+export class EnemyCardComponent {
+  readonly enemy = input<EnemyDef | null>(null);
 
-  protected attack(m: MonsterDef): string {
+  protected attack(m: EnemyDef): string {
     return ATTACK[m.attack];
   }
 
-  protected tiers(m: MonsterDef): { label: string; tier: MonsterTier; enhanced: boolean }[] {
+  protected tiers(m: EnemyDef): { label: string; tier: EnemyTier; enhanced: boolean }[] {
     return [{ label: tr('Normale'), tier: m.normal, enhanced: false }, { label: tr('Potenziato'), tier: m.enhanced, enhanced: true }];
   }
 

@@ -9,7 +9,7 @@ import { MercenaryPanelComponent, PanelKind } from './mercenary-panel.component'
 import { MercenaryDetails, MercenarySheetComponent } from './mercenary-sheet.component';
 import { PieceStatus } from '../game/pieces/piece';
 import { InventoryPanelComponent } from './inventory-panel.component';
-import { MonsterDetails, MonsterSheetComponent } from './monster-sheet.component';
+import { EnemyDetails, EnemySheetComponent } from './enemy-sheet.component';
 import { IconComponent } from './icon.component';
 
 /** Chi compare nella barra: un eroe oppure il segnaposto del Maligno. */
@@ -61,12 +61,12 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
  */
 @Component({
   selector: 'app-party-bar',
-  imports: [TrPipe, CityPanelComponent, HeartsComponent, MercenaryPanelComponent, MercenarySheetComponent, IconComponent, InventoryPanelComponent, MonsterSheetComponent, NgTemplateOutlet],
+  imports: [TrPipe, CityPanelComponent, HeartsComponent, MercenaryPanelComponent, MercenarySheetComponent, IconComponent, InventoryPanelComponent, EnemySheetComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '[class.public]': 'publicView()', '[class.compact]': 'compact()' },
   template: `
     <nav class="bar" [attr.aria-label]="'Mercenari' | tr">
-      <!-- Gli eroi sono un gruppo: la scheda completa (o quella di un mostro) sta sopra tutto il gruppo, lunga quanto l'elenco degli eroi. -->
+      <!-- Gli eroi sono un gruppo: la scheda completa (o quella di un nemico) sta sopra tutto il gruppo, lunga quanto l'elenco degli eroi. -->
       <div class="mercenaries">
         @if (panelMember(); as m) {
           <app-mercenary-panel [mercenary]="m.details!" [active]="panel()!.kind" [kinds]="publicView() ? ['info'] : null" (closed)="sheetClosed.emit()" (switch)="panelSwitch.emit($event)">
@@ -75,10 +75,10 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
             @else { <app-city-panel [mercenary]="m.details!" (cityAction)="cityAction.emit($event)" (denied)="denied.emit($event)" /> }
           </app-mercenary-panel>
         }
-        <!-- La scheda di un mostro (solo nella vista del Maligno): stessa cornice di quella di un eroe, sopra l'elenco degli eroi; mai insieme alla loro. -->
-        @if (monster(); as mon) {
-          <app-mercenary-panel [mercenary]="mon" active="info" [kinds]="['info']" (closed)="monsterClosed.emit()">
-            <app-monster-sheet [monster]="mon" />
+        <!-- La scheda di un nemico (solo nella vista del Maligno): stessa cornice di quella di un eroe, sopra l'elenco degli eroi; mai insieme alla loro. -->
+        @if (enemy(); as mon) {
+          <app-mercenary-panel [mercenary]="mon" active="info" [kinds]="['info']" (closed)="enemyClosed.emit()">
+            <app-enemy-sheet [enemy]="mon" />
           </app-mercenary-panel>
         }
         @for (m of mercenaries(); track m.id) {
@@ -289,9 +289,9 @@ export class PartyBarComponent {
   readonly changeOrder = output<string>();
   /** Si usa un'abilità dalla scheda. */
   readonly skillUse = output<string>();
-  /** La scheda del mostro aperta (solo nella vista del Maligno). */
-  readonly monster = input<MonsterDetails | null>(null);
-  readonly monsterClosed = output<void>();
+  /** La scheda del nemico aperta (solo nella vista del Maligno). */
+  readonly enemy = input<EnemyDetails | null>(null);
+  readonly enemyClosed = output<void>();
   /** Dai titoli in cima a un pannello: si passa all'altro. */
   readonly panelSwitch = output<PanelKind>();
   /** Un'azione su un oggetto, dalla scheda completa. */

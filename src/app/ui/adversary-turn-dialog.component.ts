@@ -16,7 +16,7 @@ import { IconComponent } from './icon.component';
     <app-dialog [title]="'Inizia il tuo turno' | tr" [kicker]="'Avversario' | tr" [closable]="false" [adversary]="true" width="min(420px, 100%)">
       <div class="content">
         <app-icon name="skull" [size]="30" />
-        <p class="text">{{ (gained() === 1 ? 'Ricevi 1 segnalino Allarme da spendere per carte e mostri.' : 'Ricevi {n} segnalini Allarme da spendere per carte e mostri.') | tr: { n: gained() } }}</p>
+        <p class="text">{{ (gained() === 1 ? 'Ricevi 1 segnalino Allarme da spendere per carte e nemici.' : 'Ricevi {n} segnalini Allarme da spendere per carte e nemici.') | tr: { n: gained() } }}</p>
         <div class="counter" role="status">
           <span class="label">{{ 'Punti allarme totali' | tr }}</span>
           <span class="value">{{ shown() }}</span>

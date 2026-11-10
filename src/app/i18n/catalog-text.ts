@@ -1,10 +1,10 @@
 import { translateRaw, translateRawAll } from './i18n.service';
 
 /**
- * I testi dei cataloghi (oggetti, abilità, mostri, eroi) sono scritti in italiano nei file di `public/`: l'italiano è anche ciò che legge il motore di gioco (per esempio "Perforare 2" o
+ * I testi dei cataloghi (oggetti, abilità, nemici, eroi) sono scritti in italiano nei file di `public/`: l'italiano è anche ciò che legge il motore di gioco (per esempio "Perforare 2" o
  * "+1 danno" sono parole che le regole riconoscono), quindi nei dati non si traduce. Chi mostra un testo all'utente lo passa da qui: se c'è la traduzione nella lingua di adesso la dà,
  * altrimenti restituisce il testo com'è.
- * Le traduzioni stanno in `it.json` e `en.json`: i nomi per id (`item.sword`, `skill.parry`, `monster.goblin`) e gli altri testi con una chiave ricavata dal testo stesso (`catalogKey`).
+ * Le traduzioni stanno in `it.json` e `en.json`: i nomi per id (`item.sword`, `skill.parry`, `enemy.goblin`) e gli altri testi con una chiave ricavata dal testo stesso (`catalogKey`).
  */
 
 /** La chiave di un testo del catalogo: le prime parole senza accenti e un breve riassunto del testo intero (due testi diversi non hanno mai la stessa chiave). */
@@ -31,13 +31,13 @@ export function catalogText(text: string): string {
   return translateRaw(catalogKey(text)) ?? text;
 }
 
-/** Il nome di un oggetto, un'abilità o un mostro (`kind` è `item`, `skill` o `monster`) nella lingua di adesso (se non c'è la traduzione, quello dei dati). */
-export function catalogName(kind: 'item' | 'skill' | 'monster' | 'adversary', id: string, fallback: string): string {
+/** Il nome di un oggetto, un'abilità o un nemico (`kind` è `item`, `skill` o `enemy`) nella lingua di adesso (se non c'è la traduzione, quello dei dati). */
+export function catalogName(kind: 'item' | 'skill' | 'enemy' | 'adversary', id: string, fallback: string): string {
   return translateRaw(`${kind}.${id}`) ?? fallback;
 }
 
 /** Fa seguire il nome alla lingua: la proprietà `name` di una voce del catalogo diventa un getter (le copie di una voce, come `{ ...def }`, prendono il nome del momento). */
-export function localizeName<T extends { id: string; name: string }>(kind: 'item' | 'skill' | 'monster' | 'adversary', def: T): T {
+export function localizeName<T extends { id: string; name: string }>(kind: 'item' | 'skill' | 'enemy' | 'adversary', def: T): T {
   const raw = def.name;
   Object.defineProperty(def, 'name', { get: () => catalogName(kind, def.id, raw), enumerable: true, configurable: true });
   return def;

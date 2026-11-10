@@ -6,7 +6,7 @@ import { FamiliarDef } from '../game/familiars/familiar';
 import { IconComponent } from './icon.component';
 import { PictureComponent } from './picture.component';
 
-/** Ciò che la cornice mostra di chi la apre: un eroe (`MercenaryDetails`) o un mostro (`MonsterDetails`). */
+/** Ciò che la cornice mostra di chi la apre: un eroe (`MercenaryDetails`) o un nemico (`EnemyDetails`). */
 export interface PanelSubject {
   name: string;
   mercenaryClass?: string;
@@ -16,7 +16,7 @@ export interface PanelSubject {
   cityPanel?: boolean;
   /** Solo per gli eroi: il Valore, la Conquista che il gruppo perde se muore; sta in un'esplosione in basso a destra sull'immagine. */
   value?: number;
-  /** Un mostro potenziato: la sua carta ha il contorno rosso. */
+  /** Un nemico potenziato: la sua carta ha il contorno rosso. */
   enhanced?: boolean;
   /** Solo per gli eroi: i famigli che ha con sé. La card del primo sta dal lato opposto all'immagine, e se sono più d'uno una freccia mostra il successivo. */
   familiars?: readonly FamiliarDef[];
@@ -53,7 +53,7 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
     @if (mercenary(); as h) {
       <section class="frame" [attr.aria-label]="'Pannello di {name}' | tr: { name: h.name }">
         <figure class="art" [class.enhanced]="h.enhanced">
-          <app-picture [src]="h.portraitFull ?? h.portrait" [icon]="isMonster(h) ? 'skull' : 'frame_person'" [iconSize]="72" />
+          <app-picture [src]="h.portraitFull ?? h.portrait" [icon]="isEnemy(h) ? 'skull' : 'frame_person'" [iconSize]="72" />
           <figcaption>
             @if (h.value !== undefined) {
               <!-- Il Valore: una stella a molte punte, nera, con il numero al centro, appena sopra il piede dell'immagine. -->
@@ -167,15 +167,15 @@ const BURST = Array.from({ length: 32 }, (_, i) => {
   `,
 })
 export class MercenaryPanelComponent {
-  /** Il pannello di un mostro (la sua "classe" è "Mostro" o "Mostro potenziato"): ha l'icona del teschio al posto di quella dell'eroe. */
-  protected isMonster(h: PanelSubject): boolean {
-    return [tr('Mostro'), tr('Mostro potenziato')].includes(h.mercenaryClass ?? '');
+  /** Il pannello di un nemico (la sua "classe" è "Nemico" o "Nemico potenziato"): ha l'icona del teschio al posto di quella dell'eroe. */
+  protected isEnemy(h: PanelSubject): boolean {
+    return [tr('Nemico'), tr('Nemico potenziato')].includes(h.mercenaryClass ?? '');
   }
 
   protected readonly burst = BURST;
   readonly mercenary = input<PanelSubject | null>(null);
   /**
-   * Le card dei famigli dell'eroe (nessuna per un mostro), quella mostrata adesso e il passaggio alla successiva. Due famigli con lo stesso ritratto (Ying e Yang: due segnalini,
+   * Le card dei famigli dell'eroe (nessuna per un nemico), quella mostrata adesso e il passaggio alla successiva. Due famigli con lo stesso ritratto (Ying e Yang: due segnalini,
    * una sola creatura) hanno una card sola, con i nomi insieme.
    */
   protected readonly familiars = computed<readonly { id: string; name: string; portrait?: string }[]>(() => {
@@ -218,7 +218,7 @@ export class MercenaryPanelComponent {
     const base = this.hostEl.getBoundingClientRect().left - this.shift(); // dov'è il pannello senza lo spostamento
     this.shift.set(Math.max(0, Math.ceil(FAM_WIDTH - FAM_OVERLAP + FAM_MARGIN - base)));
   }
-  /** A sinistra (eroi: dal primo tab) o a destra (mostri: dall'ultimo tab, quello del Maligno). */
+  /** A sinistra (eroi: dal primo tab) o a destra (nemici: dall'ultimo tab, quello del Maligno). */
   readonly side = input<'left' | 'right'>('left');
   /** Le etichette in cima; senza, quelle degli eroi (Informazioni, Inventario e, in città, Città). */
   readonly kinds = input<PanelKind[] | null>(null);

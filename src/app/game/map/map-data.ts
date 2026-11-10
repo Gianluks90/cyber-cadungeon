@@ -58,7 +58,7 @@ export type EventTrigger =
    * "non ce n'è più", una volta per volta, e non scatta se all'inizio non ce n'erano.
    */
   | { kind: 'encountersGone'; markerIds?: string[]; area?: string }
-  /** Finisce il turno del Maligno (dopo che i mostri hanno giocato, prima che cominci il round dopo): serve per ricompense e penalità a fine turno, di solito con una condizione. */
+  /** Finisce il turno del Maligno (dopo che i nemici hanno giocato, prima che cominci il round dopo): serve per ricompense e penalità a fine turno, di solito con una condizione. */
   /** Un eroe usa una zona (la voce "!" `label` se è adiacente a una sua casella o ci sta dentro, al costo `cost` della zona): `zoneId` è il suo id. */
   | { kind: 'zoneUsed'; zoneId: string }
   /**
@@ -67,7 +67,7 @@ export type EventTrigger =
    */
   | { kind: 'zoneEntered'; zoneId: string; everyStep?: boolean; /** Solo quando si fa scattare (non nei dati): il passo viene da fuori dalla zona. */ fromOutside?: boolean }
   | { kind: 'adversaryTurnEnd'; /** Solo alla fine di questo round (da 1); senza, a ogni round. */ round?: number }
-  /** Comincia il turno del Maligno (dopo che ha ricaricato l'Odio e pescato, prima che i mostri agiscano): serve per effetti che si ripetono a ogni round, di solito con una condizione. */
+  /** Comincia il turno del Maligno (dopo che ha ricaricato l'Odio e pescato, prima che i nemici agiscano): serve per effetti che si ripetono a ogni round, di solito con una condizione. */
   | { kind: 'adversaryTurnStart'; /** Solo all'inizio del turno del Maligno di questo round (da 1); senza, a ogni round. */ round?: number };
 
 /**
@@ -92,11 +92,11 @@ export interface VariableCondition {
   is: boolean;
 }
 
-/** Una condizione su un oggetto del catalogo: in questo momento è con un eroe, a terra (un segnalino sulla mappa) o con un mostro (o, con `not`, non lo è). */
+/** Una condizione su un oggetto del catalogo: in questo momento è con un eroe, a terra (un segnalino sulla mappa) o con un nemico (o, con `not`, non lo è). */
 export interface ItemCondition {
   item: string;
-  at: 'mercenary' | 'ground' | 'monster';
-  /** Vale se l'oggetto NON sta lì (per esempio "non è con un eroe": a terra o con un mostro). */
+  at: 'mercenary' | 'ground' | 'enemy';
+  /** Vale se l'oggetto NON sta lì (per esempio "non è con un eroe": a terra o con un nemico). */
   not?: boolean;
 }
 
@@ -112,7 +112,7 @@ export type EventEffect =
   | { kind: 'progress'; amount: number }
   | { kind: 'setVariable'; variable: string; value: boolean }
   /** Cambia per il resto della partita i valori di una pedina (anche una che aspetta di tornare in vita): somme (o sottrazioni) alle ferite massime e attuali, alla velocità e all'armatura. */
-  | { kind: 'modifyMonster'; pieceId: string; pieceIds?: string[]; wounds?: number; speed?: number; armor?: number }
+  | { kind: 'modifyEnemy'; pieceId: string; pieceIds?: string[]; wounds?: number; speed?: number; armor?: number }
   /** Solo negli eventi "sconfitto": la pedina non muore, esce dalla mappa e dopo `turns` turni del Maligno torna a piena salute in una casella già scoperta, lontana almeno `distance` caselle dagli eroi (o la più lontana possibile). */
   | { kind: 'revive'; turns: number; distance: number }
   /** Se la pedina sta aspettando di tornare in vita, la sua sconfitta si ripete adesso (con le variabili di adesso): così un evento può "chiudere" un ritorno in vita. */
@@ -228,7 +228,7 @@ export interface MapData {
   zones?: Zone[];
   /** Gli oggetti del catalogo che l'avventura personalizza (livelli, maledizione, valori): vedi `ItemMod`. */
   itemMods?: ItemMod[];
-  /** Comportamenti globali dei mostri (per tipo, o per tutti): vedi `GlobalBehavior`. */
+  /** Comportamenti globali dei nemici (per tipo, o per tutti): vedi `GlobalBehavior`. */
   behaviors?: GlobalBehavior[];
   /** Muri dell'avventura (segmenti sulla griglia che bloccano movimento e vista, senza creare aree): dati dell'avventura. */
   walls?: Wall[];

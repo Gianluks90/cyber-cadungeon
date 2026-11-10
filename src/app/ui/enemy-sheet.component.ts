@@ -6,11 +6,11 @@ import { DieColor } from '../game/items/item';
 import { HeartsComponent } from './hearts.component';
 import { IconComponent } from './icon.component';
 
-/** Tutto ciò che la scheda di un mostro mostra (solo al Maligno: i giocatori non conoscono i parametri dei nemici). */
-export interface MonsterDetails {
+/** Tutto ciò che la scheda di un nemico mostra (solo al Maligno: i giocatori non conoscono i parametri dei nemici). */
+export interface EnemyDetails {
   id: string;
   name: string;
-  /** Il sottotitolo sotto il nome (in maiuscolo): "Mostro" o "Mostro potenziato". */
+  /** Il sottotitolo sotto il nome (in maiuscolo): "Nemico" o "Nemico potenziato". */
   mercenaryClass: string;
   /** Potenziato: la carta con l'immagine ha il contorno rosso. */
   enhanced: boolean;
@@ -37,15 +37,15 @@ export interface MonsterDetails {
 const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'); }, get green() { return tr('dado verde'); }, get blue() { return tr('dado blu'); }, get yellow() { return tr('dado giallo'); }, get white() { return tr('dado bianco'); }, get black() { return tr('dado competenza'); } };
 
 /**
- * La scheda di un mostro: parametri (cuori e ferite, velocità, armatura, dimensione), attacco (tipo e dadi) e abilità speciali.
+ * La scheda di un nemico: parametri (cuori e ferite, velocità, armatura, dimensione), attacco (tipo e dadi) e abilità speciali.
  * È il contenuto della cornice `app-mercenary-panel` aperta a destra, partendo dal tab del Maligno.
  */
 @Component({
-  selector: 'app-monster-sheet',
+  selector: 'app-enemy-sheet',
   imports: [TrPipe, CatalogTextPipe, HeartsComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    @if (monster(); as m) {
+    @if (enemy(); as m) {
       <h3 class="first">{{ 'Parametri' | tr }}</h3>
       <div class="life">
         <app-hearts [wounds]="m.wounds" [max]="m.maxWounds" [poison]="m.poison" [size]="18" />
@@ -98,8 +98,8 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
     .none { color: var(--c-text-dim); font-style: italic; }
   `,
 })
-export class MonsterSheetComponent {
-  readonly monster = input<MonsterDetails | null>(null);
+export class EnemySheetComponent {
+  readonly enemy = input<EnemyDetails | null>(null);
 
   protected dieName(d: DieColor): string {
     return DIE_NAMES[d];

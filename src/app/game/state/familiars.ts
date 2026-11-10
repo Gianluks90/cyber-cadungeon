@@ -6,7 +6,7 @@ import type { GameState } from './game-state';
 
 /**
  * I famigli (docs/REGOLE.md, sezione 2g). Non sono pedine ma una lista a parte (`GameState.familiars`): così, senza altro codice, non occupano caselle, non bloccano la vista, non si possono
- * attaccare né colpire con le aree, e non contano come eroi per gli scaglioni dei mostri e per l'evocazione. Sono dell'eroe che li possiede (`owner`), che li sposta a mano dopo il suo turno.
+ * attaccare né colpire con le aree, e non contano come eroi per gli scaglioni dei nemici e per l'evocazione. Sono dell'eroe che li possiede (`owner`), che li sposta a mano dopo il suo turno.
  */
 
 /** Gli id dei famigli che questo eroe ha: quelli della sua scheda (effetto `familiar` in `effects`) e quelli delle sue carte abilità. */
@@ -59,15 +59,15 @@ export function familiarReach(state: GameState, board: Board, def: FamiliarDef, 
 /** Quanti punti costa il percorso fino a `target` (i punti che il famiglio ha speso muovendosi). */
 export const familiarCost = (reach: Map<string, Reach>, target: Cell): number => reach.get(cellKey(target))?.cost ?? 0;
 
-/** Gli effetti dei famigli sui mostri vicini: i nemici nello spazio di un famiglio con `weaken` e in quelli adiacenti hanno meno armatura e non schivano né mirano. */
-export function weakening(state: GameState, monster: Piece): { armor: number; noDodge: boolean; noAim: boolean } {
+/** Gli effetti dei famigli sui nemici vicini: i nemici nello spazio di un famiglio con `weaken` e in quelli adiacenti hanno meno armatura e non schivano né mirano. */
+export function weakening(state: GameState, enemy: Piece): { armor: number; noDodge: boolean; noAim: boolean } {
   const out = { armor: 0, noDodge: false, noAim: false };
-  if (monster.team !== 'monster' || monster.city) return out;
+  if (enemy.team !== 'enemy' || enemy.city) return out;
   for (const f of state.familiars) {
     const def = state.familiarDefs.get(f.id);
     const w = def?.effects?.find((e) => e.kind === 'weaken');
     if (!w) continue;
-    const near = footprint(monster).some((c) => Math.max(Math.abs(c.x - f.cell.x), Math.abs(c.y - f.cell.y)) <= 1);
+    const near = footprint(enemy).some((c) => Math.max(Math.abs(c.x - f.cell.x), Math.abs(c.y - f.cell.y)) <= 1);
     if (!near) continue;
     out.armor += Number(w['armor'] ?? 0);
     out.noDodge ||= !!w['noDodge'];

@@ -4,7 +4,7 @@ import { TrPipe } from '../i18n/tr.pipe';
 import { HeartsComponent } from './hearts.component';
 import { IconComponent } from './icon.component';
 
-/** Il mostro che il Maligno sta attivando a mano. */
+/** Il nemico che il Maligno sta attivando a mano. */
 export interface ActivationView {
   name: string;
   /** L'immagine del segnalino (percorso in public/). */
@@ -19,9 +19,9 @@ export interface ActivationView {
 }
 
 /**
- * Il mostro in attivazione (vista del Maligno), sotto la barra degli eroi a un piccolo gap, larga e alta uguale al suo box. Da sinistra: il segnalino quadrato, il nome con
+ * Il nemico in attivazione (vista del Maligno), sotto la barra degli eroi a un piccolo gap, larga e alta uguale al suo box. Da sinistra: il segnalino quadrato, il nome con
  * i punti vita sotto (il valore e i cuori), i punti movimento e gli attacchi che restano, e "Termina", un pezzo del box (quadrato) che chiude l'attivazione.
- * Sopra movimento e attacchi, in verticale come nome e vita, le abilità del mostro come pillole.
+ * Sopra movimento e attacchi, in verticale come nome e vita, le abilità del nemico come pillole.
  */
 @Component({
   selector: 'app-adversary-activation',
@@ -30,20 +30,20 @@ export interface ActivationView {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="card">
-      <span class="token">@if (monster().portrait) { <img [src]="monster().portrait" alt="" draggable="false" /> }</span>
+      <span class="token">@if (enemy().portrait) { <img [src]="enemy().portrait" alt="" draggable="false" /> }</span>
       <span class="info">
-        <span class="name">{{ monster().name }}</span>
-        <span class="life"><span class="v">{{ monster().wounds }}</span><app-hearts [wounds]="monster().wounds" [max]="monster().maxWounds" [size]="14" [outline]="true" /></span>
+        <span class="name">{{ enemy().name }}</span>
+        <span class="life"><span class="v">{{ enemy().wounds }}</span><app-hearts [wounds]="enemy().wounds" [max]="enemy().maxWounds" [size]="14" [outline]="true" /></span>
       </span>
       <span class="side">
-        @if (monster().abilities.length) {
+        @if (enemy().abilities.length) {
           <ul class="abilities" [attr.aria-label]="'Abilità' | tr">
-            @for (a of monster().abilities; track $index) { <li class="pill">{{ a | ct }}</li> }
+            @for (a of enemy().abilities; track $index) { <li class="pill">{{ a | ct }}</li> }
           </ul>
         }
         <span class="stats">
-          <span class="stat move" [title]="'Punti movimento' | tr"><app-icon name="footprint" [size]="18" />{{ monster().points }}</span>
-          <span class="stat" [title]="'Attacchi' | tr"><app-icon name="swords" [size]="18" />{{ monster().attacks }}</span>
+          <span class="stat move" [title]="'Punti movimento' | tr"><app-icon name="footprint" [size]="18" />{{ enemy().points }}</span>
+          <span class="stat" [title]="'Attacchi' | tr"><app-icon name="swords" [size]="18" />{{ enemy().attacks }}</span>
         </span>
       </span>
       <button type="button" class="end" [attr.aria-label]="'Termina' | tr" [title]="'Termina' | tr" (click)="done.emit()"><app-icon name="skip_next" [size]="28" /><span>{{ 'Termina' | tr }}</span></button>
@@ -95,7 +95,7 @@ export interface ActivationView {
   `,
 })
 export class AdversaryActivationComponent {
-  readonly monster = input.required<ActivationView>();
+  readonly enemy = input.required<ActivationView>();
   /** Quanti eroi ci sono: la box è larga quanto la barra degli eroi. */
   readonly slots = input(2);
   readonly done = output<void>();

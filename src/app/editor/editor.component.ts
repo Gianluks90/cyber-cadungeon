@@ -44,9 +44,9 @@ import { MapPickService } from '../ui/map-pick.service';
 const zoneName = (id: string): string => t('tools.zoneName', { n: /(\d+)$/.exec(id)?.[1] ?? '?' });
 
 const isSpecialSpec = (type: string) => type === 'glyph' || type === 'start' || type === 'encounter';
-import { MonsterView } from './monster-view';
+import { EnemyView } from './enemy-view';
 import { renderMarkerSamples } from './marker-samples';
-import { MonsterDialogComponent } from './monster-dialog.component';
+import { EnemyDialogComponent } from './enemy-dialog.component';
 import { EncounterDialogComponent, EncounterEdits } from './encounter-dialog.component';
 import { StairsDialogComponent, StairsEdits } from './stairs-dialog.component';
 import { ObstacleDialogComponent, ObstacleEdits } from './obstacle-dialog.component';
@@ -56,10 +56,10 @@ import { graphics, renderResolution } from '../game/graphics-settings';
 import { ChestTableDialogComponent } from './chest-table-dialog.component';
 import { ItemModsDialogComponent } from './item-mods-dialog.component';
 import type { ChestTable } from '../game/board/marker';
-import { MonsterEdits } from './tile-editor';
+import { EnemyEdits } from './tile-editor';
 import { loadItemCatalog, type ItemDef, type ItemMod } from '../game/items/item';
 import { loadPortraits } from '../game/pieces/portraits';
-import { loadMonsterCatalog, MonsterDef } from '../game/monsters/monster';
+import { loadEnemyCatalog, EnemyDef } from '../game/enemies/enemy';
 import type { ObstacleType } from '../game/board/obstacle';
 import { AreaTool } from './area-tool';
 import { AreaDialogComponent, AreaTexts } from './area-dialog.component';
@@ -79,7 +79,7 @@ import { DotWaveComponent } from '../ui/dot-wave.component';
  */
 @Component({
   selector: 'app-editor',
-  imports: [TranslatePipe, ObstacleDialogComponent, ZoneDialogComponent, DotWaveComponent, DialogComponent, GlobalBehaviorsDialogComponent, AdventureSetupDialogComponent, ItemMarkerDialogComponent, EventDialogComponent, VariablesDialogComponent, ChestTableDialogComponent, ItemModsDialogComponent, MonsterDialogComponent, EncounterDialogComponent, StairsDialogComponent, ConfirmDialogComponent, AreaDialogComponent, ValidationDialogComponent, EditorToolsComponent, AdventureGoalsDialogComponent, AdventureInfoDialogComponent, IconComponent, KeyLabelComponent, LogoButtonComponent, ZoomControlsComponent],
+  imports: [TranslatePipe, ObstacleDialogComponent, ZoneDialogComponent, DotWaveComponent, DialogComponent, GlobalBehaviorsDialogComponent, AdventureSetupDialogComponent, ItemMarkerDialogComponent, EventDialogComponent, VariablesDialogComponent, ChestTableDialogComponent, ItemModsDialogComponent, EnemyDialogComponent, EncounterDialogComponent, StairsDialogComponent, ConfirmDialogComponent, AreaDialogComponent, ValidationDialogComponent, EditorToolsComponent, AdventureGoalsDialogComponent, AdventureInfoDialogComponent, IconComponent, KeyLabelComponent, LogoButtonComponent, ZoomControlsComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(window:keydown)': 'onKey($event)', '(window:keyup)': 'onKeyUp($event)' },
   template: `
@@ -127,7 +127,7 @@ import { DotWaveComponent } from '../ui/dot-wave.component';
     <app-confirm-dialog [open]="!!importing() && !importMissing()" [title]="'editor.replaceMapTitle' | t" [text]="importWarning()" [confirmLabel]="'editor.replace' | t" (confirmed)="confirmImport()" (cancel)="importing.set(null)" />
     <app-confirm-dialog [open]="!!importError()" [title]="'editor.importFailed' | t" [text]="importError()" [confirmLabel]="'editor.ok' | t" [danger]="false" (confirmed)="importError.set('')" (cancel)="importError.set('')" />
     <app-area-dialog [open]="!!editedArea()" [name]="editedArea()?.name ?? ('editor.areaFallback' | t)" [required]="!editedArea()?.start" [value]="{ subtitle: editedArea()?.subtitle ?? '', text: editedArea()?.text ?? '' }" (confirmed)="applyArea($event)" (cancel)="areaEditing.set(null)" />
-    <app-monster-dialog [open]="monsterEditing() !== null" [def]="editedMonster()?.def ?? null" [enhanced]="editedMonster()?.enhanced ?? false" [items]="itemOptions()" [obstacles]="behaviorObstacles()" [value]="monsterEdits()" (confirmed)="applyMonster($event)" (cancel)="monsterEditing.set(null)" />
+    <app-enemy-dialog [open]="enemyEditing() !== null" [def]="editedEnemy()?.def ?? null" [enhanced]="editedEnemy()?.enhanced ?? false" [items]="itemOptions()" [obstacles]="behaviorObstacles()" [value]="enemyEdits()" (confirmed)="applyEnemy($event)" (cancel)="enemyEditing.set(null)" />
     <app-item-marker-dialog [open]="itemEditing() !== null" [value]="itemEdits()" [items]="itemOptions()" [looks]="lookOptions()" [imageUrls]="lookImageUrls()" (confirmed)="applyItem($event)" (cancel)="itemEditing.set(null)" />
     <app-zone-dialog [open]="zoneEditing() !== null" [name]="zoneEditingName()" [value]="zoneEdits()" (confirmed)="applyZone($event)" (cancel)="zoneEditing.set(null)" />
     <app-obstacle-dialog [open]="obstacleEditing() !== null" [value]="obstacleEdits()" (confirmed)="applyObstacle($event)" (cancel)="obstacleEditing.set(null)" />
@@ -141,17 +141,17 @@ import { DotWaveComponent } from '../ui/dot-wave.component';
         <button type="button" class="dlg-btn" (click)="cancelPick()">{{ (p.apply ? 'pick.cancel' : 'pick.back') | t }}</button>
       </div>
     }
-    <app-event-dialog [open]="!!editingEvent()" [value]="editingEvent()?.event ?? null" [monsters]="goalTargets()" [areas]="areaOptions()" [doors]="eventDoors()" [pickups]="eventPickups()" [encounters]="eventEncounters()" [zones]="eventZones()" [itemMarkers]="eventItemMarkers()" [stairsEnds]="eventStairs()" [glyphs]="eventGlyphs()" [obstacles]="behaviorObstacles()" [items]="itemOptions()" [finalReward]="goals().reward" [variables]="variables()" (confirmed)="applyEvent($event)" (variableAdded)="addVariable($event)" (cancel)="editingEvent.set(null)" />
+    <app-event-dialog [open]="!!editingEvent()" [value]="editingEvent()?.event ?? null" [enemies]="goalTargets()" [areas]="areaOptions()" [doors]="eventDoors()" [pickups]="eventPickups()" [encounters]="eventEncounters()" [zones]="eventZones()" [itemMarkers]="eventItemMarkers()" [stairsEnds]="eventStairs()" [glyphs]="eventGlyphs()" [obstacles]="behaviorObstacles()" [items]="itemOptions()" [finalReward]="goals().reward" [variables]="variables()" (confirmed)="applyEvent($event)" (variableAdded)="addVariable($event)" (cancel)="editingEvent.set(null)" />
     <app-variables-dialog [open]="variablesOpen()" [variables]="variables()" [usage]="variableUsage()" (added)="addVariable($event)" (removed)="removeVariable($event)" (closed)="variablesOpen.set(false)" />
     <app-confirm-dialog [open]="!!deletingEvent()" [title]="'editor.deleteNamed' | t: { name: deletingEvent()?.name ?? '' }" [text]="'editor.deleteEventText' | t" [confirmLabel]="'editor.delete' | t" (confirmed)="confirmDeleteEvent()" (cancel)="deletingEvent.set(null)" />
     <app-confirm-dialog [open]="!!deletingArea()" [title]="'editor.deleteNamed' | t: { name: deletingArea()?.name ?? '' }" [text]="'editor.deleteAreaText' | t" [confirmLabel]="'editor.delete' | t" (confirmed)="confirmDeleteArea()" (cancel)="deletingArea.set(null)" />
     <app-validation-dialog [open]="dialog() === 'validation'" [checks]="checks()" (closed)="dialog.set(null)" />
     <app-adventure-info-dialog [open]="dialog() === 'info'" [value]="info()" (confirmed)="applyInfo($event)" (cancel)="dialog.set(null)" />
-    <app-global-behaviors-dialog [open]="dialog() === 'behaviors'" [value]="behaviors()" [monsterTypes]="monsterTypes()" [items]="itemOptions()" (confirmed)="applyBehaviors($event)" (cancel)="dialog.set(null)" />
+    <app-global-behaviors-dialog [open]="dialog() === 'behaviors'" [value]="behaviors()" [enemyTypes]="enemyTypes()" [items]="itemOptions()" (confirmed)="applyBehaviors($event)" (cancel)="dialog.set(null)" />
     <app-adventure-setup-dialog [open]="dialog() === 'setup'" [value]="setupForm()" [portraits]="portraitOptions()" [cards]="adversaryCards()" (confirmed)="applySetup($event)" (cancel)="dialog.set(null)" />
     <app-adventure-goals-dialog [open]="dialog() === 'goals'" [value]="goals()" [targets]="goalTargets()" (confirmed)="applyGoals($event)" (cancel)="dialog.set(null)" />
     <!-- Gli strumenti di costruzione sul bordo inferiore. -->
-    <app-editor-tools [handActions]="handActions()" (handConfirm)="placeHand()" (handCancel)="dropHand()" [tiles]="palette()" [counts]="counts()" [carrying]="carrying()" [deleting]="deleting()" [openExits]="openExits()" [canUndo]="canUndo()" [canRedo]="canRedo()" (undo)="tileEditor?.undo()" (redo)="tileEditor?.redo()" [obstacleCounts]="obstacleCounts()" [carryingObstacle]="carryingObstacle()" (pickObstacle)="tileEditor?.pickObstacle($event)" [wallCounts]="wallCounts()" [carryingWall]="carryingWall()" (pickWall)="tileEditor?.pickWall($event)" [monsters]="monsterCatalog()" [monsterCounts]="monsterCounts()" [carryingMonster]="carryingMonster()" (pickMonster)="tileEditor?.pickMonster($event.id, $event.enhanced)" [markerImages]="markerImages()" [markerCounts]="markerCounts()" [carryingMarker]="carryingMarker()" (pickMarker)="onPickMarker($event)" (openChestTable)="dialog.set('chests')" (openItemMods)="dialog.set('itemMods')" [customizing]="customizing()" (toggleCustomize)="tileEditor?.setCustomizing(!customizing())" [separating]="separating()" (toggleSeparate)="tileEditor?.setSeparating(!separating())" [doorCounts]="doorCounts()" [carryingDoor]="carryingDoor()" (pick)="tileEditor?.pick($event)" (pickDoor)="tileEditor?.pickDoor($event)" (rotate)="tileEditor?.rotate()" (toggleDelete)="tileEditor?.setDeleting(!deleting())" (closeExits)="closeExits()" [areas]="areaList()" [creatingArea]="creatingArea()" [zonesView]="zonesView()" (toggleZonesView)="toggleZonesView()" [zoneCards]="zoneCards()" [creatingZone]="creatingZone()" [zoneSelected]="zoneSelected()" (createZone)="zoneTool?.startChoosing()" (confirmZone)="confirmZone()" (cancelZone)="zoneTool?.cancel()" (editZone)="editZoneProps($event)" [deletingZones]="deletingZones()" (toggleDeleteZones)="deletingZones.set(!deletingZones())" (editZoneCells)="zoneTool?.startChoosing($event)" (deleteZone)="tileEditor?.deleteZone($event)" (highlightZone)="zoneTool?.setHighlight($event)" (toggleCreateArea)="areaTool?.setCreating(!creatingArea())" (areaHighlight)="areaTool?.setHighlight($event)" [deletingAreas]="deletingAreas()" (toggleDeleteAreas)="toggleDeleteAreas()" [events]="eventCards()" [deletingEvents]="deletingEvents()" (toggleDeleteEvents)="toggleDeleteEvents()" (createEvent)="editingEvent.set({ event: null })" (editEvent)="editEvent($event)" (deleteEvent)="askDeleteEvent($event)" (duplicateEvent)="duplicateEvent($event)" (openVariables)="variablesOpen.set(true)" (setStartArea)="tileEditor?.toggleStart($event)" (editArea)="areaEditing.set($event)" (moveArea)="tileEditor?.moveArea($event.id, $event.to)" (deleteArea)="askDeleteArea($event)" (toolChange)="onToolChange($event)" />
+    <app-editor-tools [handActions]="handActions()" (handConfirm)="placeHand()" (handCancel)="dropHand()" [tiles]="palette()" [counts]="counts()" [carrying]="carrying()" [deleting]="deleting()" [openExits]="openExits()" [canUndo]="canUndo()" [canRedo]="canRedo()" (undo)="tileEditor?.undo()" (redo)="tileEditor?.redo()" [obstacleCounts]="obstacleCounts()" [carryingObstacle]="carryingObstacle()" (pickObstacle)="tileEditor?.pickObstacle($event)" [wallCounts]="wallCounts()" [carryingWall]="carryingWall()" (pickWall)="tileEditor?.pickWall($event)" [enemies]="enemyCatalog()" [enemyCounts]="enemyCounts()" [carryingEnemy]="carryingEnemy()" (pickEnemy)="tileEditor?.pickEnemy($event.id, $event.enhanced)" [markerImages]="markerImages()" [markerCounts]="markerCounts()" [carryingMarker]="carryingMarker()" (pickMarker)="onPickMarker($event)" (openChestTable)="dialog.set('chests')" (openItemMods)="dialog.set('itemMods')" [customizing]="customizing()" (toggleCustomize)="tileEditor?.setCustomizing(!customizing())" [separating]="separating()" (toggleSeparate)="tileEditor?.setSeparating(!separating())" [doorCounts]="doorCounts()" [carryingDoor]="carryingDoor()" (pick)="tileEditor?.pick($event)" (pickDoor)="tileEditor?.pickDoor($event)" (rotate)="tileEditor?.rotate()" (toggleDelete)="tileEditor?.setDeleting(!deleting())" (closeExits)="closeExits()" [areas]="areaList()" [creatingArea]="creatingArea()" [zonesView]="zonesView()" (toggleZonesView)="toggleZonesView()" [zoneCards]="zoneCards()" [creatingZone]="creatingZone()" [zoneSelected]="zoneSelected()" (createZone)="zoneTool?.startChoosing()" (confirmZone)="confirmZone()" (cancelZone)="zoneTool?.cancel()" (editZone)="editZoneProps($event)" [deletingZones]="deletingZones()" (toggleDeleteZones)="deletingZones.set(!deletingZones())" (editZoneCells)="zoneTool?.startChoosing($event)" (deleteZone)="tileEditor?.deleteZone($event)" (highlightZone)="zoneTool?.setHighlight($event)" (toggleCreateArea)="areaTool?.setCreating(!creatingArea())" (areaHighlight)="areaTool?.setHighlight($event)" [deletingAreas]="deletingAreas()" (toggleDeleteAreas)="toggleDeleteAreas()" [events]="eventCards()" [deletingEvents]="deletingEvents()" (toggleDeleteEvents)="toggleDeleteEvents()" (createEvent)="editingEvent.set({ event: null })" (editEvent)="editEvent($event)" (deleteEvent)="askDeleteEvent($event)" (duplicateEvent)="duplicateEvent($event)" (openVariables)="variablesOpen.set(true)" (setStartArea)="tileEditor?.toggleStart($event)" (editArea)="areaEditing.set($event)" (moveArea)="tileEditor?.moveArea($event.id, $event.to)" (deleteArea)="askDeleteArea($event)" (toolChange)="onToolChange($event)" />
     <!-- I comandi di navigazione sul bordo destro, come in partita ma senza il focus sull'eroe. -->
     <app-zoom-controls [showFocus]="false" (zoom)="camera?.zoomBy($event)" (fit)="fitMap()" />
   `,
@@ -225,9 +225,9 @@ export class EditorComponent implements OnDestroy {
   protected map: MapData = { seed: Math.floor(Math.random() * 2 ** 31), tiles: [] };
   /** Quale dialog è aperta: la presentazione (titolo e introduzione) o gli obiettivi. */
   protected readonly dialog = signal<'info' | 'goals' | 'setup' | 'behaviors' | 'validation' | 'chests' | 'itemMods' | null>(null);
-  /** I comportamenti globali dei mostri e i tipi di mostro del catalogo fra cui sceglierli. */
+  /** I comportamenti globali dei nemici e i tipi di nemico del catalogo fra cui sceglierli. */
   protected readonly behaviors = signal<GlobalBehavior[]>([]);
-  protected readonly monsterTypes = computed(() => this.monsterCatalog().map((d) => ({ id: d.id, name: d.name })));
+  protected readonly enemyTypes = computed(() => this.enemyCatalog().map((d) => ({ id: d.id, name: d.name })));
   /** La tabella dei ritrovamenti dei bauli (le ricompense casuali), letta dalla mappa. */
   protected readonly chestTable = signal<ChestTable>({});
   protected readonly itemMods = signal<ItemMod[]>([]);
@@ -253,14 +253,14 @@ export class EditorComponent implements OnDestroy {
   protected readonly goals = signal<AdventureGoals>({ objective: '', progress: null, condition: '', target: '', rules: '', rulesImage: '', conclusion: '', reward: null });
   /** I nemici in mappa, per scegliere quello da sconfiggere (nome della carta o proprio, "unico" se ha un nome o "potenziato", e casella). */
   protected readonly goalTargets = computed<SelectOption[]>(() => {
-    const catalog = this.monsterCatalog();
+    const catalog = this.enemyCatalog();
     const areas = this.areaCells();
-    return this.monsterPieces().map((p) => {
+    return this.enemyPieces().map((p) => {
       const area = areas.find((a) => a.cells.some((c) => c.x === p.x && c.y === p.y))?.name ?? t('editor.outsideArea');
-      return { value: p.id, label: `${p.name ?? catalog.find((d) => d.id === p.monster)?.name ?? p.monster ?? p.id}${p.unique ? t('editor.suffixUnique') : p.enhanced ? t('editor.suffixEnhanced') : ''} · ${area} · ${t('pickup.cell', { x: p.x, y: p.y })}` };
+      return { value: p.id, label: `${p.name ?? catalog.find((d) => d.id === p.enemy)?.name ?? p.enemy ?? p.id}${p.unique ? t('editor.suffixUnique') : p.enhanced ? t('editor.suffixEnhanced') : ''} · ${area} · ${t('pickup.cell', { x: p.x, y: p.y })}` };
     });
   });
-  private readonly monsterPieces = signal<PieceData[]>([]);
+  private readonly enemyPieces = signal<PieceData[]>([]);
   /** Le porte evento in mappa, per l'effetto "Apri una porta evento". */
   protected readonly eventDoors = signal<SelectOption[]>([]);
   /** Gli oggetti a terra fra cui scegliere nel "Quando" "un eroe raccoglie un oggetto". */
@@ -301,7 +301,7 @@ export class EditorComponent implements OnDestroy {
   protected readonly importMissing = computed(() => (missingTotal(this.importing()?.missing ?? null) ? this.importing()!.missing : null));
   protected readonly importMissingLines = computed(() => {
     const m = this.importMissing();
-    return m ? [...m.monsters.map((x) => t('editor.missingEnemy', { type: x.type, x: x.x, y: x.y })), ...m.items.map((x) => t('editor.missingItem', { id: x.itemId, x: x.x, y: x.y }))] : [];
+    return m ? [...m.enemies.map((x) => t('editor.missingEnemy', { type: x.type, x: x.x, y: x.y })), ...m.items.map((x) => t('editor.missingItem', { id: x.itemId, x: x.x, y: x.y }))] : [];
   });
   protected readonly importError = signal('');
   /** La domanda "Nuova avventura?" è aperta. */
@@ -338,24 +338,24 @@ export class EditorComponent implements OnDestroy {
   protected readonly markerImages = signal<Record<string, string>>({});
   protected readonly carryingMarker = signal<MarkerSpec | null>(null);
   /** Il nemico di cui si modificano nome, valori, abilità e bottino (la dialog), con le sue modifiche attuali, e gli oggetti che si possono dare come bottino. */
-  protected readonly monsterEditing = signal<number | null>(null);
-  protected readonly monsterEdits = signal<MonsterEdits | null>(null);
+  protected readonly enemyEditing = signal<number | null>(null);
+  protected readonly enemyEdits = signal<EnemyEdits | null>(null);
   private readonly itemList = signal<{ id: string; name: string; carried?: boolean; weapon?: boolean; icon?: string }[]>([]);
   /** Gli oggetti del catalogo come li vede l'avventura: `leveled` (ha dei livelli) e `customized` (genetics) vengono dalle sue personalizzazioni, il catalogo resta com'è. */
   protected readonly itemOptions = computed(() => {
     const mods = new Map(this.itemMods().map((m) => [m.id, m]));
     return this.itemList().map((i) => ({ ...i, leveled: !!mods.get(i.id)?.levels?.length, customized: mods.has(i.id) }));
   });
-  protected readonly editedMonster = computed(() => {
-    const i = this.monsterEditing();
-    const piece = i === null ? undefined : this.tileEditor?.monsters[i];
-    const def = piece?.monster ? this.monsterCatalog().find((m) => m.id === piece.monster) : undefined;
+  protected readonly editedEnemy = computed(() => {
+    const i = this.enemyEditing();
+    const piece = i === null ? undefined : this.tileEditor?.enemies[i];
+    const def = piece?.enemy ? this.enemyCatalog().find((m) => m.id === piece.enemy) : undefined;
     return def && piece ? { def, enhanced: !!piece.enhanced } : null;
   });
-  /** I mostri del catalogo, quanti ne sono in mappa (chiave `id` normali, `id+` potenziati) e quale si porta in mano. */
-  protected readonly monsterCatalog = signal<MonsterDef[]>([]);
-  protected readonly monsterCounts = signal<Record<string, number>>({});
-  protected readonly carryingMonster = signal<{ id: string; enhanced: boolean } | null>(null);
+  /** I nemici del catalogo, quanti ne sono in mappa (chiave `id` normali, `id+` potenziati) e quale si porta in mano. */
+  protected readonly enemyCatalog = signal<EnemyDef[]>([]);
+  protected readonly enemyCounts = signal<Record<string, number>>({});
+  protected readonly carryingEnemy = signal<{ id: string; enhanced: boolean } | null>(null);
   protected readonly areaList = signal<{ id: string; name: string; start: boolean; cells: number; subtitle: string; text: string }[]>([]);
   protected readonly creatingArea = signal(false);
   /** Strumento Zone: si stanno scegliendo le caselle (e quante), le schede, e la zona di cui si scrivono il testo e il costo. */
@@ -385,19 +385,19 @@ export class EditorComponent implements OnDestroy {
   protected readonly areaOptions = computed<SelectOption[]>(() => this.areaList().map((a) => ({ value: a.id, label: a.name })));
   /** Le schede degli eventi: nome (o un nome ricavato), "quando" a parole e un riassunto di quanti effetti ha. */
   protected readonly eventCards = computed(() => {
-    const monster = new Map(this.goalTargets().map((o) => [o.value, o.label.split(' · ')[0]]));
+    const enemy = new Map(this.goalTargets().map((o) => [o.value, o.label.split(' · ')[0]]));
     const area = new Map(this.areaOptions().map((o) => [o.value, o.label]));
     const encounter = (id: string) => this.eventEncounters().find((o) => o.value === id)?.label.split(' · ')[0] ?? '?';
     const inArea = (id?: string) => (id ? `: ${area.get(id) ?? '?'}` : '');
     /** Il "quando" di un innesco, a parole. */
     const phrase = (w: AdventureEvent['when']): string => {
       switch (w.kind) {
-        case 'cleared': return t('editor.when.clearedEnemies', { what: w.pieceIds?.length ? w.pieceIds.map((id) => monster.get(id) ?? '?').join(', ') : t('editor.when.enemiesWord'), area: inArea(w.area) });
+        case 'cleared': return t('editor.when.clearedEnemies', { what: w.pieceIds?.length ? w.pieceIds.map((id) => enemy.get(id) ?? '?').join(', ') : t('editor.when.enemiesWord'), area: inArea(w.area) });
         case 'encountersGone': return t('editor.when.clearedEnemies', { what: w.markerIds?.length ? w.markerIds.map(encounter).join(', ') : t('editor.when.encountersWord'), area: inArea(w.area) });
         case 'encounterUsed': return t('editor.when.encounterUsed', { what: encounter(w.markerId) });
         case 'pickedUp': return t('editor.when.pickedUp', { what: this.eventPickups().find((o) => o.value === w.markerId)?.label.split(' · ')[0] ?? '?' });
-        case 'defeated': return t('editor.when.defeated', { what: monster.get(w.pieceId) ?? '?' });
-        case 'interact': return t('editor.when.interact', { what: monster.get(w.pieceId) ?? '?' });
+        case 'defeated': return t('editor.when.defeated', { what: enemy.get(w.pieceId) ?? '?' });
+        case 'interact': return t('editor.when.interact', { what: enemy.get(w.pieceId) ?? '?' });
         case 'chestOpened': return t('editor.when.chestOpened', { what: area.get(w.area) ?? '?' });
         case 'areaRevealed': return t('editor.when.areaRevealed', { what: area.get(w.area) ?? '?' });
         case 'zoneUsed': return t('editor.when.zoneUsed', { what: this.eventZones().find((o) => o.value === w.zoneId)?.label ?? '?' });
@@ -637,12 +637,12 @@ export class EditorComponent implements OnDestroy {
       }
       // Con lo strumento Nemici aperto e niente in mano, il tasto destro su un nemico apre subito le sue modifiche (e accende la modalità personalizza).
       const editor = this.tileEditor;
-      if (editor && editor.deleteScope === 'monsters' && !editor.carrying && !editor.carryingDoor && !editor.carryingObstacle && !editor.carryingWall && !editor.carryingMonster && !editor.carryingMarker && !editor.deleting && !editor.separating) {
+      if (editor && editor.deleteScope === 'enemies' && !editor.carrying && !editor.carryingDoor && !editor.carryingObstacle && !editor.carryingWall && !editor.carryingEnemy && !editor.carryingMarker && !editor.deleting && !editor.separating) {
         const rect = app.canvas.getBoundingClientRect();
         const cells = this.toCells({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-        if (editor.monsterIndexAt(cells) >= 0) {
+        if (editor.enemyIndexAt(cells) >= 0) {
           e.preventDefault();
-          this.zone.run(() => editor.editMonsterAt(cells));
+          this.zone.run(() => editor.editEnemyAt(cells));
           return;
         }
       }
@@ -664,18 +664,18 @@ export class EditorComponent implements OnDestroy {
         setTimeout(() => this.loaderGone.set(true), 450); // dopo la dissolvenza il loader esce dalla pagina
       });
     };
-    void Promise.all([loadTilePalette(), loadMonsterCatalog()]).then(async ([palette, monsters]) => {
-      // Le immagini dei mostri (le pedine) e il catalogo degli oggetti si caricano prima di disegnare.
-      const [textures, itemCatalog] = await Promise.all([loadPortraits([...monsters.values()].map((m) => MonsterView.tokenUrl(m))), loadItemCatalog().catch(() => null)]);
+    void Promise.all([loadTilePalette(), loadEnemyCatalog()]).then(async ([palette, enemies]) => {
+      // Le immagini dei nemici (le pedine) e il catalogo degli oggetti si caricano prima di disegnare.
+      const [textures, itemCatalog] = await Promise.all([loadPortraits([...enemies.values()].map((m) => EnemyView.tokenUrl(m))), loadItemCatalog().catch(() => null)]);
       if (this.destroyed) return;
-      layer.setMonsterTextures(textures);
-      this.monsterCatalog.set([...monsters.values()]);
-      const editor = new TileEditor(layer, new Map(palette.map((t) => [t.id, t.def])), monsters, () => this.onTilesChanged());
+      layer.setEnemyTextures(textures);
+      this.enemyCatalog.set([...enemies.values()]);
+      const editor = new TileEditor(layer, new Map(palette.map((t) => [t.id, t.def])), enemies, () => this.onTilesChanged());
       this.tileEditor = editor;
-      editor.onEditMonster = (index) =>
+      editor.onEditEnemy = (index) =>
         this.zone.run(() => {
-          this.monsterEdits.set(editor.monsterEdits(index));
-          this.monsterEditing.set(index);
+          this.enemyEdits.set(editor.enemyEdits(index));
+          this.enemyEditing.set(index);
         });
       editor.onEditItem = (index) =>
         this.zone.run(() => {
@@ -749,7 +749,7 @@ export class EditorComponent implements OnDestroy {
     if (!editor || !this.mapLoaded) return; // finché la mappa non è caricata le liste sono vuote: salvare adesso cancellerebbe la bozza
     const { doors: _doors, areas: _areas, obstacles: _obstacles, walls: _walls, pieces: _pieces, markers: _markers, start: _start, zones: _zones, ...rest } = this.map;
     const areas = editor.areas().map((a) => ({ ...a.def }));
-    this.map = { ...rest, tiles: editor.tiles.map((t) => ({ ...t })), ...(editor.doors.length ? { doors: editor.doors.map((d) => ({ ...d })) } : {}), ...(areas.length ? { areas } : {}), ...(editor.obstacles.length ? { obstacles: editor.obstacles.map((o) => ({ ...o })) } : {}), ...(editor.walls.length ? { walls: editor.walls.map((w) => ({ ...w })) } : {}), ...(editor.monsters.length ? { pieces: editor.monsters.map((m) => ({ ...m })) } : {}), ...(editor.markers.length ? { markers: editor.markers.map((m) => ({ ...m })) } : {}), ...(editor.startCells.length ? { start: editor.startCells.map((c) => ({ ...c })) } : {}) };
+    this.map = { ...rest, tiles: editor.tiles.map((t) => ({ ...t })), ...(editor.doors.length ? { doors: editor.doors.map((d) => ({ ...d })) } : {}), ...(areas.length ? { areas } : {}), ...(editor.obstacles.length ? { obstacles: editor.obstacles.map((o) => ({ ...o })) } : {}), ...(editor.walls.length ? { walls: editor.walls.map((w) => ({ ...w })) } : {}), ...(editor.enemies.length ? { pieces: editor.enemies.map((m) => ({ ...m })) } : {}), ...(editor.markers.length ? { markers: editor.markers.map((m) => ({ ...m })) } : {}), ...(editor.startCells.length ? { start: editor.startCells.map((c) => ({ ...c })) } : {}) };
     if (editor.zones.length) this.map = { ...this.map, zones: editor.zones.map((z) => ({ ...z, cells: z.cells.map((c) => ({ ...c })) })) };
     this.areaTool?.refresh();
     this.zoneTool?.refresh();
@@ -793,8 +793,8 @@ export class EditorComponent implements OnDestroy {
     this.customizing.set(editor.customizing);
     this.markerCounts.set(editor.markerCounts());
     this.carryingMarker.set(editor.carryingMarker);
-    this.monsterCounts.set(editor.monsterCounts());
-    this.carryingMonster.set(editor.carryingMonster);
+    this.enemyCounts.set(editor.enemyCounts());
+    this.carryingEnemy.set(editor.carryingEnemy);
     this.carrying.set(editor.carrying);
     this.deleting.set(editor.deleting);
     this.openExits.set(editor.openExits());
@@ -820,7 +820,7 @@ export class EditorComponent implements OnDestroy {
     editor?.setDeleting(false);
     editor?.setSeparating(false);
     editor?.setCustomizing(false);
-    if (editor) editor.deleteScope = tool === 'doors' ? 'doors' : tool === 'obstacles' ? 'obstacles' : tool === 'monsters' ? 'monsters' : tool === 'markers' ? 'markers' : tool === 'specials' ? 'specials' : 'tiles';
+    if (editor) editor.deleteScope = tool === 'doors' ? 'doors' : tool === 'obstacles' ? 'obstacles' : tool === 'enemies' ? 'enemies' : tool === 'markers' ? 'markers' : tool === 'specials' ? 'specials' : 'tiles';
     if (editor) editor.tilesToolOpen = tool === 'tiles';
     this.stairsHandlesWanted = tool === 'doors';
     this.layer?.setTwinHover(tool === 'specials'); // un passaggio del mouse sui glifi gemelli ne illumina la coppia
@@ -828,7 +828,7 @@ export class EditorComponent implements OnDestroy {
     if (tool !== 'tiles' && editor?.carrying) editor.drop(); // chiusa la cassetta, la tessera in mano si lascia (o si rimette dov'era) e spariscono anche i tasti
     if (tool !== 'doors' && editor?.carryingDoor) editor.drop();
     if (tool !== 'obstacles' && (editor?.carryingObstacle || editor?.carryingWall)) editor.drop();
-    if (tool !== 'monsters' && editor?.carryingMonster) editor.drop();
+    if (tool !== 'enemies' && editor?.carryingEnemy) editor.drop();
     // Ogni segnalino in mano appartiene a uno strumento (le scale a Porte e passaggi, glifi e partenze a Glifi e altro, il resto a Oggetti): cambiando strumento si lascia.
     const hand = editor?.carryingMarker;
     if (hand && tool !== (hand.type === 'stairs' ? 'doors' : isSpecialSpec(hand.type) ? 'specials' : 'markers')) editor!.drop(); // la cassetta cambiata non è quella del segnalino in mano // chiudendo la cassetta degli ostacoli non si resta con uno in mano
@@ -872,7 +872,7 @@ export class EditorComponent implements OnDestroy {
   /** Un pezzo (tessera, porta, ostacolo, nemico o oggetto) è in mano. */
   private holding(): boolean {
     const e = this.tileEditor;
-    return !!e && (!!e.carrying || !!e.carryingDoor || !!e.carryingObstacle || !!e.carryingWall || !!e.carryingMonster || !!e.carryingMarker);
+    return !!e && (!!e.carrying || !!e.carryingDoor || !!e.carryingObstacle || !!e.carryingWall || !!e.carryingEnemy || !!e.carryingMarker);
   }
 
   /** La spunta sul tocco: piazza il pezzo in mano dove si trova l'anteprima. */
@@ -888,7 +888,7 @@ export class EditorComponent implements OnDestroy {
   /** C'è qualcosa da annullare con Esc o il tasto destro: un elemento in mano o una modalità accesa. */
   private hasActiveSelection(): boolean {
     const e = this.tileEditor;
-    return !!e && (!!e.carrying || !!e.carryingDoor || !!e.carryingObstacle || !!e.carryingWall || !!e.carryingMonster || !!e.carryingMarker || e.deleting || e.separating || e.customizing || !!this.areaTool?.creating || this.deletingAreas() || this.deletingEvents());
+    return !!e && (!!e.carrying || !!e.carryingDoor || !!e.carryingObstacle || !!e.carryingWall || !!e.carryingEnemy || !!e.carryingMarker || e.deleting || e.separating || e.customizing || !!this.areaTool?.creating || this.deletingAreas() || this.deletingEvents());
   }
 
   /** Esc e tasto destro: togli la selezione (l'elemento in mano, o la modalità di creazione, elimina o separa). */
@@ -899,7 +899,7 @@ export class EditorComponent implements OnDestroy {
 
   /** Cosa si sta cercando, a parole, per la barra. */
   protected pickWhat(p: PickRequest): string {
-    return { monster: t('pick.what.monster'), encounter: t('pick.what.encounter'), glyph: t('pick.what.glyph'), stairs: t('pick.what.stairs'), pickup: t('pick.what.pickup'), itemMarker: t('pick.what.itemMarker'), obstacle: t('pick.what.obstacle'), area: t('pick.what.area'), door: t('pick.what.door'), zone: t('pick.what.zone') }[p.kind];
+    return { enemy: t('pick.what.enemy'), encounter: t('pick.what.encounter'), glyph: t('pick.what.glyph'), stairs: t('pick.what.stairs'), pickup: t('pick.what.pickup'), itemMarker: t('pick.what.itemMarker'), obstacle: t('pick.what.obstacle'), area: t('pick.what.area'), door: t('pick.what.door'), zone: t('pick.what.zone') }[p.kind];
   }
 
   /** La dialog si nasconde: evidenzia gli elementi fra cui scegliere (o, per "mostrami dov'è", porta la camera su quello e lo evidenzia). */
@@ -1041,10 +1041,10 @@ export class EditorComponent implements OnDestroy {
   }
 
   /** Conferma le modifiche del nemico aperto nella dialog. */
-  protected applyMonster(e: MonsterEdits) {
-    const i = this.monsterEditing();
-    if (i !== null) this.tileEditor?.updateMonster(i, e);
-    this.monsterEditing.set(null);
+  protected applyEnemy(e: EnemyEdits) {
+    const i = this.enemyEditing();
+    if (i !== null) this.tileEditor?.updateEnemy(i, e);
+    this.enemyEditing.set(null);
     this.persist();
   }
 
@@ -1103,7 +1103,7 @@ export class EditorComponent implements OnDestroy {
     this.variables.set(m.variables ?? []);
     this.setupData.set(m.setup ?? {});
     this.goals.set({ objective: m.objective?.description ?? m.objective?.text ?? '', progress: m.progress ?? null, condition: m.objective?.kind === 'defeat' ? 'defeat' : m.objective?.kind === 'event' ? 'event' : '', target: m.objective?.kind === 'defeat' ? m.objective.pieceId : '', rules: m.rules ?? '', rulesImage: m.rulesImage ?? '', conclusion: m.objective?.conclusion ?? '', reward: m.objective?.reward ?? null });
-    this.monsterPieces.set((m.pieces ?? []).filter((p) => p.team === 'monster'));
+    this.enemyPieces.set((m.pieces ?? []).filter((p) => p.team === 'enemy'));
     this.tileEditor?.setEventPieces(piecesWithEvents(m)); // il badge del fulmine sulle miniature con un evento
     if (this.tileEditor) {
       this.tileEditor.setEventRunes(runeKeysFromEvents(m)); // le chiavi runiche consegnate dagli eventi contano nel toolbox
@@ -1190,7 +1190,7 @@ export class EditorComponent implements OnDestroy {
     this.dialog.set(null);
   }
 
-  /** Scrive nella mappa i comportamenti globali dei mostri (senza, il campo sparisce). */
+  /** Scrive nella mappa i comportamenti globali dei nemici (senza, il campo sparisce). */
   protected applyBehaviors(list: GlobalBehavior[]) {
     const { behaviors: _b, ...rest } = this.map;
     this.map = { ...rest, ...(list.length ? { behaviors: list } : {}) };
@@ -1227,8 +1227,8 @@ export class EditorComponent implements OnDestroy {
     const parsed = parseAdventure(await file.text(), new Set(this.palette().map((t) => t.id)));
     if (parsed.ok) {
       const items = this.itemOptions();
-      const missing = findMissing(parsed.map, new Set(this.monsterCatalog().map((m) => m.id)), items.length ? new Set(items.map((i) => i.id)) : null);
-      this.importing.set({ map: parsed.map, missing: missing.monsters.length || missing.items.length ? missing : null });
+      const missing = findMissing(parsed.map, new Set(this.enemyCatalog().map((m) => m.id)), items.length ? new Set(items.map((i) => i.id)) : null);
+      this.importing.set({ map: parsed.map, missing: missing.enemies.length || missing.items.length ? missing : null });
     } else this.importError.set(`${file.name}: ${parsed.reason}`);
   }
 

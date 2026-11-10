@@ -41,12 +41,12 @@ import { CityResult } from '../state/city';
 /**
  * Le pedine sul tabellone: mostra dove può andare l'eroe attivo e lo muove casella per casella.
  * Le regole di passaggio: un eroe attraversa gli altri eroi ma non può fermarsi sulla loro casella;
- * i mostri bloccano. Quali passi sono possibili (muri, porte) sta in Board; qui c'è il gioco "a vista".
+ * i nemici bloccano. Quali passi sono possibili (muri, porte) sta in Board; qui c'è il gioco "a vista".
  */
 export class PiecesController {
   private readonly highlight = new Graphics();
-  /** L'area di movimento di un mostro che il Maligno sta attivando a mano: stesso contorno di quella degli eroi, ma rosso. */
-  private readonly monsterReach = new Graphics();
+  /** L'area di movimento di un nemico che il Maligno sta attivando a mano: stesso contorno di quella degli eroi, ma rosso. */
+  private readonly enemyReach = new Graphics();
   /** Le caselle dove si può spostare un bersaglio con il Contraccolpo. */
   private readonly knock = new Graphics();
   private readonly pathLine = new Graphics();
@@ -71,20 +71,20 @@ export class PiecesController {
   /** L'ordine mostrato sulla pedina di ogni eroe (per ridisegnarla quando cambia). */
   private readonly shownOrder = new Map<string, string>();
   private hovered: Cell | null = null;
-  /** Chiamata dopo ogni passo di un eroe: dice se il movimento deve fermarsi (es. è comparso un mostro). */
+  /** Chiamata dopo ogni passo di un eroe: dice se il movimento deve fermarsi (es. è comparso un nemico). */
   onStepped: ((piece: Piece, outcome: StepOutcome) => boolean) | null = null;
-  /** Chiamata quando si tocca un mostro sulla mappa: la scena apre la sua scheda, ma solo nella vista del Maligno. */
-  onMonsterClick: ((piece: Piece) => void) | null = null;
-  /** Dopo ogni passo di un mostro: se ritorna vero il suo movimento si ferma lì (Vigilanza: un eroe può attaccarlo). Riceve com'era prima del passo. */
-  onMonsterStep: ((piece: Piece, before: { cell: Cell; size: { w: number; h: number } }) => boolean) | null = null;
+  /** Chiamata quando si tocca un nemico sulla mappa: la scena apre la sua scheda, ma solo nella vista del Maligno. */
+  onEnemyClick: ((piece: Piece) => void) | null = null;
+  /** Dopo ogni passo di un nemico: se ritorna vero il suo movimento si ferma lì (Vigilanza: un eroe può attaccarlo). Riceve com'era prima del passo. */
+  onEnemyStep: ((piece: Piece, before: { cell: Cell; size: { w: number; h: number } }) => boolean) | null = null;
   /** Chiamata quando un eroe muore per un passo (cade in una buca a 1 ferita): la scena avvisa e fa passare il turno. */
   onDied: ((piece: Piece) => void) | null = null;
   /** Eroi che stanno morendo: da 0 a 1. Sfumano e diventano rossi, poi spariscono dalla mappa. */
   private readonly dying = new Map<string, number>();
-  /** I pezzi che stanno morendo e non sono più nello stato (i mostri uccisi): servono a finire la dissolvenza. */
+  /** I pezzi che stanno morendo e non sono più nello stato (i nemici uccisi): servono a finire la dissolvenza. */
   private readonly dyingPieces = new Map<string, Piece>();
 
-  /** Vero finché una pedina sta ancora svanendo (eroe o mostro morto): il gioco aspetta che sia sparita del tutto. */
+  /** Vero finché una pedina sta ancora svanendo (eroe o nemico morto): il gioco aspetta che sia sparita del tutto. */
   isDying(): boolean {
     return this.dying.size > 0;
   }
@@ -96,17 +96,17 @@ export class PiecesController {
     f.desaturate();
     return f;
   })();
-  /** Quali mostri si vedono: null = tutti (es. chi costruisce la mappa); gli eroi si vedono sempre. */
-  private visibleMonsters: ReadonlySet<string> | null = null;
-  private grayMonsters: ReadonlySet<string> | null = null;
-  private activationOf: ((monster: Piece) => ActivationState | null) | null = null;
-  /** Il pallino di attivazione che si vede adesso su ogni mostro, per ridisegnarlo solo quando cambia. */
+  /** Quali nemici si vedono: null = tutti (es. chi costruisce la mappa); gli eroi si vedono sempre. */
+  private visibleEnemies: ReadonlySet<string> | null = null;
+  private grayEnemies: ReadonlySet<string> | null = null;
+  private activationOf: ((enemy: Piece) => ActivationState | null) | null = null;
+  /** Il pallino di attivazione che si vede adesso su ogni nemico, per ridisegnarlo solo quando cambia. */
   private readonly shownActivation = new Map<string, string>();
   /** I glifi che gli eroi conoscono (già rivelati): null = tutti (es. chi costruisce la mappa). Si può viaggiare solo verso questi. */
   private knownMarkers: ReadonlySet<Marker> | null = null;
   /** I glifi verso cui l'eroe attivo può viaggiare adesso (l'ultimo calcolo). */
   private teleportTargets = new Set<Marker>();
-  /** Mostri che stanno apparendo: da 0 a 1. */
+  /** Nemici che stanno apparendo: da 0 a 1. */
   private readonly appearing = new Map<string, number>();
   private moving: { piece: Piece; steps: Reach[]; index: number; elapsed: number; done?: () => void; arcs?: ({ from: number; to: number } | null)[] } | null = null;
 
@@ -120,7 +120,7 @@ export class PiecesController {
     /** Le immagini dei ritratti già caricate, per percorso (vedi loadPortraits). */
     private readonly portraits: ReadonlyMap<string, Texture> = new Map<string, Texture>(),
   ) {
-    layer.addChild(this.highlight, this.monsterReach, this.pathLine, this.knock);
+    layer.addChild(this.highlight, this.enemyReach, this.pathLine, this.knock);
     for (const p of this.pieces) {
       const view = this.createView(p);
       this.views.set(p.id, view);
@@ -133,10 +133,10 @@ export class PiecesController {
     this.onChange(this.active);
   }
 
-  /** Una pedina nuova in partita (un mostro evocato): ne crea la grafica. Compare solo se i mostri nascosti sono rivelati. */
+  /** Una pedina nuova in partita (un nemico evocato): ne crea la grafica. Compare solo se i nemici nascosti sono rivelati. */
   addPiece(piece: Piece, textures: ReadonlyMap<string, Texture> = new Map()) {
     for (const [url, tex] of textures) (this.portraits as Map<string, Texture>).set(url, tex);
-    // Crea la grafica di tutte le pedine dello stato che ancora non ce l'hanno (più mostri evocati insieme sono già nello stato).
+    // Crea la grafica di tutte le pedine dello stato che ancora non ce l'hanno (più nemici evocati insieme sono già nello stato).
     for (const p of this.pieces) {
       if (this.views.has(p.id)) continue;
       const view = this.createView(p);
@@ -226,7 +226,7 @@ export class PiecesController {
     const other = this.pieceAt(cell);
     if (other) {
       if (other.team === 'mercenary' && other.id !== this.state.activeId && !this.viewOnly) this.select(other);
-      else if (other.team === 'monster') this.onMonsterClick?.(other);
+      else if (other.team === 'enemy') this.onEnemyClick?.(other);
       return;
     }
     const active = this.active;
@@ -323,7 +323,7 @@ export class PiecesController {
   mercenaryDied(piece: Piece, slain: Piece[]): void {
     this.dyingPieces.set(piece.id, piece);
     this.dying.set(piece.id, 0);
-    this.monstersSlain(slain.filter((p) => p !== piece));
+    this.enemiesSlain(slain.filter((p) => p !== piece));
     this.applyVisibility();
     this.refresh();
   }
@@ -390,33 +390,33 @@ export class PiecesController {
     return result;
   }
 
-  /** Quali mostri mostrare: i rivelati, oppure tutti se `ids` è null. */
-  setVisibleMonsters(ids: ReadonlySet<string> | null) {
-    this.visibleMonsters = ids;
+  /** Quali nemici mostrare: i rivelati, oppure tutti se `ids` è null. */
+  setVisibleEnemies(ids: ReadonlySet<string> | null) {
+    this.visibleEnemies = ids;
     this.applyVisibility();
   }
 
-  /** Mostra (o toglie, con null) il contorno rosso delle caselle dove il mostro attivato a mano può andare. */
-  showMonsterReach(cells: readonly Cell[] | null) {
-    this.monsterReach.clear();
+  /** Mostra (o toglie, con null) il contorno rosso delle caselle dove il nemico attivato a mano può andare. */
+  showEnemyReach(cells: readonly Cell[] | null) {
+    this.enemyReach.clear();
     const board = this.board;
     if (!cells?.length || !board) return;
     const area = new Set(cells.map(cellKey));
     const loops = reachOutline(area, (cell, side) => (board.isWallSide(cell, side) ? (PERIMETER_WALLS_OUTSIDE && board.isVoidSide(cell, side) ? REACH_WALL_INSET_PX - WALL_WIDTH_PX / 2 : REACH_WALL_INSET_PX) : REACH_EDGE_INSET_PX));
-    for (const loop of loops) this.monsterReach.poly(loop.flat(), true);
-    this.monsterReach.stroke({ width: REACH_LINE_WIDTH_PX, color: theme.color.danger, alpha: theme.alpha.reach, join: 'miter' });
+    for (const loop of loops) this.enemyReach.poly(loop.flat(), true);
+    this.enemyReach.stroke({ width: REACH_LINE_WIDTH_PX, color: theme.color.danger, alpha: theme.alpha.reach, join: 'miter' });
   }
 
-  /** Il pallino di attivazione dei mostri (solo vista del Maligno): come calcolarlo per un mostro, o null per non mostrarlo. */
-  setActivationDots(of: ((monster: Piece) => ActivationState | null) | null) {
+  /** Il pallino di attivazione dei nemici (solo vista del Maligno): come calcolarlo per un nemico, o null per non mostrarlo. */
+  setActivationDots(of: ((enemy: Piece) => ActivationState | null) | null) {
     this.activationOf = of;
     this.shownActivation.clear();
-    for (const p of this.pieces) if (p.team === 'monster') this.drawPiece(p);
+    for (const p of this.pieces) if (p.team === 'enemy') this.drawPiece(p);
   }
 
-  /** Mostri da mostrare senza colore (vista del Maligno: quelli di un'area non ancora scoperta); null = nessuno. */
-  setGrayMonsters(ids: ReadonlySet<string> | null) {
-    this.grayMonsters = ids;
+  /** Nemici da mostrare senza colore (vista del Maligno: quelli di un'area non ancora scoperta); null = nessuno. */
+  setGrayEnemies(ids: ReadonlySet<string> | null) {
+    this.grayEnemies = ids;
     for (const p of this.pieces) {
       const portrait = this.views.get(p.id)?.portrait;
       if (portrait) portrait.filters = p.look === 'stone' || ids?.has(p.id) ? [this.stoneFilter] : [];
@@ -434,8 +434,8 @@ export class PiecesController {
     return this.moving ? new Set() : this.teleportTargets;
   }
 
-  /** Alcuni mostri sono appena stati rivelati: compaiono con una piccola animazione. */
-  revealMonsters(ids: readonly string[]) {
+  /** Alcuni nemici sono appena stati rivelati: compaiono con una piccola animazione. */
+  revealEnemies(ids: readonly string[]) {
     for (const id of ids) this.appearing.set(id, 0);
     this.applyVisibility();
   }
@@ -444,7 +444,7 @@ export class PiecesController {
     for (const p of this.pieces) {
       // Chi è in città non è sulla mappa: la sua pedina non si vede.
       const view = this.views.get(p.id);
-      if (view) view.root.visible = (!p.city || this.dying.has(p.id)) && (p.team === 'mercenary' || !this.visibleMonsters || this.visibleMonsters.has(p.id));
+      if (view) view.root.visible = (!p.city || this.dying.has(p.id)) && (p.team === 'mercenary' || !this.visibleEnemies || this.visibleEnemies.has(p.id));
     }
   }
 
@@ -484,7 +484,7 @@ export class PiecesController {
     this.refresh();
   }
 
-  /** Muove un pezzo (un mostro, nel turno del Maligno) lungo un percorso già calcolato, con la stessa animazione degli eroi. Finisce quando arriva. */
+  /** Muove un pezzo (un nemico, nel turno del Maligno) lungo un percorso già calcolato, con la stessa animazione degli eroi. Finisce quando arriva. */
   walk(piece: Piece, steps: Reach[]): Promise<void> {
     return new Promise((resolve) => {
       if (!steps.length || this.moving) return resolve();
@@ -542,7 +542,7 @@ export class PiecesController {
     return arcs;
   }
 
-  /** Un mostro evocato arriva come se cadesse dall'alto: parte più grande (`FX.enterScale`) e un po' trasparente, e si posa sulla sua casella a grandezza normale, accelerando. */
+  /** Un nemico evocato arriva come se cadesse dall'alto: parte più grande (`FX.enterScale`) e un po' trasparente, e si posa sulla sua casella a grandezza normale, accelerando. */
   enter(piece: Piece): Promise<void> {
     const view = this.views.get(piece.id);
     if (!view) return Promise.resolve();
@@ -817,9 +817,9 @@ export class PiecesController {
     else show();
   }
 
-  /** Un mostro compare nella vista (per esempio perché attacca): subito visibile. */
-  showMonster(piece: Piece) {
-    this.revealMonsters([piece.id]);
+  /** Un nemico compare nella vista (per esempio perché attacca): subito visibile. */
+  showEnemy(piece: Piece) {
+    this.revealEnemies([piece.id]);
   }
 
   /** Evidenzia le caselle dove si può spostare un bersaglio (Contraccolpo), o le toglie con null. */
@@ -845,7 +845,7 @@ export class PiecesController {
     const seed = lookSeed(p.id);
     const ghost = new Graphics();
     ghost.addChild(drawPawnDetails(new Graphics(), a, b, from, seed, !!p.enhanced));
-    pawnPath(ghost, a, b, from, seed).stroke({ width: LINE.medium, color: lookBorder(from, !!p.enhanced) ?? (p.team === 'monster' && p.enhanced ? theme.color.danger : theme.color.token.idle), join: 'round' });
+    pawnPath(ghost, a, b, from, seed).stroke({ width: LINE.medium, color: lookBorder(from, !!p.enhanced) ?? (p.team === 'enemy' && p.enhanced ? theme.color.danger : theme.color.token.idle), join: 'round' });
     view.root.addChildAt(ghost, view.root.getChildIndex(view.ring) + 1);
     let gray: ColorMatrixFilter | undefined;
     const toStone = p.look === 'stone';
@@ -863,8 +863,8 @@ export class PiecesController {
     });
   }
 
-  /** I mostri uccisi da Giustizia divina svaniscono come quelli sconfitti. */
-  monstersSlain(list: readonly Piece[]) {
+  /** I nemici uccisi da Giustizia divina svaniscono come quelli sconfitti. */
+  enemiesSlain(list: readonly Piece[]) {
     for (const m of list) {
       this.dyingPieces.set(m.id, m);
       this.dying.set(m.id, 0);
@@ -883,7 +883,7 @@ export class PiecesController {
 
   /** Dopo un attacco: se il nemico è stato sconfitto la sua pedina svanisce (diventa rossa e sfuma), poi si aggiornano interfaccia e caselle raggiungibili. */
   afterCombat(attacker: Piece, target: Piece, killed: boolean) {
-    if (killed && target.team === 'monster') {
+    if (killed && target.team === 'enemy') {
       this.dyingPieces.set(target.id, target);
       this.dying.set(target.id, 0);
     } else if (killed) {
@@ -925,7 +925,7 @@ export class PiecesController {
     const m = this.moving;
     if (!m) return null;
     const root = this.views.get(m.piece.id)!.root;
-    if (!root.visible) return null; // la camera non segue un mostro che i giocatori non vedono
+    if (!root.visible) return null; // la camera non segue un nemico che i giocatori non vedono
     return { x: root.position.x, y: root.position.y };
   }
 
@@ -982,19 +982,19 @@ export class PiecesController {
     return g.roundRect(-a, -b, 2 * a, 2 * b, Math.min(a, b));
   }
 
-  /** Il centro della pedina in pixel del mondo (per i mostri grandi sta nel mezzo delle loro caselle). */
+  /** Il centro della pedina in pixel del mondo (per i nemici grandi sta nel mezzo delle loro caselle). */
   private centerOf(p: Piece, cell: Cell = p.cell): { x: number; y: number } {
     return { x: (cell.x + p.size.w / 2) * CELL_SIZE, y: (cell.y + p.size.h / 2) * CELL_SIZE };
   }
 
-  /** Disegna una pedina: anello acceso se è l'eroe attivo, spento se è un altro eroe, rosso se è un mostro. */
+  /** Disegna una pedina: anello acceso se è l'eroe attivo, spento se è un altro eroe, rosso se è un nemico. */
   private drawPiece(p: Piece) {
     const view = this.views.get(p.id);
     if (!view) return; // una pedina appena evocata, la cui grafica non è ancora pronta
     const { a, b } = this.halfExtent(p);
     const c = theme.color;
     const active = p.id === this.state.activeId;
-    const border = p.team === 'monster' ? (p.enhanced && !p.look ? c.danger : c.token.idle) : active ? c.accentActive : c.token.idle; // rosso solo per i mostri potenziati
+    const border = p.team === 'enemy' ? (p.enhanced && !p.look ? c.danger : c.token.idle) : active ? c.accentActive : c.token.idle; // rosso solo per i nemici potenziati
     const look = p.look;
     const seed = lookSeed(p.id);
     pawnPath(view.base.clear(), a, b, look, seed).fill(c.token.fill);
@@ -1003,7 +1003,7 @@ export class PiecesController {
     if (!view.portrait) this.shape(view.base, a * 0.62, b * 0.62).fill(c.token.portrait);
     else {
       view.portrait.alpha = p.team === 'mercenary' && !active ? theme.alpha.portraitIdle : 1; // gli eroi non attivi più tenui
-      view.portrait.filters = look === 'stone' || this.grayMonsters?.has(p.id) ? [this.stoneFilter] : []; // aspetto di pietra (o mostro non ancora scoperto, per il Maligno): immagine senza colore
+      view.portrait.filters = look === 'stone' || this.grayEnemies?.has(p.id) ? [this.stoneFilter] : []; // aspetto di pietra (o nemico non ancora scoperto, per il Maligno): immagine senza colore
       const tex = view.portrait.texture;
       // Un'immagine allungata (la salamandra è in verticale) ruota di 90° quando la pedina è girata dall'altra parte, e copre tutta la forma.
       const fit = fitPortrait(tex.width, tex.height, a, b);
@@ -1107,7 +1107,7 @@ export class PiecesController {
     this.pulseTime = (this.pulseTime + deltaMs) % REACH_PULSE_PERIOD_MS;
     const wave = (1 - Math.cos((this.pulseTime / REACH_PULSE_PERIOD_MS) * Math.PI * 2)) / 2; // 0 -> 1 -> 0
     this.highlight.alpha = REACH_PULSE_MIN + (1 - REACH_PULSE_MIN) * wave;
-    this.monsterReach.alpha = this.highlight.alpha;
+    this.enemyReach.alpha = this.highlight.alpha;
 
     // Chi ha cambiato ordine (piazzato, usato, perso) ridisegna il suo cerchietto.
     for (const p of this.pieces) {
@@ -1118,10 +1118,10 @@ export class PiecesController {
       this.drawPiece(p);
     }
 
-    // Il pallino di attivazione dei mostri cambia (attivato, stordito, area rivelata): si ridisegna solo quella pedina.
+    // Il pallino di attivazione dei nemici cambia (attivato, stordito, area rivelata): si ridisegna solo quella pedina.
     if (this.activationOf) {
       for (const p of this.pieces) {
-        if (p.team !== 'monster' || this.dying.has(p.id)) continue;
+        if (p.team !== 'enemy' || this.dying.has(p.id)) continue;
         const shown = this.activationOf(p) ?? '';
         if (this.shownActivation.get(p.id) === shown) continue;
         this.shownActivation.set(p.id, shown);
@@ -1140,7 +1140,7 @@ export class PiecesController {
       }
     }
 
-    // I mostri appena rivelati compaiono: un po' più grandi e trasparenti, poi si assestano.
+    // I nemici appena rivelati compaiono: un po' più grandi e trasparenti, poi si assestano.
     for (const [id, p] of this.appearing) {
       const next = p + deltaMs / REVEAL_ANIM_MS;
       const root = this.views.get(id)?.root;
@@ -1167,7 +1167,7 @@ export class PiecesController {
       if (next >= 1) {
         this.dying.delete(id);
         if (this.dyingPieces.delete(id)) {
-          // un mostro ucciso: la sua pedina sparisce per sempre
+          // un nemico ucciso: la sua pedina sparisce per sempre
           view.root.destroy({ children: true });
           this.views.delete(id);
           continue;
@@ -1204,7 +1204,7 @@ export class PiecesController {
       root.position.set((at.x + 0.5) * CELL_SIZE, (at.y + 0.5) * CELL_SIZE);
       root.alpha = Math.abs(1 - 2 * k);
     } else {
-      // Dal centro della sagoma di adesso al centro di quella dopo il passo (un mostro grande ha più caselle e può cambiare forma).
+      // Dal centro della sagoma di adesso al centro di quella dopo il passo (un nemico grande ha più caselle e può cambiare forma).
       const size = step.size ?? m.piece.size;
       const c0 = this.centerOf(m.piece);
       const c1 = { x: (to.x + size.w / 2) * CELL_SIZE, y: (to.y + size.h / 2) * CELL_SIZE };
@@ -1222,8 +1222,8 @@ export class PiecesController {
     if (outcome.fell) this.onNotice(tr('{name} cade in una buca: {wounds} ferita', { name: m.piece.name, wounds: PIT_FALL_WOUNDS }), 'warning');
     outcome.auraHits.forEach((h, i) => this.floatTag(h, tr('Aura'), 'skill', i * 450));
     for (const h of outcome.auraHits) this.onNotice(tr("{name} subisce 1 ferita per l'Aura di {source}", { name: m.piece.name, source: h.name }), 'warning');
-    if (outcome.died && m.piece.team === 'monster') {
-      // Un mostro morto per strada (Aura): svanisce come quando lo si sconfigge.
+    if (outcome.died && m.piece.team === 'enemy') {
+      // Un nemico morto per strada (Aura): svanisce come quando lo si sconfigge.
       this.dyingPieces.set(m.piece.id, m.piece);
       this.dying.set(m.piece.id, 0);
       this.moving = null;
@@ -1232,7 +1232,7 @@ export class PiecesController {
       this.refresh();
       return;
     }
-    this.monstersSlain(outcome.slain);
+    this.enemiesSlain(outcome.slain);
     if (outcome.died) {
       // Morto: la pedina resta un momento sulla mappa e svanisce in rosso; il turno passa.
       this.dying.set(m.piece.id, 0);
@@ -1244,10 +1244,10 @@ export class PiecesController {
       return;
     }
     this.onChange(m.piece);
-    const mercenaryStop = (this.onStepped?.(m.piece, outcome) ?? false) && m.piece.team === 'mercenary'; // es. è comparso un mostro: ci si ferma qui (ai mostri non succede)
-    // Un mostro si ferma se un eroe può usare la Vigilanza; ma non sopra un'altra pedina (ci passa attraverso, non ci si ferma): in quel caso l'interruzione aspetta il passo dopo.
-    const onTop = m.piece.team === 'monster' && this.pieces.some((o) => o !== m.piece && !o.city && footprint(o).some((c) => occupies(m.piece, c)));
-    const stop = mercenaryStop || (m.piece.team === 'monster' && !onTop && (this.onMonsterStep?.(m.piece, before) ?? false));
+    const mercenaryStop = (this.onStepped?.(m.piece, outcome) ?? false) && m.piece.team === 'mercenary'; // es. è comparso un nemico: ci si ferma qui (ai nemici non succede)
+    // Un nemico si ferma se un eroe può usare la Vigilanza; ma non sopra un'altra pedina (ci passa attraverso, non ci si ferma): in quel caso l'interruzione aspetta il passo dopo.
+    const onTop = m.piece.team === 'enemy' && this.pieces.some((o) => o !== m.piece && !o.city && footprint(o).some((c) => occupies(m.piece, c)));
+    const stop = mercenaryStop || (m.piece.team === 'enemy' && !onTop && (this.onEnemyStep?.(m.piece, before) ?? false));
     m.index++;
     m.elapsed = 0;
     if (stop || m.index >= m.steps.length) {
@@ -1258,7 +1258,7 @@ export class PiecesController {
     }
   }
 
-  /** Le caselle che l'eroe attivo attraversa, contando che i mostri bloccano. */
+  /** Le caselle che l'eroe attivo attraversa, contando che i nemici bloccano. */
   private computeReach(): Map<string, Reach> {
     const active = this.active;
     if (!this.board || !this.enabled || this.viewOnly || !active) return new Map();

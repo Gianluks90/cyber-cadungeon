@@ -12,9 +12,9 @@ export interface Reach {
   prev: Cell | null;
   stepCost: number;
   kind: StepKind;
-  /** Solo per i mostri grandi: la nuova sagoma dopo il passo (la Salamandra di fuoco ruota quando si piega). */
+  /** Solo per i nemici grandi: la nuova sagoma dopo il passo (la Salamandra di fuoco ruota quando si piega). */
   size?: { w: number; h: number };
-  /** Le porte chiuse che questo passo apre prima di passare (solo per i mostri: vedi `DoorOpening`). */
+  /** Le porte chiuse che questo passo apre prima di passare (solo per i nemici: vedi `DoorOpening`). */
   opens?: ResolvedDoor[];
 }
 
@@ -40,7 +40,7 @@ const add = (c: Cell, d: Cell): Cell => ({ x: c.x + d.x, y: c.y + d.y });
  * - Da dentro una buca si esce per 2 punti, su una casella libera accanto alla buca.
  * - `teleports` sono caselle in cui si arriva di colpo, spendendo tutti i punti rimasti (il viaggio da glifo a glifo):
  *   valgono solo se a piedi non si arriva già lì.
- * - `doorOpening`, se c'è, permette di aprire lungo la strada le porte chiuse che `may` ammette, pagando il loro costo (i mostri).
+ * - `doorOpening`, se c'è, permette di aprire lungo la strada le porte chiuse che `may` ammette, pagando il loro costo (i nemici).
  * - `stairs` collega una casella con una scala all'altro capo della scalinata (1 punto): si può arrivarci a piedi e
  *   proseguire da lì. Chi chiama lo dà solo agli eroi.
  * - `passThrough` (Acrobata): si attraversano nemici, roccia, acqua e buche come se fossero pavimento, senza conseguenze. Tocca a chi chiama escludere

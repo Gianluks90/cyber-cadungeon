@@ -10,8 +10,8 @@ import type { Zone } from '../game/map/map-data';
 import { Wall, edgeCells, wallEdges } from '../game/board/wall';
 import { placeRock, splitObstacle } from './rocks';
 import type { PieceData } from '../game/pieces/piece';
-import type { MonsterDef } from '../game/monsters/monster';
-import type { PlacedMonster } from './monster-view';
+import type { EnemyDef } from '../game/enemies/enemy';
+import type { PlacedEnemy } from './enemy-view';
 import { CHEST_TABLE_MAX } from '../game/board/marker';
 import { MERCENARY_START_CELLS } from '../game/constants';
 import type { ChestTier, Loot, Marker, PotionKind, TokenLook } from '../game/board/marker';
@@ -33,7 +33,7 @@ export const markerKey = (m: { type: string; kind?: string; tier?: string; color
   m.type === 'coins' || m.type === 'start' || m.type === 'stairs' || m.type === 'encounter' || m.type === 'item' ? m.type : m.type === 'glyph' ? (m.twin ? 'glyph:twin' : m.active ? 'glyph:active' : 'glyph') : `${m.type}:${m.kind ?? m.tier ?? m.color}`;
 
 /** Le modifiche a un nemico: nome (se è unico), quanto cambiano i valori della carta, abilità in più e bottino. */
-export interface MonsterEdits {
+export interface EnemyEdits {
   unique: boolean;
   name: string;
   bonus: { wounds: number; speed: number; armor: number; dice: DieColor[] };
@@ -96,7 +96,7 @@ interface Snap {
   areas: AreaDef[];
   obstacles: Obstacle[];
   walls: Wall[];
-  monsters: PieceData[];
+  enemies: PieceData[];
   markers: Marker[];
   start: Cell[];
   zones: Zone[];
@@ -122,7 +122,7 @@ export class TileEditor {
   private obstacleList: Obstacle[] = [];
   /** I muri dell'avventura (vedi `board/wall.ts`): stanno sui lati fra due caselle di tile e spariscono se un tile viene tolto. */
   private wallList: Wall[] = [];
-  private monsterList: PieceData[] = [];
+  private enemyList: PieceData[] = [];
   private markerList: Marker[] = [];
   /** Le caselle di partenza degli eroi (`start` della mappa). */
   private startList: Cell[] = [];
@@ -135,8 +135,8 @@ export class TileEditor {
   carryingObstacle: ObstacleType | null = null;
   /** La lunghezza (in lati di cella) del muro in mano, o null. */
   carryingWall: number | null = null;
-  /** Il mostro in mano (id del catalogo e se è potenziato), o null; `monsterRotated` lo gira (1×2 diventa 2×1, 2×3 diventa 3×2). */
-  carryingMonster: { id: string; enhanced: boolean } | null = null;
+  /** Il nemico in mano (id del catalogo e se è potenziato), o null; `enemyRotated` lo gira (1×2 diventa 2×1, 2×3 diventa 3×2). */
+  carryingEnemy: { id: string; enhanced: boolean } | null = null;
   /** Il segnalino in mano (pozione, monete, baule, chiave runica), o null. R gira i bauli. */
   carryingMarker: MarkerSpec | null = null;
   private markerRotation: 0 | 90 | 180 | 270 = 0;
@@ -144,7 +144,7 @@ export class TileEditor {
   private heldStairsLink: string | null = null;
   /** L'etichetta della coppia di un glifo gemello ripreso dalla mappa: rimesso, resta collegato al suo compagno. */
   private heldTwin: string | null = null;
-  private monsterRotated = false;
+  private enemyRotated = false;
   /** La porta in mano, o null. Una cosa alla volta: o una tessera o una porta. */
   carryingDoor: DoorKind | null = null;
   /** La serratura della porta ripresa per spostarla: rimessa, la porta la ritrova com'era (chiave o id evento compresi). */
@@ -168,19 +168,19 @@ export class TileEditor {
   private pickedFrom: { before: Snap } | null = null;
   /** Modalità elimina: ogni clic, o area tracciata, toglie gli elementi toccati; ogni strumento toglie solo i suoi (`deleteScope`: le tessere, le porte o gli ostacoli). */
   deleting = false;
-  deleteScope: 'tiles' | 'doors' | 'obstacles' | 'monsters' | 'markers' | 'specials' = 'tiles';
+  deleteScope: 'tiles' | 'doors' | 'obstacles' | 'enemies' | 'markers' | 'specials' = 'tiles';
   /** Lo strumento Tessere è aperto: solo allora un clic su una tessera già messa la riprende per spostarla. */
   tilesToolOpen = false;
-  /** Modalità personalizza (strumento Nemici): un clic su un nemico apre la dialog delle sue modifiche (`onEditMonster`). */
+  /** Modalità personalizza (strumento Nemici): un clic su un nemico apre la dialog delle sue modifiche (`onEditEnemy`). */
   customizing = false;
-  onEditMonster?: (index: number) => void;
+  onEditEnemy?: (index: number) => void;
   /** Modalità separa (strumento Ostacoli): un clic su una macerie la stacca dal suo gruppo. */
   separating = false;
 
   constructor(
     private readonly layer: EditorMapLayer,
     private readonly defs: ReadonlyMap<string, TileDef>,
-    private readonly monsterDefs: ReadonlyMap<string, MonsterDef>,
+    private readonly enemyDefs: ReadonlyMap<string, EnemyDef>,
     private readonly notify: () => void,
   ) {
     layer.onStairsRoute = (a, route, phase) => this.stairsRouteEdit(a, route, phase);
@@ -246,15 +246,15 @@ export class TileEditor {
     return (this.markerCounts()[markerKey(spec)] ?? 0) < limit;
   }
 
-  get monsters(): readonly PieceData[] {
-    return this.monsterList;
+  get enemies(): readonly PieceData[] {
+    return this.enemyList;
   }
 
-  /** Quanti mostri in mappa per tipo e versione (chiave `id` per i normali, `id+` per i potenziati). */
-  monsterCounts(): Record<string, number> {
+  /** Quanti nemici in mappa per tipo e versione (chiave `id` per i normali, `id+` per i potenziati). */
+  enemyCounts(): Record<string, number> {
     const c: Record<string, number> = {};
-    for (const m of this.monsterList) {
-      const key = `${m.monster}${m.enhanced ? '+' : ''}`;
+    for (const m of this.enemyList) {
+      const key = `${m.enemy}${m.enhanced ? '+' : ''}`;
       c[key] = (c[key] ?? 0) + 1;
     }
     return c;
@@ -269,8 +269,8 @@ export class TileEditor {
   }
 
   /** Un nemico di un tipo che il catalogo non ha (un contenuto che qui non c'è): resta in mappa come segnaposto, 1×1 se non ha una dimensione scritta. */
-  private isMissingMonster(m: PieceData): boolean {
-    return !!m.monster && !this.monsterDefs.has(m.monster);
+  private isMissingEnemy(m: PieceData): boolean {
+    return !!m.enemy && !this.enemyDefs.has(m.enemy);
   }
 
   /** Un oggetto a terra (reliquia o altro) che il catalogo non conosce. */
@@ -280,21 +280,21 @@ export class TileEditor {
 
   /** Quanti elementi non riconosciuti ci sono in mappa: finché ce ne sono l'avventura non è giocabile (la Verifica lo dice). */
   missingCount(): number {
-    return this.monsterList.filter((m) => this.isMissingMonster(m)).length + this.markerList.filter((m) => this.isMissingMarker(m)).length;
+    return this.enemyList.filter((m) => this.isMissingEnemy(m)).length + this.markerList.filter((m) => this.isMissingMarker(m)).length;
   }
 
   /** Ridisegna i segnaposto e i segnalini noti (quelli sconosciuti non si disegnano come oggetti veri). */
   private refreshMissing() {
     this.layer.setMarkers(this.markerList.filter((m) => !this.isMissingMarker(m)));
     this.layer.setMissing([
-      ...this.monsterList.filter((m) => this.isMissingMonster(m)).map((m) => ({ kind: 'monster' as const, x: m.x, y: m.y, w: (m.size ?? { w: 1, h: 1 }).w, h: (m.size ?? { w: 1, h: 1 }).h })),
+      ...this.enemyList.filter((m) => this.isMissingEnemy(m)).map((m) => ({ kind: 'enemy' as const, x: m.x, y: m.y, w: (m.size ?? { w: 1, h: 1 }).w, h: (m.size ?? { w: 1, h: 1 }).h })),
       ...this.markerList.filter((m) => this.isMissingMarker(m)).map((m) => ({ kind: 'object' as const, x: m.x, y: m.y, w: 1, h: 1 })),
     ]);
   }
 
-  /** Un mostro piazzato com'è disegnato: il suo tipo, dove sta e quanto occupa. */
-  private placedMonster(p: PieceData): PlacedMonster | null {
-    const def = p.monster ? this.monsterDefs.get(p.monster) : undefined;
+  /** Un nemico piazzato com'è disegnato: il suo tipo, dove sta e quanto occupa. */
+  private placedEnemy(p: PieceData): PlacedEnemy | null {
+    const def = p.enemy ? this.enemyDefs.get(p.enemy) : undefined;
     const custom = !!p.unique || !!p.bonus || !!p.traits?.length || !!p.removedTraits?.length || !!p.drop?.length || !!p.inactive || !!p.behavior || !!p.ignoreGlobal || !!p.invincible || !!p.onlyHurtBy || !!p.delayed || !!p.immune;
     return def ? { def, x: p.x, y: p.y, w: (p.size ?? def.size).w, h: (p.size ?? def.size).h, enhanced: !!p.enhanced, custom, look: lookOf(p), id: p.id, events: this.eventPieces.has(p.id) } : null;
   }
@@ -313,7 +313,7 @@ export class TileEditor {
   setEventPieces(ids: ReadonlySet<string>) {
     if (ids.size === this.eventPieces.size && [...ids].every((id) => this.eventPieces.has(id))) return;
     this.eventPieces = ids;
-    this.layer.setMonsters(this.monsterList.flatMap((m) => this.placedMonster(m) ?? []));
+    this.layer.setEnemies(this.enemyList.flatMap((m) => this.placedEnemy(m) ?? []));
   }
 
   get walls(): readonly Wall[] {
@@ -384,7 +384,7 @@ export class TileEditor {
   }
 
   /** Mette in mappa pezzi e porte (la bozza ritrovata, o un annulla); i tile di cui non si conosce il tipo si saltano. */
-  load(tiles: readonly MapTileRef[], doors: readonly Door[] = this.doorList, areas: readonly Partial<AreaDef>[] = this.areaList, obstacles: readonly Obstacle[] = this.obstacleList, monsters: readonly PieceData[] = this.monsterList, markers: readonly Marker[] = this.markerList, start: readonly Cell[] = this.startList, walls: readonly Wall[] = this.wallList, zones: readonly Zone[] = this.zoneList) {
+  load(tiles: readonly MapTileRef[], doors: readonly Door[] = this.doorList, areas: readonly Partial<AreaDef>[] = this.areaList, obstacles: readonly Obstacle[] = this.obstacleList, enemies: readonly PieceData[] = this.enemyList, markers: readonly Marker[] = this.markerList, start: readonly Cell[] = this.startList, walls: readonly Wall[] = this.wallList, zones: readonly Zone[] = this.zoneList) {
     this.list = tiles.filter((t) => this.defs.has(t.tile)).map((t) => ({ ...t }));
     this.placed = this.list.map((t) => ({ def: rotateTile(this.defs.get(t.tile)!, t.rot), x: t.x, y: t.y }));
     this.doorList = doors.map((d) => ({ ...d }));
@@ -392,7 +392,7 @@ export class TileEditor {
     this.obstacleList = obstacles.map((o) => ({ ...o }));
     this.wallList = walls.map((w) => ({ ...w }));
     this.zoneList = zones.map((z) => ({ ...z, cells: z.cells.map((c) => ({ ...c })) }));
-    this.monsterList = monsters.filter((m) => m.team === 'monster').map((m) => ({ ...m }));
+    this.enemyList = enemies.filter((m) => m.team === 'enemy').map((m) => ({ ...m }));
     this.markerList = markers.map((m) => ({ ...m }));
     // Gli oggetti a terra di avventure fatte prima (o a mano) non hanno un id: gli si dà, così gli eventi possono sceglierli.
     const carried = this.carriedPickupId;
@@ -406,16 +406,16 @@ export class TileEditor {
     this.layer.setDoors(this.doorList);
     this.layer.setObstacles(this.obstacleList);
     this.layer.setWalls(this.wallList);
-    this.layer.setMonsters(this.monsterList.flatMap((m) => this.placedMonster(m) ?? []));
+    this.layer.setEnemies(this.enemyList.flatMap((m) => this.placedEnemy(m) ?? []));
     this.refreshMissing();
   }
 
   private snapshot(): Snap {
-    return { tiles: this.list.map((t) => ({ ...t })), doors: this.doorList.map((d) => ({ ...d })), areas: this.areaList.map((a) => ({ ...a, cells: a.cells.map((c) => ({ ...c })) })), obstacles: this.obstacleList.map((o) => ({ ...o })), walls: this.wallList.map((w) => ({ ...w })), monsters: this.monsterList.map((m) => ({ ...m })), markers: this.markerList.map((m) => ({ ...m })), start: this.startList.map((c) => ({ ...c })), zones: this.zoneList.map((z) => ({ ...z, cells: z.cells.map((c) => ({ ...c })) })) };
+    return { tiles: this.list.map((t) => ({ ...t })), doors: this.doorList.map((d) => ({ ...d })), areas: this.areaList.map((a) => ({ ...a, cells: a.cells.map((c) => ({ ...c })) })), obstacles: this.obstacleList.map((o) => ({ ...o })), walls: this.wallList.map((w) => ({ ...w })), enemies: this.enemyList.map((m) => ({ ...m })), markers: this.markerList.map((m) => ({ ...m })), start: this.startList.map((c) => ({ ...c })), zones: this.zoneList.map((z) => ({ ...z, cells: z.cells.map((c) => ({ ...c })) })) };
   }
 
   private restore(s: Snap) {
-    this.load(s.tiles, s.doors, s.areas, s.obstacles, s.monsters, s.markers, s.start, s.walls, s.zones);
+    this.load(s.tiles, s.doors, s.areas, s.obstacles, s.enemies, s.markers, s.start, s.walls, s.zones);
   }
 
   private remember(before: Snap) {
@@ -446,21 +446,21 @@ export class TileEditor {
     // Le caselle delle zone seguono i tile; una zona rimasta senza caselle sparisce.
     if (!this.pickedFrom) this.zoneList = this.zoneList.map((z) => ({ ...z, cells: z.cells.filter((c) => this.layer.isWalkable(c)) })).filter((z) => z.cells.length);
     this.layer.setStartCells(this.startList);
-    // I mostri seguono i tile come gli ostacoli.
-    if (!this.pickedFrom) this.monsterList = this.monsterList.filter((m) => this.monsterCellsOk(m));
+    // I nemici seguono i tile come gli ostacoli.
+    if (!this.pickedFrom) this.enemyList = this.enemyList.filter((m) => this.enemyCellsOk(m));
     this.layer.setObstacles(this.obstacleList);
-    this.layer.setMonsters(this.monsterList.flatMap((m) => this.placedMonster(m) ?? []));
+    this.layer.setEnemies(this.enemyList.flatMap((m) => this.placedEnemy(m) ?? []));
     this.refreshMissing();
     this.notify();
   }
 
-  private monsterCells(m: PieceData): Cell[] {
-    const size = m.size ?? (m.monster ? this.monsterDefs.get(m.monster)?.size : undefined) ?? { w: 1, h: 1 };
+  private enemyCells(m: PieceData): Cell[] {
+    const size = m.size ?? (m.enemy ? this.enemyDefs.get(m.enemy)?.size : undefined) ?? { w: 1, h: 1 };
     return Array.from({ length: size.w * size.h }, (_, i) => ({ x: m.x + (i % size.w), y: m.y + Math.floor(i / size.w) }));
   }
 
-  private monsterCellsOk(m: PieceData): boolean {
-    return this.monsterCells(m).every((c) => this.layer.isWalkable(c));
+  private enemyCellsOk(m: PieceData): boolean {
+    return this.enemyCells(m).every((c) => this.layer.isWalkable(c));
   }
 
   private clearHand() {
@@ -472,9 +472,9 @@ export class TileEditor {
     this.layer.setCarry(null);
     this.layer.setCarryDoor(false);
     this.layer.setObstacleProvider(null);
-    this.carryingMonster = null;
-    this.monsterRotated = false;
-    this.layer.setMonsterProvider(null);
+    this.carryingEnemy = null;
+    this.enemyRotated = false;
+    this.layer.setEnemyProvider(null);
     this.carryingMarker = null;
     this.markerRotation = 0;
     this.heldStairsLink = null;
@@ -494,7 +494,7 @@ export class TileEditor {
       this.drop();
       return;
     }
-    if (this.pickedFrom || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker) this.drop(); // una ripresa dalla mappa torna dov'era prima di prendere altro
+    if (this.pickedFrom || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker) this.drop(); // una ripresa dalla mappa torna dov'era prima di prendere altro
     this.deleting = false;
     this.carrying = id;
     this.layer.setCarry(this.defs.get(id) ?? null, this.layer.rotation);
@@ -508,7 +508,7 @@ export class TileEditor {
       return;
     }
     if (RUNE_COLORS.includes(kind as RuneColor) && this.doorCounts()[kind] > 0 && this.carryingDoor !== kind) return;
-    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker) this.drop();
+    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker) this.drop();
     this.deleting = false;
     this.carryingDoor = kind;
     this.carriedLock = null;
@@ -522,7 +522,7 @@ export class TileEditor {
       this.drop();
       return;
     }
-    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker) this.drop();
+    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker) this.drop();
     this.deleting = false;
     this.separating = false;
     this.carryingWall = length;
@@ -554,7 +554,7 @@ export class TileEditor {
       this.drop();
       return;
     }
-    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker) this.drop();
+    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker) this.drop();
     this.deleting = false;
     this.separating = false;
     this.carryingObstacle = type;
@@ -573,7 +573,7 @@ export class TileEditor {
       return;
     }
     if (!this.markerAvailable(spec)) return;
-    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker) this.drop();
+    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker) this.drop();
     this.deleting = false;
     this.separating = false;
     this.customizing = false;
@@ -586,7 +586,7 @@ export class TileEditor {
   private markerTarget(cell: Cell): { marker?: Marker; startCell?: Cell; valid: boolean } | null {
     const spec = this.carryingMarker;
     if (!spec) return null;
-    const blocked = this.obstacleList.some((o) => obstacleCells(o).some((c) => c.x === cell.x && c.y === cell.y)) || this.monsterList.some((m) => this.monsterCells(m).some((c) => c.x === cell.x && c.y === cell.y));
+    const blocked = this.obstacleList.some((o) => obstacleCells(o).some((c) => c.x === cell.x && c.y === cell.y)) || this.enemyList.some((m) => this.enemyCells(m).some((c) => c.x === cell.x && c.y === cell.y));
     if (spec.type === 'start') {
       const there = this.markerList.some((m) => m.x === cell.x && m.y === cell.y && m.type !== 'glyph');
       const already = this.startList.some((c) => c.x === cell.x && c.y === cell.y); // rimetterla la toglie: sempre possibile
@@ -687,7 +687,7 @@ export class TileEditor {
   pickTargets(kind: PickKind): { value: string; cells: Cell[] }[] {
     const at = (m: { x: number; y: number }) => [{ x: m.x, y: m.y }];
     switch (kind) {
-      case 'monster': return this.monsterList.filter((m) => m.team === 'monster').map((m) => ({ value: m.id, cells: this.monsterCells(m) }));
+      case 'enemy': return this.enemyList.filter((m) => m.team === 'enemy').map((m) => ({ value: m.id, cells: this.enemyCells(m) }));
       case 'encounter': return this.markerList.flatMap((m) => (m.type === 'encounter' && m.id ? [{ value: m.id, cells: at(m) }] : []));
       case 'glyph': return this.markerList.flatMap((m) => (m.type === 'glyph' ? [{ value: `${m.x},${m.y}`, cells: at(m) }] : []));
       case 'stairs': return this.markerList.flatMap((m) => (m.type === 'stairs' ? [{ value: `${m.x},${m.y}`, cells: at(m) }] : []));
@@ -745,82 +745,82 @@ export class TileEditor {
     return true;
   }
 
-  /** Prende un mostro (normale o potenziato); lo stesso di nuovo lo lascia. Ogni clic ne piazza uno (resta in mano per metterne altri); R lo gira. */
-  pickMonster(id: string, enhanced: boolean) {
-    if (this.carryingMonster?.id === id && this.carryingMonster.enhanced === enhanced && !this.pickedFrom) {
+  /** Prende un nemico (normale o potenziato); lo stesso di nuovo lo lascia. Ogni clic ne piazza uno (resta in mano per metterne altri); R lo gira. */
+  pickEnemy(id: string, enhanced: boolean) {
+    if (this.carryingEnemy?.id === id && this.carryingEnemy.enhanced === enhanced && !this.pickedFrom) {
       this.drop();
       return;
     }
-    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker) this.drop();
+    if (this.pickedFrom || this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker) this.drop();
     this.deleting = false;
     this.separating = false;
     this.customizing = false;
-    this.carryingMonster = { id, enhanced };
-    this.layer.setMonsterProvider((at) => this.monsterTarget(at));
+    this.carryingEnemy = { id, enhanced };
+    this.layer.setEnemyProvider((at) => this.enemyTarget(at));
     this.notify();
   }
 
-  /** Dove andrebbe il mostro in mano con il puntatore in `at` (celle con la parte decimale), e se lì si può: serve che stia tutto su caselle dei tile, senza ostacoli né altri mostri. */
-  private monsterTarget(at: Cell): { shown: PlacedMonster; valid: boolean; upgrade?: number; replace?: number[] } | null {
-    const hand = this.carryingMonster;
-    const def = hand ? this.monsterDefs.get(hand.id) : undefined;
+  /** Dove andrebbe il nemico in mano con il puntatore in `at` (celle con la parte decimale), e se lì si può: serve che stia tutto su caselle dei tile, senza ostacoli né altri nemici. */
+  private enemyTarget(at: Cell): { shown: PlacedEnemy; valid: boolean; upgrade?: number; replace?: number[] } | null {
+    const hand = this.carryingEnemy;
+    const def = hand ? this.enemyDefs.get(hand.id) : undefined;
     if (!hand || !def) return null;
     // Un nemico normale messo sopra uno identico già piazzato lo rende potenziato (l'anteprima mostra già il potenziato).
     if (!hand.enhanced) {
       const cell = { x: Math.floor(at.x), y: Math.floor(at.y) };
-      const i = this.monsterList.findIndex((m) => m.monster === hand.id && !m.enhanced && this.monsterCells(m).some((c) => c.x === cell.x && c.y === cell.y));
-      const existing = i >= 0 ? this.placedMonster(this.monsterList[i]) : null;
+      const i = this.enemyList.findIndex((m) => m.enemy === hand.id && !m.enhanced && this.enemyCells(m).some((c) => c.x === cell.x && c.y === cell.y));
+      const existing = i >= 0 ? this.placedEnemy(this.enemyList[i]) : null;
       if (existing) return { shown: { ...existing, enhanced: true }, valid: true, upgrade: i };
     }
-    const rotated = this.monsterRotated && def.size.w !== def.size.h;
+    const rotated = this.enemyRotated && def.size.w !== def.size.h;
     const w = rotated ? def.size.h : def.size.w;
     const h = rotated ? def.size.w : def.size.h;
     const x = Math.round(at.x - w / 2);
     const y = Math.round(at.y - h / 2);
     const cells = Array.from({ length: w * h }, (_, i) => ({ x: x + (i % w), y: y + Math.floor(i / w) }));
     // Un nemico non riconosciuto si sostituisce mettendoci sopra un nemico vero: le sue caselle non contano come occupate.
-    const taken = new Set([...this.obstacleList.flatMap((o) => obstacleCells(o)), ...this.monsterList.filter((m) => !this.isMissingMonster(m)).flatMap((m) => this.monsterCells(m)), ...this.markerList].map((c) => `${c.x},${c.y}`));
+    const taken = new Set([...this.obstacleList.flatMap((o) => obstacleCells(o)), ...this.enemyList.filter((m) => !this.isMissingEnemy(m)).flatMap((m) => this.enemyCells(m)), ...this.markerList].map((c) => `${c.x},${c.y}`));
     const valid = cells.every((c) => this.layer.isWalkable(c) && !taken.has(`${c.x},${c.y}`));
-    return { shown: { def, x, y, w, h, enhanced: hand.enhanced }, valid, replace: valid ? this.missingMonstersIn(cells) : [] };
+    return { shown: { def, x, y, w, h, enhanced: hand.enhanced }, valid, replace: valid ? this.missingEnemiesIn(cells) : [] };
   }
 
   /** Gli indici dei nemici non riconosciuti che occupano almeno una di queste caselle (quelli che un nemico vero sostituirebbe). */
-  private missingMonstersIn(cells: Cell[]): number[] {
+  private missingEnemiesIn(cells: Cell[]): number[] {
     const set = new Set(cells.map((c) => `${c.x},${c.y}`));
-    return this.monsterList.flatMap((m, i) => (this.isMissingMonster(m) && this.monsterCells(m).some((c) => set.has(`${c.x},${c.y}`)) ? [i] : []));
+    return this.enemyList.flatMap((m, i) => (this.isMissingEnemy(m) && this.enemyCells(m).some((c) => set.has(`${c.x},${c.y}`)) ? [i] : []));
   }
 
-  private placeMonster(at: Cell) {
-    const hand = this.carryingMonster;
-    const t = hand ? this.monsterTarget(at) : null;
+  private placeEnemy(at: Cell) {
+    const hand = this.carryingEnemy;
+    const t = hand ? this.enemyTarget(at) : null;
     if (!hand || !t || !t.valid) return;
     this.remember(this.pickedFrom?.before ?? this.snapshot());
     this.pickedFrom = null;
     if (t.upgrade !== undefined) {
-      this.monsterList[t.upgrade] = { ...this.monsterList[t.upgrade], enhanced: true };
+      this.enemyList[t.upgrade] = { ...this.enemyList[t.upgrade], enhanced: true };
       this.changed();
       return;
     }
     const replaced = new Set(t.replace ?? []);
-    if (replaced.size) this.monsterList = this.monsterList.filter((_, i) => !replaced.has(i)); // toglie i segnaposto che sostituisce
-    const next = this.monsterList.reduce((m, p) => Math.max(m, Number(/^m(\d+)$/.exec(p.id)?.[1] ?? 0)), 0) + 1;
+    if (replaced.size) this.enemyList = this.enemyList.filter((_, i) => !replaced.has(i)); // toglie i segnaposto che sostituisce
+    const next = this.enemyList.reduce((m, p) => Math.max(m, Number(/^m(\d+)$/.exec(p.id)?.[1] ?? 0)), 0) + 1;
     const rotated = t.shown.w !== t.shown.def.size.w || t.shown.h !== t.shown.def.size.h;
-    this.monsterList.push({ id: `m${next}`, team: 'monster', monster: hand.id, x: t.shown.x, y: t.shown.y, ...(hand.enhanced ? { enhanced: true } : {}), ...(rotated ? { size: { w: t.shown.w, h: t.shown.h } } : {}) });
+    this.enemyList.push({ id: `m${next}`, team: 'enemy', enemy: hand.id, x: t.shown.x, y: t.shown.y, ...(hand.enhanced ? { enhanced: true } : {}), ...(rotated ? { size: { w: t.shown.w, h: t.shown.h } } : {}) });
     this.changed();
   }
 
-  private pickUpMonster(at: Cell): boolean {
+  private pickUpEnemy(at: Cell): boolean {
     const cell = { x: Math.floor(at.x), y: Math.floor(at.y) };
-    const i = this.monsterList.findIndex((m) => this.monsterCells(m).some((c) => c.x === cell.x && c.y === cell.y));
+    const i = this.enemyList.findIndex((m) => this.enemyCells(m).some((c) => c.x === cell.x && c.y === cell.y));
     if (i < 0) return false;
-    const m = this.monsterList[i];
-    const def = m.monster ? this.monsterDefs.get(m.monster) : undefined;
+    const m = this.enemyList[i];
+    const def = m.enemy ? this.enemyDefs.get(m.enemy) : undefined;
     if (!def) return false;
     this.pickedFrom = { before: this.snapshot() };
-    this.monsterList.splice(i, 1);
-    this.carryingMonster = { id: def.id, enhanced: !!m.enhanced };
-    this.monsterRotated = !!m.size && (m.size.w !== def.size.w || m.size.h !== def.size.h);
-    this.layer.setMonsterProvider((p) => this.monsterTarget(p));
+    this.enemyList.splice(i, 1);
+    this.carryingEnemy = { id: def.id, enhanced: !!m.enhanced };
+    this.enemyRotated = !!m.size && (m.size.w !== def.size.w || m.size.h !== def.size.h);
+    this.layer.setEnemyProvider((p) => this.enemyTarget(p));
     this.changed();
     return true;
   }
@@ -866,9 +866,9 @@ export class TileEditor {
       this.notify();
       return;
     }
-    if (this.carryingMonster) {
-      this.monsterRotated = !this.monsterRotated;
-      this.layer.setMonsterProvider((at) => this.monsterTarget(at)); // ridisegna l'anteprima
+    if (this.carryingEnemy) {
+      this.enemyRotated = !this.enemyRotated;
+      this.layer.setEnemyProvider((at) => this.enemyTarget(at)); // ridisegna l'anteprima
       this.notify();
       return;
     }
@@ -906,8 +906,8 @@ export class TileEditor {
         if (k >= 0) this.onEditItem?.(k);
         return;
       }
-      const i = this.monsterList.findIndex((m) => this.monsterCells(m).some((c) => c.x === cell.x && c.y === cell.y));
-      if (i >= 0 && !this.isMissingMonster(this.monsterList[i])) this.onEditMonster?.(i); // un segnaposto non si personalizza: si sostituisce o si toglie
+      const i = this.enemyList.findIndex((m) => this.enemyCells(m).some((c) => c.x === cell.x && c.y === cell.y));
+      if (i >= 0 && !this.isMissingEnemy(this.enemyList[i])) this.onEditEnemy?.(i); // un segnaposto non si personalizza: si sostituisce o si toglie
       return;
     }
     if (this.carryingDoor) {
@@ -922,8 +922,8 @@ export class TileEditor {
       this.placeObstacle(at);
       return;
     }
-    if (this.carryingMonster) {
-      this.placeMonster(at);
+    if (this.carryingEnemy) {
+      this.placeEnemy(at);
       return;
     }
     if (this.carryingMarker) {
@@ -931,9 +931,9 @@ export class TileEditor {
       return;
     }
     if (!this.carrying) {
-      // Ogni strumento riprende solo i suoi elementi: le porte con lo strumento Porte, i mostri con Nemici, le tessere con Tessere.
-      if (this.deleteScope === 'monsters') {
-        this.pickUpMonster(at);
+      // Ogni strumento riprende solo i suoi elementi: le porte con lo strumento Porte, i nemici con Nemici, le tessere con Tessere.
+      if (this.deleteScope === 'enemies') {
+        this.pickUpEnemy(at);
         return;
       }
       if (this.deleteScope === 'specials') {
@@ -1033,17 +1033,17 @@ export class TileEditor {
   }
 
   /** L'indice del nemico che copre il punto (in celle con la parte decimale), o -1. */
-  monsterIndexAt(at: Cell): number {
+  enemyIndexAt(at: Cell): number {
     const cell = { x: Math.floor(at.x), y: Math.floor(at.y) };
-    return this.monsterList.findIndex((m) => this.monsterCells(m).some((c) => c.x === cell.x && c.y === cell.y));
+    return this.enemyList.findIndex((m) => this.enemyCells(m).some((c) => c.x === cell.x && c.y === cell.y));
   }
 
   /** Il tasto destro su un nemico: accende la modalità personalizza e apre subito le sue modifiche. */
-  editMonsterAt(at: Cell) {
-    const i = this.monsterIndexAt(at);
-    if (i < 0 || this.isMissingMonster(this.monsterList[i])) return;
+  editEnemyAt(at: Cell) {
+    const i = this.enemyIndexAt(at);
+    if (i < 0 || this.isMissingEnemy(this.enemyList[i])) return;
     this.setCustomizing(true);
-    this.onEditMonster?.(i);
+    this.onEditEnemy?.(i);
   }
 
   /** Il testo dell'azione e il costo di un segnalino Incontro, nel formato della dialog. */
@@ -1118,15 +1118,15 @@ export class TileEditor {
   }
 
   /** Le modifiche attuali di un nemico, nel formato della dialog. */
-  monsterEdits(index: number): MonsterEdits | null {
-    const m = this.monsterList[index];
+  enemyEdits(index: number): EnemyEdits | null {
+    const m = this.enemyList[index];
     if (!m) return null;
     return { unique: !!m.unique, name: m.unique ? (m.name ?? '') : '', bonus: { wounds: m.bonus?.wounds ?? 0, speed: m.bonus?.speed ?? 0, armor: m.bonus?.armor ?? 0, dice: [...(m.bonus?.dice ?? [])] }, traits: [...(m.traits ?? [])], removedTraits: [...(m.removedTraits ?? [])], drop: (m.drop ?? []).map((l) => ({ ...l })), inactive: !!m.inactive, look: lookOf(m) ?? '', ...(m.behavior ? { behavior: { ...m.behavior } } : {}), ignoreGlobal: !!m.ignoreGlobal, invincible: !!m.invincible, onlyHurtBy: m.onlyHurtBy ?? '', delayed: !!m.delayed, immune: [...(m.immune ?? this.cardImmune(m))] };
   }
 
   /** Le immunità che la carta del catalogo dà a questo nemico (nella sua versione normale o potenziata). */
   private cardImmune(m: PieceData): string[] {
-    const def = m.monster ? this.monsterDefs.get(m.monster) : undefined;
+    const def = m.enemy ? this.enemyDefs.get(m.enemy) : undefined;
     return [...((m.enhanced ? def?.enhanced : def?.normal)?.immune ?? [])];
   }
 
@@ -1135,13 +1135,13 @@ export class TileEditor {
   }
 
   /** Scrive le modifiche di un nemico; ciò che è a zero o vuoto non finisce nel file, così il nemico torna quello della carta. */
-  updateMonster(index: number, e: MonsterEdits) {
-    const m = this.monsterList[index];
+  updateEnemy(index: number, e: EnemyEdits) {
+    const m = this.enemyList[index];
     if (!m) return;
     this.remember(this.snapshot());
     const { unique: _u, name: _n, bonus: _b, traits: _t, removedTraits: _rt, drop: _d, inactive: _i, stone: _s, look: _l, behavior: _bh, ignoreGlobal: _ig, invincible: _v, onlyHurtBy: _oh, delayed: _dl, immune: _im, ...base } = m;
     const bonus = { ...(e.bonus.wounds ? { wounds: e.bonus.wounds } : {}), ...(e.bonus.speed ? { speed: e.bonus.speed } : {}), ...(e.bonus.armor ? { armor: e.bonus.armor } : {}), ...(e.bonus.dice.length ? { dice: [...e.bonus.dice] } : {}) };
-    this.monsterList[index] = {
+    this.enemyList[index] = {
       ...base,
       ...(e.unique && e.name.trim() ? { unique: true, name: e.name.trim() } : {}),
       ...(e.inactive ? { inactive: true } : {}),
@@ -1186,7 +1186,7 @@ export class TileEditor {
       this.separating = false;
       this.customizing = false;
     }
-    if (on && (this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingMonster || this.carryingMarker)) this.drop();
+    if (on && (this.carrying || this.carryingDoor || this.carryingObstacle || this.carryingWall || this.carryingEnemy || this.carryingMarker)) this.drop();
     this.deleting = on;
     this.notify();
   }
@@ -1233,10 +1233,10 @@ export class TileEditor {
         if (x0 <= area.x1 + doorTolerance && x1 >= area.x0 - doorTolerance && y0 <= area.y1 + doorTolerance && y1 >= area.y0 - doorTolerance) walls.add(i);
       });
     }
-    const monsters = new Set<number>();
-    if (scope === 'monsters') {
-      this.monsterList.forEach((m, i) => {
-        if (this.monsterCells(m).some((c) => c.x < area.x1 && c.x + 1 > area.x0 && c.y < area.y1 && c.y + 1 > area.y0)) monsters.add(i);
+    const enemies = new Set<number>();
+    if (scope === 'enemies') {
+      this.enemyList.forEach((m, i) => {
+        if (this.enemyCells(m).some((c) => c.x < area.x1 && c.x + 1 > area.x0 && c.y < area.y1 && c.y + 1 > area.y0)) enemies.add(i);
       });
     }
     const markers = new Set<number>();
@@ -1252,18 +1252,18 @@ export class TileEditor {
         if (c.x < area.x1 && c.x + 1 > area.x0 && c.y < area.y1 && c.y + 1 > area.y0) starts.add(i);
       });
     }
-    if (!tiles.size && !doors.size && !obstacles.size && !walls.size && !monsters.size && !markers.size && !starts.size) return 0;
+    if (!tiles.size && !doors.size && !obstacles.size && !walls.size && !enemies.size && !markers.size && !starts.size) return 0;
     this.remember(this.snapshot());
     this.list = this.list.filter((_, i) => !tiles.has(i));
     this.placed = this.placed.filter((_, i) => !tiles.has(i));
     this.doorList = this.doorList.filter((_, i) => !doors.has(i));
     this.obstacleList = this.obstacleList.filter((_, i) => !obstacles.has(i));
     this.wallList = this.wallList.filter((_, i) => !walls.has(i));
-    this.monsterList = this.monsterList.filter((_, i) => !monsters.has(i));
+    this.enemyList = this.enemyList.filter((_, i) => !enemies.has(i));
     this.markerList = this.markerList.filter((_, i) => !markers.has(i));
     this.startList = this.startList.filter((_, i) => !starts.has(i));
     this.changed();
-    return tiles.size + doors.size + obstacles.size + walls.size + monsters.size + markers.size + starts.size;
+    return tiles.size + doors.size + obstacles.size + walls.size + enemies.size + markers.size + starts.size;
   }
 
   // --- Aree ---

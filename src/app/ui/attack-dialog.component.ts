@@ -16,9 +16,9 @@ export interface AttackSide {
   name: string;
   subtitle: string;
   portrait?: string;
-  /** Un mostro o un eroe: decide l'icona se manca l'immagine. */
-  team: 'mercenary' | 'monster';
-  /** Un mostro potenziato: la carta ha il contorno rosso. */
+  /** Un nemico o un eroe: decide l'icona se manca l'immagine. */
+  team: 'mercenary' | 'enemy';
+  /** Un nemico potenziato: la carta ha il contorno rosso. */
   enhanced?: boolean;
   wounds: number;
   maxWounds: number;
@@ -101,7 +101,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
       <div class="backdrop" role="dialog" aria-modal="true" [attr.aria-label]="'Attacco di {a} contro {b}' | tr: { a: v.attacker.name, b: v.target.name }">
         <div class="dialog" [class.paused]="paused()" (pointerenter)="enter($event)" (pointerleave)="leave($event)" (pointerdown)="down($event)">
           <ng-template #side let-s>
-            <app-picture [src]="s.portrait" [icon]="s.team === 'monster' ? 'skull' : 'frame_person'" [iconSize]="56" />
+            <app-picture [src]="s.portrait" [icon]="s.team === 'enemy' ? 'skull' : 'frame_person'" [iconSize]="56" />
             <figcaption>
               <b>{{ s.name }}</b>
               <span>{{ s.subtitle }}</span>

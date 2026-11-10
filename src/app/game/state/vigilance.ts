@@ -6,14 +6,14 @@ import type { GameState } from './game-state';
 
 /**
  * Vigilanza (docs/cards/skill-cunning.md): quando un nemico entra in una casella adiacente all'eroe, questi può spendere 2 overclock per attaccarlo subito
- * (una volta per ogni volta che un nemico entra). Qui si decide chi ne ha la possibilità dopo ogni passo di un mostro; la scena chiede al giocatore e svolge
+ * (una volta per ogni volta che un nemico entra). Qui si decide chi ne ha la possibilità dopo ogni passo di un nemico; la scena chiede al giocatore e svolge
  * l'attacco (fuori dal turno degli eroi, senza consumare i suoi attacchi).
  */
 export interface VigilanceChance {
   mercenary: Piece;
   /** L'overclock da spendere. */
   cost: number;
-  /** Le armi (o i pugni) con cui può attaccare quel mostro adesso. */
+  /** Le armi (o i pugni) con cui può attaccare quel nemico adesso. */
   options: AttackOption[];
 }
 
@@ -37,33 +37,33 @@ const adjacent = (a: Pick<Piece, 'cell' | 'size'>, b: Pick<Piece, 'cell' | 'size
   footprint(a).some((c) => footprint(b).some((d) => Math.max(Math.abs(c.x - d.x), Math.abs(c.y - d.y)) <= 1));
 
 /**
- * Gli eroi che possono usare la Vigilanza contro `monster`, che con l'ultimo passo è appena entrato in una casella adiacente a loro (prima, da `from`,
+ * Gli eroi che possono usare la Vigilanza contro `enemy`, che con l'ultimo passo è appena entrato in una casella adiacente a loro (prima, da `from`,
  * non lo era): hanno la carta, l'overclock, e un'arma con cui colpirlo adesso.
  */
-export function vigilanceChances(state: GameState, board: Board, monster: Piece, from: Pick<Piece, 'cell' | 'size'>): VigilanceChance[] {
-  if (monster.team !== 'monster' || monster.city) return [];
+export function vigilanceChances(state: GameState, board: Board, enemy: Piece, from: Pick<Piece, 'cell' | 'size'>): VigilanceChance[] {
+  if (enemy.team !== 'enemy' || enemy.city) return [];
   const out: VigilanceChance[] = [];
   for (const mercenary of state.pieces) {
     if (mercenary.team !== 'mercenary' || mercenary.city || mercenary.toad || mercenary.wounds <= 0) continue;
     const cost = vigilanceCost(state, mercenary);
     if (cost === null || mercenary.overclock < cost) continue;
-    if (!adjacent(mercenary, monster) || adjacent(mercenary, from)) continue; // deve essere appena entrato
-    const options = controlledAttackOptions(state, board, mercenary, monster);
+    if (!adjacent(mercenary, enemy) || adjacent(mercenary, from)) continue; // deve essere appena entrato
+    const options = controlledAttackOptions(state, board, mercenary, enemy);
     if (options.length) out.push({ mercenary, cost, options });
   }
   return out;
 }
 
 /**
- * Guardia (ordine, docs/REGOLE.md): durante il turno del Maligno un eroe con l'ordine di Guardia può interrompere un mostro che può attaccare con un attacco,
- * gratis. Chi rifiuta (`declined`) non può ripensarci per la stessa attivazione del mostro.
+ * Guardia (ordine, docs/REGOLE.md): durante il turno del Maligno un eroe con l'ordine di Guardia può interrompere un nemico che può attaccare con un attacco,
+ * gratis. Chi rifiuta (`declined`) non può ripensarci per la stessa attivazione del nemico.
  */
-export function guardChances(state: GameState, board: Board, monster: Piece, declined: ReadonlySet<string>): VigilanceChance[] {
-  if (monster.team !== 'monster' || monster.city || monster.wounds <= 0) return [];
+export function guardChances(state: GameState, board: Board, enemy: Piece, declined: ReadonlySet<string>): VigilanceChance[] {
+  if (enemy.team !== 'enemy' || enemy.city || enemy.wounds <= 0) return [];
   const out: VigilanceChance[] = [];
   for (const mercenary of state.pieces) {
     if (mercenary.team !== 'mercenary' || mercenary.city || mercenary.toad || mercenary.wounds <= 0 || mercenary.order !== 'guard' || declined.has(mercenary.id)) continue;
-    const options = controlledAttackOptions(state, board, mercenary, monster).filter((o) => o.enabled);
+    const options = controlledAttackOptions(state, board, mercenary, enemy).filter((o) => o.enabled);
     if (options.length) out.push({ mercenary, cost: 0, options });
   }
   return out;

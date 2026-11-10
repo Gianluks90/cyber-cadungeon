@@ -39,7 +39,7 @@ export interface ItemDef {
   forbidsTags?: string[];
   /** Passivo: punti movimento in più a ogni turno, anche se l'azione ne dà zero (come Combattere). Può essere negativo (chi porta la Principessa ne ha uno in meno, mai sotto 0). */
   movementBonus?: number;
-  /** Oggetto trasportato (la Principessa...): conta come un oggetto equipaggiato ma non va mai nello zaino e non si scarta, si posa a terra (azione "Posa"); chi lo porta lo lascia a terra se muore, e un mostro può prenderlo (comportamento globale `carry`). */
+  /** Oggetto trasportato (la Principessa...): conta come un oggetto equipaggiato ma non va mai nello zaino e non si scarta, si posa a terra (azione "Posa"); chi lo porta lo lascia a terra se muore, e un nemico può prenderlo (comportamento globale `carry`). */
   carried?: boolean;
   /**
    * Oggetto maledetto (la Divoratrice di anime): chi lo porta non può scartarlo, posarlo né metterlo nello zaino, e lo ha sempre equipaggiato. Si può solo cederlo a un eroe adiacente
@@ -47,7 +47,7 @@ export interface ItemDef {
    */
   cursed?: boolean;
   /**
-   * Maledizione di fine turno (la Divoratrice di anime): al termine del turno di chi la porta equipaggiata, se **con questa arma** non ha ucciso almeno un mostro durante il turno, perde
+   * Maledizione di fine turno (la Divoratrice di anime): al termine del turno di chi la porta equipaggiata, se **con questa arma** non ha ucciso almeno un nemico durante il turno, perde
    * una frazione delle sue ferite massime (`fraction` 4 = un quarto): l'armatura non le riduce. Può uccidere l'eroe.
    */
   curse?: { fraction: number };
@@ -241,7 +241,7 @@ export function applyItemMods(items: ReadonlyMap<string, ItemDef>, mods: readonl
     } else if (m.giveCost !== undefined) copy.giveCost = m.giveCost;
     if (m.curse) {
       copy.curse = { fraction: m.curse.fraction };
-      rules.push(tr('Al termine del tuo turno, se non hai ucciso un mostro con questo oggetto durante il turno, subisci ferite pari a 1/{n} delle tue ferite massime: l\'armatura non le riduce.', { n: m.curse.fraction }));
+      rules.push(tr('Al termine del tuo turno, se non hai ucciso un nemico con questo oggetto durante il turno, subisci ferite pari a 1/{n} delle tue ferite massime: l\'armatura non le riduce.', { n: m.curse.fraction }));
     }
     if (m.protectFrom?.length) {
       copy.effects = [...(base.effects ?? []), { kind: 'rule', rule: 'protectFrom', items: [...m.protectFrom] }];

@@ -11,7 +11,7 @@ import { armorOf, canActOnMap, killMercenary, loseOrdersOnWounds } from './actio
 import { usedItem } from './behaviors';
 import { attackBonus, effectsOf, hasRule, onHitStatuses, ruleAmount } from './effects';
 import { onKillBonuses } from './skills';
-import { RemovalResult, removeMonster } from './loot';
+import { RemovalResult, removeEnemy } from './loot';
 import { immuneTo, inflictStatus, keywordLevel } from './status';
 import { GameState } from './game-state';
 
@@ -80,7 +80,7 @@ export interface AttackPlan {
   supportDamage: number;
   /** Perforare fisso dell'arma. */
   pierce: number;
-  /** Gittata in più fissa (le abilità dei mostri, "+1 Gittata"). */
+  /** Gittata in più fissa (le abilità dei nemici, "+1 Gittata"). */
   bonusRange: number;
   /** Gli stati che l'attacco piazza di base (le scintille ne aggiungono altri). */
   inflictions: Infliction[];
@@ -183,13 +183,13 @@ export function canSeeTarget(state: GameState, board: Board, attacker: Piece, ta
     for (const c of footprint(p)) blockers.add(cellKey(c));
   }
   // Chi sta in una buca non vede fuori; da fuori si vede chi è dentro.
-  // (un mostro grande solo se è interamente in una buca)
+  // (un nemico grande solo se è interamente in una buca)
   if (footprint(attacker).every((c) => board.isPit(c))) return footprint(target).some((t) => footprint(attacker).some((c) => c.x === t.x && c.y === t.y));
   const seesFrom = (from: Cell, skip: ReadonlySet<string>, rocks: ReadonlySet<string> = new Set()) => {
     const b = skip.size ? new Set([...blockers].filter((k) => !skip.has(k))) : blockers;
     return footprint(target).some((c) => canSee(board, from, c, b, rocks));
   };
-  // La linea di vista parte dal centro di una qualunque delle caselle di chi guarda (un mostro grande ne ha più d'una).
+  // La linea di vista parte dal centro di una qualunque delle caselle di chi guarda (un nemico grande ne ha più d'una).
   if (footprint(attacker).some((c) => seesFrom(c, new Set()))) return true;
   // Precisione: si può ignorare 1 modello od ostacolo che sta in mezzo (una creatura, oppure un masso).
   if ((opts.ignore ?? 0) >= 1) {
@@ -265,7 +265,7 @@ export interface Infliction {
   when: 'before' | 'after';
 }
 
-/** Gli stati che una regola scritta a parole (di un'arma o di un mostro) fa piazzare: Bruciare, Veleno, Ragnatela, Stordire e le frasi di Placare, Pietrificare, Parola di Vaal. */
+/** Gli stati che una regola scritta a parole (di un'arma o di un nemico) fa piazzare: Bruciare, Veleno, Ragnatela, Stordire e le frasi di Placare, Pietrificare, Parola di Vaal. */
 export function inflictionsFrom(texts: readonly string[]): Infliction[] {
   const out: Infliction[] = [];
   for (const t of texts) {
@@ -322,36 +322,36 @@ export function attackOptions(state: GameState, board: Board, attacker: Piece, t
 }
 
 /**
- * Come un mostro può attaccare `target` adesso: il suo tipo di attacco e i suoi dadi. La mischia solo se il bersaglio è adiacente; distanza e Intrusione se lo vede.
+ * Come un nemico può attaccare `target` adesso: il suo tipo di attacco e i suoi dadi. La mischia solo se il bersaglio è adiacente; distanza e Intrusione se lo vede.
  * Null se non può (non ha un attacco, è troppo lontano per la mischia o non lo vede).
  */
-/** Il tipo di attacco di un mostro: quello dell'arma se attacca con un oggetto (`useItem`), altrimenti quello della sua carta. */
-export function monsterAttackType(state: GameState, monster: Piece): AttackType | undefined {
-  const used = usedItem(state, monster);
-  return used ? state.items.get(used.itemId)!.attack : monster.attackType;
+/** Il tipo di attacco di un nemico: quello dell'arma se attacca con un oggetto (`useItem`), altrimenti quello della sua carta. */
+export function enemyAttackType(state: GameState, enemy: Piece): AttackType | undefined {
+  const used = usedItem(state, enemy);
+  return used ? state.items.get(used.itemId)!.attack : enemy.attackType;
 }
 
-export function monsterAttackOption(state: GameState, board: Board, monster: Piece, target: Piece): AttackOption | null {
-  const used = usedItem(state, monster);
-  const attackType = monsterAttackType(state, monster);
-  if (monster.team !== 'monster' || !attackType || target.team !== 'mercenary' || target.city) return null;
+export function enemyAttackOption(state: GameState, board: Board, enemy: Piece, target: Piece): AttackOption | null {
+  const used = usedItem(state, enemy);
+  const attackType = enemyAttackType(state, enemy);
+  if (enemy.team !== 'enemy' || !attackType || target.team !== 'mercenary' || target.city) return null;
   // Il Soffio colpisce chi sta nel suo cono (niente gittata, niente linea di vista verso il bersaglio: solo i muri).
-  if (keywordLevel(state, monster, 'Soffio') > 0) {
-    const dir = breathDirTo(state, board, monster, target);
-    const reasonB = monster.attacks < 1 ? tr('Ha già attaccato') : dir ? undefined : tr('Il bersaglio non è nel cono');
-    return reasonB === tr('Il bersaglio non è nel cono') ? null : { id: 'monster', name: monster.name, icon: 'skull', attack: attackType, dice: monsterDice(state, monster), ...(used ? { itemId: used.itemId, id: `weapon:${used.itemId}`, name: state.items.get(used.itemId)!.name, icon: state.items.get(used.itemId)!.icon ?? 'skull' } : {}), enabled: !reasonB, reason: reasonB };
+  if (keywordLevel(state, enemy, 'Soffio') > 0) {
+    const dir = breathDirTo(state, board, enemy, target);
+    const reasonB = enemy.attacks < 1 ? tr('Ha già attaccato') : dir ? undefined : tr('Il bersaglio non è nel cono');
+    return reasonB === tr('Il bersaglio non è nel cono') ? null : { id: 'enemy', name: enemy.name, icon: 'skull', attack: attackType, dice: enemyDice(state, enemy), ...(used ? { itemId: used.itemId, id: `weapon:${used.itemId}`, name: state.items.get(used.itemId)!.name, icon: state.items.get(used.itemId)!.icon ?? 'skull' } : {}), enabled: !reasonB, reason: reasonB };
   }
   // Se non si vede direttamente ma c'è una scala fra i due, l'attacco passa di lì (la mischia solo fra i due capi).
-  const direct = canSeeTarget(state, board, monster, target);
-  const route = direct ? null : stairsRoute(state, board, monster, target);
-  const dist = route ? route.distance : distanceTo(monster, target);
+  const direct = canSeeTarget(state, board, enemy, target);
+  const route = direct ? null : stairsRoute(state, board, enemy, target);
+  const dist = route ? route.distance : distanceTo(enemy, target);
   // La mischia vuole l'adiacenza, o la distanza 2 con Raggiungimento (serve la vista, come sempre).
-  if (attackType === 'melee' && (route ? route.distance !== 1 : dist > (keywordLevel(state, monster, 'Raggiungimento') > 0 ? 2 : 1))) return null;
-  // Stessa regola degli eroi: un mostro con un attacco a distanza non spara a chi gli è adiacente. E non annuncia un tiro impossibile: oltre la gittata massima dei suoi dadi non attacca.
+  if (attackType === 'melee' && (route ? route.distance !== 1 : dist > (keywordLevel(state, enemy, 'Raggiungimento') > 0 ? 2 : 1))) return null;
+  // Stessa regola degli eroi: un nemico con un attacco a distanza non spara a chi gli è adiacente. E non annuncia un tiro impossibile: oltre la gittata massima dei suoi dadi non attacca.
   if (attackType === 'ranged' && dist <= 1) return null;
-  if ((attackType === 'ranged' || attackType === 'intrusion') && dist > monsterRange(state, monster).max) return null;
-  const reason = monster.attacks < 1 ? tr('Ha già attaccato') : !direct && !route ? tr('Non vede il bersaglio') : undefined;
-  return { id: 'monster', name: monster.name, icon: 'skull', attack: attackType, dice: monsterDice(state, monster), ...(used ? { itemId: used.itemId, id: `weapon:${used.itemId}`, name: state.items.get(used.itemId)!.name, icon: state.items.get(used.itemId)!.icon ?? 'skull' } : {}), enabled: !reason, reason, ...(route ? { distance: route.distance, via: { from: route.from, to: route.to } } : {}) };
+  if ((attackType === 'ranged' || attackType === 'intrusion') && dist > enemyRange(state, enemy).max) return null;
+  const reason = enemy.attacks < 1 ? tr('Ha già attaccato') : !direct && !route ? tr('Non vede il bersaglio') : undefined;
+  return { id: 'enemy', name: enemy.name, icon: 'skull', attack: attackType, dice: enemyDice(state, enemy), ...(used ? { itemId: used.itemId, id: `weapon:${used.itemId}`, name: state.items.get(used.itemId)!.name, icon: state.items.get(used.itemId)!.icon ?? 'skull' } : {}), enabled: !reason, reason, ...(route ? { distance: route.distance, via: { from: route.from, to: route.to } } : {}) };
 }
 
 /**
@@ -379,20 +379,20 @@ const DIE_RANGE: Record<DieColor, { avg: number; max: number }> = {
 };
 
 /**
- * Quanto lontano può colpire un mostro con un attacco a distanza o di Intrusione: `likely` è la gittata che i suoi dadi danno di solito (la media, arrotondata
+ * Quanto lontano può colpire un nemico con un attacco a distanza o di Intrusione: `likely` è la gittata che i suoi dadi danno di solito (la media, arrotondata
  * per eccesso, fra 2 e `SHOOTER_DISTANCE_CAP`): è la distanza a cui lo script cerca di stare; `max` è il massimo possibile (la somma delle facce migliori
  * e del Comando): oltre non attacca, perché il tiro sarebbe impossibile.
  */
-export function monsterRange(state: GameState, monster: Piece): { likely: number; max: number } {
-  const dice = monsterDice(state, monster);
+export function enemyRange(state: GameState, enemy: Piece): { likely: number; max: number } {
+  const dice = enemyDice(state, enemy);
   const avg = dice.reduce((n, d) => n + DIE_RANGE[d].avg, 0);
-  const max = dice.reduce((n, d) => n + DIE_RANGE[d].max, 0) + commandBonus(state, monster);
+  const max = dice.reduce((n, d) => n + DIE_RANGE[d].max, 0) + commandBonus(state, enemy);
   return { likely: Math.min(SHOOTER_DISTANCE_CAP, Math.max(2, Math.ceil(avg))), max };
 }
 
 /**
  * Le scintille che lo script paga dopo il tiro (il Maligno automatico): tutte quelle che può, prima le più forti (uccisione istantanea, poi più danno). Solo per chi attacca con un'arma che ha
- * scintille (`useItem`): gli altri mostri non ne hanno. Restituisce gli indici nell'elenco delle scintille dell'arma, uno per ogni volta che si paga.
+ * scintille (`useItem`): gli altri nemici non ne hanno. Restituisce gli indici nell'elenco delle scintille dell'arma, uno per ogni volta che si paga.
  */
 export function scriptSparks(state: GameState, target: Piece, plan: AttackPlan, rolls: readonly FaceRoll[], choices: Readonly<Record<number, 'range' | 'heart'>>): number[] {
   const spent: number[] = [];
@@ -407,9 +407,9 @@ export function scriptSparks(state: GameState, target: Piece, plan: AttackPlan, 
   return spent;
 }
 
-/** I dadi d'attacco di un mostro: con Distruzione ne tira uno potere in più. */
-export function monsterDice(state: GameState, monster: Piece): DieColor[] {
-  const used = usedItem(state, monster);
+/** I dadi d'attacco di un nemico: con Distruzione ne tira uno potere in più. */
+export function enemyDice(state: GameState, enemy: Piece): DieColor[] {
+  const used = usedItem(state, enemy);
   if (used) {
     // Come un eroe: i dadi dell'oggetto più i dadi competenza che il comportamento dà a quel tipo di attacco.
     const weapon = state.items.get(used.itemId)!;
@@ -417,10 +417,10 @@ export function monsterDice(state: GameState, monster: Piece): DieColor[] {
     const dice: DieColor[] = [...(weapon.dice ?? []), ...Array.from({ length: used.dice[key] }, () => 'black' as DieColor)];
     return state.adversary.inPlay.includes('destruction') ? [...dice, 'black'] : dice;
   }
-  return state.adversary.inPlay.includes('destruction') ? [...monster.attackDice, 'black'] : [...monster.attackDice];
+  return state.adversary.inPlay.includes('destruction') ? [...enemy.attackDice, 'black'] : [...enemy.attackDice];
 }
 
-/** Gli attacchi ad area scritti a parole (le abilità di un mostro o le regole di un'arma). */
+/** Gli attacchi ad area scritti a parole (le abilità di un nemico o le regole di un'arma). */
 export function areaFrom(texts: readonly string[]): { sweep: boolean; blast: number; breath: boolean } {
   let blast = 0;
   for (const t of texts) {
@@ -497,7 +497,7 @@ export function breathReach(board: Board, b: Breath): Cell[] {
   return [...seen.values()];
 }
 
-/** In quale posizione il Soffio colpirebbe `target` (la migliore: più eroi e meno mostri colpiti)? Null se in nessuna. */
+/** In quale posizione il Soffio colpirebbe `target` (la migliore: più eroi e meno nemici colpiti)? Null se in nessuna. */
 export function breathDirTo(state: GameState, board: Board, attacker: Piece, target: Piece): Breath | null {
   let best: { b: Breath; score: number } | null = null;
   for (const b of breathPlacements(board, attacker)) {
@@ -573,8 +573,8 @@ export function protectionFrom(state: GameState, target: Piece, weaponId: string
 
 /** Il piano di un attacco con l'opzione scelta: distanza, scintille disponibili e bonus fissi. */
 export function planAttack(state: GameState, attacker: Piece, target: Piece, option: AttackOption): AttackPlan {
-  if (attacker.team === 'monster' && !option.itemId) {
-    // Un mostro non ha armi: le sue abilità speciali (solo quelle già in gioco: Perforare, +gittata, +danno) valgono sempre.
+  if (attacker.team === 'enemy' && !option.itemId) {
+    // Un nemico non ha armi: le sue abilità speciali (solo quelle già in gioco: Perforare, +gittata, +danno) valgono sempre.
     let pierce = 0;
     let bonusRange = 0;
     let damage = 0;
@@ -705,17 +705,17 @@ export function resolveAttack(
 
 export interface AttackResult {
   killed: boolean;
-  /** Monete date all'eroe per aver ucciso un mostro potenziato (0 negli altri casi). */
+  /** Monete date all'eroe per aver ucciso un nemico potenziato (0 negli altri casi). */
   reward: number;
   /** Il bersaglio ferito (o morto, se è un eroe che torna in città). */
   target: Piece;
   /** Gli stati che ha davvero ricevuto (quelli a cui è immune non ci sono). */
   applied: { kind: StatusKind; n: number }[];
-  /** Un mostro Immortale che si è rialzato. */
+  /** Un nemico Immortale che si è rialzato. */
   undying: boolean;
-  /** I mostri uccisi da Giustizia divina dell'eroe che è appena morto. */
+  /** I nemici uccisi da Giustizia divina dell'eroe che è appena morto. */
   slain: Piece[];
-  /** Il bottino del mostro ucciso (e se è comparso un oggetto a terra), se ne aveva. */
+  /** Il bottino del nemico ucciso (e se è comparso un oggetto a terra), se ne aveva. */
   drop: RemovalResult | null;
   /** Il bersaglio può essere spostato di fino a 3 spazi (Contraccolpo). */
   knockback: boolean;
@@ -723,7 +723,7 @@ export interface AttackResult {
   overclockGained?: number;
 }
 
-/** Applica l'attacco: consuma un attacco dell'attaccante e toglie le ferite al bersaglio. Un mostro a zero ferite esce dalla mappa; un eroe muore come in `killMercenary`. */
+/** Applica l'attacco: consuma un attacco dell'attaccante e toglie le ferite al bersaglio. Un nemico a zero ferite esce dalla mappa; un eroe muore come in `killMercenary`. */
 export function applyAttack(state: GameState, attacker: Piece, target: Piece, outcome: AttackOutcome, opts: { undying?: boolean; option?: AttackOption; extra?: boolean } = {}): AttackResult {
   if (!opts.extra) {
     attacker.attacks = Math.max(0, attacker.attacks - 1);
@@ -741,7 +741,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
   if (outcome.damage > 0 && target.team === 'mercenary') {
     loseOrdersOnWounds(target); // perde la Mira, il Riposo (non recupera l'overclock) e la Guardia
   }
-  // Immortale: se il dado competenza ha dato una scintilla il mostro si rialza a salute piena, meno i danni in più del colpo mortale.
+  // Immortale: se il dado competenza ha dato una scintilla il nemico si rialza a salute piena, meno i danni in più del colpo mortale.
   if (target.wounds <= 0 && opts.undying) {
     const excess = outcome.damage - before;
     target.wounds = Math.max(1, target.maxWounds - excess);
@@ -762,7 +762,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
     const gain = outcome.damage > 0 && target.team === 'mercenary' ? Math.min(target.maxOverclock - target.overclock, ruleAmount(state, target, 'overclockOnWounded')) : 0;
     if (gain > 0) target.overclock += gain;
     // Zanna e simili: l'attacco che ferisce piazza uno stato (una volta per attacco).
-    if (!opts.extra && outcome.damage > 0 && attacker.team === 'mercenary' && target.team === 'monster' && opts.option) {
+    if (!opts.extra && outcome.damage > 0 && attacker.team === 'mercenary' && target.team === 'enemy' && opts.option) {
       for (const s of onHitStatuses(state, attacker, opts.option.attack)) {
         const n = inflictStatus(state, target, s.kind, s.n);
         if (n) applied.push({ kind: s.kind, n });
@@ -774,13 +774,13 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
     const slain = killMercenary(state, target);
     return { killed: true, reward: 0, target, applied: [], undying: false, slain, drop: null, knockback: false };
   }
-  const drop = removeMonster(state, target, attacker.team === 'mercenary' ? attacker : undefined);
+  const drop = removeEnemy(state, target, attacker.team === 'mercenary' ? attacker : undefined);
   if (attacker.team === 'mercenary') {
     if (opts.option?.attack === 'melee') attacker.lastKill = { weaponId: opts.option.itemId }; // Fendente
     onKillBonuses(state, attacker); // Sangue vampirico
     if (opts.option?.itemId) (attacker.killedWith ??= []).push(opts.option.itemId); // chi ha dato il colpo mortale (la maledizione della Divoratrice)
   }
-  // Il colpo fatale a un mostro potenziato vale monete per l'eroe che lo dà (il denaro è personale).
+  // Il colpo fatale a un nemico potenziato vale monete per l'eroe che lo dà (il denaro è personale).
   const reward = target.enhanced && attacker.team === 'mercenary' && !drop.revived ? ENHANCED_KILL_COINS : 0;
   attacker.coins += reward;
   return { killed: true, reward, target, applied: [], undying: false, slain: [], drop, knockback: false };

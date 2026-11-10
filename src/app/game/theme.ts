@@ -53,7 +53,7 @@ export interface ThemeColors {
   glyphSealed: number;
   /** Le torce: gli strati della fiamma dal bordo al centro (rosso-arancio, arancio, giallo, quasi bianco) e l'alone di luce (additivo, caldo). */
   torch: { outer: number; flame: number; core: number; hot: number; glow: number };
-  /** Pericolo: ciò che è ostile (anello dei mostri). `invalid`: anteprima di un piazzamento non valido. */
+  /** Pericolo: ciò che è ostile (anello dei nemici). `invalid`: anteprima di un piazzamento non valido. */
   danger: number;
   invalid: number;
   /** Segnaposto di un elemento che il motore non riconosce (editor): arancione, con un badge di avviso. */
@@ -76,9 +76,9 @@ export interface ThemeColors {
   stat: { movement: number; overclock: number };
   /** I segnalini degli stati sulla pedina: fiamma, rete, stordimento, veleno. */
   status: { burn: number; web: number; stun: number; poison: number };
-  /** Il pallino di attivazione dei mostri (solo per il Maligno): da attivare, non attivabile, attivazione completata. */
+  /** Il pallino di attivazione dei nemici (solo per il Maligno): da attivare, non attivabile, attivazione completata. */
   activation: { ready: number; blocked: number; done: number };
-  /** I famigli: il contorno azzurro del loro segnalino, per distinguerli da eroi e mostri. */
+  /** I famigli: il contorno azzurro del loro segnalino, per distinguerli da eroi e nemici. */
   familiar: number;
   /** Salute: i cuori carichi. Un giocatore la riconosce subito; i quarti persi e i cuori vuoti usano `ui.border` con `heartEmpty`. */
   health: number;

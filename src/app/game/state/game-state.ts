@@ -9,7 +9,7 @@ import { AdventureObjective, AdventureSetup, MapData } from '../map/map-data';
 import { Party, PartyData } from '../party';
 import { MercenarySheet } from '../mercenaries/mercenary-sheet';
 import { ItemDef, ItemMod, applyItemMods, itemAtLevel } from '../items/item';
-import { MonsterDef } from '../monsters/monster';
+import { EnemyDef } from '../enemies/enemy';
 import { AdversaryCardDef } from '../adversary/card';
 import type { ArmedTrap } from './traps';
 import type { Setup } from './setup';
@@ -64,8 +64,8 @@ export class GameState {
   skillDecks: Record<SkillSchool, string[]> = { combat: [], cunning: [], hacking: [] };
   /** Le scorte del negozio della città: quante copie restano di ogni oggetto in vendita (id -> numero). */
   shop: Record<string, number> = {};
-  /** Il catalogo dei mostri (si ricarica dai file: non si salva): serve a far apparire mostri durante la partita. */
-  monsters: ReadonlyMap<string, MonsterDef> = new Map();
+  /** Il catalogo dei nemici (si ricarica dai file: non si salva): serve a far apparire nemici durante la partita. */
+  enemies: ReadonlyMap<string, EnemyDef> = new Map();
   /** Il catalogo delle Carte del Male (si ricarica dai file: non si salva). */
   adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map();
   /** Il Mazzo del Male: mazzo (in ordine di pesca), mano, scarti, carte Potere in gioco e Odio. I giocatori ne vedono solo quante carte restano nel mazzo. */
@@ -74,7 +74,7 @@ export class GameState {
   adversaryManual = false;
   /** I muri dell'avventura (vedi `board/wall.ts`). */
   walls: Wall[] = [];
-  /** I comportamenti globali dei mostri (vedi `state/behaviors.ts`). */
+  /** I comportamenti globali dei nemici (vedi `state/behaviors.ts`). */
   behaviors: GlobalBehavior[] = [];
   /** Gli eventi dell'avventura: definizioni, variabili, chi aspetta di tornare in vita e i messaggi da mostrare (vedi `state/events.ts`). */
   events: EventState = emptyEvents();
@@ -300,18 +300,18 @@ export class GameState {
   }
 
   /** L'inizio di una partita dai dati della mappa. `fallbackPieces` serve se la mappa non ha pedine; `sheets` sono le schede degli eroi. */
-  static fromMap(data: MapData, fallbackPieces: PieceData[], sheets: ReadonlyMap<string, MercenarySheet> = new Map(), items: ReadonlyMap<string, ItemDef> = new Map(), shopStock: Readonly<Record<string, number>> = {}, skills: ReadonlyMap<string, SkillDef> = new Map(), monsters: ReadonlyMap<string, MonsterDef> = new Map(), adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map()): GameState {
+  static fromMap(data: MapData, fallbackPieces: PieceData[], sheets: ReadonlyMap<string, MercenarySheet> = new Map(), items: ReadonlyMap<string, ItemDef> = new Map(), shopStock: Readonly<Record<string, number>> = {}, skills: ReadonlyMap<string, SkillDef> = new Map(), enemies: ReadonlyMap<string, EnemyDef> = new Map(), adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map()): GameState {
     const state = new GameState(
       data.seed,
       data.doors ?? [],
       data.obstacles ?? [],
       data.markers ?? [],
-      createPieces(data.pieces ?? fallbackPieces, sheets, items, monsters),
+      createPieces(data.pieces ?? fallbackPieces, sheets, items, enemies),
       new Party(data.party),
       new Exploration(),
     );
     state.walls = (data.walls ?? []).map((w) => ({ ...w }));
-    state.behaviors = (data.behaviors ?? []).map((b) => ({ behavior: { ...b.behavior }, ...(b.monsters?.length ? { monsters: [...b.monsters] } : {}) }));
+    state.behaviors = (data.behaviors ?? []).map((b) => ({ behavior: { ...b.behavior }, ...(b.enemies?.length ? { enemies: [...b.enemies] } : {}) }));
     state.progress = data.progress ?? DEFAULT_PROGRESS;
     state.objective = data.objective ?? null;
     state.events = buildEvents(data);
@@ -333,7 +333,7 @@ export class GameState {
     state.applyItemLevels();
     state.rngState = data.seed;
     state.skills = skills;
-    state.monsters = monsters;
+    state.enemies = enemies;
     state.adversaryCards = adversaryCards;
     state.chestTable = data.chestTable ?? {};
     state.buildDecks();
@@ -382,7 +382,7 @@ export class GameState {
   }
 
   /** Ricostruisce lo stato da una copia. */
-  static restore(s: GameSnapshot, items: ReadonlyMap<string, ItemDef> = new Map(), skills: ReadonlyMap<string, SkillDef> = new Map(), monsters: ReadonlyMap<string, MonsterDef> = new Map(), adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map()): GameState {
+  static restore(s: GameSnapshot, items: ReadonlyMap<string, ItemDef> = new Map(), skills: ReadonlyMap<string, SkillDef> = new Map(), enemies: ReadonlyMap<string, EnemyDef> = new Map(), adversaryCards: ReadonlyMap<string, AdversaryCardDef> = new Map()): GameState {
     if (s.version !== SNAPSHOT_VERSION) throw new Error(`Salvataggio di versione ${s.version}: non supportato`);
     const copy = <T>(v: T): T => JSON.parse(JSON.stringify(v));
     const doors: Door[] = copy(s.doors);
@@ -409,7 +409,7 @@ export class GameState {
     state.itemLevels = s.itemLevels ? { ...s.itemLevels } : {};
     state.applyItemLevels();
     state.skills = skills;
-    state.monsters = monsters;
+    state.enemies = enemies;
     state.adversaryCards = adversaryCards;
     if (s.adversary) state.adversary = { ...copy(s.adversary), traps: copy(s.adversary.traps ?? []), gust: s.adversary.gust ?? false };
     state.openedTiers = [...(s.openedTiers ?? [])];

@@ -20,7 +20,7 @@ import { GameState } from './game-state';
 import { effectsOf, hasRule, ruleAmount, statBonus } from './effects';
 import { weakening } from './familiars';
 import { clearStatus, healWounds, immuneTo, isGrappled, keywordLevel } from './status';
-import { RemovalResult, removeMonster } from './loot';
+import { RemovalResult, removeEnemy } from './loot';
 
 /**
  * Le azioni di gioco come funzioni sullo stato: niente Pixi, niente animazioni, niente messaggi. Ognuna controlla le regole,
@@ -59,13 +59,13 @@ export interface StepOutcome {
   marker: MarkerEvent | null;
   /** Le creature con Aura che hanno ferito chi è appena entrato accanto a loro (1 ferita che l'armatura non riduce). */
   auraHits: Piece[];
-  /** I mostri uccisi da Giustizia divina dell'eroe che è morto in questo passo. */
+  /** I nemici uccisi da Giustizia divina dell'eroe che è morto in questo passo. */
   slain: Piece[];
-  /** Il bottino di un mostro morto per strada (Aura). */
+  /** Il bottino di un nemico morto per strada (Aura). */
   drop: RemovalResult | null;
   /** La trappola armata su questa casella, scattata dall'ingresso di un eroe (la scena la risolve). */
   trap?: ArmedTrap;
-  /** Le porte (numero d'ordine nella mappa) che un mostro ha aperto con questo passo. */
+  /** Le porte (numero d'ordine nella mappa) che un nemico ha aperto con questo passo. */
   opened?: number[];
 }
 
@@ -126,7 +126,7 @@ export function openChest(state: GameState, board: Board, piece: Piece): ChestRe
     // Un Maligno a mano decide lui: l'Odio è già suo, lo scrigno resta chiuso e non si pagano punti; la scena glielo chiede e poi riapre lo scrigno (le Maledizioni sono già risolte).
     else if (isMercenary) return { code: 'curse', cost: 0, ...(found.length ? { found } : {}) };
   }
-  // Mostro mimetico: lo scrigno è vivo. Si pagano i punti, ma non si apre e non dà niente finché il Mimic non muore.
+  // Nemico mimetico: lo scrigno è vivo. Si pagano i punti, ma non si apre e non dà niente finché il Mimic non muore.
   const mimic = isMercenary ? trapAtChest(state, chest) : null;
   if (mimic?.card === 'mimic') {
     spendPoints(piece, CHEST_OPEN_COST);
@@ -213,9 +213,9 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
   const from = { ...piece.cell };
   if (step.stepCost > 0 && piece.order === 'aim') piece.order = null; // chi si sposta perde la Mira
   piece.cell = step.cell;
-  if (step.size) piece.size = { ...step.size }; // un mostro grande che si piega (la Salamandra di fuoco) cambia forma
+  if (step.size) piece.size = { ...step.size }; // un nemico grande che si piega (la Salamandra di fuoco) cambia forma
   spendPoints(piece, step.stepCost); // un passo costa 1, un salto o un'uscita da una buca di più
-  // Un mostro che ha una porta chiusa davanti la apre prima di passare (il costo è già nel passo).
+  // Un nemico che ha una porta chiusa davanti la apre prima di passare (il costo è già nel passo).
   const opened: number[] = [];
   for (const rd of step.opens ?? []) {
     const index = board.doors.indexOf(rd);
@@ -225,7 +225,7 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
     }
   }
   let fell = false;
-  // Un mostro grande subisce la buca solo se ci finisce interamente dentro. Acrobata attraversa le buche senza conseguenze (ma non ci si ferma: lo garantisce il clic).
+  // Un nemico grande subisce la buca solo se ci finisce interamente dentro. Acrobata attraversa le buche senza conseguenze (ma non ci si ferma: lo garantisce il clic).
   const crossing = step.stepCost > 0 && hasRule(state, piece, 'passThrough');
   if (step.kind !== 'climb' && !crossing && !piece.invincible && !piece.onlyHurtBy && footprint(piece).every((c) => board.isPit(c))) {
     // Una buca letale uccide chi ci cade, qualunque cosa abbia; le altre tolgono 1 ferita.
@@ -257,7 +257,7 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
   let drop: RemovalResult | null = null;
   if (died) {
     if (piece.team === 'mercenary') slain = killMercenary(state, piece);
-    else drop = removeMonster(state, piece); // un mostro che muore per strada esce dalla mappa e lascia il suo bottino
+    else drop = removeEnemy(state, piece); // un nemico che muore per strada esce dalla mappa e lascia il suo bottino
   }
   const trap = !died && piece.team === 'mercenary' ? trapAtCell(state, piece.cell) : null;
   const outcome: StepOutcome = { fell, died, marker: died ? null : enterCell(board, piece, state), auraHits, slain, drop };
@@ -272,14 +272,14 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
  * (la sua pedina non c'è più), con ferite al massimo. Passa il turno da solo (lo fa chi lo chiama); al round dopo rientra su un glifo acceso senza pagare.
  */
 export function killMercenary(state: GameState, piece: Piece): Piece[] {
-  // Giustizia divina: quando muore uccide i mostri senza un nome entro 3 spazi (anche gli Immortali). Restituisce quelli uccisi, che la scena fa svanire.
+  // Giustizia divina: quando muore uccide i nemici senza un nome entro 3 spazi (anche gli Immortali). Restituisce quelli uccisi, che la scena fa svanire.
   const slain: Piece[] = [];
   for (const { effect: e } of effectsOf(state, piece)) {
     if (e.kind !== 'trigger' || e.on !== 'death') continue;
     for (const op of (e['do'] as { op: string; range?: number }[]) ?? []) {
       if (op.op !== 'killNearby') continue;
       for (const m of [...state.pieces]) {
-        if (m.team !== 'monster' || m.city || m.unique || m.invincible) continue;
+        if (m.team !== 'enemy' || m.city || m.unique || m.invincible) continue;
         const d = Math.min(...footprint(m).flatMap((c) => footprint(piece).map((h) => Math.max(Math.abs(c.x - h.x), Math.abs(c.y - h.y)))));
         if (d <= (op.range ?? 3)) {
           state.pieces.splice(state.pieces.indexOf(m), 1);
@@ -330,7 +330,7 @@ export interface ReachResult {
  */
 export function reachFor(state: GameState, board: Board, piece: Piece, knownMarkers: ReadonlySet<Marker> | null): ReachResult {
   if (!canActOnMap(state, piece) || isGrappled(state, piece)) return { reach: new Map(), travelTargets: new Set() }; // afferrato: nessun movimento
-  const enemies = new Set(state.pieces.filter((p) => p.team !== piece.team && onMap(p)).flatMap((p) => footprint(p).map(cellKey))); // un mostro grande blocca tutte le sue caselle
+  const enemies = new Set(state.pieces.filter((p) => p.team !== piece.team && onMap(p)).flatMap((p) => footprint(p).map(cellKey))); // un nemico grande blocca tutte le sue caselle
   const here = board.markerAt(piece.cell);
   const onActiveGlyph = here?.type === 'glyph' && here.active && piece.team === 'mercenary';
   const occupied = (c: Cell) => state.pieces.some((p) => onMap(p) && occupies(p, c));
@@ -376,7 +376,7 @@ export function armorOf(state: GameState, piece: Piece, vs?: AttackType): number
   if (piece.toad) return 0; // il rospo non ha armatura
   const base = totalArmor(piece.armor, equippedDefs(state, piece)) + statBonus(state, piece, 'armor', { vs }) + (piece.tempArmor ?? 0);
   // I nemici vicini a un famiglio con `weaken` (Nero il Corvo) hanno meno armatura, mai meno di 0.
-  return piece.team === 'monster' ? Math.max(0, base - weakening(state, piece).armor) : base;
+  return piece.team === 'enemy' ? Math.max(0, base - weakening(state, piece).armor) : base;
 }
 
 /** Attacchi che l'azione dà in un turno. */
@@ -556,7 +556,7 @@ export interface CurseHit {
 }
 
 /**
- * Le maledizioni di fine turno: per ogni oggetto equipaggiato con `curse` con cui l'eroe non ha ucciso un mostro in questo turno (`Piece.killedWith`) perde una frazione delle sue ferite massime,
+ * Le maledizioni di fine turno: per ogni oggetto equipaggiato con `curse` con cui l'eroe non ha ucciso un nemico in questo turno (`Piece.killedWith`) perde una frazione delle sue ferite massime,
  * senza armatura. Se arriva a zero muore come per ogni morte. Segue l'eroe ovunque, anche in città.
  */
 function applyTurnEndCurses(state: GameState, piece: Piece): CurseHit[] {
@@ -589,7 +589,7 @@ export function endMercenariesTurn(state: GameState): PassResult | null {
   return { nextActive: null, roundStarted: false, adversary: true, ...(toadEnded ? { toadEnded } : {}), ...(curses.length ? { curses } : {}) };
 }
 
-/** Finito il turno del Maligno (lo gioca la scena, un mostro alla volta) comincia un nuovo round. */
+/** Finito il turno del Maligno (lo gioca la scena, un nemico alla volta) comincia un nuovo round. */
 export function endAdversaryTurn(state: GameState): Piece[] {
   runEvents(state, { kind: 'adversaryTurnEnd' }); // gli eventi "finisce il turno del Maligno" (ricompense e penalità a fine turno)
   const revived = tickRevivals(state); // chi aspettava di tornare in vita perde un turno, e a zero riappare
@@ -611,7 +611,7 @@ export function startRound(state: GameState): void {
     }
     p.action = 'advance';
     p.points = Math.max(0, speedOf(state, p) + (p.toad ? 0 : movementBonusOf(equippedDefs(state, p))));
-    p.attacks = p.toad ? 0 : ADVANCE_ATTACKS + (p.team === 'monster' && keywordLevel(state, p, 'Colpo veloce') > 0 ? 1 : 0); // Colpo veloce: due attacchi per attivazione
+    p.attacks = p.toad ? 0 : ADVANCE_ATTACKS + (p.team === 'enemy' && keywordLevel(state, p, 'Colpo veloce') > 0 ? 1 : 0); // Colpo veloce: due attacchi per attivazione
     p.pointsUsed = 0;
     p.attacksUsed = 0;
     p.done = false;

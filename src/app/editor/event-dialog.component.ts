@@ -136,7 +136,7 @@ interface FormCondition {
   variable: string;
   is: 'on' | 'off';
   item: string;
-  at: 'mercenary' | 'ground' | 'monster';
+  at: 'mercenary' | 'ground' | 'enemy';
   /** Vale se l'oggetto NON sta nel posto `at`. */
   not: boolean;
 }
@@ -156,7 +156,7 @@ function toForm(e: EventEffect): FormEffect {
     case 'message': return { ...f, title: e.title ?? '', text: e.text };
     case 'progress': return { ...f, amount: String(e.amount) };
     case 'setVariable': return { ...f, variable: e.variable, on: e.value ? 'on' : 'off' };
-    case 'modifyMonster': return { ...f, pieceIds: targetsOf(e), wounds: e.wounds ? String(e.wounds) : '', speed: e.speed ? String(e.speed) : '', armor: e.armor ? String(e.armor) : '' };
+    case 'modifyEnemy': return { ...f, pieceIds: targetsOf(e), wounds: e.wounds ? String(e.wounds) : '', speed: e.speed ? String(e.speed) : '', armor: e.armor ? String(e.armor) : '' };
     case 'revive': return { ...f, turns: String(e.turns), distance: String(e.distance) };
     case 'finishRevival': return { ...f, pieceIds: targetsOf(e) };
     case 'activate': return { ...f, pieceIds: targetsOf(e) };
@@ -199,7 +199,7 @@ function toEffect(f: FormEffect): EventEffect {
     case 'message': return { kind: 'message', ...(f.title.trim() ? { title: f.title.trim() } : {}), text: f.text.trim() };
     case 'progress': return { kind: 'progress', amount: num(f.amount) };
     case 'setVariable': return { kind: 'setVariable', variable: f.variable, value: f.on === 'on' };
-    case 'modifyMonster': return { kind: 'modifyMonster', ...targetFields(f), ...(num(f.wounds) ? { wounds: num(f.wounds) } : {}), ...(num(f.speed) ? { speed: num(f.speed) } : {}), ...(num(f.armor) ? { armor: num(f.armor) } : {}) };
+    case 'modifyEnemy': return { kind: 'modifyEnemy', ...targetFields(f), ...(num(f.wounds) ? { wounds: num(f.wounds) } : {}), ...(num(f.speed) ? { speed: num(f.speed) } : {}), ...(num(f.armor) ? { armor: num(f.armor) } : {}) };
     case 'revive': return { kind: 'revive', turns: Math.max(1, num(f.turns)), distance: Math.max(0, num(f.distance)) };
     case 'finishRevival': return { kind: 'finishRevival', ...targetFields(f) };
     case 'activate': return { kind: 'activate', ...targetFields(f) };
@@ -250,7 +250,7 @@ const EFFECT_OPTIONS: SelectOption[] = [
   { value: 'message', get label() { return t('eventDialog.fxMessage'); } },
   { value: 'progress', get label() { return t('eventDialog.fxProgress'); } },
   { value: 'setVariable', get label() { return t('eventDialog.fxSetVariable'); } },
-  { value: 'modifyMonster', get label() { return t('eventDialog.fxModify'); } },
+  { value: 'modifyEnemy', get label() { return t('eventDialog.fxModify'); } },
   { value: 'heal', get label() { return t('eventDialog.fxHeal'); } },
   { value: 'revive', get label() { return t('eventDialog.fxRevive'); } },
   { value: 'finishRevival', get label() { return t('eventDialog.fxFinishRevival'); } },
@@ -355,7 +355,7 @@ const STATE_OPTIONS: SelectOption[] = [
                     <span class="dlg-chip">{{ chipName(t, id) }}<button type="button" [attr.aria-label]="'common.removeNamed' | t: { name: chipName(t, id) }" (click)="removePieceId(ti, id)">×</button></span>
                   } @empty { <small class="dlg-hint">{{ (t.kind === 'cleared' ? 'eventDialog.p.anyEnemy' : 'eventDialog.p.allEncounters') | t }}</small> }
                 </div>
-                <app-map-select [kind]="t.kind === 'cleared' ? 'monster' : 'encounter'" [locatable]="false" [options]="freeChoicesOf(t)" [placeholder]="(t.kind === 'cleared' ? 'eventDialog.p.addEnemyToList' : 'eventDialog.p.addEncounterToList') | t" [label]="'eventDialog.list' | t" (changed)="addPieceId(ti, $event)" />
+                <app-map-select [kind]="t.kind === 'cleared' ? 'enemy' : 'encounter'" [locatable]="false" [options]="freeChoicesOf(t)" [placeholder]="(t.kind === 'cleared' ? 'eventDialog.p.addEnemyToList' : 'eventDialog.p.addEncounterToList') | t" [label]="'eventDialog.list' | t" (changed)="addPieceId(ti, $event)" />
                 @if (t.kind === 'cleared') {
                   <small class="dlg-hint">{{ 'eventDialog.clearedEnemiesHint' | t }}</small>
                 } @else {
@@ -435,7 +435,7 @@ const STATE_OPTIONS: SelectOption[] = [
               <span class="dlg-chip">{{ targetName(id) }}<button type="button" [attr.aria-label]="'common.removeNamed' | t: { name: targetName(id) }" (click)="removeTarget(loc, i, id)">×</button></span>
             } @empty { <small class="dlg-hint">{{ 'eventDialog.noEnemyChosen' | t }}</small> }
           </div>
-          <app-map-select kind="monster" [locatable]="false" [options]="targetChoices(e)" [placeholder]="'eventDialog.addEnemy' | t" [label]="'eventDialog.enemy' | t" (changed)="addTarget(loc, i, $event)" />
+          <app-map-select kind="enemy" [locatable]="false" [options]="targetChoices(e)" [placeholder]="'eventDialog.addEnemy' | t" [label]="'eventDialog.enemy' | t" (changed)="addTarget(loc, i, $event)" />
         </ng-template>
 
         <!-- Un effetto con i suoi campi. È un modello perché la Prova contiene altre due liste di effetti (superata e fallita) che si scrivono allo stesso modo. -->
@@ -459,7 +459,7 @@ const STATE_OPTIONS: SelectOption[] = [
                       <app-select class="block" [options]="stateOptions" [value]="e.on" [label]="'eventDialog.becomes' | t" (changed)="patch(loc, i, { on: $any($event) })" />
                     </div>
                   }
-                  @case ('modifyMonster') {
+                  @case ('modifyEnemy') {
                     <ng-container *ngTemplateOutlet="targets; context: { $implicit: e, loc: loc, i: i }" />
                     <div class="dlg-cols three">
                       <app-field [label]="'eventDialog.wounds' | t"><input type="number" step="1" placeholder="0" [value]="e.wounds" (input)="patch(loc, i, { wounds: $any($event.target).value })" /></app-field>
@@ -534,7 +534,7 @@ const STATE_OPTIONS: SelectOption[] = [
                     <small class="dlg-hint">{{ 'eventDialog.removeObstaclesHint' | t }}</small>
                   }
                   @case ('enterPiece') {
-                    <app-field [label]="'eventDialog.enemy' | t"><app-map-select kind="monster" [options]="monsters()" [value]="e.pieceIds[0] ?? ''" [placeholder]="'eventDialog.chooseEnemy' | t" [label]="'eventDialog.enemy' | t" (changed)="patch(loc, i, { pieceIds: $event ? [$event] : [] })" /></app-field>
+                    <app-field [label]="'eventDialog.enemy' | t"><app-map-select kind="enemy" [options]="enemies()" [value]="e.pieceIds[0] ?? ''" [placeholder]="'eventDialog.chooseEnemy' | t" [label]="'eventDialog.enemy' | t" (changed)="patch(loc, i, { pieceIds: $event ? [$event] : [] })" /></app-field>
                     <app-field [label]="'eventDialog.inPlaceOf' | t" [note]="'encounterDialog.optional' | t"><app-map-select kind="encounter" [options]="encounterChoices()" [value]="e.markerId" [label]="'eventDialog.inPlaceOf' | t" (changed)="patch(loc, i, { markerId: $event })" /></app-field>
                     <small class="dlg-hint">{{ 'eventDialog.enterPieceHint' | t }}</small>
                   }
@@ -684,7 +684,7 @@ export class EventDialogComponent {
   /** L'evento da modificare; null per uno nuovo. */
   readonly value = input<AdventureEvent | null>(null);
   /** I nemici in mappa, le aree e le variabili fra cui scegliere. */
-  readonly monsters = input<SelectOption[]>([]);
+  readonly enemies = input<SelectOption[]>([]);
   readonly areas = input<SelectOption[]>([]);
   /** Le porte evento in mappa (l'id della serratura e dove stanno). */
   readonly doors = input<SelectOption[]>([]);
@@ -737,10 +737,10 @@ export class EventDialogComponent {
   protected readonly itemAtOptions: SelectOption[] = [
     { value: 'mercenary', get label() { return t('eventDialog.atMercenary'); } },
     { value: 'ground', get label() { return t('eventDialog.onGround'); } },
-    { value: 'monster', get label() { return t('eventDialog.atMonster'); } },
+    { value: 'enemy', get label() { return t('eventDialog.atEnemy'); } },
     { value: '!mercenary', get label() { return t('eventDialog.notAtMercenary'); } },
     { value: '!ground', get label() { return t('eventDialog.notOnGround'); } },
-    { value: '!monster', get label() { return t('eventDialog.notAtMonster'); } },
+    { value: '!enemy', get label() { return t('eventDialog.notAtEnemy'); } },
   ];
   protected readonly lookOptions: SelectOption[] = PAWN_LOOKS.map((l) => ({ value: l.value, label: l.label }));
   protected readonly diceOptions: SelectOption[] = [
@@ -761,16 +761,16 @@ export class EventDialogComponent {
   /** Le scelte ancora libere nell'elenco di un innesco "non c'è più nessuno": nemici, o segnalini incontro. */
   /** I segnalini Incontro fra cui scegliere dove compare il nemico (la prima voce, vuota, lo lascia dov'è stato piazzato). */
   protected readonly encounterChoices = computed<SelectOption[]>(() => [{ value: '', label: translate('eventDialog.whereItWasPlaced') }, ...this.encounters()]);
-  protected readonly freeChoicesOf = (t: FormTrigger) => (t.kind === 'encountersGone' ? this.encounters() : this.monsters()).filter((m) => !t.pieceIds.includes(m.value));
-  protected readonly chipName = (t: FormTrigger, id: string) => (t.kind === 'encountersGone' ? (this.encounters().find((m) => m.value === id)?.label ?? '?') : this.monsterName(id));
-  protected readonly monsterName = (id: string) => this.monsters().find((m) => m.value === id)?.label ?? '?';
+  protected readonly freeChoicesOf = (t: FormTrigger) => (t.kind === 'encountersGone' ? this.encounters() : this.enemies()).filter((m) => !t.pieceIds.includes(m.value));
+  protected readonly chipName = (t: FormTrigger, id: string) => (t.kind === 'encountersGone' ? (this.encounters().find((m) => m.value === id)?.label ?? '?') : this.enemyName(id));
+  protected readonly enemyName = (id: string) => this.enemies().find((m) => m.value === id)?.label ?? '?';
   /** C'è un nemico dell'evento (sconfitto, o con cui si interagisce): gli effetti possono indicarlo con "il nemico dell'evento". */
   protected readonly hasThis = computed(() => this.triggers().some((t) => t.kind === 'defeated' || t.kind === 'interact'));
   protected readonly hasDefeated = computed(() => this.triggers().some((t) => t.kind === 'defeated'));
   /** I nemici fra cui scegliere in un effetto: quelli in mappa e, se c'è un nemico dell'evento, anche lui. */
-  private readonly effectMonsters = computed<SelectOption[]>(() => (this.hasThis() ? [{ value: THIS_PIECE, get label() { return t('eventDialog.thisEnemy'); } }, ...this.monsters()] : this.monsters()));
-  protected readonly targetName = (id: string) => (id === THIS_PIECE ? translate('eventDialog.thisEnemy') : this.monsterName(id));
-  protected readonly targetChoices = (e: FormEffect) => this.effectMonsters().filter((m) => !e.pieceIds.includes(m.value));
+  private readonly effectEnemies = computed<SelectOption[]>(() => (this.hasThis() ? [{ value: THIS_PIECE, get label() { return t('eventDialog.thisEnemy'); } }, ...this.enemies()] : this.enemies()));
+  protected readonly targetName = (id: string) => (id === THIS_PIECE ? translate('eventDialog.thisEnemy') : this.enemyName(id));
+  protected readonly targetChoices = (e: FormEffect) => this.effectEnemies().filter((m) => !e.pieceIds.includes(m.value));
   protected readonly conditions = signal<FormCondition[]>([]);
   protected readonly effectsThen = signal<FormEffect[]>([]);
   protected readonly effectsElse = signal<FormEffect[]>([]);
@@ -779,7 +779,7 @@ export class EventDialogComponent {
   protected readonly title = computed(() => (this.value() ? translate('eventDialog.p.modifyEvent') : translate('eventDialog.p.newEvent')));
   /** Un innesco riguarda un nemico (sconfitto, o con cui si interagisce) e non un'area o un oggetto. */
   private readonly onPiece = (t: FormTrigger) => t.kind === 'defeated' || t.kind === 'interact';
-  protected readonly targetOptionsOf = (t: FormTrigger) => (t.kind === 'pickedUp' ? this.pickups() : t.kind === 'encounterUsed' ? this.encounters() : t.kind === 'zoneUsed' || t.kind === 'zoneEntered' ? this.zones() : this.onPiece(t) ? this.monsters() : this.areas());
+  protected readonly targetOptionsOf = (t: FormTrigger) => (t.kind === 'pickedUp' ? this.pickups() : t.kind === 'encounterUsed' ? this.encounters() : t.kind === 'zoneUsed' || t.kind === 'zoneEntered' ? this.zones() : this.onPiece(t) ? this.enemies() : this.areas());
   protected readonly placeholderOf = (t: FormTrigger) => (t.kind === 'pickedUp' ? translate('common.chooseItem') : t.kind === 'encounterUsed' ? translate('eventDialog.p.phEncounter') : t.kind === 'zoneUsed' || t.kind === 'zoneEntered' ? translate('eventDialog.p.phZone') : this.onPiece(t) ? translate('eventDialog.p.phEnemy') : translate('eventDialog.p.phArea'));
   protected readonly emptyHintOf = (t: FormTrigger) =>
     t.kind === 'pickedUp' ? translate('eventDialog.p.hintPickup') : t.kind === 'encounterUsed' ? translate('eventDialog.p.hintEncounter') : t.kind === 'zoneUsed' || t.kind === 'zoneEntered' ? translate('eventDialog.p.hintZone') : this.onPiece(t) ? translate('eventDialog.p.hintEnemy') : translate('eventDialog.p.hintArea');
@@ -904,7 +904,7 @@ export class EventDialogComponent {
 
   /** Che tipo di elemento della mappa sceglie un innesco (se ne sceglie uno). */
   protected triggerPickKind(t: FormTrigger): PickKind {
-    return t.kind === 'defeated' || t.kind === 'interact' ? 'monster' : t.kind === 'pickedUp' ? 'pickup' : t.kind === 'encounterUsed' ? 'encounter' : t.kind === 'zoneUsed' || t.kind === 'zoneEntered' ? 'zone' : 'area';
+    return t.kind === 'defeated' || t.kind === 'interact' ? 'enemy' : t.kind === 'pickedUp' ? 'pickup' : t.kind === 'encounterUsed' ? 'encounter' : t.kind === 'zoneUsed' || t.kind === 'zoneEntered' ? 'zone' : 'area';
   }
 
   protected addVariable() {
@@ -919,7 +919,7 @@ export class EventDialogComponent {
       case 'message': return e.text.trim() ? '' : translate('eventDialog.prob.message');
       case 'progress': return num(e.amount) ? '' : translate('eventDialog.prob.progress');
       case 'setVariable': return e.variable ? '' : translate('eventDialog.prob.setVariable');
-      case 'modifyMonster': return !e.pieceIds.length ? translate('eventDialog.prob.modifyPick') : ![e.wounds, e.speed, e.armor].every(isInt) || !(num(e.wounds) || num(e.speed) || num(e.armor)) ? translate('eventDialog.prob.modifyNumbers') : '';
+      case 'modifyEnemy': return !e.pieceIds.length ? translate('eventDialog.prob.modifyPick') : ![e.wounds, e.speed, e.armor].every(isInt) || !(num(e.wounds) || num(e.speed) || num(e.armor)) ? translate('eventDialog.prob.modifyNumbers') : '';
       case 'revive': return num(e.turns) >= 1 && isInt(e.distance) && num(e.distance) >= 0 ? '' : translate('eventDialog.prob.revive');
       case 'finishRevival': return e.pieceIds.length ? '' : translate('eventDialog.prob.finishRevival');
       case 'activate': return e.pieceIds.length ? '' : translate('eventDialog.prob.activate');

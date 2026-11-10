@@ -1,7 +1,7 @@
 # CyberCadungeon
 
 Dungeon crawler a squadra su griglia, per browser, a tema cyberpunk: una squadra di 3 **Mercenari** contro un **Avversario** (il ruolo che nel vecchio progetto era il "Maligno": umano o automatico; l'ambientazione lo chiama Megacorp).
-Il motore deriva da CADungeon (gioco fantasy, ora archiviato). Nomi, mostri, oggetti, testi e avventure sono provvisori e originali: niente materiale del gioco da tavolo che lo ispirava.
+Il motore deriva da CADungeon (gioco fantasy, ora archiviato). Nomi, nemici, oggetti, testi e avventure sono provvisori e originali: niente materiale del gioco da tavolo che lo ispirava.
 Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzioni) è in `docs/legacy/CLAUDE-cadungeon.md`; le regole del gioco originale in `docs/legacy/REGOLE.md`. Sono solo fonte, non vincolanti.
 
 ## Come lavoriamo
@@ -23,7 +23,7 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - Due modi: **chiavi a nome** (`home.newGame`, pipe `t` o `translate('chiave')`, in inglese, per le schermate) e **italiano come chiave** (`tr('Testo {nome}', { nome })` o pipe `tr`, per messaggi di regole e partita; la chiave è ricavata dal testo con `catalogKey`, quindi cambiare una parola vuole la riga nuova in entrambi i file).
 - Dopo ogni modifica ai testi: `npm run i18n:check` (controlla che ogni testo passato a `tr` abbia la riga in entrambi i file).
 - Si traduce al momento dell'uso, mai in costanti di modulo (usa getter). Plurali = frasi diverse, niente suffissi a mano; numeri e nomi con segnaposto.
-- Cataloghi (Mercenari, mostri, oggetti, abilità, Carte dell'Avversario) restano in italiano in `public/`, perché è anche ciò che legge il motore ("Perforare 2"…): si traducono solo in visualizzazione. Nomi con chiavi `item.<id>`, `skill.<id>`, `monster.<id>`, `adversary.<id>`; altri testi con la chiave di `catalogKey` e il pipe `ct`. Ogni voce nuova nei cataloghi vuole la sua traduzione.
+- Cataloghi (Mercenari, nemici, oggetti, abilità, Carte dell'Avversario) restano in italiano in `public/`, perché è anche ciò che legge il motore ("Perforare 2"…): si traducono solo in visualizzazione. Nomi con chiavi `item.<id>`, `skill.<id>`, `enemy.<id>`, `adversary.<id>`; altri testi con la chiave di `catalogKey` e il pipe `ct`. Ogni voce nuova nei cataloghi vuole la sua traduzione.
 - Dettagli del meccanismo: `i18n/` (`i18n.service.ts`, `catalog-text.ts`). Lingua scelta in `localStorage` (`cad-lang`), poi lingua del browser, poi italiano.
 
 ## Architettura di rete
@@ -37,7 +37,7 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - Una sola unità: la **cella**, 64 px ovunque (SVG compresi).
 - **Tile**: JSON in `public/tiles/` con dimensione in celle, forma (rettangolo `size` o unione `rects`) e aperture (lato, posizione, larghezza 2). Rotazione a scatti di 90°; due tile si agganciano se hanno aperture che si guardano. Pavimento, muri e fratture si disegnano da codice. Un'apertura senza vicino è muro; i punti morti (`deadEnd`) chiudono le uscite libere.
 - **Mappa**: elenco di tile con posizione e rotazione + `seed` per i dettagli generati (`public/maps/`; `test.json` è la mappa di prova, `catalog.json` mostra tutti i tile). È anche il formato di salvataggio ed esportazione dell'editor (`MapData`, `game/map/map-data.ts`).
-- **Dati dell'avventura, non dei tile**: porte (`doors`: lato di cella, aperta/chiusa, serratura `lock`), ostacoli (`obstacles`: roccia, buca, acqua), muri d'autore (`walls`), segnalini (`markers`: glifi, scale, scrigni, oggetti a terra, incontri), pedine (`pieces`), aree (`areas[].cells`), torce, eventi (`events`, `variables`), zone. Un eroe o mostro si richiama dal catalogo con `mercenary`/`monster` e i campi scritti sulla pedina lo sostituiscono.
+- **Dati dell'avventura, non dei tile**: porte (`doors`: lato di cella, aperta/chiusa, serratura `lock`), ostacoli (`obstacles`: roccia, buca, acqua), muri d'autore (`walls`), segnalini (`markers`: glifi, scale, scrigni, oggetti a terra, incontri), pedine (`pieces`), aree (`areas[].cells`), torce, eventi (`events`, `variables`), zone. Un mercenario o nemico si richiama dal catalogo con `mercenary`/`enemy` e i campi scritti sulla pedina lo sostituiscono.
 - Geometria dei muri a segmenti: serve per movimento e linea di vista. Si scoprono gli elementi singoli, non le stanze.
 - Torce, scale, barili, bauli non sono proprietà del tile: tile neutri e riutilizzabili.
 
@@ -54,7 +54,7 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - **Stato e regole di partita**: `game/state/` (`game-state.ts`, `actions.ts`, `combat.ts`, `status.ts`, `effects.ts`); scena Pixi e HUD in `game/game-scene.component.ts`.
 - **Eventi dell'avventura**: `game/state/events.ts` (+ tipi in `game/map/map-data.ts`); l'Avversario in `game/state/adversary.ts`, `adversary-deck.ts`, `game/adversary/`.
 - **Editor**: `src/app/editor/` (`editor.component.ts`, `tile-editor.ts` senza interfaccia, `validator.ts` per la Verifica, `map-camera.ts`). Esiste un editor completo con strumenti per tessere, porte, ostacoli, oggetti, nemici, aree, glifi ed eventi; i dettagli sono nel legacy.
-- **Cataloghi**: `public/{mercenaries,monsters,items,skills,adversary,shops}/`, caricati da `game/{mercenaries,monsters,items,skills,adversary}/`. Squadra predefinita in `game/mercenaries/mercenary-sheet.ts` (`DEFAULT_PARTY`).
+- **Cataloghi**: `public/{mercenaries,enemies,items,skills,adversary,shops}/`, caricati da `game/{mercenaries,enemies,items,skills,adversary}/`. Squadra predefinita in `game/mercenaries/mercenary-sheet.ts` (`DEFAULT_PARTY`).
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
 - **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 
@@ -71,7 +71,7 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Restano com'erano**: "città" e "dadi competenza" (decisione presa).
 - **Da rinominare ancora**: "runa/chiave runica", "scintille", "Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro".
 - **Briefing**: la nuova fase di negozio del setup. **Megacorp / megacorporazione / corp**: parole dell'ambientazione. **Spettro** decade: l'archetipo si chiama solo Incursore.
-- **Nemico** sostituisce "mostro" (il nome nel codice sarà `enemy`; oggi i dati sono ancora in `monsters/`, `monster` nelle chiavi: rinomina da fare, TODO L1.9). Il catalogo ha i 9 nemici di `docs/NEMICI.md`. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
+- **Nemico** sostituisce "mostro" (nel codice `enemy`, cartelle `enemies/`, rinomina fatta; "mostro/mostri" resta solo nei testi di carte e abilità, che verranno rifatti). Il catalogo ha i 9 nemici di `docs/NEMICI.md`. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
 Mappa del mondo, missioni geolocalizzate, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.

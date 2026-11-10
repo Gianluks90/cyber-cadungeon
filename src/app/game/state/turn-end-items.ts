@@ -4,14 +4,14 @@ import { immuneTo, inflictStatus } from './status';
 
 /**
  * Oggetti che si usano al termine del turno dell'eroe (per ora il Flauto del riposo: "scarta questa carta al termine del tuo turno per piazzare 1 segnalino
- * stordito su ogni mostro entro 6 spazi dal tuo eroe"). Si propongono quando l'eroe passa il turno; chi li ha, nello zaino o equipaggiati, può usarli.
+ * stordito su ogni nemico entro 6 spazi dal tuo eroe"). Si propongono quando l'eroe passa il turno; chi li ha, nello zaino o equipaggiati, può usarli.
  */
 export interface TurnEndItem {
   id: string;
   name: string;
   /** Entro quanti spazi dal suo eroe (le caselle in diagonale contano 1). */
   range: number;
-  /** Quanti segnalini stordito piazza su ogni mostro. */
+  /** Quanti segnalini stordito piazza su ogni nemico. */
   amount: number;
 }
 
@@ -33,7 +33,7 @@ export function turnEndItems(state: GameState, piece: Piece): TurnEndItem[] {
   return out;
 }
 
-/** Usa l'oggetto: lo scarta e stordisce i mostri entro il raggio (quelli immuni o con un nome no). Restituisce chi è stordito e chi è immune. */
+/** Usa l'oggetto: lo scarta e stordisce i nemici entro il raggio (quelli immuni o con un nome no). Restituisce chi è stordito e chi è immune. */
 export function useTurnEndItem(state: GameState, piece: Piece, id: string): { stunned: Piece[]; immune: Piece[] } | null {
   const item = turnEndItems(state, piece).find((i) => i.id === id);
   if (!item) return null;
@@ -47,7 +47,7 @@ export function useTurnEndItem(state: GameState, piece: Piece, id: string): { st
   const stunned: Piece[] = [];
   const immune: Piece[] = [];
   for (const m of state.pieces) {
-    if (m.team !== 'monster' || m.city) continue;
+    if (m.team !== 'enemy' || m.city) continue;
     const near = footprint(m).some((c) => footprint(piece).some((h) => Math.max(Math.abs(c.x - h.x), Math.abs(c.y - h.y)) <= item.range));
     if (!near) continue;
     if (immuneTo(state, m, 'stun')) immune.push(m);

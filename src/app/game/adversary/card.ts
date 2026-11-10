@@ -20,8 +20,8 @@ export interface AdversaryCardDef {
   text: string;
   /** Le trappole: dove vanno armate. */
   target?: TrapTarget;
-  /** Le evocazioni: quali mostri (e quanti) fanno apparire. */
-  summon?: { monster: string; count: number; enhanced?: boolean }[];
+  /** Le evocazioni: quali nemici (e quanti) fanno apparire. */
+  summon?: { enemy: string; count: number; enhanced?: boolean }[];
   /** Vero se la carta ha già i suoi effetti nel gioco: nel mazzo entrano solo queste (le altre arrivano a poco a poco). */
   ready?: boolean;
 }

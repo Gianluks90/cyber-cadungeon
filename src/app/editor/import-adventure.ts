@@ -25,16 +25,16 @@ export function parseAdventure(text: string, knownTiles: ReadonlySet<string>): P
 
 /** Gli elementi di un'avventura che il motore (o l'account) non riconosce: nemici di un tipo che il catalogo non ha, oggetti a terra che non conosce. */
 export interface MissingReport {
-  monsters: { id: string; type: string; x: number; y: number }[];
+  enemies: { id: string; type: string; x: number; y: number }[];
   items: { itemId: string; x: number; y: number }[];
 }
 
-export const missingTotal = (r: MissingReport | null) => (r ? r.monsters.length + r.items.length : 0);
+export const missingTotal = (r: MissingReport | null) => (r ? r.enemies.length + r.items.length : 0);
 
 /** Cosa non si riconosce. Con `itemIds` nullo (catalogo degli oggetti non ancora caricato) gli oggetti si considerano noti. */
-export function findMissing(map: MapData, monsterIds: ReadonlySet<string>, itemIds: ReadonlySet<string> | null): MissingReport {
+export function findMissing(map: MapData, enemyIds: ReadonlySet<string>, itemIds: ReadonlySet<string> | null): MissingReport {
   return {
-    monsters: (map.pieces ?? []).flatMap((p) => (p.team === 'monster' && p.monster && !monsterIds.has(p.monster) ? [{ id: p.id, type: p.monster, x: p.x, y: p.y }] : [])),
+    enemies: (map.pieces ?? []).flatMap((p) => (p.team === 'enemy' && p.enemy && !enemyIds.has(p.enemy) ? [{ id: p.id, type: p.enemy, x: p.x, y: p.y }] : [])),
     items: (map.markers ?? []).flatMap((m) => (m.type === 'item' && itemIds && !itemIds.has(m.itemId) ? [{ itemId: m.itemId, x: m.x, y: m.y }] : [])),
   };
 }
@@ -44,9 +44,9 @@ export function findMissing(map: MapData, monsterIds: ReadonlySet<string>, itemI
  * se c'era, la dimensione: il resto, come bonus, nome e bottino, va perso). L'id della pedina resta, così obiettivo ed eventi che la citano restano validi.
  */
 export function resolveMissing(map: MapData, report: MissingReport, mode: 'remove' | 'keep'): MapData {
-  const lostPieces = new Set(report.monsters.map((m) => m.id));
+  const lostPieces = new Set(report.enemies.map((m) => m.id));
   const lostItems = new Set(report.items.map((i) => `${i.itemId}@${i.x},${i.y}`));
-  const pieces = (map.pieces ?? []).flatMap((p) => (!lostPieces.has(p.id) ? [p] : mode === 'keep' ? [{ id: p.id, team: p.team, monster: p.monster, x: p.x, y: p.y, ...(p.size ? { size: p.size } : {}) }] : []));
+  const pieces = (map.pieces ?? []).flatMap((p) => (!lostPieces.has(p.id) ? [p] : mode === 'keep' ? [{ id: p.id, team: p.team, enemy: p.enemy, x: p.x, y: p.y, ...(p.size ? { size: p.size } : {}) }] : []));
   const markers = (map.markers ?? []).flatMap((m) => (m.type !== 'item' || !lostItems.has(`${m.itemId}@${m.x},${m.y}`) ? [m] : mode === 'keep' ? [{ type: 'item' as const, itemId: m.itemId, x: m.x, y: m.y }] : []));
   return { ...map, ...(map.pieces ? { pieces } : {}), ...(map.markers ? { markers } : {}) };
 }

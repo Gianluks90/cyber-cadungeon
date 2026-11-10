@@ -2,7 +2,7 @@ import { Board, Cell, cellKey } from './board';
 import { ResolvedDoor } from './door';
 import { DoorOpening, Reach } from './movement';
 
-/** La sagoma di un mostro grande: la casella in alto a sinistra e quante ne occupa (un rettangolo). */
+/** La sagoma di un nemico grande: la casella in alto a sinistra e quante ne occupa (un rettangolo). */
 export interface Shape {
   cell: Cell;
   size: { w: number; h: number };
@@ -40,8 +40,8 @@ interface Move {
 }
 
 /**
- * I passi che una sagoma può fare (docs/REGOLE.md, "Mostri grandi"):
- * - Un mostro di due caselle (la Salamandra di fuoco) muove metà del corpo in una casella adiacente non diagonale (qualunque delle due metà, in una delle
+ * I passi che una sagoma può fare (docs/REGOLE.md, "Nemici grandi"):
+ * - Un nemico di due caselle (la Salamandra di fuoco) muove metà del corpo in una casella adiacente non diagonale (qualunque delle due metà, in una delle
  *   tre direzioni libere) e l'altra metà finisce dove la prima era: così si piega e ruota; oppure fa il movimento laterale, cioè entrambe le metà di una
  *   casella nella stessa direzione obliqua.
  * - Il Drago (sei caselle) si sposta intero lungo il suo asse, ruota di 90° se va di lato, o si sposta intero in obliquo (vedi sotto).
@@ -94,13 +94,13 @@ function movesOf(s: Shape): Move[] {
     for (const d of DIAGONAL) translate(d);
     return moves;
   }
-  // I mostri da quattro caselle si spostano interi di una casella in una delle otto direzioni.
+  // I nemici da quattro caselle si spostano interi di una casella in una delle otto direzioni.
   for (const d of [...ORTHOGONAL, ...DIAGONAL]) translate(d);
   return moves;
 }
 
 /**
- * Tutte le sagome in cui un mostro grande può arrivare da `start` con al massimo `points` punti (un passo costa 1, più il costo delle porte che apre).
+ * Tutte le sagome in cui un nemico grande può arrivare da `start` con al massimo `points` punti (un passo costa 1, più il costo delle porte che apre).
  * Ogni casella della sagoma deve esistere e non avere roccia o acqua, né una scala (i grandi non usano le scale); le buche non contano a meno che la
  * sagoma ci finisca interamente (lo decide chi chiama). `blocked` sono le caselle dei nemici, che non si attraversano. Include la partenza (costo 0).
  */

@@ -50,7 +50,7 @@ export interface AdventureGoals {
         }
         @if (condition() === 'defeat') {
           <app-field [label]="'goalsDialog.enemyToDefeat' | t">
-            <app-map-select kind="monster" [options]="targets()" [value]="target()" [placeholder]="'goalsDialog.chooseEnemy' | t" [label]="'goalsDialog.enemyToDefeat' | t" (changed)="target.set($event)" />
+            <app-map-select kind="enemy" [options]="targets()" [value]="target()" [placeholder]="'goalsDialog.chooseEnemy' | t" [label]="'goalsDialog.enemyToDefeat' | t" (changed)="target.set($event)" />
             @if (!targets().length) { <small class="dlg-hint">{{ 'goalsDialog.placeEnemyFirst' | t }}</small> }
           </app-field>
         }

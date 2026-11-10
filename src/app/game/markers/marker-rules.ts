@@ -24,7 +24,7 @@ export const POTION_NAMES = { get heal() { return tr('Pozione curativa'); }, get
 
 /**
  * La pedina `piece` è appena entrata nella sua casella (un passo, non per forza l'ultimo): ci sono segnalini che reagiscono?
- * - Glifo spento: lo accende un eroe, anche passandoci sopra. I mostri non lo accendono.
+ * - Glifo spento: lo accende un eroe, anche passandoci sopra. I nemici non lo accendono.
  * Gli oggetti a terra non reagiscono: si raccolgono con l'azione `pickUp`.
  * Restituisce cosa è cambiato, così chi chiama può avvisare e ridisegnare, o null se non è successo niente.
  */

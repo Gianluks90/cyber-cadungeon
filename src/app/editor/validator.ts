@@ -276,7 +276,7 @@ export function piecesWithEvents(map: MapData): Set<string> {
       if (w.kind === 'defeated' || w.kind === 'interact') out.add(w.pieceId);
       else if (w.kind === 'cleared') for (const id of w.pieceIds ?? []) out.add(id);
     }
-    for (const f of flattenEffects([...e.then, ...(e.else ?? [])])) if (f.kind === 'modifyMonster' || f.kind === 'finishRevival' || f.kind === 'activate' || f.kind === 'removePiece' || f.kind === 'makeVulnerable' || (f.kind === 'setLook' || f.kind === 'setBehavior') || f.kind === 'removeImmunity' || f.kind === 'heal') for (const id of targetsOf(f)) if (id !== THIS_PIECE) out.add(id);
+    for (const f of flattenEffects([...e.then, ...(e.else ?? [])])) if (f.kind === 'modifyEnemy' || f.kind === 'finishRevival' || f.kind === 'activate' || f.kind === 'removePiece' || f.kind === 'makeVulnerable' || (f.kind === 'setLook' || f.kind === 'setBehavior') || f.kind === 'removeImmunity' || f.kind === 'heal') for (const id of targetsOf(f)) if (id !== THIS_PIECE) out.add(id);
   }
   return out;
 }
@@ -300,7 +300,7 @@ const sameOne = (a: EventTrigger, b: EventTrigger) =>
 const sameTrigger = (a: AdventureEvent, b: AdventureEvent) => triggersOf(a).some((x) => triggersOf(b).some((y) => sameOne(x, y)));
 
 /** Due eventi non possono scattare insieme se uno chiede una variabile accesa e l'altro la stessa spenta. */
-const ITEM_PLACES = ['mercenary', 'ground', 'monster', 'none'];
+const ITEM_PLACES = ['mercenary', 'ground', 'enemy', 'none'];
 
 /** I posti in cui un oggetto può stare perché valgano tutte le condizioni di `e` su di lui (null se `e` non ne ha). */
 const allowedAt = (e: AdventureEvent, item: string): Set<string> | null => {
@@ -353,12 +353,12 @@ export function validateEvents(map: MapData): Map<string, EventIssue[]> {
     for (const w of triggers) {
     if (w.kind === 'defeated' || w.kind === 'interact') {
       if (!pieces.has(w.pieceId)) push(e, 'error', t('validator.ev.pieceGone'));
-      else if (w.kind === 'interact' && (map.pieces ?? []).find((p) => p.id === w.pieceId)?.team !== 'monster') push(e, 'error', t('validator.ev.interactEnemyOnly'));
+      else if (w.kind === 'interact' && (map.pieces ?? []).find((p) => p.id === w.pieceId)?.team !== 'enemy') push(e, 'error', t('validator.ev.interactEnemyOnly'));
       else if (w.kind === 'interact' && w.onlyInactive && !(map.pieces ?? []).find((p) => p.id === w.pieceId)?.inactive) push(e, 'warning', t('validator.ev.interactInactive'));
     } else if (w.kind === 'cleared') {
       for (const id of w.pieceIds ?? []) if (!pieces.has(id)) push(e, 'error', t('validator.ev.listPieceGone'));
       if (w.area && !(map.areas ?? []).some((a) => a.id === w.area)) push(e, 'error', t('validator.ev.areaGone'));
-      if (!w.pieceIds?.length && !(map.pieces ?? []).some((p) => p.team === 'monster')) push(e, 'warning', t('validator.ev.noEnemies'));
+      if (!w.pieceIds?.length && !(map.pieces ?? []).some((p) => p.team === 'enemy')) push(e, 'warning', t('validator.ev.noEnemies'));
     } else if (w.kind === 'encounterUsed') {
       if (!(map.markers ?? []).some((m) => m.type === 'encounter' && m.id === w.markerId)) push(e, 'error', t('validator.ev.encounterGone'));
     } else if (w.kind === 'encountersGone') {
@@ -412,7 +412,7 @@ export function validateEvents(map: MapData): Map<string, EventIssue[]> {
         }
         if (f.kind === 'setStairs' && !(map.markers ?? []).some((m) => m.type === 'stairs' && m.x === f.x && m.y === f.y)) push(e, 'error', t('validator.ev.stairsGone'));
         if (f.kind === 'setGlyph' && !(map.markers ?? []).some((m) => m.type === 'glyph' && m.x === f.x && m.y === f.y)) push(e, 'error', t('validator.ev.glyphGone'));
-        if (f.kind === 'modifyMonster' || f.kind === 'finishRevival' || f.kind === 'activate' || f.kind === 'removePiece' || f.kind === 'makeVulnerable' || (f.kind === 'setLook' || f.kind === 'setBehavior') || f.kind === 'removeImmunity' || f.kind === 'heal') {
+        if (f.kind === 'modifyEnemy' || f.kind === 'finishRevival' || f.kind === 'activate' || f.kind === 'removePiece' || f.kind === 'makeVulnerable' || (f.kind === 'setLook' || f.kind === 'setBehavior') || f.kind === 'removeImmunity' || f.kind === 'heal') {
           const verb = t(`validator.ev.verb.${f.kind}`);
           const ids = targetsOf(f);
           if (!ids.length) push(e, 'error', t('validator.ev.noTarget', { verb }));
@@ -454,7 +454,7 @@ export function validateEvents(map: MapData): Map<string, EventIssue[]> {
           if (f.kind === 'check' && hasCleared) push(e, 'warning', t('validator.ev.checkAfterCleared'));
         }
         if (f.kind === 'openDoor' && !(map.doors ?? []).some((d) => d.lock?.kind === 'event' && d.lock.id === f.doorId)) push(e, 'error', t('validator.ev.doorGone'));
-        if (f.kind === 'modifyMonster' && !f.wounds && !f.speed && !f.armor) push(e, 'warning', t('validator.ev.modifyNoop'));
+        if (f.kind === 'modifyEnemy' && !f.wounds && !f.speed && !f.armor) push(e, 'warning', t('validator.ev.modifyNoop'));
         if (f.kind === 'endMercenariesTurn') {
           const startArea = (map.areas ?? []).find((a) => a.start)?.id;
           if (triggers.every((t) => t.kind === 'adversaryTurnStart' || t.kind === 'adversaryTurnEnd')) push(e, 'warning', t('validator.ev.endTurnAdversaryTurn'));

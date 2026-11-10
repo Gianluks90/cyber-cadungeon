@@ -6,19 +6,19 @@ import { DialogComponent } from '../ui/dialog.component';
 import { FieldComponent } from '../ui/field.component';
 import { SelectComponent, SelectOption } from '../ui/select.component';
 
-/** Una riga come si modifica: quale comportamento e per quali tipi di mostro (id del catalogo; vuoto = tutti). */
+/** Una riga come si modifica: quale comportamento e per quali tipi di nemico (id del catalogo; vuoto = tutti). */
 interface Row {
   kind: BehaviorKind;
   /** Solo per `carry`: l'oggetto che vuole ('' = qualsiasi oggetto trasportabile). */
   itemId: string;
-  monsters: string[];
+  enemies: string[];
 }
 
 /** I comportamenti che hanno senso per tutta l'avventura (gli altri, come "termina il turno accanto a…", dipendono da un ostacolo e si scrivono sul singolo nemico). */
 const GLOBAL_KINDS: SelectOption[] = BEHAVIOR_OPTIONS.filter((o) => o.value === 'carry').map((o) => ({ value: o.value, label: o.label }));
 
 /**
- * Il pannello dei comportamenti globali dei mostri (pulsante "Comportamenti" a sinistra): ogni riga è un comportamento che vale per i mostri dei tipi scelti o, se non se ne sceglie
+ * Il pannello dei comportamenti globali dei nemici (pulsante "Comportamenti" a sinistra): ogni riga è un comportamento che vale per i nemici dei tipi scelti o, se non se ne sceglie
  * nessuno, per tutti. Un singolo nemico può ignorarli (Personalizza → "Ignora i comportamenti globali"). Per ora c'è "Raccoglie gli oggetti trasportabili".
  */
 @Component({
@@ -44,10 +44,10 @@ const GLOBAL_KINDS: SelectOption[] = BEHAVIOR_OPTIONS.filter((o) => o.value === 
             <div class="field">
               <span class="cap">{{ 'behaviorsDialog.appliesTo' | t }}</span>
               <div class="dlg-chips">
-                @for (id of r.monsters; track id) { <span class="dlg-chip">{{ nameOf(id) }}<button type="button" [attr.aria-label]="'common.removeNamed' | t: { name: nameOf(id) }" (click)="removeType(i, id)">×</button></span> }
-                @empty { <span class="dlg-hint">{{ 'behaviorsDialog.allMonsters' | t }}</span> }
+                @for (id of r.enemies; track id) { <span class="dlg-chip">{{ nameOf(id) }}<button type="button" [attr.aria-label]="'common.removeNamed' | t: { name: nameOf(id) }" (click)="removeType(i, id)">×</button></span> }
+                @empty { <span class="dlg-hint">{{ 'behaviorsDialog.allEnemies' | t }}</span> }
               </div>
-              @if (freeTypes(r).length) { <app-select class="block" [options]="freeTypes(r)" value="" [placeholder]="'behaviorsDialog.addMonsterType' | t" [label]="'behaviorsDialog.monsterType' | t" (changed)="addType(i, $event)" /> }
+              @if (freeTypes(r).length) { <app-select class="block" [options]="freeTypes(r)" value="" [placeholder]="'behaviorsDialog.addEnemyType' | t" [label]="'behaviorsDialog.enemyType' | t" (changed)="addType(i, $event)" /> }
             </div>
             @if (r.kind === 'carry') {
               <small class="dlg-hint">{{ (itemName(r) ? 'behaviorsDialog.carryHintItem' : 'behaviorsDialog.carryHint') | t: { item: itemName(r) } }}</small>
@@ -71,8 +71,8 @@ const GLOBAL_KINDS: SelectOption[] = BEHAVIOR_OPTIONS.filter((o) => o.value === 
 export class GlobalBehaviorsDialogComponent {
   readonly open = input(false);
   readonly value = input<GlobalBehavior[]>([]);
-  /** I tipi di mostro del catalogo. */
-  readonly monsterTypes = input<{ id: string; name: string }[]>([]);
+  /** I tipi di nemico del catalogo. */
+  readonly enemyTypes = input<{ id: string; name: string }[]>([]);
   /** Gli oggetti del catalogo (`carried`: quelli trasportabili, gli unici che ha senso scegliere). */
   readonly items = input<{ id: string; name: string; carried?: boolean }[]>([]);
   readonly confirmed = output<GlobalBehavior[]>();
@@ -89,21 +89,21 @@ export class GlobalBehaviorsDialogComponent {
   constructor() {
     effect(() => {
       if (!this.open()) return;
-      this.rows.set(this.value().map((g) => ({ kind: behaviorKind(g.behavior) as BehaviorKind, itemId: behaviorItem(g.behavior), monsters: [...(g.monsters ?? [])] })));
+      this.rows.set(this.value().map((g) => ({ kind: behaviorKind(g.behavior) as BehaviorKind, itemId: behaviorItem(g.behavior), enemies: [...(g.enemies ?? [])] })));
     });
   }
 
   protected nameOf(id: string): string {
-    return this.monsterTypes().find((m) => m.id === id)?.name ?? id;
+    return this.enemyTypes().find((m) => m.id === id)?.name ?? id;
   }
 
   /** I tipi non ancora scelti in questa riga. */
   protected freeTypes(r: Row): SelectOption[] {
-    return this.monsterTypes().filter((m) => !r.monsters.includes(m.id)).map((m) => ({ value: m.id, label: m.name }));
+    return this.enemyTypes().filter((m) => !r.enemies.includes(m.id)).map((m) => ({ value: m.id, label: m.name }));
   }
 
   protected add() {
-    this.rows.update((l) => [...l, { kind: 'carry', itemId: '', monsters: [] }]);
+    this.rows.update((l) => [...l, { kind: 'carry', itemId: '', enemies: [] }]);
   }
 
   protected remove(i: number) {
@@ -115,17 +115,17 @@ export class GlobalBehaviorsDialogComponent {
   }
 
   protected addType(i: number, id: string) {
-    if (id) this.rows.update((l) => l.map((r, k) => (k === i && !r.monsters.includes(id) ? { ...r, monsters: [...r.monsters, id] } : r)));
+    if (id) this.rows.update((l) => l.map((r, k) => (k === i && !r.enemies.includes(id) ? { ...r, enemies: [...r.enemies, id] } : r)));
   }
 
   protected removeType(i: number, id: string) {
-    this.rows.update((l) => l.map((r, k) => (k === i ? { ...r, monsters: r.monsters.filter((m) => m !== id) } : r)));
+    this.rows.update((l) => l.map((r, k) => (k === i ? { ...r, enemies: r.enemies.filter((m) => m !== id) } : r)));
   }
 
   protected confirm() {
     this.confirmed.emit(this.rows().flatMap((r): GlobalBehavior[] => {
       const behavior = behaviorFrom(r.kind, '', r.itemId);
-      return behavior ? [{ behavior, ...(r.monsters.length ? { monsters: [...r.monsters] } : {}) }] : [];
+      return behavior ? [{ behavior, ...(r.enemies.length ? { enemies: [...r.enemies] } : {}) }] : [];
     }));
   }
 }

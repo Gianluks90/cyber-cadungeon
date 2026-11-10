@@ -7,9 +7,9 @@ import { ChestTier, Loot, PotionKind } from '../board/marker';
 import { AttackDice, MercenarySheet, StartingSkills } from '../mercenaries/mercenary-sheet';
 import { DieColor, ItemDef, AttackType, fitsEquipment } from '../items/item';
 import type { SkillEffect } from '../skills/skill';
-import { MonsterDef, playersKey } from '../monsters/monster';
+import { EnemyDef, playersKey } from '../enemies/enemy';
 
-export type Team = 'mercenary' | 'monster';
+export type Team = 'mercenary' | 'enemy';
 
 /** Gli stati che durano (docs/cards/stati.md): fiamma, rete (ragnatela), stordimento e veleno. Ognuno è un conto di segnalini. */
 export type StatusKind = 'burn' | 'web' | 'stun' | 'poison';
@@ -50,7 +50,7 @@ export const ORDER_ICONS: Record<MercenaryOrder, string> = { aim: 'target', dodg
 
 export const ORDER_NAMES: Record<MercenaryOrder, string> = { get aim() { return tr('Mira'); }, get dodge() { return tr('Schivata'); }, get rest() { return tr('Riposo'); }, get guard() { return tr('Guardia'); } };
 
-/** Un pezzo sul tabellone (eroe o mostro), con il suo stato di gioco. */
+/** Un pezzo sul tabellone (eroe o nemico), con il suo stato di gioco. */
 export interface Piece {
   id: string;
   name: string;
@@ -110,21 +110,21 @@ export interface Piece {
   attackTypesUsed?: string[];
   lastAttack?: { type: AttackType; weaponId?: string } | null;
   lastKill?: { weaponId?: string } | null;
-  /** Gli oggetti (id) con cui ha dato il colpo mortale a un mostro in questo turno: serve alla maledizione di fine turno (`ItemDef.curse`). Si svuota a inizio round. */
+  /** Gli oggetti (id) con cui ha dato il colpo mortale a un nemico in questo turno: serve alla maledizione di fine turno (`ItemDef.curse`). Si svuota a inizio round. */
   killedWith?: string[];
   lockedWeapon?: string | null;
   tempArmor?: number;
-  /** Un mostro con un nome: non si stordisce e Giustizia divina non lo uccide. */
+  /** Un nemico con un nome: non si stordisce e Giustizia divina non lo uccide. */
   unique?: boolean;
-  /** Il bottino che lascia quando esce dalla mappa (vedi `removeMonster`). */
+  /** Il bottino che lascia quando esce dalla mappa (vedi `removeEnemy`). */
   drop?: Loot[];
-  /** Un mostro che era uno scrigno (Mimic): alla morte ogni eroe pesca anche un tesoro dal mazzo di questo tipo, come aprendo lo scrigno. */
+  /** Un nemico che era uno scrigno (Mimic): alla morte ogni eroe pesca anche un tesoro dal mazzo di questo tipo, come aprendo lo scrigno. */
   chestTier?: ChestTier;
-  /** Quante carte del mazzo di `chestTier` pesca ogni eroe quando il mostro muore (se manca, una). */
+  /** Quante carte del mazzo di `chestTier` pesca ogni eroe quando il nemico muore (se manca, una). */
   chestDraws?: number;
   /** In questo round di turno: stordito (può solo muoversi o attaccare) o impigliato nella rete (nessun punto movimento). Si ricalcola a inizio round. */
   /** Trasformato in rospo (Maledizione del Rospo): segnalini che restano e se è il turno della trasformazione (che non ne toglie uno). */
-  /** Un mostro nascosto in un'area non ancora rivelata dorme; quando l'area si rivela si sveglia e poi agisce sempre. */
+  /** Un nemico nascosto in un'area non ancora rivelata dorme; quando l'area si rivela si sveglia e poi agisce sempre. */
   awake?: boolean;
   /** Inattivo: finché lo è, il nemico è quasi un ostacolo (occupa le sue caselle, blocca movimento e vista) ma non agisce, non si attacca e non ha abilità. Un evento lo attiva (`activate`) o lo toglie dalla mappa (`removePiece`). */
   inactive?: boolean;
@@ -141,14 +141,14 @@ export interface Piece {
   toad?: { tokens: number; fresh: boolean };
   stunned?: boolean;
   webbed?: boolean;
-  /** A cosa è immune (per i mostri, scritto nella pedina): `burn`, `web`, `stun`, `poison`, `aura`, `fear`, `grip`, `knockback`, e `all` per tutti gli stati (fiamma, rete, stordimento, veleno). */
+  /** A cosa è immune (per i nemici, scritto nella pedina): `burn`, `web`, `stun`, `poison`, `aura`, `fear`, `grip`, `knockback`, e `all` per tutti gli stati (fiamma, rete, stordimento, veleno). */
   immune?: string[];
-  /** Un mostro potenziato (la versione forte della carta): il suo anello sulla mappa è rosso; i mostri normali hanno l'anello standard. */
+  /** Un nemico potenziato (la versione forte della carta): il suo anello sulla mappa è rosso; i nemici normali hanno l'anello standard. */
   enhanced: boolean;
   /** Quante caselle occupa, nel verso in cui sta (1×1, 1×2, 2×2 o 2×3; un 1×2 ruotato è 2×1). `cell` è la casella in alto a sinistra. */
   size: { w: number; h: number };
-  /** Se è un mostro: l'id nel catalogo (public/monsters/), il suo tipo di attacco, i dadi d'attacco e le abilità speciali (solo testo, per ora). */
-  monster?: string;
+  /** Se è un nemico: l'id nel catalogo (public/enemies/), il suo tipo di attacco, i dadi d'attacco e le abilità speciali (solo testo, per ora). */
+  enemy?: string;
   attackType?: AttackType;
   attackDice: DieColor[];
   traits: string[];
@@ -162,7 +162,7 @@ export interface Piece {
   mercenaryEffects?: SkillEffect[];
 }
 
-/** Tutte le caselle occupate da un pezzo (una per i normali, di più per i mostri grandi). */
+/** Tutte le caselle occupate da un pezzo (una per i normali, di più per i nemici grandi). */
 export function footprint(p: Pick<Piece, 'cell' | 'size'>): Cell[] {
   const out: Cell[] = [];
   for (let dy = 0; dy < p.size.h; dy++) for (let dx = 0; dx < p.size.w; dx++) out.push({ x: p.cell.x + dx, y: p.cell.y + dy });
@@ -191,21 +191,21 @@ export interface PieceData {
   potions?: PotionKind[];
   coins?: number;
   items?: string[];
-  /** Un mostro del catalogo (id in public/monsters/): da lì vengono nome, immagine, dimensione, ferite, velocità, armatura, dadi e abilità, secondo il numero di eroi e se è potenziato. I campi scritti qui li sostituiscono. */
-  monster?: string;
-  /** Mostro unico (con un nome): vedi `Piece.unique`. */
+  /** Un nemico del catalogo (id in public/enemies/): da lì vengono nome, immagine, dimensione, ferite, velocità, armatura, dadi e abilità, secondo il numero di eroi e se è potenziato. I campi scritti qui li sostituiscono. */
+  enemy?: string;
+  /** Nemico unico (con un nome): vedi `Piece.unique`. */
   unique?: boolean;
-  /** Il bottino che lascia quando muore (come il contenuto di uno scrigno: chiavi, chiavi runiche, Conquista, denaro, oggetti): serve ai mostri speciali delle avventure. */
+  /** Il bottino che lascia quando muore (come il contenuto di uno scrigno: chiavi, chiavi runiche, Conquista, denaro, oggetti): serve ai nemici speciali delle avventure. */
   drop?: Loot[];
-  /** Un mostro che era uno scrigno (Mimic): alla morte ogni eroe pesca anche un tesoro dal mazzo di questo tipo, come aprendo lo scrigno. */
+  /** Un nemico che era uno scrigno (Mimic): alla morte ogni eroe pesca anche un tesoro dal mazzo di questo tipo, come aprendo lo scrigno. */
   chestTier?: ChestTier;
   /** Quante carte pesca ogni eroe dal mazzo di `chestTier` (se manca, una). */
   chestDraws?: number;
-  /** Abilità speciali in più o diverse da quelle della carta (a parole, come in `MonsterTier.abilities`): servono alle avventure e alle prove. */
+  /** Abilità speciali in più o diverse da quelle della carta (a parole, come in `EnemyTier.abilities`): servono alle avventure e alle prove. */
   traits?: string[];
   /** Abilità della carta che questo nemico non ha (per esempio un Naga senza Presa): si tolgono da quelle del catalogo prima di aggiungere `traits`. */
   removedTraits?: string[];
-  /** A cosa è immune (vedi `Piece.immune`): per esempio un mostro unico non si stordisce (`stun`). */
+  /** A cosa è immune (vedi `Piece.immune`): per esempio un nemico unico non si stordisce (`stun`). */
   immune?: string[];
   /** Parte inattivo: vedi `Piece.inactive`. */
   inactive?: boolean;
@@ -223,10 +223,10 @@ export interface PieceData {
   onlyHurtBy?: string;
   /** Entra in gioco più tardi: all'inizio la pedina non c'è (non occupa, non si vede, non agisce) finché un evento `enterPiece` non la fa entrare. */
   delayed?: boolean;
-  /** Mostro potenziato: vedi `Piece.enhanced`. */
+  /** Nemico potenziato: vedi `Piece.enhanced`. */
   enhanced?: boolean;
   /**
-   * Quanto questo mostro è più (o meno) forte della sua carta: si somma ai valori della carta per il numero di giocatori, così la base resta dinamica (con 2 o con 5 eroi cambiano le
+   * Quanto questo nemico è più (o meno) forte della sua carta: si somma ai valori della carta per il numero di giocatori, così la base resta dinamica (con 2 o con 5 eroi cambiano le
    * ferite di base, e il bonus resta lo stesso). `dice` sono dadi d'attacco in più. Per le abilità in più si usa `traits`.
    */
   bonus?: { wounds?: number; speed?: number; armor?: number; dice?: DieColor[] };
@@ -240,15 +240,15 @@ export function createPieces(
   data: PieceData[],
   sheets: ReadonlyMap<string, MercenarySheet> = new Map(),
   items: ReadonlyMap<string, ItemDef> = new Map(),
-  monsters: ReadonlyMap<string, MonsterDef> = new Map(),
-  /** Quanti eroi ci sono in partita (per le ferite dei mostri); se manca, quelli di `data`. */
+  enemies: ReadonlyMap<string, EnemyDef> = new Map(),
+  /** Quanti eroi ci sono in partita (per le ferite dei nemici); se manca, quelli di `data`. */
   mercenaries?: number,
 ): Piece[] {
   const mercenaryCount = mercenaries ?? data.filter((d) => d.team === 'mercenary').length;
   return data.map((d) => {
     const sheet = d.mercenary ? sheets.get(d.mercenary) : undefined;
-    const mob = d.monster ? monsters.get(d.monster) : undefined;
-    if (d.monster && !mob) console.warn(`Mostro "${d.monster}" non trovato nel catalogo`);
+    const mob = d.enemy ? enemies.get(d.enemy) : undefined;
+    if (d.enemy && !mob) console.warn(`Nemico "${d.enemy}" non trovato nel catalogo`);
     const tier = mob ? (d.enhanced ? mob.enhanced : mob.normal) : undefined;
     const bonus = d.bonus;
     const speed = Math.max(1, (d.speed ?? sheet?.speed ?? tier?.speed ?? PAWN_SPEED) + (bonus?.speed ?? 0));
@@ -269,7 +269,7 @@ export function createPieces(
       team: d.team,
       portrait: d.portrait ?? sheet?.portrait ?? (mob ? `${mob.image}-token.webp` : undefined),
       portraitFull: sheet?.portraitFull ?? (mob ? `${mob.image}-portrait.webp` : undefined),
-      monster: mob?.id,
+      enemy: mob?.id,
       attackType: mob?.attack,
       attackDice: tier ? [...tier.dice, ...(bonus?.dice ?? [])] : [],
       traits: [...(tier?.abilities ?? []).filter((a) => !d.removedTraits?.includes(a)), ...(d.traits ?? [])],

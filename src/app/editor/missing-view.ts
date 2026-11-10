@@ -5,7 +5,7 @@ import { LINE, theme } from '../game/theme';
 
 /** Un elemento che il motore non riconosce: che categoria era (cioè quale strumento lo toglie), dove sta e quanto occupa. */
 export interface MissingItem {
-  kind: 'monster' | 'object';
+  kind: 'enemy' | 'object';
   x: number;
   y: number;
   w: number;
@@ -14,7 +14,7 @@ export interface MissingItem {
 
 /** Le icone delle categorie: le stesse dei tasti degli strumenti (Nemici e Oggetti). */
 export const MISSING_ICONS = ['skull', 'inventory_2', 'warning'] as const;
-const CATEGORY_ICON = { monster: 'skull', object: 'inventory_2' } as const;
+const CATEGORY_ICON = { enemy: 'skull', object: 'inventory_2' } as const;
 
 /**
  * Disegna gli elementi non riconosciuti (un nemico o un oggetto di un contenuto che qui non c'è): un token arancione con l'icona della sua categoria, la stessa dello strumento

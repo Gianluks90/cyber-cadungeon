@@ -25,7 +25,7 @@ const IMMUNITY_NAMES: Record<string, Immunity> = {
 
 /**
  * Le immunità scritte in una frase di regola: "Sei immune a Presa e Tramortire", "Sei immune alle seguenti abilità: Aura, Bruciare, ..." (le carte), "Immune a Veleno"
- * (le abilità dei mostri). Le parole che il gioco non conosce (Sanguinare) si ignorano. Così un oggetto, una carta o un mostro ha un'immunità solo scrivendola nel
+ * (le abilità dei nemici). Le parole che il gioco non conosce (Sanguinare) si ignorano. Così un oggetto, una carta o un nemico ha un'immunità solo scrivendola nel
  * suo testo, senza un campo apposta.
  */
 export function immunitiesIn(text: string): Immunity[] {
@@ -35,13 +35,13 @@ export function immunitiesIn(text: string): Immunity[] {
 }
 
 /**
- * L'eroe o il mostro è immune a questo effetto? Viene da: `immune` nella pedina (i mostri), le abilità scritte a parole (di un mostro, di un oggetto
- * equipaggiato: "Sei immune a ..."), la regola `immune` degli effetti di carte abilità e oggetti, e dall'essere un mostro con un nome (non si stordisce).
+ * L'eroe o il nemico è immune a questo effetto? Viene da: `immune` nella pedina (i nemici), le abilità scritte a parole (di un nemico, di un oggetto
+ * equipaggiato: "Sei immune a ..."), la regola `immune` degli effetti di carte abilità e oggetti, e dall'essere un nemico con un nome (non si stordisce).
  */
 export function immuneTo(state: GameState, piece: Piece, what: Immunity): boolean {
   if (piece.immune?.includes(what)) return true;
   if (piece.immune?.includes(IMMUNE_TO_ALL) && ALL_STATUSES.includes(what as StatusKind)) return true; // "tutti gli stati": una voce a parte, così toglierla non cancella le immunità della carta
-  if (piece.unique && what === 'stun') return true; // i mostri con un nome non si stordiscono
+  if (piece.unique && what === 'stun') return true; // i nemici con un nome non si stordiscono
   const texts = [...piece.traits, ...piece.equipped.flatMap((id) => state.items.get(id)?.rules ?? [])];
   if (texts.some((t) => immunitiesIn(t).includes(what))) return true;
   return effectsOf(state, piece).some(({ effect: e }) => e.kind === 'rule' && e.rule === 'immune' && ((e['to'] as string[] | undefined) ?? []).includes(what));
@@ -115,7 +115,7 @@ const KEYWORD_NAMES: Record<Keyword, string[]> = {
   Esplosione: ['esplosione', 'blast'],
 };
 
-/** Il livello di una parola chiave (Aura, Paura, Presa, Stregoneria 2...) di una creatura, 0 se non ce l'ha: per i mostri dalle abilità scritte sulla pedina, per gli eroi dagli oggetti e dalle carte (`grant`). */
+/** Il livello di una parola chiave (Aura, Paura, Presa, Stregoneria 2...) di una creatura, 0 se non ce l'ha: per i nemici dalle abilità scritte sulla pedina, per gli eroi dagli oggetti e dalle carte (`grant`). */
 export function keywordLevel(state: GameState, piece: Piece, word: Keyword): number {
   let level = 0;
   const names = KEYWORD_NAMES[word];

@@ -3,12 +3,12 @@ import { ChangeDetectionStrategy, Component, computed, input, output, signal } f
 import { FamiliarDef } from '../game/familiars/familiar';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { ItemDef } from '../game/items/item';
-import { MonsterDef } from '../game/monsters/monster';
+import { EnemyDef } from '../game/enemies/enemy';
 import { SkillDef } from '../game/skills/skill';
 import { DialogComponent } from './dialog.component';
 import { FamiliarCardComponent } from './familiar-card.component';
 import { MercenaryCardComponent } from './mercenary-card.component';
-import { MonsterCardComponent } from './monster-card.component';
+import { EnemyCardComponent } from './enemy-card.component';
 import { ItemCardComponent } from './item-card.component';
 import { SkillCardComponent } from './skill-card.component';
 
@@ -17,7 +17,7 @@ export type CatalogEntry =
   | { kind: 'item'; id: string; name: string; def: ItemDef; icon: string; detail: string; count: number | null; search: string }
   | { kind: 'skill'; id: string; name: string; def: SkillDef; search: string }
   | { kind: 'mercenary'; id: string; name: string; sheet: MercenarySheet; search: string }
-  | { kind: 'monster'; id: string; name: string; def: MonsterDef; search: string }
+  | { kind: 'enemy'; id: string; name: string; def: EnemyDef; search: string }
   | { kind: 'familiar'; id: string; name: string; def: FamiliarDef; search: string };
 
 /** Una categoria del catalogo, nell'elenco a sinistra; `group` è il titolo sopra le categorie dello stesso gruppo. */
@@ -37,7 +37,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
  */
 @Component({
   selector: 'app-components-dialog',
-  imports: [TrPipe, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, MonsterCardComponent, SkillCardComponent],
+  imports: [TrPipe, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
@@ -67,7 +67,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
                 } @else if (e.kind === 'familiar') {
                   <app-familiar-card [familiar]="e.def" />
                 } @else {
-                  <app-monster-card [monster]="e.def" />
+                  <app-enemy-card [enemy]="e.def" />
                 }
               } @empty {
                 <p class="empty">{{ 'Nessun componente corrisponde alla ricerca.' | tr }}</p>

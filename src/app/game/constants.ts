@@ -266,7 +266,7 @@ export const CITY_TELEPORT_COST = 25;
 export const POTION_PRICES = { heal: 50, overclock: 25 } as const;
 export const TREASURE_PRICES = { copper: 250, silver: 500, gold: 750 } as const;
 export const TEMPLE_HEAL_COST = 100;
-/** Il colpo fatale a un mostro potenziato (leader) dà all'eroe che lo mette a segno questa ricompensa in monete (docs/REGOLE.md). */
+/** Il colpo fatale a un nemico potenziato (leader) dà all'eroe che lo mette a segno questa ricompensa in monete (docs/REGOLE.md). */
 export const ENHANCED_KILL_COINS = 50;
 /** Si vende a metà prezzo, arrotondato per difetto a un multiplo di questa cifra. */
 export const SELL_STEP_COINS = 25;
@@ -279,7 +279,7 @@ export const ATTACK_DICE_MAX = 5;
 export const MERCENARY_DEATH_FADE_MS = 2200;
 
 // --- Esplorazione ---
-/** Quanto dura la comparsa di ciò che si scopre (il velo che svanisce, un mostro che appare), in millisecondi. */
+/** Quanto dura la comparsa di ciò che si scopre (il velo che svanisce, un nemico che appare), in millisecondi. */
 export const REVEAL_ANIM_MS = 350;
 /** Il massimo di dadi competenza in una prova (quelli della scheda più quelli comprati con l'overclock). */
 export const CHECK_MAX_DICE = 8;
@@ -287,7 +287,7 @@ export const CHECK_MAX_DICE = 8;
 export const LOOK_FADE_MS = 1400;
 /** Velo sulle caselle non esplorate: distanza fra le linee del tratteggio diagonale, in pixel del mondo. */
 export const FOG_HATCH_STEP_PX = 10;
-/** Un mostro appena rivelato compare un po' più grande e si assesta alla misura vera. */
+/** Un nemico appena rivelato compare un po' più grande e si assesta alla misura vera. */
 export const REVEAL_SCALE_FROM = 1.2;
 
 // --- Porte ---
@@ -380,7 +380,7 @@ export const WATER_SHIMMER_CYCLES = 2;
 export const FX = {
   /** Il messaggio al centro dello schermo (carta giocata, trappola scattata...): quanto resta prima di sparire. */
   announceMs: 3000,
-  /** Dopo quanto dall'apparire del messaggio parte l'azione (la camera, i mostri...): il tempo di leggere l'effetto. */
+  /** Dopo quanto dall'apparire del messaggio parte l'azione (la camera, i nemici...): il tempo di leggere l'effetto. */
   announceLeadMs: 2000,
   /** Lo scorrimento della camera verso la zona interessata (solo pan, lo zoom resta dei giocatori). */
   cameraPanMs: 900,
@@ -392,11 +392,11 @@ export const FX = {
   focusZoom: 2.2,
   /** Un ostacolo tolto da un evento (l'acqua che defluisce): quanto dura la dissolvenza (scala e opacità a zero). */
   obstacleFadeMs: 1600,
-  /** Dopo il messaggio e prima che i mostri evocati entrino. */
+  /** Dopo il messaggio e prima che i nemici evocati entrino. */
   summonDelayMs: 200,
-  /** I mostri evocati escono dall'ombra: dissolvenza e traslazione dal centro del tile in cui compaiono. */
+  /** I nemici evocati escono dall'ombra: dissolvenza e traslazione dal centro del tile in cui compaiono. */
   enterMs: 600,
-  /** Un mostro che entra parte a questa scala e arriva a 1, come se cadesse dall'alto. */
+  /** Un nemico che entra parte a questa scala e arriva a 1, come se cadesse dall'alto. */
   enterScale: 1.5,
   /** Una pedina scaraventata (Contraccolpo) salta: la durata, la scala al culmine (1 → 1,5 → 1) e, all'atterraggio, la raggiera di linee grigie (quante e quanto dura). */
   jumpMs: 520,
@@ -405,7 +405,7 @@ export const FX = {
   jumpSlow: 0.8,
   burstLines: 12,
   burstMs: 420,
-  /** Pausa dopo l'ingresso, prima che i mostri si attivino. */
+  /** Pausa dopo l'ingresso, prima che i nemici si attivino. */
   afterSummonMs: 1200,
   /** Attacco in mischia: lo scatto a metà strada, lo scontro, il ritorno. */
   lungeMs: 260,
@@ -453,5 +453,5 @@ export const TORCH = { bracketPx: 9, bracketWidthPx: 2, cupPx: 5.5, glowRadiusCe
  */
 export const SCENERY = { webChance: 0.3, webMax: 34, salt: 0x5ce9e, pebbleChance: 0.55, pebbleMax: 3, debrisMax: 4, pebbleSalt: 0x9eb81e, pebbleMinPx: 1.4, pebbleMaxPx: 2.8, debrisMinPx: 0.5, debrisMaxPx: 1, pebbleAlpha: 0.5, boneChance: 0, /* ossa spente per ora: il codice resta, si riaccendono alzando questo valore (0,035 era la prova) */ boneSalt: 0xb04e5, boneMinPx: 15, boneMaxPx: 24, boneBrokenChance: 0.4, boneFragmentAlone: 0.65, skullChance: 0 /* teschi spenti per ora: si riaccendono alzando questo valore (0,015 era la prova) */ };
 
-/** La distanza massima a cui un mostro con un attacco a distanza o di Intrusione cerca di stare dal bersaglio (si ferma prima se la sua gittata di solito è minore). */
+/** La distanza massima a cui un nemico con un attacco a distanza o di Intrusione cerca di stare dal bersaglio (si ferma prima se la sua gittata di solito è minore). */
 export const SHOOTER_DISTANCE_CAP = 5;

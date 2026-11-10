@@ -5,23 +5,23 @@ import { reachableShapes } from '../board/movement-big';
 import { DOOR_MOVE_COST } from '../constants';
 import { obstacleCells } from '../board/obstacle';
 import { Piece, footprint } from '../pieces/piece';
-import { distanceTo, monsterAttackOption, monsterAttackType, monsterRange } from './combat';
+import { distanceTo, enemyAttackOption, enemyAttackType, enemyRange } from './combat';
 import { keywordLevel } from './status';
 import { GameState } from './game-state';
 import { behaviorsOf, canCarry, carriedOnGround, carryWants } from './behaviors';
 
 /**
- * Lo script del Maligno (docs/REGOLE.md, sezione 9): i mostri vanno verso l'eroe più vicino e attaccano, preferendo il più ferito con un po' di caso.
+ * Lo script del Maligno (docs/REGOLE.md, sezione 9): i nemici vanno verso l'eroe più vicino e attaccano, preferendo il più ferito con un po' di caso.
  * Qui ci sono solo le decisioni, senza animazioni né finestre: usano le stesse regole degli eroi (movimento, linea di vista, attacco).
  */
 
 const distance = (a: Cell, b: Cell) => Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y));
 
 /**
- * Un mostro può aprire una porta chiusa che ha davanti, a patto che non sia chiusa a chiave (né runica) e che le due aree che collega siano state
- * rivelate (manuale, "Esplorazione"): così un eroe che chiude una porta fa spendere punti al mostro che deve riaprirla.
+ * Un nemico può aprire una porta chiusa che ha davanti, a patto che non sia chiusa a chiave (né runica) e che le due aree che collega siano state
+ * rivelate (manuale, "Esplorazione"): così un eroe che chiude una porta fa spendere punti al nemico che deve riaprirla.
  */
-export function monsterMayOpen(state: GameState, board: Board, rd: ResolvedDoor): boolean {
+export function enemyMayOpen(state: GameState, board: Board, rd: ResolvedDoor): boolean {
   if (rd.door.open || isLocked(rd.door)) return false;
   return board.doorSideCells(rd).every((c) => {
     const area = board.areaAt(c);
@@ -30,13 +30,13 @@ export function monsterMayOpen(state: GameState, board: Board, rd: ResolvedDoor)
 }
 
 /**
- * I comportamenti di un mostro (il suo e quelli globali dell'avventura: `behaviorsOf`) dicono dove può fermarsi: `stay` da nessuna parte (non lascia la sua casella), `endNear` solo in una
+ * I comportamenti di un nemico (il suo e quelli globali dell'avventura: `behaviorsOf`) dicono dove può fermarsi: `stay` da nessuna parte (non lascia la sua casella), `endNear` solo in una
  * casella accanto all'ostacolo scelto (una casella della sua sagoma a distanza 1, anche in diagonale, da una dell'ostacolo; se l'ostacolo non c'è più il vincolo cade); `carry` non limita
  * niente. Devono valere tutti. È la stessa regola per lo script e per il Maligno umano: le caselle che non rispettano il comportamento non si offrono.
  */
-export function monsterMayStop(state: GameState, board: Board, monster: Piece, spot: Pick<Spot, 'cell' | 'size'>): boolean {
-  return behaviorsOf(state, monster).every((b) => {
-    if (b.kind === 'stay') return spot.cell.x === monster.cell.x && spot.cell.y === monster.cell.y;
+export function enemyMayStop(state: GameState, board: Board, enemy: Piece, spot: Pick<Spot, 'cell' | 'size'>): boolean {
+  return behaviorsOf(state, enemy).every((b) => {
+    if (b.kind === 'stay') return spot.cell.x === enemy.cell.x && spot.cell.y === enemy.cell.y;
     if (b.kind !== 'endNear') return true;
     const target = board.obstacles.find((o) => o.x === b.x && o.y === b.y);
     if (!target) return true;
@@ -50,7 +50,7 @@ function mercenariesOnMap(state: GameState): Piece[] {
   return state.pieces.filter((p) => p.team === 'mercenary' && !p.city);
 }
 
-/** Una sagoma in cui il mostro può trovarsi (la sua casella e la sua forma), con quanto costa arrivarci e il percorso. */
+/** Una sagoma in cui il nemico può trovarsi (la sua casella e la sua forma), con quanto costa arrivarci e il percorso. */
 export interface Spot {
   cell: Cell;
   size: { w: number; h: number };
@@ -59,27 +59,27 @@ export interface Spot {
 }
 
 /**
- * Le sagome in cui il mostro può fermarsi in questo turno (con il costo e il percorso): le stesse per lo script e per il Maligno che lo muove a mano.
+ * Le sagome in cui il nemico può fermarsi in questo turno (con il costo e il percorso): le stesse per lo script e per il Maligno che lo muove a mano.
  * Gli eroi bloccano il passaggio (non a chi vola: Volo), le porte chiuse si aprono se si può, e ci si ferma solo in uno spazio libero, non in una buca
- * (un grande solo se non ci finisce interamente), non su un glifo acceso, uno scrigno o un incontro, e dove il comportamento del mostro lo permette.
+ * (un grande solo se non ci finisce interamente), non su un glifo acceso, uno scrigno o un incontro, e dove il comportamento del nemico lo permette.
  */
-export function monsterStops(state: GameState, board: Board, monster: Piece): Spot[] {
+export function enemyStops(state: GameState, board: Board, enemy: Piece): Spot[] {
   const mercenaries = mercenariesOnMap(state);
-  const big = monster.size.w > 1 || monster.size.h > 1;
+  const big = enemy.size.w > 1 || enemy.size.h > 1;
   // Gli eroi bloccano il passaggio, ma non a chi vola (Volo): sopra di loro si passa, senza fermarsi.
-  const blocked = keywordLevel(state, monster, 'Volo') > 0 ? new Set<string>() : new Set(mercenaries.flatMap((h) => footprint(h).map(cellKey)));
-  const doors: DoorOpening = { cost: DOOR_MOVE_COST, may: (rd) => monsterMayOpen(state, board, rd) };
+  const blocked = keywordLevel(state, enemy, 'Volo') > 0 ? new Set<string>() : new Set(mercenaries.flatMap((h) => footprint(h).map(cellKey)));
+  const doors: DoorOpening = { cost: DOOR_MOVE_COST, may: (rd) => enemyMayOpen(state, board, rd) };
   let spots: Spot[];
   if (big) {
-    spots = reachableShapes(board, { cell: monster.cell, size: monster.size }, monster.points, blocked, doors).map((r) => ({ cell: r.shape.cell, size: r.shape.size, cost: r.cost, path: () => r.path }));
+    spots = reachableShapes(board, { cell: enemy.cell, size: enemy.size }, enemy.points, blocked, doors).map((r) => ({ cell: r.shape.cell, size: r.shape.size, cost: r.cost, path: () => r.path }));
   } else {
-    const reach = reachable(board, monster.cell, monster.points, blocked, [], new Map(), doors);
-    spots = [...reach.values()].map((r) => ({ cell: r.cell, size: monster.size, cost: r.cost, path: () => pathTo(reach, r.cell) }));
+    const reach = reachable(board, enemy.cell, enemy.points, blocked, [], new Map(), doors);
+    spots = [...reach.values()].map((r) => ({ cell: r.cell, size: enemy.size, cost: r.cost, path: () => pathTo(reach, r.cell) }));
   }
-  const taken = new Set(state.pieces.filter((p) => !p.city && p.id !== monster.id).flatMap((p) => footprint(p).map(cellKey)));
+  const taken = new Set(state.pieces.filter((p) => !p.city && p.id !== enemy.id).flatMap((p) => footprint(p).map(cellKey)));
   return spots.filter((r) => {
     const cells = footprint(r);
-    if (r.cost === 0 || cells.some((c) => taken.has(cellKey(c))) || !monsterMayStop(state, board, monster, r)) return false;
+    if (r.cost === 0 || cells.some((c) => taken.has(cellKey(c))) || !enemyMayStop(state, board, enemy, r)) return false;
     if (big ? cells.every((c) => board.isPit(c)) : board.isPit(r.cell)) return false;
     return !cells.some((c) => {
       const m = board.markerAt(c);
@@ -95,56 +95,56 @@ function nearestMercenaryDistance(spot: Pick<Spot, 'cell' | 'size'>, mercenaries
   return best;
 }
 
-/** Da `spot` il mostro potrebbe attaccare qualcuno? */
-function canAttackFrom(state: GameState, board: Board, monster: Piece, spot: Pick<Spot, 'cell' | 'size'>, mercenaries: readonly Piece[]): boolean {
-  const at = { ...monster, cell: spot.cell, size: spot.size };
-  return mercenaries.some((h) => monsterAttackOption(state, board, at, h)?.enabled);
+/** Da `spot` il nemico potrebbe attaccare qualcuno? */
+function canAttackFrom(state: GameState, board: Board, enemy: Piece, spot: Pick<Spot, 'cell' | 'size'>, mercenaries: readonly Piece[]): boolean {
+  const at = { ...enemy, cell: spot.cell, size: spot.size };
+  return mercenaries.some((h) => enemyAttackOption(state, board, at, h)?.enabled);
 }
 
 /** Un tiratore (distanza o Intrusione) da `spot` colpisce bene: può attaccare un eroe che sta a una distanza entro la sua gittata di solito. */
-function shootsWell(state: GameState, board: Board, monster: Piece, spot: Pick<Spot, 'cell' | 'size'>, mercenaries: readonly Piece[]): boolean {
-  const at = { ...monster, cell: spot.cell, size: spot.size };
-  const { likely } = monsterRange(state, monster);
-  return mercenaries.some((h) => monsterAttackOption(state, board, at, h)?.enabled && distanceTo(at, h) <= likely);
+function shootsWell(state: GameState, board: Board, enemy: Piece, spot: Pick<Spot, 'cell' | 'size'>, mercenaries: readonly Piece[]): boolean {
+  const at = { ...enemy, cell: spot.cell, size: spot.size };
+  const { likely } = enemyRange(state, enemy);
+  return mercenaries.some((h) => enemyAttackOption(state, board, at, h)?.enabled && distanceTo(at, h) <= likely);
 }
 
 /**
- * Il percorso del mostro in questo turno: verso una casella da cui può attaccare (la più vicina in punti movimento) oppure, se non ce n'è, verso
- * l'eroe più vicino. Vuoto se sta fermo (può già attaccare o non ha dove andare). I mostri grandi si muovono con la loro sagoma intera
+ * Il percorso del nemico in questo turno: verso una casella da cui può attaccare (la più vicina in punti movimento) oppure, se non ce n'è, verso
+ * l'eroe più vicino. Vuoto se sta fermo (può già attaccare o non ha dove andare). I nemici grandi si muovono con la loro sagoma intera
  * (`board/movement-big.ts`): quelli da quattro caselle come un personaggio normale, la Salamandra di fuoco piegandosi e ruotando.
  */
-export function planMonsterMove(state: GameState, board: Board, monster: Piece): Reach[] {
+export function planEnemyMove(state: GameState, board: Board, enemy: Piece): Reach[] {
   const mercenaries = mercenariesOnMap(state);
-  if (!mercenaries.length || monster.points < 1) return [];
-  const big = monster.size.w > 1 || monster.size.h > 1;
-  const type = monsterAttackType(state, monster);
+  if (!mercenaries.length || enemy.points < 1) return [];
+  const big = enemy.size.w > 1 || enemy.size.h > 1;
+  const type = enemyAttackType(state, enemy);
   const shooter = type === 'ranged' || type === 'intrusion';
-  const here: Spot = { cell: monster.cell, size: monster.size, cost: 0, path: () => [] };
-  const hereOk = monsterMayStop(state, board, monster, here); // con un comportamento la casella di adesso può non essere lecita (non è accanto all'ostacolo)
+  const here: Spot = { cell: enemy.cell, size: enemy.size, cost: 0, path: () => [] };
+  const hereOk = enemyMayStop(state, board, enemy, here); // con un comportamento la casella di adesso può non essere lecita (non è accanto all'ostacolo)
   // Chi sa trasportare e ha un oggetto trasportabile a terra lo va a prendere, se lo raggiunge in questo turno (anche a costo di non attaccare).
-  const lootList = canCarry(state, monster) ? carriedOnGround(state, carryWants(state, monster) ?? undefined) : [];
+  const lootList = canCarry(state, enemy) ? carriedOnGround(state, carryWants(state, enemy) ?? undefined) : [];
   const wantsLoot = lootList.length > 0;
-  if (!wantsLoot && !shooter && hereOk && canAttackFrom(state, board, monster, here, mercenaries)) return [];
+  if (!wantsLoot && !shooter && hereOk && canAttackFrom(state, board, enemy, here, mercenaries)) return [];
 
-  const stops = monsterStops(state, board, monster); // dove si può fermare
+  const stops = enemyStops(state, board, enemy); // dove si può fermare
 
   if (wantsLoot) {
     const loot = new Set(lootList.map(cellKey));
     const best = stops.filter((r) => footprint(r).some((c) => loot.has(cellKey(c)))).sort((a, b) => a.cost - b.cost)[0];
     if (best) return best.path();
-    if (!shooter && hereOk && canAttackFrom(state, board, monster, here, mercenaries)) return []; // non lo raggiunge: attacca come sempre
+    if (!shooter && hereOk && canAttackFrom(state, board, enemy, here, mercenaries)) return []; // non lo raggiunge: attacca come sempre
   }
 
   let goal: Spot | undefined;
   if (shooter) {
     // Chi tira da lontano si tiene a distanza: fra le caselle da cui può colpire bene (linea di vista, entro la sua gittata di solito e non adiacente
     // per l'arco) sceglie la più lontana dagli eroi; a parità spende meno. Così non si sbatte in mischia e non annuncia tiri impossibili.
-    const good = [...(hereOk ? [here] : []), ...stops].filter((r) => shootsWell(state, board, monster, r, mercenaries));
+    const good = [...(hereOk ? [here] : []), ...stops].filter((r) => shootsWell(state, board, enemy, r, mercenaries));
     const best = good.sort((a, b) => nearestMercenaryDistance(b, mercenaries) - nearestMercenaryDistance(a, mercenaries) || a.cost - b.cost)[0];
     if (best?.cost === 0) return []; // sta già nel posto migliore
     goal = best;
   } else {
-    goal = stops.filter((r) => canAttackFrom(state, board, monster, r, mercenaries)).sort((a, b) => a.cost - b.cost)[0];
+    goal = stops.filter((r) => canAttackFrom(state, board, enemy, r, mercenaries)).sort((a, b) => a.cost - b.cost)[0];
   }
   if (!goal) {
     // Nessuna casella da cui attaccare: ci si avvicina il più possibile (a parità, spendendo meno).
@@ -157,36 +157,36 @@ export function planMonsterMove(state: GameState, board: Board, monster: Piece):
 }
 
 /**
- * Chi attacca il mostro (dalla sua casella di adesso): fra gli eroi che può colpire, il più ferito il più delle volte, qualche volta uno a caso.
+ * Chi attacca il nemico (dalla sua casella di adesso): fra gli eroi che può colpire, il più ferito il più delle volte, qualche volta uno a caso.
  * Null se non può attaccare nessuno.
  */
-export function chooseMonsterTarget(state: GameState, board: Board, monster: Piece): Piece | null {
-  const candidates = mercenariesOnMap(state).filter((h) => monsterAttackOption(state, board, monster, h)?.enabled);
+export function chooseEnemyTarget(state: GameState, board: Board, enemy: Piece): Piece | null {
+  const candidates = mercenariesOnMap(state).filter((h) => enemyAttackOption(state, board, enemy, h)?.enabled);
   if (!candidates.length) return null;
   if (state.random() < 0.7) return [...candidates].sort((a, b) => a.wounds / a.maxWounds - b.wounds / b.maxWounds)[0];
   return candidates[Math.floor(state.random() * candidates.length)];
 }
 
 /**
- * Rete di sicurezza: se `monster` è finito sopra un'altra pedina (non dovrebbe: i mostri attraversano gli amici ma non ci si fermano), lo sposta nella sagoma libera più vicina (stessa forma,
+ * Rete di sicurezza: se `enemy` è finito sopra un'altra pedina (non dovrebbe: i nemici attraversano gli amici ma non ci si fermano), lo sposta nella sagoma libera più vicina (stessa forma,
  * entro 8 caselle: tutte le caselle esistono, senza roccia o acqua, né pedine, né scale, glifi accesi, scrigni o incontri, e non interamente in una buca). Restituisce vero se l'ha spostato.
  */
-export function settleOverlap(state: GameState, board: Board, monster: Piece): boolean {
-  const others = state.pieces.filter((p) => p !== monster && !p.city);
+export function settleOverlap(state: GameState, board: Board, enemy: Piece): boolean {
+  const others = state.pieces.filter((p) => p !== enemy && !p.city);
   const taken = new Set(others.flatMap((p) => footprint(p).map(cellKey)));
-  if (!footprint(monster).some((c) => taken.has(cellKey(c)))) return false;
+  if (!footprint(enemy).some((c) => taken.has(cellKey(c)))) return false;
   const okCell = (c: Cell) => {
     const m = board.markerAt(c);
     return board.isWalkable(c) && !board.blocksMovement(c) && !taken.has(cellKey(c)) && m?.type !== 'stairs' && m?.type !== 'chest' && m?.type !== 'encounter' && !(m?.type === 'glyph' && m.active);
   };
   const candidates: Cell[] = [];
-  for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) candidates.push({ x: monster.cell.x + dx, y: monster.cell.y + dy });
-  candidates.sort((a, b) => distance(a, monster.cell) - distance(b, monster.cell));
+  for (let dy = -8; dy <= 8; dy++) for (let dx = -8; dx <= 8; dx++) candidates.push({ x: enemy.cell.x + dx, y: enemy.cell.y + dy });
+  candidates.sort((a, b) => distance(a, enemy.cell) - distance(b, enemy.cell));
   const spot = candidates.find((c) => {
-    const cells = footprint({ cell: c, size: monster.size });
+    const cells = footprint({ cell: c, size: enemy.size });
     return cells.every(okCell) && !cells.every((x) => board.isPit(x));
   });
   if (!spot) return false;
-  monster.cell = spot;
+  enemy.cell = spot;
   return true;
 }
