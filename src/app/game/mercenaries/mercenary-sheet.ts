@@ -1,6 +1,9 @@
 import { PotionKind } from '../board/marker';
 import type { SkillEffect } from '../skills/skill';
 
+/** L'archetipo primario: lo slot che il Mercenario occupa nella squadra (docs/REGOLE-v2.md §2). aider è l'Incursore. */
+export type Archetype = 'brawler' | 'gunner' | 'raider';
+
 /** Quanti dadi extra ha un eroe per ognuno dei tre tipi di attacco. */
 export interface AttackDice {
   melee: number;
@@ -16,7 +19,7 @@ export interface StartingSkills {
 }
 
 /**
- * La scheda di un eroe: un archetipo pronto (public/mercenaries/<id>.json). Le regole stanno in docs/REGOLE.md, sezione 10.
+ * La scheda di un eroe: un archetipo pronto (public/mercenaries/<id>.json). Le regole stanno in docs/REGOLE-v2.md, sezione 3.
  * Le quattro caratteristiche (forza, conoscenza, volontà, percezione) sono in pausa e non fanno parte della scheda.
  */
 export interface MercenarySheet {
@@ -24,6 +27,8 @@ export interface MercenarySheet {
   name: string;
   /** La classe, a parole (druido, ranger, ...): è il sottotitolo dell'eroe. */
   class: string;
+  /** L'archetipo primario (Picchiatore, Artigliere, Incursore). Senza, la scheda è ancora quella di prova. */
+  archetype?: Archetype;
   /** Immagine del ritratto (percorso in public/). */
   portrait?: string;
   /** L'immagine a figura intera (alta), per i pannelli dell'eroe. */
@@ -36,7 +41,7 @@ export interface MercenarySheet {
   armor: number;
   /** Velocità: punti movimento a inizio turno. */
   speed: number;
-  /** Il valore dell'eroe: la Conquista che il gruppo perde se muore. Più è robusto, più vale. */
+  /** Il valore dell'eroe: la Fama che il gruppo perde se muore. Più è robusto, più vale. */
   value: number;
   skills: StartingSkills;
   dice: AttackDice;

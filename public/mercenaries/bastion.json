@@ -2,6 +2,7 @@
   "id": "bastion",
   "name": "Bastion",
   "class": "Soldato corazzato",
+  "archetype": "brawler",
   "portrait": "characters/bastion-token.webp",
   "portraitFull": "characters/bastion-portrait.webp",
   "wounds": 20,

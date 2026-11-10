@@ -35,7 +35,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 ### L0.1 — Glossario fissato
 - **Serve**: decidere e scrivere i nomi definitivi (Avversario/Megacorp, Incursore/Spettro, Fama/Conquista, Terminale/glifo, Overclock/Fatica/Energia ✔) in un solo posto. Già decisi: Avversario, Incursore, Mercenari, Overclock.
 - **Tocca**: sezione "Glossario provvisorio" di `CLAUDE.md`; tabella §1 di `docs/REGOLE-v2.md`; `PROJECT_STATUS.md` (nella radice; nota "Nomenclatura doppia").
-- **Fatto**: glossario aggiornato in `CLAUDE.md`, `docs/REGOLE-v2.md` §1 e `PROJECT_STATUS.md` (Fama, cassa, terminale, Mazzo Avversario, Overclock nel codice). Aperti: Briefing, Megacorp, Spettro/Incursore.
+- **Fatto**: glossario aggiornato in `CLAUDE.md`, `docs/REGOLE-v2.md` §1 e `PROJECT_STATUS.md` (Fama, cassa, terminale, Mazzo Avversario, Overclock nel codice). Decisi: Briefing si tiene (fase di negozio del setup), Megacorp/corp sono parole dell'ambientazione, Spettro decade (solo Incursore). "Mostro"→"nemico" (`enemy` nel codice): rinomina ancora da fare.
 - **Dipende da**: niente. **Sblocca**: L0.2, L1.5, tutto il resto per i nomi.
 - **Decisione**: sì → **Q1, Q2, Q3**.
 
@@ -46,6 +46,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Fatto (parziale)**: Maligno→Avversario, Odio→Allarme, eroe→mercenario in `it.json`/`en.json` (anche Evil One→Adversary, Hatred→Alarm, hero→mercenary), nei testi passati a `tr()` e in `public/adversary/catalog.json`. Build e `i18n:check` verdi. Poi anche: Conquista→Fama, Mazzo/Carte del Male→Mazzo Avversario/Carte dell'Avversario, scrigno e baule→cassa, glifo→terminale (nei testi; `en`: Fame, Adversary deck/cards, Terminal; "chest" resta). Decisi: "città" e "dadi competenza" restano. **Restano**: Intrusione/Overclock nei testi (oggi nessun testo dice Energia/Fatica), "Briefing", Megacorp.
 
 ### L0.3 — Schede dei Mercenari — **a cura dell'utente**
+- **Modello controllato**: `MercenarySheet` ha già `intrusion`, `hacking`, `overclock`. Aggiunto il campo opzionale `archetype` (`brawler`|`gunner`|`raider`) e le tre schede di prova lo hanno (`halo` = `raider` provvisorio). `coins`/`items`/`potions` restano nel tipo ma la v2 li toglie (li decide il Briefing): da togliere con L2.x.
 - **Stato**: i Mercenari li modella l'utente; gli eroi di test attuali si ignorano. Questa voce resta per riferimento sul formato (campi nuovi: Q5 ✔).
 - **Serve (riferimento)**: scrivere l'archetipo e la distribuzione 3 dadi + 3 punti per ciascuno; creare **un Incursore puro** (oggi non ce n'è: `bastion` è 3/0/0, `vesper` 1/2/0 dadi e 1/2/0 abilità, `halo` è 1/1/1). Eroe nuovo = scheda JSON + ritratto/token (`characters/<id>-token.webp`, `-portrait.webp`) + riga in `public/heroes/index.json`.
 - **Tocca**: `public/heroes/*.json`, `index.json`, `public/characters/`, `i18n` (nome/classe/abilità in `hero.*` o via `tr`). Con il motore attuale l'Incursore usa i campi `dice.magic` e `skills.magic` (v2 scrive `intrusion`/`hacking`: vedi L1.4 e A5).
@@ -53,6 +54,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Decisione**: sì → **Q4** (quale archetipo ha `halo`, come si bilancia l'1,1,1), **Q5** (nomi dei campi).
 
 ### L0.4 — Catalogo nemici v2 (9 voci + 3 Demoni)
+- **Fatto (i 9 nemici)**: `public/monsters/catalog.json` ora ha solo i 9 nemici di `docs/NEMICI.md` (i vecchi sono sostituiti: `corp-guard`→`thug`, `sentry-drone`→`surveillance-drone`, `rogue-netrunner`→`netrunner`, `war-mech` resta; riferimenti aggiornati in `adversary/catalog.json`, `maps/test.json`, `HORDE_TYPES`; cartelle `mobs/` rinominate). Campi nuovi `family`, `range`, `ice`, `vigilance` scritti ma inerti. Macchine = `immune: ["poison"]`. Traduzioni in it/en. **Mancano**: i 3 Demoni, e le immagini dei 5 nuovi (`armored`, `shooter`, `sniper`, `bomber`, `turret`).
 - **Serve**: Teppista, Corazzato, Tiratore, Cecchino, Bombarolo, Netrunner, Drone da sorveglianza, Mech da guerra, Torretta; Demoni Surriscaldamento / Contagio / Cortocircuito (pedine fisse con attacco `magic`, dadi bianco+giallo). Mappare le 4 voci già presenti (`corp-guard`, `rogue-netrunner`, `sentry-drone`, `war-mech`) su quelle nuove.
 - **Workaround dati**: la colonna delle ferite è ancora `{"2-3":…,"4":…,"5":…}`: scrivere lo stesso numero nelle tre chiavi finché non c'è L1.2. **Macchina** = `immune: ["poison"]` (campo già letto da `immuneTo` in `state/status.ts`). Gittata, vigilanza, ICE e le parole nuove si scrivono ma sono inerti finché non ci sono L1.1, L1.3, L2.1, L3.x.
 - **Tocca**: `public/monsters/catalog.json`; immagini `public/mobs/<id>/<id>-token.webp` e `-portrait.webp` (le 5 nuove non esistono); `i18n` (`monster.<id>` + testi delle abilità col pipe `ct`).

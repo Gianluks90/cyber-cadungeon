@@ -2,6 +2,7 @@
   "id": "halo",
   "name": "Halo",
   "class": "Tecnico di supporto",
+  "archetype": "raider",
   "portrait": "characters/halo-token.webp",
   "portraitFull": "characters/halo-portrait.webp",
   "wounds": 12,

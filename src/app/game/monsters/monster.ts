@@ -13,6 +13,10 @@ export interface MonsterTier {
   abilities: string[];
   /** A cosa è immune: `burn`, `web`, `stun`, `poison`, `aura`, `fear`, `grip`, `knockback`. */
   immune?: string[];
+  /** Armatura digitale contro l'Intrusione (v2, docs/NEMICI.md §2b). Per ora solo dato: il motore non la legge ancora. */
+  ice?: number;
+  /** Raggio in caselle con cui nota i Mercenari (v2). Per ora solo dato. */
+  vigilance?: number;
 }
 
 /** Lo scaglione della carta: 2-3, 4 o 5 giocatori (il Maligno conta come giocatore). */
@@ -28,6 +32,10 @@ export interface MonsterDef {
   size: { w: number; h: number };
   /** Un mostro fa un solo tipo di attacco. */
   attack: AttackType;
+  /** Famiglia (v2): `humanoid` o `machine`. Per ora solo dato. */
+  family?: 'humanoid' | 'machine';
+  /** Gittata fissa in caselle (v2: non viene più dai dadi). Per ora solo dato: il motore usa ancora quella dei dadi. */
+  range?: number;
   /**
    * Quante miniature ci sono nella scatola, normali e potenziate (docs/cards/monsters-count.md). Vale solo per il piazzamento (le evocazioni): quelli già in mappa
    * possono eccedere per le regole speciali di un'avventura. Senza, nessun limite (il Mimic è legato a una carta).

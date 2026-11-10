@@ -2,6 +2,7 @@
   "id": "vesper",
   "name": "Vesper",
   "class": "Cecchino",
+  "archetype": "gunner",
   "portrait": "characters/vesper-token.webp",
   "portraitFull": "characters/vesper-portrait.webp",
   "wounds": 8,

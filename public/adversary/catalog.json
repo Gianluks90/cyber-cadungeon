@@ -135,11 +135,11 @@
       "text": "Gioca questa carta nel tuo turno prima di attivare i mostri. Puoi evocare 2 Droni sentinella e 1 Drone sentinella potenziato, seguendo le normali regole per evocare i mostri.",
       "summon": [
         {
-          "monster": "sentry-drone",
+          "monster": "surveillance-drone",
           "count": 2
         },
         {
-          "monster": "sentry-drone",
+          "monster": "surveillance-drone",
           "count": 1,
           "enhanced": true
         }
@@ -156,11 +156,11 @@
       "text": "Gioca questa carta nel tuo turno prima di attivare i mostri. Puoi evocare 2 Guardie corporative e 1 Guardia corporativa potenziata, seguendo le normali regole per evocare i mostri.",
       "summon": [
         {
-          "monster": "corp-guard",
+          "monster": "thug",
           "count": 2
         },
         {
-          "monster": "corp-guard",
+          "monster": "thug",
           "count": 1,
           "enhanced": true
         }
@@ -177,7 +177,7 @@
       "text": "Gioca questa carta nel tuo turno prima di attivare i mostri. Puoi evocare 2 Netrunner ostili, seguendo le normali regole per evocare i mostri.",
       "summon": [
         {
-          "monster": "rogue-netrunner",
+          "monster": "netrunner",
           "count": 2
         }
       ],

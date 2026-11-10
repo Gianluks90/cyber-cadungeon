@@ -69,7 +69,9 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Fama**: nome della risorsa condivisa (era "Conquista"; nel codice ancora `progress`).
 - **Cassa**: era "scrigno"/"baule" (nei testi; in inglese "chest"). **Terminale**: era "glifo" (testi: it "terminale", en "terminal"; nel codice ancora `glyph`). **Mazzo Avversario / Carte dell'Avversario**: era "Mazzo/Carte del Male".
 - **Restano com'erano**: "città" e "dadi competenza" (decisione presa).
-- **Da rinominare ancora**: "runa/chiave runica", "scintille", "Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro"; "Briefing" e Megacorp ancora da decidere. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
+- **Da rinominare ancora**: "runa/chiave runica", "scintille", "Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro".
+- **Briefing**: la nuova fase di negozio del setup. **Megacorp / megacorporazione / corp**: parole dell'ambientazione. **Spettro** decade: l'archetipo si chiama solo Incursore.
+- **Nemico** sostituisce "mostro" (il nome nel codice sarà `enemy`; oggi i dati sono ancora in `monsters/`, `monster` nelle chiavi: rinomina da fare, TODO L1.9). Il catalogo ha i 9 nemici di `docs/NEMICI.md`. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
 Mappa del mondo, missioni geolocalizzate, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.

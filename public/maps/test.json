@@ -358,7 +358,7 @@
       "y": 3,
       "mercenary": "vesper"
     },
-    {"id": "m1", "team": "monster", "monster": "sentry-drone", "x": 13, "y": 3}
+    {"id": "m1", "team": "monster", "monster": "surveillance-drone", "x": 13, "y": 3}
   ],
   "party": {
     "runeKeys": [

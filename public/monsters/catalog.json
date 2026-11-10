@@ -1,96 +1,49 @@
 {
   "monsters": [
     {
-      "id": "sentry-drone",
-      "name": "Drone sentinella",
-      "image": "mobs/sentry-drone/sentry-drone",
-      "size": {
-        "w": 1,
-        "h": 1
-      },
-      "attack": "ranged",
-      "limit": {
-        "normal": 6,
-        "enhanced": 3
-      },
-      "normal": {
-        "wounds": {
-          "2-3": 2,
-          "4": 3,
-          "5": 4
-        },
-        "speed": 5,
-        "armor": 0,
-        "dice": [
-          "blue",
-          "green"
-        ],
-        "abilities": [
-          "Perforare 1",
-          "+1 Gittata"
-        ]
-      },
-      "enhanced": {
-        "wounds": {
-          "2-3": 3,
-          "4": 4,
-          "5": 5
-        },
-        "speed": 5,
-        "armor": 1,
-        "dice": [
-          "blue",
-          "green",
-          "black"
-        ],
-        "abilities": [
-          "Perforare 2",
-          "+2 Gittata"
-        ]
-      }
-    },
-    {
-      "id": "corp-guard",
-      "name": "Guardia corporativa",
-      "image": "mobs/corp-guard/corp-guard",
+      "id": "thug",
+      "name": "Teppista",
+      "image": "mobs/thug/thug",
+      "family": "humanoid",
       "size": {
         "w": 1,
         "h": 1
       },
       "attack": "melee",
-      "limit": {
-        "normal": 6,
-        "enhanced": 3
-      },
+      "range": 1,
       "normal": {
         "wounds": {
-          "2-3": 2,
           "4": 3,
-          "5": 4
+          "5": 3,
+          "2-3": 3
         },
         "speed": 4,
-        "armor": 2,
+        "armor": 1,
         "dice": [
           "red",
           "green"
         ],
+        "ice": 0,
+        "vigilance": 5,
         "abilities": [
           "+1 Danno"
         ]
       },
       "enhanced": {
         "wounds": {
-          "2-3": 3,
           "4": 4,
-          "5": 5
+          "5": 4,
+          "2-3": 4
         },
         "speed": 4,
-        "armor": 3,
+        "armor": 2,
         "dice": [
           "red",
           "green",
           "black"
         ],
+        "ice": 0,
+        "vigilance": 5,
         "abilities": [
           "+2 Danno",
           "Comando"
@@ -98,87 +51,42 @@
       }
     },
     {
-      "id": "rogue-netrunner",
-      "name": "Netrunner ostile",
-      "image": "mobs/rogue-netrunner/rogue-netrunner",
-      "size": {
-        "w": 1,
-        "h": 1
-      },
-      "attack": "intrusion",
-      "limit": {
-        "normal": 4,
-        "enhanced": 2
-      },
-      "normal": {
-        "wounds": {
-          "2-3": 3,
-          "4": 4,
-          "5": 5
-        },
-        "speed": 4,
-        "armor": 2,
-        "dice": [
-          "white",
-          "yellow"
-        ],
-        "abilities": [
-          "Stregoneria 3"
-        ]
-      },
-      "enhanced": {
-        "wounds": {
-          "2-3": 4,
-          "4": 5,
-          "5": 6
-        },
-        "speed": 4,
-        "armor": 3,
-        "dice": [
-          "white",
-          "yellow",
-          "black"
-        ],
-        "abilities": [
-          "Stregoneria 4"
-        ]
-      }
-    },
-    {
-      "id": "war-mech",
-      "name": "Mech da guerra",
-      "image": "mobs/war-mech/war-mech",
+      "id": "armored",
+      "name": "Corazzato",
+      "image": "mobs/armored/armored",
+      "family": "humanoid",
       "size": {
         "w": 2,
         "h": 2
       },
       "attack": "melee",
-      "limit": {
-        "normal": 2,
-        "enhanced": 1
-      },
+      "range": 1,
       "normal": {
         "wounds": {
-          "2-3": 5,
-          "4": 6,
-          "5": 7
+          "4": 9,
+          "5": 9,
+          "2-3": 9
         },
         "speed": 3,
         "armor": 4,
         "dice": [
           "red",
           "green",
-          "green"
+          "green",
+          "yellow"
         ],
+        "ice": 0,
+        "vigilance": 4,
         "abilities": [
-          "Contraccolpo"
+          "Contraccolpo",
+          "Stordire"
         ]
       },
       "enhanced": {
         "wounds": {
-          "2-3": 6,
-          "4": 7,
-          "5": 8
+          "4": 10,
+          "5": 10,
+          "2-3": 10
         },
         "speed": 3,
         "armor": 5,
@@ -186,11 +94,397 @@
           "red",
           "green",
           "green",
+          "yellow",
           "black"
         ],
+        "ice": 0,
+        "vigilance": 4,
         "abilities": [
           "Contraccolpo",
-          "Immortale"
+          "Stordire",
+          "Spazzata"
+        ]
+      }
+    },
+    {
+      "id": "shooter",
+      "name": "Tiratore",
+      "image": "mobs/shooter/shooter",
+      "family": "humanoid",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "ranged",
+      "range": 5,
+      "normal": {
+        "wounds": {
+          "4": 3,
+          "5": 3,
+          "2-3": 3
+        },
+        "speed": 4,
+        "armor": 0,
+        "dice": [
+          "blue",
+          "green"
+        ],
+        "ice": 0,
+        "vigilance": 6,
+        "abilities": [
+          "Perforare 1"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 4,
+        "armor": 1,
+        "dice": [
+          "blue",
+          "green",
+          "black"
+        ],
+        "ice": 0,
+        "vigilance": 6,
+        "abilities": [
+          "Perforare 2"
+        ]
+      }
+    },
+    {
+      "id": "sniper",
+      "name": "Cecchino",
+      "image": "mobs/sniper/sniper",
+      "family": "humanoid",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "ranged",
+      "range": 10,
+      "normal": {
+        "wounds": {
+          "4": 2,
+          "5": 2,
+          "2-3": 2
+        },
+        "speed": 3,
+        "armor": 0,
+        "dice": [
+          "blue",
+          "yellow"
+        ],
+        "ice": 0,
+        "vigilance": 10,
+        "abilities": [
+          "Perforare 2",
+          "Postazione"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 3,
+          "5": 3,
+          "2-3": 3
+        },
+        "speed": 3,
+        "armor": 1,
+        "dice": [
+          "blue",
+          "yellow",
+          "black"
+        ],
+        "ice": 0,
+        "vigilance": 10,
+        "abilities": [
+          "Perforare 3",
+          "Postazione"
+        ]
+      }
+    },
+    {
+      "id": "bomber",
+      "name": "Bombarolo",
+      "image": "mobs/bomber/bomber",
+      "family": "humanoid",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "ranged",
+      "range": 4,
+      "normal": {
+        "wounds": {
+          "4": 3,
+          "5": 3,
+          "2-3": 3
+        },
+        "speed": 4,
+        "armor": 1,
+        "dice": [
+          "blue",
+          "yellow"
+        ],
+        "ice": 0,
+        "vigilance": 5,
+        "abilities": [
+          "Esplosione 1"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 4,
+        "armor": 2,
+        "dice": [
+          "blue",
+          "yellow",
+          "black"
+        ],
+        "ice": 0,
+        "vigilance": 5,
+        "abilities": [
+          "Esplosione 1",
+          "Bruciare"
+        ]
+      }
+    },
+    {
+      "id": "netrunner",
+      "name": "Netrunner",
+      "image": "mobs/netrunner/netrunner",
+      "family": "humanoid",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "intrusion",
+      "range": 4,
+      "normal": {
+        "wounds": {
+          "4": 3,
+          "5": 3,
+          "2-3": 3
+        },
+        "speed": 4,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow"
+        ],
+        "ice": 2,
+        "vigilance": 6,
+        "abilities": [
+          "Sabotatore",
+          "Intrusione sui Mercenari"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 4,
+        "armor": 1,
+        "dice": [
+          "white",
+          "yellow",
+          "black"
+        ],
+        "ice": 3,
+        "vigilance": 6,
+        "abilities": [
+          "Sabotatore",
+          "Intrusione sui Mercenari",
+          "Stordire"
+        ]
+      }
+    },
+    {
+      "id": "surveillance-drone",
+      "name": "Drone da sorveglianza",
+      "image": "mobs/surveillance-drone/surveillance-drone",
+      "family": "machine",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "ranged",
+      "range": 4,
+      "normal": {
+        "wounds": {
+          "4": 2,
+          "5": 2,
+          "2-3": 2
+        },
+        "speed": 6,
+        "armor": 1,
+        "dice": [
+          "blue",
+          "green"
+        ],
+        "ice": 1,
+        "vigilance": 7,
+        "abilities": [
+          "Volo",
+          "Segnale",
+          "Macchina"
+        ],
+        "immune": [
+          "poison"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 3,
+          "5": 3,
+          "2-3": 3
+        },
+        "speed": 6,
+        "armor": 2,
+        "dice": [
+          "blue",
+          "green",
+          "black"
+        ],
+        "ice": 2,
+        "vigilance": 7,
+        "abilities": [
+          "Volo",
+          "Segnale",
+          "Macchina",
+          "Attacco veloce"
+        ],
+        "immune": [
+          "poison"
+        ]
+      }
+    },
+    {
+      "id": "war-mech",
+      "name": "Mech da guerra",
+      "image": "mobs/war-mech/war-mech",
+      "family": "machine",
+      "size": {
+        "w": 2,
+        "h": 2
+      },
+      "attack": "ranged",
+      "range": 6,
+      "normal": {
+        "wounds": {
+          "4": 10,
+          "5": 10,
+          "2-3": 10
+        },
+        "speed": 3,
+        "armor": 4,
+        "dice": [
+          "blue",
+          "green",
+          "yellow"
+        ],
+        "ice": 2,
+        "vigilance": 6,
+        "abilities": [
+          "Macchina",
+          "Perforare 2"
+        ],
+        "immune": [
+          "poison"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 11,
+          "5": 11,
+          "2-3": 11
+        },
+        "speed": 3,
+        "armor": 5,
+        "dice": [
+          "blue",
+          "green",
+          "yellow",
+          "black"
+        ],
+        "ice": 3,
+        "vigilance": 6,
+        "abilities": [
+          "Macchina",
+          "Perforare 3",
+          "Esplosione 1"
+        ],
+        "immune": [
+          "poison"
+        ]
+      }
+    },
+    {
+      "id": "turret",
+      "name": "Torretta",
+      "image": "mobs/turret/turret",
+      "family": "machine",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "ranged",
+      "range": 7,
+      "normal": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 0,
+        "armor": 2,
+        "dice": [
+          "blue",
+          "green"
+        ],
+        "ice": 1,
+        "vigilance": 7,
+        "abilities": [
+          "Fissa",
+          "Macchina",
+          "Attacco veloce"
+        ],
+        "immune": [
+          "poison"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 5,
+          "5": 5,
+          "2-3": 5
+        },
+        "speed": 0,
+        "armor": 3,
+        "dice": [
+          "blue",
+          "green",
+          "black"
+        ],
+        "ice": 2,
+        "vigilance": 7,
+        "abilities": [
+          "Fissa",
+          "Macchina",
+          "Attacco veloce",
+          "Perforare 1"
+        ],
+        "immune": [
+          "poison"
         ]
       }
     }

@@ -33,7 +33,7 @@ export interface AreaResult {
 }
 
 /** I tipi che l'Orda di Creature può aggiungere. */
-export const HORDE_TYPES = ['corp-guard', 'sentry-drone', 'rogue-netrunner'];
+export const HORDE_TYPES = ['thug', 'surveillance-drone', 'netrunner'];
 
 /** I mostri di un'area che Abile comandante può potenziare: non unici, non già potenziati, di un tipo del catalogo. */
 export function upgradeOptions(state: GameState, inArea: readonly Piece[]): Piece[] {
