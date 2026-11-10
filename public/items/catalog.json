@@ -18,7 +18,7 @@
         }
       ],
       "offHand": "+1 danno",
-      "icon": "tokens/items/sword"
+      "icon": "swords"
     },
     {
       "id": "pulse-pistol",
@@ -41,7 +41,7 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/crossbow",
+      "icon": "target",
       "range": 5
     },
     {
@@ -65,7 +65,7 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/staff-a",
+      "icon": "deployed_code",
       "range": 4,
       "ice": 1
     },
@@ -76,7 +76,7 @@
       "hands": 0,
       "armor": 1,
       "price": 50,
-      "icon": "tokens/items/armor-a"
+      "icon": "frame_person"
     },
     {
       "id": "shield",
@@ -97,7 +97,7 @@
       "rules": [
         "Esaurisci questa carta per annullare 1 ferita appena ricevuta. Questa carta non può annullare le ferite che ignorano l'armatura."
       ],
-      "icon": "tokens/items/shield-a"
+      "icon": "shield"
     },
     {
       "id": "nano-repair-kit",
@@ -131,7 +131,7 @@
       "rules": [
         "Se è equipaggiato all'inizio del tuo turno, scartalo per recuperare 6 ferite e i tuoi segnalini overclock {overclock} fino al loro massimo livello."
       ],
-      "icon": "tokens/items/trinket-crystal"
+      "icon": "genetics"
     },
     {
       "id": "rail-rifle",
@@ -159,7 +159,7 @@
       "rules": [
         "Perforare 3"
       ],
-      "icon": "tokens/items/bow-b",
+      "icon": "target",
       "range": 8
     },
     {
@@ -186,7 +186,7 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/thrown",
+      "icon": "burn",
       "range": 6
     },
     {
@@ -207,7 +207,7 @@
           "effect": "+1 danno"
         }
       ],
-      "icon": "tokens/items/staff-a"
+      "icon": "deployed_code"
     },
     {
       "id": "military-deck",
@@ -233,7 +233,7 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/staff-a"
+      "icon": "deployed_code"
     },
     {
       "id": "silenced-pistol",
@@ -256,7 +256,7 @@
           "effect": "+1 danno"
         }
       ],
-      "icon": "tokens/items/crossbow"
+      "icon": "target"
     }
   ]
 }

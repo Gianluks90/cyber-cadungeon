@@ -137,3 +137,4 @@ dist
 
 # other
 .angular/
+.DS_Store
