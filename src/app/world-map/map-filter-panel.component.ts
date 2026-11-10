@@ -28,11 +28,14 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
   host: { '(document:keydown)': 'onKey($event)' },
   template: `
     <div class="wrap" [class.open]="open()">
-      <nav class="rail">
-        <button type="button" class="tab" [class.on]="open()" [attr.aria-expanded]="open()" [attr.aria-label]="(open() ? 'worldMap.filter.close' : 'worldMap.filter.open') | t" (click)="open.set(!open())">
-          <app-icon name="filter_list" [size]="20" />
-          <kbd>F</kbd>
-        </button>
+      <nav class="rail" [class.labels]="labels()">
+        <div class="item">
+          <button type="button" class="tab" [class.on]="open()" [attr.aria-expanded]="open()" [attr.aria-label]="(open() ? 'worldMap.filter.close' : 'worldMap.filter.open') | t" (click)="open.set(!open())">
+            <app-icon name="filter_list" [size]="20" />
+            <kbd>F</kbd>
+          </button>
+          <span class="tip" aria-hidden="true">{{ 'worldMap.filter.title' | t }}</span>
+        </div>
       </nav>
       <aside class="sheet" [attr.aria-label]="'worldMap.filter.title' | t">
         <header>
@@ -78,12 +81,16 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
     .wrap { --w: min(320px, 82vw); --rail: 56px; position: absolute; inset: 0; z-index: 2; pointer-events: none; }
     /* Il container verticale lungo il lato sinistro: ospita i tasti quadrati. */
     .rail { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .item { position: relative; }
+    /* L'etichetta (tasto H): alla destra del tasto. */
+    .tip { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); height: 22px; padding: 0 8px; box-sizing: border-box; display: flex; align-items: center; white-space: nowrap; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; opacity: 0; pointer-events: none; transition: opacity var(--t-fast); }
+    .rail.labels .tip { opacity: 1; }
     .tab, .close { display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .tab { position: relative; pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* Il pannello si apre accanto al container, scivolando da sinistra. */
-    .sheet { position: absolute; left: var(--rail); top: 56px; bottom: 86px; /* tra il logo (10+36px dall'alto) e l'orologio (40+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet { position: absolute; left: var(--rail); top: 56px; bottom: 56px; /* tra il logo (10+36px dall'alto) e l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
     .wrap.open .sheet { transform: none; }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
@@ -120,6 +127,8 @@ export class MapFilterPanelComponent {
   /** Il filtro scelto. */
   readonly preset = input.required<FilterPreset>();
   readonly presetChosen = output<FilterPreset>();
+  /** Mostra il nome del tasto (H tenuto premuto). */
+  readonly labels = input(false);
 
   protected readonly open = signal(false);
   protected readonly sections = SECTIONS;

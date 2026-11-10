@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
@@ -11,6 +11,7 @@ import { GOOD_ACCURACY_M, LocationService, type UserPosition } from './location.
 import { applyTerrain, buildMapStyle } from './map-style';
 import { MapNavComponent } from './map-nav.component';
 import { MapCreditsComponent } from './map-credits.component';
+import { MapLocatingComponent } from './map-locating.component';
 import { MapFilterPanelComponent } from './map-filter-panel.component';
 import { FILTER_GROUPS, applyMapFilters, enabledFor, loadCustomFilters, loadPreset, saveCustomFilters, savePreset, type FilterPreset } from './map-filters';
 import { createCyberpunkTheme, type MapTheme } from './map-theme';
@@ -36,12 +37,17 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, LocationConsentComponent],
+  imports: [IconComponent, TranslatePipe, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // H tenuto premuto mostra i nomi dei tasti; se la finestra perde il fuoco mentre è premuto, il keyup non arriva: si spengono comunque.
+  host: { '(document:keydown)': 'onKey($event, true)', '(document:keyup)': 'onKey($event, false)', '(window:blur)': 'labels.set(false)' },
   template: `
-    <div #container class="map" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
+    <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
+    @if (locating()) {
+      <app-map-locating [position]="location.position()" />
+    }
     <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
-    <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
+    <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [labels]="labels()" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <button type="button" class="fullscreen" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
       <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="20" />
     </button>
@@ -49,12 +55,12 @@ const USER_ZOOM = 16;
       <app-icon name="logout" [size]="20" />
     </button>
     <p class="clock" role="timer" [attr.aria-label]="(isNight() ? 'worldMap.night' : 'worldMap.day') | t">
-      <app-icon [name]="isNight() ? 'bedtime' : 'light_mode'" [size]="20" />
+      <span class="sun" [class.swapping]="swapping()"><app-icon [name]="shownNight() ? 'bedtime' : 'light_mode'" [size]="20" /></span>
       {{ time() }}
     </p>
-    <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
+    <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" [labels]="labels()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     <app-map-credits />
-    @if (location.searching()) {
+    @if (location.searching() && ready()) {
       <p class="status">{{ 'location.searching' | t }}</p>
     } @else if (lowAccuracy(); as meters) {
       <p class="status">
@@ -70,22 +76,33 @@ const USER_ZOOM = 16;
   `,
   styles: `
     :host { display: block; position: relative; width: 100%; height: 100%; }
-    .map { position: absolute; inset: 0; }
+    .map { position: absolute; inset: 0; opacity: 0; transition: opacity var(--t-base); }
+    /* La mappa compare quando ha disegnato i primi tasselli (all'avvio sul giocatore, dietro la finta dialog "Localizzazione in corso"). */
+    .map.ready { opacity: 1; }
     /* In alto a destra, a spigoli secchi come le altre cornici del progetto. */
     /* In alto a sinistra, nel box come il logout; il logo è un SVG usato come maschera, quindi lo colora il testo. */
     .logo { position: absolute; top: 10px; left: 10px; z-index: 1; box-sizing: border-box; height: 36px; width: 82px; border: 1px solid var(--c-line-strong); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: none; }
     .logo::after { content: ''; position: absolute; inset: 0; margin: auto; width: 62px; height: 20px; background-color: var(--c-text); -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
     .logout { position: absolute; top: 10px; right: 10px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
-    /* Lo stato della ricerca della posizione: in basso a sinistra, identico all'attribuzione di MapLibre (che sta in basso a destra). */
-    .status { position: absolute; left: 10px; bottom: 10px; z-index: 2; margin: 0; padding: 0 5px; max-width: calc(100% - 20px); box-sizing: border-box; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; pointer-events: none; }
+    /* Lo stato della ricerca della posizione: al centro in basso, senza spostare l'orologio. Su telefono occupa tutta la larghezza (meno 10px per lato). */
+    .status { position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; z-index: 2; margin: 0; padding: 0 5px; max-width: calc(100% - 20px); box-sizing: border-box; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; pointer-events: none; }
     .status { display: flex; align-items: center; gap: 4px; }
     .halo-toggle { pointer-events: auto; width: 20px; height: 20px; margin-right: -5px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast); }
     .halo-toggle:hover, .halo-toggle:focus-visible { color: var(--c-interact); outline: none; }
     .fullscreen { position: absolute; top: 10px; right: 54px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .fullscreen:hover, .fullscreen:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
-    /* L'orologio: un riquadro come i tasti (36px di altezza), in basso a sinistra sopra il piè di pagina. */
-    .clock { position: absolute; left: 10px; bottom: 40px; z-index: 1; margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
+    /* L'orologio: un riquadro come i tasti (36px di altezza), in basso a sinistra. */
+    .clock { position: absolute; left: 10px; bottom: 10px; z-index: 1; margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
     .logout:hover, .logout:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    /* Il passaggio giorno/notte: l'icona scende, cambia mentre è nascosta e risale al suo posto. */
+    .sun { display: inline-flex; transition: transform 240ms var(--ease-draw), opacity 240ms; }
+    .sun.swapping { transform: translateY(28px); opacity: 0; }
+    @media (prefers-reduced-motion: reduce) { .sun { transition: none; } }
+    /* Su telefono l'orologio non si vede e l'avviso di posizione prende tutta la larghezza. */
+    @media (max-width: 640px) {
+      .clock { display: none; }
+      .status { left: 10px; right: 10px; transform: none; max-width: none; justify-content: center; }
+    }
   `,
 })
 export class WorldMapComponent {
@@ -118,6 +135,24 @@ export class WorldMapComponent {
     const h = this.now().getHours();
     return h >= 18 || h < 6;
   });
+  /** L'icona sole/luna che si vede adesso: segue `isNight` con un'animazione (scende, cambia, risale) tranne alla prima volta. */
+  protected readonly shownNight = signal(this.isNight());
+  /** L'icona è scesa e sta per cambiare. */
+  protected readonly swapping = signal(false);
+  /** H tenuto premuto: si vedono i nomi dei tasti ai lati dello schermo. */
+  protected readonly labels = signal(false);
+  /** Il contenitore esiste nel DOM: da qui si può creare la mappa. */
+  private readonly domReady = signal(false);
+  /** La mappa ha disegnato i primi tasselli: prima si vede il loader. */
+  protected readonly ready = signal(false);
+  /** La mappa non viene creata finché non arriva la prima posizione (solo se il consenso c'era già: senza, non c'è nulla da aspettare), così nasce già sul giocatore e carica i tasselli giusti una volta sola. */
+  protected readonly arriving = signal(!this.location.needsPanel() && this.location.position() === null);
+  /** La finta dialog di avvio è in gioco: solo se all'apertura si stava aspettando la posizione (senza consenso non c'è nulla da cercare). */
+  private readonly intro = signal(this.arriving());
+  /** È passato 1 secondo da quando c'è la posizione. */
+  private readonly held = signal(false);
+  /** La dialog resta finché c'è la posizione da cercare, poi 1 secondo e il tempo di disegnare la mappa. */
+  protected readonly locating = computed(() => this.intro() && !(this.held() && this.ready()));
   /** Vista 3D accesa (scelta ricordata nel browser). */
   protected readonly view3d = signal(readFlag(VIEW3D_KEY));
   /** Di quanto è ruotata la mappa, in gradi interi. */
@@ -141,13 +176,33 @@ export class WorldMapComponent {
     const tick = setInterval(() => this.now.set(new Date()), 1000);
     const onFullscreen = () => this.fullscreen.set(!!document.fullscreenElement);
     document.addEventListener('fullscreenchange', onFullscreen);
+    const timers: ReturnType<typeof setTimeout>[] = [];
     this.destroyRef.onDestroy(() => {
       clearInterval(tick);
+      timers.forEach(clearTimeout);
       document.removeEventListener('fullscreenchange', onFullscreen);
     });
 
+    // Trovata la posizione, la dialog resta ancora 1 secondo (si vedono le coordinate vere) e poi può sparire.
+    effect(() => {
+      if (this.location.position() && this.intro()) timers.push(setTimeout(() => this.held.set(true), 1000));
+    });
+
+    // Alle 18:00 e alle 6:00 l'icona scende, diventa l'altra mentre è nascosta e torna al suo posto.
+    effect(() => {
+      const night = this.isNight();
+      untracked(() => {
+        if (night === this.shownNight()) return;
+        this.swapping.set(true);
+        timers.push(setTimeout(() => this.shownNight.set(night), 240), setTimeout(() => this.swapping.set(false), 280));
+      });
+    });
+
     // Il DOM esiste solo dopo il primo disegno; tutto fuori da NgZone.
-    afterNextRender(() => this.ngZone.runOutsideAngular(() => this.createMap()));
+    afterNextRender(() => this.domReady.set(true));
+    effect(() => {
+      if (this.domReady() && !this.arriving() && !untracked(() => this.map)) this.ngZone.runOutsideAngular(() => untracked(() => this.createMap()));
+    });
 
     // Cambio tema: stile sostituito per intero. Al primo giro la mappa non c'è ancora e non si fa nulla.
     effect(() => {
@@ -169,6 +224,9 @@ export class WorldMapComponent {
       const locked = this.location.locked();
       const pos = this.location.position();
       const facing = this.location.facing();
+      // La mappa nascosta all'avvio si mostra alla prima posizione, o se serve il pannello del consenso (il rifiuto non porta nessuna posizione).
+      if (pos || this.location.needsPanel()) this.arriving.set(false);
+      if (!pos && this.location.needsPanel()) this.intro.set(false); // consenso negato o posizione non disponibile: niente dialog di ricerca sopra il pannello
       this.ngZone.runOutsideAngular(() => {
         if (!this.map) return;
         this.setInteractive(this.map, !locked);
@@ -191,6 +249,18 @@ export class WorldMapComponent {
         this.protocolRegistered = false;
       }
     });
+  }
+
+  /** H tenuto premuto mostra i nomi dei tasti; lasciarlo li nasconde (anche se il fuoco è in un campo di testo). */
+  protected onKey(e: KeyboardEvent, down: boolean): void {
+    if (e.key.toLowerCase() !== 'h') return;
+    if (!down) {
+      this.labels.set(false);
+      return;
+    }
+    const target = e.target as HTMLElement | null;
+    if (e.ctrlKey || e.metaKey || e.altKey || target?.closest('input, textarea, select, [contenteditable]')) return;
+    this.labels.set(true);
   }
 
   protected toggle(id: string): void {
@@ -262,11 +332,13 @@ export class WorldMapComponent {
     addProtocol('pmtiles', new Protocol().tile);
     this.protocolRegistered = true;
 
+    // Se la posizione c'è già la mappa nasce lì (e vicina), senza spostamenti dopo.
+    const pos = this.location.position();
     const map = new MapLibreMap({
       container: this.container().nativeElement,
       style: buildMapStyle(this.activeTheme()),
-      center: START_VIEW.center,
-      zoom: START_VIEW.zoom,
+      center: pos ? [pos.lng, pos.lat] : START_VIEW.center,
+      zoom: pos ? Math.max(START_VIEW.zoom, USER_ZOOM) : START_VIEW.zoom,
       pitch: this.view3d() ? PITCH_3D : 0,
       minPitch: this.view3d() ? PITCH_3D : 0, // l'inclinazione la scegliamo noi: min e max uguali la bloccano
       maxPitch: this.view3d() ? PITCH_3D : 0,
@@ -278,6 +350,7 @@ export class WorldMapComponent {
     this.showUser(map, this.location.position(), this.location.facing());
     // Lo stile si ricrea al cambio di tema e azzera le visibilità: i filtri si riapplicano a ogni caricamento.
     map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); });
+    map.once('idle', () => this.ready.set(true)); // 'idle': ha finito di caricare e disegnare (anche se qualche tassello è fallito)
     map.on('rotate', () => this.bearing.set(Math.round(map.getBearing())));
     map.on('zoom', () => this.sizeHalo(map));
 
@@ -327,8 +400,8 @@ export class WorldMapComponent {
     this.sizeHalo(map);
     if (!this.centeredOnUser) {
       this.centeredOnUser = true;
-      // Alla prima lettura (anche approssimativa) la mappa vola verso il giocatore, spostandosi e avvicinandosi insieme.
-      map.flyTo({ center: [pos.lng, pos.lat], zoom: Math.max(map.getZoom(), USER_ZOOM) });
+      // Alla prima lettura (anche approssimativa) la mappa è subito sul giocatore, senza animazione (la mappa è ancora nascosta).
+      map.jumpTo({ center: [pos.lng, pos.lat], zoom: Math.max(map.getZoom(), USER_ZOOM) });
       this.refinedOnUser = pos.accuracy <= GOOD_ACCURACY_M;
     } else if (!this.refinedOnUser && pos.accuracy <= GOOD_ACCURACY_M) {
       // La prima lettura era approssimativa: appena arriva quella precisa, la mappa si sposta dolcemente lì (una volta sola).

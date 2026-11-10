@@ -5,7 +5,7 @@ import { IconComponent } from '../ui/icon.component';
 import { DATA_CREDITS, MAP_FEEDBACK_URL, SOFTWARE_CREDITS, TERRAIN_CREDITS, TERRAIN_SOURCES_URL } from './map-config';
 
 /**
- * Il piccolo tasto con l'icona info, in basso a destra, e la dialog con i crediti della mappa (dati, terreno, software): prende il posto del box dei crediti di MapLibre.
+ * Il tasto con l'icona info, in alto a destra accanto allo schermo intero, e la dialog con i crediti della mappa (dati, terreno, software): prende il posto del box dei crediti di MapLibre.
  * Le righe di credito sono in `map-config.ts`; qui si traducono solo i titoli e i link che sono testo nostro.
  */
 @Component({
@@ -14,7 +14,7 @@ import { DATA_CREDITS, MAP_FEEDBACK_URL, SOFTWARE_CREDITS, TERRAIN_CREDITS, TERR
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <button type="button" class="info" [attr.aria-label]="'worldMap.credits.open' | t" [title]="'worldMap.credits.open' | t" (click)="open.set(true)">
-      <app-icon name="info" [size]="16" />
+      <app-icon name="info" [size]="20" />
     </button>
     @if (open()) {
       <app-dialog [title]="'worldMap.credits.title' | t" width="min(460px, 100%)" (closed)="open.set(false)">
@@ -49,8 +49,8 @@ import { DATA_CREDITS, MAP_FEEDBACK_URL, SOFTWARE_CREDITS, TERRAIN_CREDITS, TERR
   `,
   styles: `
     :host { display: contents; }
-    /* Piccolo, a spigoli secchi, nell'angolo dove stava l'attribuzione di MapLibre. */
-    .info { position: absolute; right: 10px; bottom: 10px; z-index: 2; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
+    /* Grande come gli altri tasti, in alto a destra accanto a quello dello schermo intero (che sta a 54px dal bordo). */
+    .info { position: absolute; top: 10px; right: 98px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .info:hover, .info:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     section { display: flex; flex-direction: column; gap: 6px; }
     h3 { margin: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }

@@ -86,6 +86,18 @@ export class LocationService {
       return;
     }
     this.state.set('waiting');
+    // Il GPS preciso può metterci molti secondi: intanto una lettura veloce e approssimativa (rete, o l'ultima nota al browser) fa partire la mappa.
+    // Vale solo se la lettura precisa non è ancora arrivata; poi la affina la lettura continua qui sotto.
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        if (this.fix !== null || this.watchId === null) return;
+        this.fix = { lng: p.coords.longitude, lat: p.coords.latitude, heading: null, accuracy: p.coords.accuracy };
+        this.state.set('granted');
+        this.position.set(this.fix);
+      },
+      () => { /* nessuna lettura veloce: si aspetta quella precisa */ },
+      { enableHighAccuracy: false, maximumAge: 5 * 60_000, timeout: 5000 },
+    );
     this.watchId = navigator.geolocation.watchPosition(
       (p) => {
         const moving = (p.coords.speed ?? 0) > MOVING_SPEED && p.coords.heading !== null && !Number.isNaN(p.coords.heading);
