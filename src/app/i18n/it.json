@@ -2057,5 +2057,9 @@
   "c.segnale_d7610": "Segnale",
   "c.macchina_ba10b": "Macchina",
   "enemy.turret": "Torretta",
-  "c.fissa_92ecd": "Fissa"
+  "c.fissa_92ecd": "Fissa",
+  "enemy.overheat": "Surriscaldamento",
+  "enemy.contagion": "Contagio",
+  "enemy.short-circuit": "Cortocircuito",
+  "c.folgorazione_44598": "Folgorazione"
 }

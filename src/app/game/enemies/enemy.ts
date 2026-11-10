@@ -33,7 +33,7 @@ export interface EnemyDef {
   /** Un nemico fa un solo tipo di attacco. */
   attack: AttackType;
   /** Famiglia (v2): `humanoid` o `machine`. Per ora solo dato. */
-  family?: 'humanoid' | 'machine';
+  family?: 'humanoid' | 'machine' | 'demon';
   /** Gittata fissa in caselle (v2: non viene più dai dadi). Per ora solo dato: il motore usa ancora quella dei dadi. */
   range?: number;
   /**

@@ -487,6 +487,159 @@
           "poison"
         ]
       }
+    },
+    {
+      "id": "overheat",
+      "name": "Surriscaldamento",
+      "image": "mobs/overheat/overheat",
+      "family": "demon",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "intrusion",
+      "range": 5,
+      "normal": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 0,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow"
+        ],
+        "ice": 1,
+        "vigilance": 5,
+        "abilities": [
+          "Fissa",
+          "Bruciare"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 5,
+          "5": 5,
+          "2-3": 5
+        },
+        "speed": 0,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow",
+          "black"
+        ],
+        "ice": 2,
+        "vigilance": 5,
+        "abilities": [
+          "Fissa",
+          "Bruciare"
+        ]
+      }
+    },
+    {
+      "id": "contagion",
+      "name": "Contagio",
+      "image": "mobs/contagion/contagion",
+      "family": "demon",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "intrusion",
+      "range": 5,
+      "normal": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 0,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow"
+        ],
+        "ice": 1,
+        "vigilance": 5,
+        "abilities": [
+          "Fissa",
+          "Veleno"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 5,
+          "5": 5,
+          "2-3": 5
+        },
+        "speed": 0,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow",
+          "black"
+        ],
+        "ice": 2,
+        "vigilance": 5,
+        "abilities": [
+          "Fissa",
+          "Veleno"
+        ]
+      }
+    },
+    {
+      "id": "short-circuit",
+      "name": "Cortocircuito",
+      "image": "mobs/short-circuit/short-circuit",
+      "family": "demon",
+      "size": {
+        "w": 1,
+        "h": 1
+      },
+      "attack": "intrusion",
+      "range": 5,
+      "normal": {
+        "wounds": {
+          "4": 4,
+          "5": 4,
+          "2-3": 4
+        },
+        "speed": 0,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow"
+        ],
+        "ice": 1,
+        "vigilance": 5,
+        "abilities": [
+          "Fissa",
+          "Folgorazione"
+        ]
+      },
+      "enhanced": {
+        "wounds": {
+          "4": 5,
+          "5": 5,
+          "2-3": 5
+        },
+        "speed": 0,
+        "armor": 0,
+        "dice": [
+          "white",
+          "yellow",
+          "black"
+        ],
+        "ice": 2,
+        "vigilance": 5,
+        "abilities": [
+          "Fissa",
+          "Folgorazione"
+        ]
+      }
     }
   ]
 }
