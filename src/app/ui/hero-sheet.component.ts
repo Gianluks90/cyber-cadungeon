@@ -25,7 +25,7 @@ export interface HeroDetails {
   portraitFull?: string;
   wounds: number;
   maxWounds: number;
-  energy: number;
+  overclock: number;
   armor: number;
   speed: number;
   value: number;
@@ -56,7 +56,7 @@ export interface HeroDetails {
 }
 
 /**
- * Il pannello "Informazioni" di un eroe: parametri (cuori e salute, velocità, energia, armatura, valore), attributi (una sezione ancora vuota:
+ * Il pannello "Informazioni" di un eroe: parametri (cuori e salute, velocità, overclock, armatura, valore), attributi (una sezione ancora vuota:
  * le quattro caratteristiche sono in pausa, docs/REGOLE.md sezione 4), dadi d'attacco, abilità primaria (quella stampata sulla scheda) e abilità secondarie (le carte pescate). È il contenuto della cornice `app-hero-panel`, che gli dà posizione, altezza, immagine ed etichette; l'equipaggiamento sta
  * nel pannello dell'inventario (`app-inventory-panel`).
  */
@@ -74,7 +74,7 @@ export interface HeroDetails {
       </div>
       <div class="row stats">
         <span class="stat speed" [title]="'Velocità: punti movimento a inizio turno' | tr"><app-icon name="footprint" [size]="18" /><span class="v">{{ h.speed }}<small>{{ 'Velocità' | tr }}</small></span></span>
-        <span class="stat energy" [title]="'Energia' | tr"><app-icon name="water_drop" [size]="18" /><span class="v">{{ h.energy }}<small>{{ 'Energia' | tr }}</small></span></span>
+        <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="water_drop" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'Overclock' | tr }}</small></span></span>
         <span class="stat" [title]="'Armatura: si sottrae al danno' | tr"><app-icon name="shield" [size]="18" /><span class="v">{{ h.armor }}<small>{{ 'Armatura' | tr }}</small></span></span>
       </div>
 
@@ -124,7 +124,7 @@ export interface HeroDetails {
     .stat .v { display: inline-flex; align-items: baseline; gap: 6px; }
     small { font-weight: 400; color: var(--c-text-dim); }
     .stat.speed { color: var(--c-move); }
-    .stat.energy { color: var(--c-energy); }
+    .stat.overclock { color: var(--c-overclock); }
     .cards { display: flex; flex-direction: column; gap: 6px; }
     .states { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; font-weight: 600; }
     .soon { margin: 0; color: var(--c-text-dim); font-size: 12px; font-style: italic; }

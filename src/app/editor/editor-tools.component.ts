@@ -572,7 +572,7 @@ export class EditorToolsComponent {
   readonly openItemMods = output<void>();
   protected readonly markerCards: { key: string; name: string; spec: MarkerSpec; icon: string; tone: string; sample: 'icon' | 'chest'; limit: number; /** Quanti ne servono almeno (nessun massimo). */ min?: number }[] = [
     { key: 'potion:heal', get name() { return t('tools.healPotion'); }, spec: { type: 'potion', kind: 'heal' }, icon: 'tokens/potion', tone: 'var(--cad-potion-heal)', sample: 'icon', limit: 0 },
-    { key: 'potion:energy', get name() { return t('tools.energyPotion'); }, spec: { type: 'potion', kind: 'energy' }, icon: 'tokens/potion', tone: 'var(--cad-potion-energy)', sample: 'icon', limit: 0 },
+    { key: 'potion:overclock', get name() { return t('tools.overclockPotion'); }, spec: { type: 'potion', kind: 'overclock' }, icon: 'tokens/potion', tone: 'var(--cad-potion-overclock)', sample: 'icon', limit: 0 },
     { key: 'coins', get name() { return t('tools.coinPile'); }, spec: { type: 'coins' }, icon: 'tokens/gold_pile', tone: 'var(--cad-coin)', sample: 'icon', limit: 0 },
     { key: 'chest:copper', get name() { return t('tools.copperChest'); }, spec: { type: 'chest', tier: 'copper' }, icon: '', tone: 'var(--cad-chest-copper)', sample: 'chest', limit: CHEST_TABLE_MAX.copper },
     { key: 'chest:silver', get name() { return t('tools.silverChest'); }, spec: { type: 'chest', tier: 'silver' }, icon: '', tone: 'var(--cad-chest-silver)', sample: 'chest', limit: CHEST_TABLE_MAX.silver },

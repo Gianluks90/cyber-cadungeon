@@ -263,7 +263,7 @@ export const TREASURE_SELL_COINS = { copper: 250, silver: 500, gold: 750 } as co
 /** Tornare nel dungeon da un glifo diverso da quello da cui si è partiti costa monete (il servizio di teletrasporto), non movimento. */
 export const CITY_TELEPORT_COST = 25;
 /** I prezzi dei servizi in monete: pozioni, tesori pescati dai mazzi, ripristino della salute al tempio (inventato da noi). */
-export const POTION_PRICES = { heal: 50, energy: 25 } as const;
+export const POTION_PRICES = { heal: 50, overclock: 25 } as const;
 export const TREASURE_PRICES = { copper: 250, silver: 500, gold: 750 } as const;
 export const TEMPLE_HEAL_COST = 100;
 /** Il colpo fatale a un mostro potenziato (leader) dà all'eroe che lo mette a segno questa ricompensa in monete (docs/REGOLE.md). */
@@ -281,7 +281,7 @@ export const HERO_DEATH_FADE_MS = 2200;
 // --- Esplorazione ---
 /** Quanto dura la comparsa di ciò che si scopre (il velo che svanisce, un mostro che appare), in millisecondi. */
 export const REVEAL_ANIM_MS = 350;
-/** Il massimo di dadi competenza in una prova (quelli della scheda più quelli comprati con l'energia). */
+/** Il massimo di dadi competenza in una prova (quelli della scheda più quelli comprati con l'overclock). */
 export const CHECK_MAX_DICE = 8;
 /** Quanto dura la dissolvenza dell'aspetto visivo di un nemico (pietra, cristallo) quando un evento lo toglie. */
 export const LOOK_FADE_MS = 1400;

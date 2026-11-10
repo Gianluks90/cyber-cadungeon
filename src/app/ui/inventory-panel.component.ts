@@ -26,7 +26,7 @@ import { ItemCardComponent } from './item-card.component';
         <h3>{{ 'Pozioni' | tr }}</h3>
         <div class="row">
           @for (slot of slots(h.potions); track $index) {
-            <span class="potion" [class.empty]="!slot" [style.color]="slot ? 'var(--cad-potion-' + slot + ')' : null" [title]="(slot === 'heal' ? 'Pozione curativa' : slot === 'energy' ? 'Pozione dell\\'Energia' : 'Posto libero') | tr">
+            <span class="potion" [class.empty]="!slot" [style.color]="slot ? 'var(--cad-potion-' + slot + ')' : null" [title]="(slot === 'heal' ? 'Pozione curativa' : slot === 'overclock' ? 'Pozione dell\\'Overclock' : 'Posto libero') | tr">
               <app-icon name="tokens/potion" [size]="26" />
             </span>
           }
@@ -49,8 +49,8 @@ import { ItemCardComponent } from './item-card.component';
     <ng-template #card let-e>
       <app-item-card [def]="e.def" [icon]="e.icon" [detail]="e.detail">
         @if (e.use; as u) {
-          <!-- Un oggetto che si usa: il costo (energia, punti movimento) viene prima del testo, e se consuma l'oggetto lo dice dopo. -->
-          <button type="button" class="act" [class.energy]="u.cost.includes('{energy:')" [class.mov]="!u.cost.includes('{energy:') && u.cost.includes('{mov:')" [class.off]="!u.enabled" [attr.aria-disabled]="!u.enabled" [title]="u.enabled ? ('Usa {name}' | tr: { name: e.name }) : plain(u.reason ?? '')"
+          <!-- Un oggetto che si usa: il costo (overclock, punti movimento) viene prima del testo, e se consuma l'oggetto lo dice dopo. -->
+          <button type="button" class="act" [class.overclock]="u.cost.includes('{overclock:')" [class.mov]="!u.cost.includes('{overclock:') && u.cost.includes('{mov:')" [class.off]="!u.enabled" [attr.aria-disabled]="!u.enabled" [title]="u.enabled ? ('Usa {name}' | tr: { name: e.name }) : plain(u.reason ?? '')"
             (click)="u.enabled ? itemAction.emit({ action: 'use', itemId: e.id }) : denied.emit(u.reason ?? notPossible())">@if (u.cost) { <app-cost-text [text]="u.cost" /> }{{ 'Usa' | tr }}@if (u.extra) { · {{ u.extra }} }</button>
         }
         <button type="button" class="act" [class.mov]="e.move.cost > 0" [class.off]="!e.move.enabled" [attr.aria-disabled]="!e.move.enabled" [title]="e.move.enabled ? e.move.label + ' (' + plain('{mov:' + e.move.cost + '}') + ')' : plain(e.move.reason ?? '')"
@@ -81,7 +81,7 @@ import { ItemCardComponent } from './item-card.component';
     }
     .act { --tone: var(--c-interact); transition: border-color 0.15s, background-color 0.15s; }
     .act.mov { --tone: var(--c-move); }
-    .act.energy { --tone: var(--c-energy); }
+    .act.overclock { --tone: var(--c-overclock); }
     .act:hover:not(.off), .act:focus-visible:not(.off) { border-color: var(--tone); background: color-mix(in srgb, var(--tone) 8%, transparent); outline: none; }
     .act.off { opacity: 0.35; cursor: default; }
   `,

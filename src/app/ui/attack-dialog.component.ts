@@ -57,10 +57,10 @@ export interface AttackView {
   weapon: { lead: string; name: string; icon: string; attackLabel: string; dice: DieColor[] };
   distance: number;
   needsRange: boolean;
-  /** Energia che resta all'attaccante e dadi competenza già nel tiro (al massimo 5): serve per spenderla in un dado competenza in più. */
-  energy: number;
+  /** Overclock che resta all'attaccante e dadi competenza già nel tiro (al massimo 5): serve per spenderla in un dado competenza in più. */
+  overclock: number;
   blackDice: number;
-  /** Spazzata a pagamento (Grumshar), prima del tiro: costo in energia, se è accesa e se l'energia basta. Null se non c'è. */
+  /** Spazzata a pagamento (Grumshar), prima del tiro: costo in overclock, se è accesa e se l'overclock basta. Null se non c'è. */
   sweep: { cost: number; on: boolean; enough: boolean } | null;
   /** Stregoneria: il livello e i punti messi sulla gittata e sul danno (se il livello è 0 non si mostra). */
   sorcery: { level: number; range: number; damage: number };
@@ -137,9 +137,9 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                 </ul>
               }
               @if (v.sweep; as sw) {
-                <div class="energy-row">
+                <div class="overclock-row">
                   <button type="button" class="btn" [class.on]="sw.on" [class.off]="!sw.enough" [attr.aria-pressed]="sw.on" [attr.aria-disabled]="!sw.enough"
-                    [title]="(sw.on ? 'Spazzata attiva: tocca di nuovo per toglierla e riavere l\\'energia' : sw.enough ? 'Spendi {n} energia per aggiungere Spazzata: l\\'attacco colpisce anche tutti i nemici adiacenti' : 'Non hai abbastanza energia') | tr: { n: sw.cost }"
+                    [title]="(sw.on ? 'Spazzata attiva: tocca di nuovo per toglierla e riavere l\\'overclock' : sw.enough ? 'Spendi {n} overclock per aggiungere Spazzata: l\\'attacco colpisce anche tutti i nemici adiacenti' : 'Non hai abbastanza overclock') | tr: { n: sw.cost }"
                     (click)="sw.enough ? sweep.emit() : null"><app-icon name="water_drop" [size]="16" />{{ sw.cost }} {{ 'Spazzata' | tr }}</button>
                 </div>
               }
@@ -149,7 +149,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
               }
 
               @if (v.step === 'rolled') {
-                @if (v.aim) { <div class="energy-row"><button type="button" class="btn" (click)="aim.emit()" [title]="'Usa l\\'ordine Mira: ripeti i dadi che vuoi (anche i mancati)' | tr"><app-icon name="tactic" [size]="16" />{{ 'Attacco mirato: ripeti dei dadi' | tr }}</button></div> }
+                @if (v.aim) { <div class="overclock-row"><button type="button" class="btn" (click)="aim.emit()" [title]="'Usa l\\'ordine Mira: ripeti i dadi che vuoi (anche i mancati)' | tr"><app-icon name="tactic" [size]="16" />{{ 'Attacco mirato: ripeti dei dadi' | tr }}</button></div> }
                 @if (v.rerolls > 0) { <p class="hint">{{ (v.rerolls === 1 ? '{source}: puoi ripetere un dado a tua scelta.' : '{source}: puoi ripetere {n} dadi a tua scelta.') | tr: { source: v.rerollSource, n: v.rerolls } }}</p> }
                 <ul class="rolls" [class.missed]="v.outcome?.miss">
                   @for (r of v.rolls; track $index) {
@@ -180,11 +180,11 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                   }
                 </ul>
                 @if (!v.auto && !v.outcome?.miss) {
-                  <div class="energy-row">
-                    <button type="button" class="btn" [class.off]="v.energy < 1 || v.blackDice >= maxBlack || adding()" [attr.aria-disabled]="v.energy < 1 || v.blackDice >= maxBlack || adding()"
-                      [title]="(v.blackDice >= maxBlack ? 'Hai già 5 dadi competenza' : v.energy < 1 ? 'Non hai più energia' : 'Spendi 1 energia per tirare un dado competenza in più') | tr"
-                      (click)="v.energy < 1 || v.blackDice >= maxBlack || adding() ? null : addDie.emit()"><app-icon name="water_drop" [size]="16" />{{ '1 +1 dado competenza' | tr }}</button>
-                    <small>{{ 'Energia' | tr }} <app-icon name="water_drop" [size]="13" class="energy-icon" />{{ v.energy }} · {{ 'dadi competenza {a}/{b}' | tr: { a: v.blackDice, b: maxBlack } }}</small>
+                  <div class="overclock-row">
+                    <button type="button" class="btn" [class.off]="v.overclock < 1 || v.blackDice >= maxBlack || adding()" [attr.aria-disabled]="v.overclock < 1 || v.blackDice >= maxBlack || adding()"
+                      [title]="(v.blackDice >= maxBlack ? 'Hai già 5 dadi competenza' : v.overclock < 1 ? 'Non hai più overclock' : 'Spendi 1 overclock per tirare un dado competenza in più') | tr"
+                      (click)="v.overclock < 1 || v.blackDice >= maxBlack || adding() ? null : addDie.emit()"><app-icon name="water_drop" [size]="16" />{{ '1 +1 dado competenza' | tr }}</button>
+                    <small>{{ 'Overclock' | tr }} <app-icon name="water_drop" [size]="13" class="overclock-icon" />{{ v.overclock }} · {{ 'dadi competenza {a}/{b}' | tr: { a: v.blackDice, b: maxBlack } }}</small>
                   </div>
                 }
                 @if (v.sorcery.level > 0 && !v.outcome?.miss) {
@@ -328,12 +328,12 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
     .pick:hover, .pick:focus-visible { border-color: var(--c-interact); outline: none; }
     .pick .range { margin: 0; }
     .again { padding: 0; border: 0; background: none; color: inherit; cursor: pointer; }
-    .energy-row { display: flex; align-items: center; gap: 10px; }
-    .energy-row .btn { --tone: var(--c-energy); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 14px; }
-    .energy-row .btn:hover:not(.off), .energy-row .btn:focus-visible:not(.off) { border-color: var(--tone); color: var(--c-text); background: color-mix(in srgb, var(--tone) 8%, transparent); }
-    .energy-row .btn.off:hover { border-color: var(--c-line-strong); }
-    .energy-row .btn app-icon, .energy-row .energy-icon { color: var(--c-energy); }
-    .energy-row .energy-icon { vertical-align: -2px; }
+    .overclock-row { display: flex; align-items: center; gap: 10px; }
+    .overclock-row .btn { --tone: var(--c-overclock); display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 6px 14px; }
+    .overclock-row .btn:hover:not(.off), .overclock-row .btn:focus-visible:not(.off) { border-color: var(--tone); color: var(--c-text); background: color-mix(in srgb, var(--tone) 8%, transparent); }
+    .overclock-row .btn.off:hover { border-color: var(--c-line-strong); }
+    .overclock-row .btn app-icon, .overclock-row .overclock-icon { color: var(--c-overclock); }
+    .overclock-row .overclock-icon { vertical-align: -2px; }
     .sorcery-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sorcery-row b { min-width: 14px; text-align: center; font: 700 16px var(--font-mono); }
     .step { width: 26px; height: 26px; padding: 0; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 600 15px/1 var(--font-ui); }
@@ -409,7 +409,7 @@ export class AttackDialogComponent {
   readonly apply = output<void>();
   /** La barra dell'attacco del Maligno è finita: si applica e il pannello si chiude. */
   readonly autoDone = output<void>();
-  /** Spende 1 energia per un dado competenza in più nel tiro. */
+  /** Spende 1 overclock per un dado competenza in più nel tiro. */
   readonly addDie = output<void>();
   readonly sweep = output<void>();
   /** Stregoneria: un punto in più o in meno alla gittata o al danno. */

@@ -60,11 +60,11 @@
       "id": "extended-battery",
       "name": "Batteria estesa",
       "school": "cunning",
-      "text": "Il tuo valore massimo di energia {energy} è aumentato di 2.",
+      "text": "Il tuo valore massimo di overclock {overclock} è aumentato di 2.",
       "effects": [
         {
           "kind": "stat",
-          "stat": "energy",
+          "stat": "overclock",
           "amount": 2
         }
       ]
@@ -85,8 +85,8 @@
       ]
     },
     {
-      "id": "overclock",
-      "name": "Overclock",
+      "id": "power-spike",
+      "name": "Picco di tensione",
       "school": "magic",
       "text": "Quando esegui un attacco magico, guadagni 2 scintille bonus.",
       "effects": [

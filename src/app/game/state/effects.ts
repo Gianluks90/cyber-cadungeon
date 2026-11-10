@@ -7,7 +7,7 @@ import type { GameState } from './game-state';
 /**
  * Gli effetti attivi di un eroe (docs/cards/abilities.md, sezione 9): quelli delle sue carte abilità e degli oggetti equipaggiati, nello stesso vocabolario
  * (`stat`, `attack`, `rule`...). Le regole chiedono qui i numeri che le riguardano: velocità, armatura, bonus di attacco, eccezioni.
- * Per ora sono attivi `stat`, `attack` e alcune `rule`; `trigger`, `active` e `grant` aspettano energia, stati e altro (vedi abilities.md).
+ * Per ora sono attivi `stat`, `attack` e alcune `rule`; `trigger`, `active` e `grant` aspettano overclock, stati e altro (vedi abilities.md).
  */
 
 /** Un effetto con i campi che le regole leggono, tipati (il catalogo li scrive come dati liberi). */
@@ -69,7 +69,7 @@ export interface StatContext {
   afterCaps?: boolean;
 }
 
-/** Somma dei bonus `stat` per `stat` (wounds, energy, speed, armor): quelli con `vs` valgono solo contro quel tipo, quelli con `when: noArmorWorn` solo senza armatura. */
+/** Somma dei bonus `stat` per `stat` (wounds, overclock, speed, armor): quelli con `vs` valgono solo contro quel tipo, quelli con `when: noArmorWorn` solo senza armatura. */
 export function statBonus(state: GameState, piece: Piece, stat: string, ctx: StatContext = {}): number {
   const wearsArmor = equippedDefs(state, piece).some((d) => d.kind === 'armor');
   return effectsOf(state, piece).reduce((n, { effect: e }) => {
@@ -114,7 +114,7 @@ export function attackBonus(state: GameState, piece: Piece, type: AttackType, ta
   return out;
 }
 
-/** Quando un eroe prende una carta, i suoi bonus permanenti ai massimi (ferite e energia) si sommano subito, anche a ciò che ha adesso. */
+/** Quando un eroe prende una carta, i suoi bonus permanenti ai massimi (ferite e overclock) si sommano subito, anche a ciò che ha adesso. */
 export function applyPermanentStats(hero: Piece, effects: readonly SkillEffect[]): void {
   for (const e of effects as readonly Effect[]) {
     if (e.kind !== 'stat' || e.vs || e.when) continue;
@@ -122,9 +122,9 @@ export function applyPermanentStats(hero: Piece, effects: readonly SkillEffect[]
     if (e.stat === 'wounds') {
       hero.maxWounds += n;
       hero.wounds += n;
-    } else if (e.stat === 'energy') {
-      hero.maxEnergy += n;
-      hero.energy += n;
+    } else if (e.stat === 'overclock') {
+      hero.maxOverclock += n;
+      hero.overclock += n;
     }
   }
 }

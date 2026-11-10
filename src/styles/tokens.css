@@ -25,7 +25,7 @@
   --c-familiar:      #5aa9ff;  /* contorno dei famigli */
   --c-move:           var(--c-interact); /* movimento / velocità: lo stesso colore del perimetro di movimento */
   --c-speed:         #6cc08a;  /* dado distanza */
-  --c-energy:       #6cc08a;  /* energia: il verde della pozione dell'Energia */
+  --c-overclock:       #6cc08a;  /* overclock: il verde della pozione dell'Overclock */
   --c-hatred:        var(--c-danger);  /* Odio del Maligno: il teschio rosso */
   --c-missing:        var(--px-orange);  /* avviso dell'editor: cosa manca */
   --c-burn:          #ff5a36;  /* stato: fiamma */

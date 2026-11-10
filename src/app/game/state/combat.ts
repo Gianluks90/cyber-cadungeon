@@ -719,8 +719,8 @@ export interface AttackResult {
   drop: RemovalResult | null;
   /** Il bersaglio può essere spostato di fino a 3 spazi (Contraccolpo). */
   knockback: boolean;
-  /** L'energia che l'eroe ferito ha recuperato (Furia del dolore di Krag), se ha recuperato qualcosa. */
-  energyGained?: number;
+  /** L'overclock che l'eroe ferito ha recuperato (Furia del dolore di Krag), se ha recuperato qualcosa. */
+  overclockGained?: number;
 }
 
 /** Applica l'attacco: consuma un attacco dell'attaccante e toglie le ferite al bersaglio. Un mostro a zero ferite esce dalla mappa; un eroe muore come in `killHero`. */
@@ -739,7 +739,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
   const before = target.wounds;
   target.wounds = Math.max(0, target.wounds - outcome.damage);
   if (outcome.damage > 0 && target.team === 'hero') {
-    loseOrdersOnWounds(target); // perde la Mira, il Riposo (non recupera l'energia) e la Guardia
+    loseOrdersOnWounds(target); // perde la Mira, il Riposo (non recupera l'overclock) e la Guardia
   }
   // Immortale: se il dado competenza ha dato una scintilla il mostro si rialza a salute piena, meno i danni in più del colpo mortale.
   if (target.wounds <= 0 && opts.undying) {
@@ -758,9 +758,9 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
       const n = inflictStatus(state, target, 'poison', outcome.poison);
       if (n) applied.push({ kind: 'poison', n });
     }
-    // Furia del dolore: un eroe che subisce ferite da un attacco (di qualunque tipo) recupera energia, una volta per attacco.
-    const gain = outcome.damage > 0 && target.team === 'hero' ? Math.min(target.maxEnergy - target.energy, ruleAmount(state, target, 'energyOnWounded')) : 0;
-    if (gain > 0) target.energy += gain;
+    // Furia del dolore: un eroe che subisce ferite da un attacco (di qualunque tipo) recupera overclock, una volta per attacco.
+    const gain = outcome.damage > 0 && target.team === 'hero' ? Math.min(target.maxOverclock - target.overclock, ruleAmount(state, target, 'overclockOnWounded')) : 0;
+    if (gain > 0) target.overclock += gain;
     // Zanna e simili: l'attacco che ferisce piazza uno stato (una volta per attacco).
     if (!opts.extra && outcome.damage > 0 && attacker.team === 'hero' && target.team === 'monster' && opts.option) {
       for (const s of onHitStatuses(state, attacker, opts.option.attack)) {
@@ -768,7 +768,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
         if (n) applied.push({ kind: s.kind, n });
       }
     }
-    return { killed: false, reward: 0, target, applied, undying: false, slain: [], drop: null, knockback: !opts.extra && outcome.knockback && !immuneTo(state, target, 'knockback'), ...(gain > 0 ? { energyGained: gain } : {}) };
+    return { killed: false, reward: 0, target, applied, undying: false, slain: [], drop: null, knockback: !opts.extra && outcome.knockback && !immuneTo(state, target, 'knockback'), ...(gain > 0 ? { overclockGained: gain } : {}) };
   }
   if (target.team === 'hero') {
     const slain = killHero(state, target);

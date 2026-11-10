@@ -20,7 +20,7 @@ export interface MarkerEvent {
 const RUNE_NAMES: Record<RuneColor, string> = { get red() { return tr('rossa'); }, get blue() { return tr('blu'); }, get green() { return tr('verde'); } };
 
 /** Il nome di una pozione. */
-export const POTION_NAMES = { get heal() { return tr('Pozione curativa'); }, get energy() { return tr('Pozione dell\'Energia'); } } as const;
+export const POTION_NAMES = { get heal() { return tr('Pozione curativa'); }, get overclock() { return tr('Pozione dell\'Overclock'); } } as const;
 
 /**
  * La pedina `piece` è appena entrata nella sua casella (un passo, non per forza l'ultimo): ci sono segnalini che reagiscono?

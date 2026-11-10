@@ -49,8 +49,8 @@ export interface PendingCheck {
   dice: 'melee' | 'ranged' | 'magic';
   needs: number;
   refusable: boolean;
-  /** L'eroe non può spendere energia per tirare dadi competenza in più. */
-  noEnergy: boolean;
+  /** L'eroe non può spendere overclock per tirare dadi competenza in più. */
+  noOverclock: boolean;
   onSuccess: EventEffect[];
   onFail: EventEffect[];
   /** L'eroe che la tira (quello che ha fatto scattare l'evento). */
@@ -356,7 +356,7 @@ function apply(state: GameState, effect: EventEffect, report: EventReport, subje
         dice: effect.dice,
         needs: Math.max(1, effect.needs ?? 1),
         refusable: !!effect.refusable,
-        noEnergy: !!effect.noEnergy,
+        noOverclock: !!effect.noOverclock,
         onSuccess: copy(effect.onSuccess),
         onFail: copy(effect.onFail),
         heroId: report.actor ?? state.activeId,

@@ -114,7 +114,7 @@
               "who": "self"
             },
             {
-              "op": "recoverEnergy",
+              "op": "recoverOverclock",
               "amount": "full",
               "who": "self"
             }
@@ -126,7 +126,7 @@
       "copies": 2,
       "price": 250,
       "rules": [
-        "Se è equipaggiato all'inizio del tuo turno, scartalo per recuperare 6 ferite e i tuoi segnalini energia {energy} fino al loro massimo livello."
+        "Se è equipaggiato all'inizio del tuo turno, scartalo per recuperare 6 ferite e i tuoi segnalini overclock {overclock} fino al loro massimo livello."
       ],
       "icon": "tokens/items/trinket-crystal"
     },

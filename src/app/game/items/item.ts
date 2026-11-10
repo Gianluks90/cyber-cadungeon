@@ -58,7 +58,7 @@ export interface ItemDef {
   /** Finché è equipaggiato, chi lo porta non può viaggiare da un glifo all'altro. */
   blocksTravel?: boolean;
   /** Una carta evento dei mazzi: quando si pesca non entra nell'inventario, ha subito il suo effetto (monete e una pozione a chi la pesca, e quante carte in più pescare dallo stesso mazzo). La pozione non c'è se ne porta già il massimo. */
-  instant?: { coins?: number; potion?: 'heal' | 'energy'; draw?: number };
+  instant?: { coins?: number; potion?: 'heal' | 'overclock'; draw?: number };
   /** Quante copie ci sono nel mazzo `deck` (di solito 1). */
   copies?: number;
   /** Il prezzo in monete: nel negozio si compra per questa cifra. */

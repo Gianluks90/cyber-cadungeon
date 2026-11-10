@@ -5,7 +5,7 @@
   "portrait": "characters/bastion-token.webp",
   "portraitFull": "characters/bastion-portrait.webp",
   "wounds": 20,
-  "energy": 3,
+  "overclock": 3,
   "armor": 3,
   "speed": 3,
   "value": 4,
@@ -23,11 +23,11 @@
     "magic": 0
   },
   "abilityName": "Assorbitori cinetici",
-  "ability": "Ogni volta che subisci ferite da un attacco recuperi {energy:1}.",
+  "ability": "Ogni volta che subisci ferite da un attacco recuperi {overclock:1}.",
   "effects": [
     {
       "kind": "rule",
-      "rule": "energyOnWounded",
+      "rule": "overclockOnWounded",
       "amount": 1,
       "name": "Assorbitori cinetici"
     }

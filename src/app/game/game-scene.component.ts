@@ -65,7 +65,7 @@ import { loadTokenImages, tokenImage, tokenPortraitUrl } from './markers/token-l
 import { monsterTakesItem } from './state/behaviors';
 import { PickupView } from './markers/pickup-view';
 import { handItem } from './state/events';
-import { ActionChange, ContextAction, CurseHit, drawTreasureFor, armorOf, killHero, transformToad, canActOnMap, contextActions, endEvilTurn, explore, energyForMovement, inventoryOf, speedOf, adjacentHeroes, placeOrder, loseOrdersOnWounds, changeOrder, orderChangeCost } from './state/actions';
+import { ActionChange, ContextAction, CurseHit, drawTreasureFor, armorOf, killHero, transformToad, canActOnMap, contextActions, endEvilTurn, explore, overclockForMovement, inventoryOf, speedOf, adjacentHeroes, placeOrder, loseOrdersOnWounds, changeOrder, orderChangeCost } from './state/actions';
 import { snapshotSeen } from './state/ambush';
 import { FamiliarsView } from './familiars/familiars-view';
 import { loadFamiliarCatalog } from './familiars/familiar';
@@ -253,7 +253,7 @@ const HINTS: Record<Mode, string> = {
     @if (evilAreaInfo(); as a) { <app-evil-area-dialog [area]="a" (closed)="evilAreaInfo.set(null)" /> }
     @if (evilTurnDialog(); as t) { <app-evil-turn-dialog [from]="t.from" [to]="t.to" (ok)="closeEvilTurnDialog()" /> }
     @if (barsIn() && !evilMode) { <app-evil-panel [slots]="heroSlots()" [hasObjective]="hasObjective()" (objective)="showObjective()" [view]="evilView()" [playing]="evilBusy()" [hatred]="hatred()" [deck]="deckLeft()" [hand]="handCount()" (toggle)="toggleEvilView()" /> }
-    @if (barsIn()) { <app-party-bar [publicView]="evilMode" [compact]="evilMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [monster]="monsterInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendEnergy)="spendEnergyForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (monsterClosed)="monsterPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
+    @if (barsIn()) { <app-party-bar [publicView]="evilMode" [compact]="evilMode && narrow()" [progress]="progress()" [defeated]="defeated()"[members]="members()" [panel]="panel()" [monster]="monsterInfo()" [passBusy]="commandsBusy()" (pass)="tapCommand('pass')" (spendOverclock)="spendOverclockForMove()" (skillUse)="useSkillAction($event)" (changeOrder)="changeOrderFor($event)" (monsterClosed)="monsterPanel.set(null)" (selected)="selectFromBar($event)" (info)="togglePanel($event, 'info')" (inventory)="togglePanel($event, 'inventory')" (city)="togglePanel($event, 'city')" (cityAction)="onCityAction($event)" (denied)="showReason($event)" (sheetClosed)="panel.set(null)" (panelSwitch)="switchPanel($event)" (itemAction)="onItemAction($event)" /> }
     <!-- Footer temporaneo: tiene i comandi a schermo fuori dalla barra degli eroi. -->
     @if (hint()) { <footer class="footer keyboard-hints"><p class="hint">{{ hint() }}</p></footer> }
     @if (barsIn() && !settingUp() && !evilMode) { <app-action-controls [style.visibility]="familiarMove() ? 'hidden' : null" [slots]="heroSlots()" [runes]="runes()" [action]="activeAction()" [busy]="commandsBusy()" (chosen)="tapCommand($event)" /> }
@@ -436,9 +436,9 @@ export class GameSceneComponent implements OnDestroy {
     /** Quanti dadi si possono ancora ripetere scegliendo (Occhio del cacciatore) e chi lo permette. */
     rerolls?: number;
     rerollSource?: string;
-    /** Un attacco fuori turno (Vigilanza): non consuma gli attacchi dell'eroe, e l'energia si paga quando lo si applica. */
+    /** Un attacco fuori turno (Vigilanza): non consuma gli attacchi dell'eroe, e l'overclock si paga quando lo si applica. */
     free?: { pay: number; consumeOrder?: boolean };
-    /** Spazzata a pagamento (Grumshar): l'energia spesa prima del tiro, rimborsata se si toglie la scelta o si annulla l'attacco. */
+    /** Spazzata a pagamento (Grumshar): l'overclock spesa prima del tiro, rimborsata se si toglie la scelta o si annulla l'attacco. */
     sweepPaid?: number;
   } | null>(null);
   /** È il turno del Maligno (lo script): niente comandi per gli eroi. */
@@ -465,9 +465,9 @@ export class GameSceneComponent implements OnDestroy {
       auto: !!se.auto,
       weapon: { lead: attacker.team === 'monster' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), magic: tr('magico') }[se.option.attack], dice: se.option.dice },
       distance: se.plan.distance, needsRange: se.plan.needsRange, bonuses: se.plan.sources, step: se.step,
-      energy: attacker.energy, blackDice: se.rolls.filter((r) => r.color === 'black').length,
+      overclock: attacker.overclock, blackDice: se.rolls.filter((r) => r.color === 'black').length,
       sweep: se.step === 'preview' && !se.auto && attacker.team === 'hero' && se.option.attack === 'melee' && ruleAmount(this.state, attacker, 'sweepAttack') > 0 && (!se.plan.area.sweep || !!se.sweepPaid) // un'arma che ha già Spazzata non ne ha bisogno
-        ? { cost: ruleAmount(this.state, attacker, 'sweepAttack'), on: !!se.sweepPaid, enough: !!se.sweepPaid || attacker.energy >= ruleAmount(this.state, attacker, 'sweepAttack') }
+        ? { cost: ruleAmount(this.state, attacker, 'sweepAttack'), on: !!se.sweepPaid, enough: !!se.sweepPaid || attacker.overclock >= ruleAmount(this.state, attacker, 'sweepAttack') }
         : null,
       rolls: se.rolls.map((r, i) => ({ ...r, choice: se.choices[i] ?? null })),
       rerolls: se.step === 'rolled' && !se.auto && !this.rerolling() ? (se.rerolls ?? 0) : 0, rerollSource: se.rerollSource ?? '', aim: se.step === 'rolled' && !se.auto && !!se.aim && !this.rerolling(),
@@ -1189,7 +1189,7 @@ export class GameSceneComponent implements OnDestroy {
         wounds: p.wounds,
         maxWounds: p.maxWounds,
         points: p.points,
-        energy: p.energy,
+        overclock: p.overclock,
         armor: armorOf(s, p),
         potions: p.potions.length,
         inCity: !!p.city,
@@ -1200,7 +1200,7 @@ export class GameSceneComponent implements OnDestroy {
         status: { ...p.status },
         skillsReady: !this.evilMode && p.id === s.activeId && skillActions(s, p).some((a) => a.enabled),
         details: {
-          name: p.name, heroClass: p.heroClass, portrait: p.portrait, portraitFull: p.portraitFull, wounds: p.wounds, maxWounds: p.maxWounds, energy: p.energy,
+          name: p.name, heroClass: p.heroClass, portrait: p.portrait, portraitFull: p.portraitFull, wounds: p.wounds, maxWounds: p.maxWounds, overclock: p.overclock,
           armor: armorOf(s, p), speed: speedOf(s, p), value: p.value, potions: [...p.potions], coins: p.coins, inventory: this.inventoryWithUses(s, p), inCity: !!p.city, cityPanel: !!p.city && !cityRules.cityView(s, p)?.mustReturn, city: cityRules.cityView(s, p), dice: p.dice, skillActions: skillActions(s, p), states: [...describeStatus(p.status), ...(p.toad ? [tr('Rospo ×{n}', { n: p.toad.tokens })] : [])], poison: p.status.poison, skills: p.skills, skillCards: p.skillCards.flatMap((id) => { const c = s.skills.get(id); return c ? [c] : []; }), ability: p.ability, abilityName: p.abilityName, familiars: [...[...s.familiarDefs.values()].filter((d) => d.item && p.equipped.includes(d.item)), ...familiarsOf(s, p.id).flatMap((f) => s.familiarDefs.get(f.id) ?? [])],
         } satisfies HeroDetails,
       }));
@@ -1279,20 +1279,20 @@ export class GameSceneComponent implements OnDestroy {
     });
   }
 
-  /** Spazzata di Grumshar: prima del tiro, per l'energia della regola, l'attacco in mischia colpisce anche tutti i nemici adiacenti. Un secondo tocco la toglie e rende l'energia. */
+  /** Spazzata di Grumshar: prima del tiro, per l'overclock della regola, l'attacco in mischia colpisce anche tutti i nemici adiacenti. Un secondo tocco la toglie e rende l'overclock. */
   protected toggleSweep() {
     const se = this.attackSession();
     const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
     if (!se || !attacker || se.step !== 'preview' || se.auto) return;
     const cost = ruleAmount(this.state, attacker, 'sweepAttack');
     if (se.sweepPaid) {
-      attacker.energy += se.sweepPaid;
+      attacker.overclock += se.sweepPaid;
       this.attackSession.set({ ...se, sweepPaid: 0, plan: { ...se.plan, area: { ...se.plan.area, sweep: false } } });
-    } else if (cost > 0 && attacker.energy >= cost) {
-      attacker.energy -= cost;
+    } else if (cost > 0 && attacker.overclock >= cost) {
+      attacker.overclock -= cost;
       this.attackSession.set({ ...se, sweepPaid: cost, plan: { ...se.plan, area: { ...se.plan.area, sweep: true } } });
     } else {
-      this.showNotice(tr('Non hai abbastanza energia'), 'warning', 'game');
+      this.showNotice(tr('Non hai abbastanza overclock'), 'warning', 'game');
       return;
     }
     this.pieces?.refreshActive();
@@ -1301,7 +1301,7 @@ export class GameSceneComponent implements OnDestroy {
   protected cancelAttack() {
     const se = this.attackSession();
     const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
-    if (attacker && se?.sweepPaid && se.step === 'preview') { attacker.energy += se.sweepPaid; this.pieces?.refreshActive(); } // la Spazzata non pagata torna
+    if (attacker && se?.sweepPaid && se.step === 'preview') { attacker.overclock += se.sweepPaid; this.pieces?.refreshActive(); } // la Spazzata non pagata torna
     if (attacker) this.pieces?.cancelAttackFx(attacker); // la pedina torna al suo posto e la linea sparisce
     this.attackSession.set(null);
     this.dice.scheduleClear(true);
@@ -1335,22 +1335,22 @@ export class GameSceneComponent implements OnDestroy {
     this.attackSession.set({ ...cur, step: 'rolled', rolls: final, choices: {}, spent: [], sorcery: { range: 0, damage: 0 }, rerolls: offer.count, rerollSource: offer.sources.join(', '), aim });
   }
 
-  /** Un dado competenza in più per 1 energia, dopo il tiro (al massimo 5 dadi competenza in un attacco). */
+  /** Un dado competenza in più per 1 overclock, dopo il tiro (al massimo 5 dadi competenza in un attacco). */
   protected readonly addingDie = signal(false);
   protected async addProficiencyDie() {
     const se = this.attackSession();
     const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
     if (!se || !attacker || se.step !== 'rolled' || se.auto || this.addingDie()) return;
-    if (attacker.energy < 1 || se.rolls.filter((r) => r.color === 'black').length >= 5) return;
+    if (attacker.overclock < 1 || se.rolls.filter((r) => r.color === 'black').length >= 5) return;
     this.addingDie.set(true);
-    attacker.energy -= 1; // l'energia si spende subito: il dado non si può annullare
+    attacker.overclock -= 1; // l'overclock si spende subito: il dado non si può annullare
     this.pieces?.refreshActive();
     const extra = await this.dice.rollFaces(['black'], true);
     this.addingDie.set(false);
     const cur = this.attackSession();
     if (!cur) return;
     if (!extra) {
-      attacker.energy += 1; // i dadi 3D non ci sono: l'energia torna
+      attacker.overclock += 1; // i dadi 3D non ci sono: l'overclock torna
       this.pieces?.refreshActive();
       this.showNotice(tr('I dadi 3D non sono disponibili'), 'warning', 'game');
       return;
@@ -1466,14 +1466,14 @@ export class GameSceneComponent implements OnDestroy {
     // Le scintille spese possono allargare un'Esplosione oltre la sagoma già mostrata: in quel caso si fa lampeggiare di nuovo.
     if (hit && this.board && areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir).length > areaCells(this.board, attacker, target, se.plan, [], se.breathDir).length) await this.flashCells(areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir));
     if (se.free) {
-      attacker.energy = Math.max(0, attacker.energy - se.free.pay); // Vigilanza: l'energia si paga adesso
+      attacker.overclock = Math.max(0, attacker.overclock - se.free.pay); // Vigilanza: l'overclock si paga adesso
       this.pieces?.refreshActive();
     }
     const result = applyAttack(this.state, attacker, target, outcome, { undying, option: se.option, extra: !!se.free });
     await this.attackImpact(attacker, target, se.option, outcome, se.plan.area.breath && se.breathDir && this.board ? { cells: areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir), shape: se.breathDir } : undefined);
     // Il nome delle abilità e la sagoma sono già stati mostrati prima del tiro (`announceAttack`); qui solo gli stati inflitti sopra chi li subisce.
     result.applied.forEach((a, i) => this.pieces?.floatTag(target, STATUS_NAMES[a.kind], a.kind, i * 450));
-    if (result.energyGained) this.showNotice(tr('{name} recupera {energy:{n}}', { name: target.name, n: result.energyGained }), 'water_drop', 'hero'); // Furia del dolore
+    if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'water_drop', 'hero'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
     const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
     const by = attacker.team === 'monster' ? 'evil' : 'hero';
@@ -1726,32 +1726,32 @@ export class GameSceneComponent implements OnDestroy {
     if (!hero) return;
     const base = Math.min(checkDiceCount(this.state, check), CHECK_MAX_DICE);
     const kind = { melee: tr('Mischia'), ranged: tr('Distanza'), magic: tr('Magia') }[check.dice];
-    // Prima del tiro l'eroe può comprare dadi competenza con l'energia (1 per dado), a meno che l'evento lo vieti; l'energia si spende subito e torna se rinuncia.
+    // Prima del tiro l'eroe può comprare dadi competenza con l'overclock (1 per dado), a meno che l'evento lo vieti; l'overclock si spende subito e torna se rinuncia.
     let extra = 0;
     let answer = '';
     for (;;) {
       const total = base + extra;
-      const canAdd = !check.noEnergy && hero.energy >= 1 && total < CHECK_MAX_DICE;
+      const canAdd = !check.noOverclock && hero.overclock >= 1 && total < CHECK_MAX_DICE;
       const dice = total === 0 ? tr('nessun dado competenza') : `${total} ${total === 1 ? 'dado competenza' : 'dadi competenza'}`;
-      const paid = extra ? (extra === 1 ? tr(', di cui 1 pagato con l\'energia') : tr(', di cui {extra} pagati con l\'energia', { extra })) : '';
-      const none = total === 0 ? (canAdd ? tr(' Senza dadi la prova fallisce: puoi comprarne con l\'energia.') : tr(' Senza dadi la prova fallisce.')) : '';
+      const paid = extra ? (extra === 1 ? tr(', di cui 1 pagato con l\'overclock') : tr(', di cui {extra} pagati con l\'overclock', { extra })) : '';
+      const none = total === 0 ? (canAdd ? tr(' Senza dadi la prova fallisce: puoi comprarne con l\'overclock.') : tr(' Senza dadi la prova fallisce.')) : '';
       const rule = (check.needs === 1 ? tr('**Prova:** {name} tira {dice} (dadi in più dell\'attacco {kind}{paid}); serve almeno 1 scintilla.{none}', { name: hero.name, dice, kind, paid, none }) : tr('**Prova:** {name} tira {dice} (dadi in più dell\'attacco {kind}{paid}); serve almeno {needs} scintille.{none}', { name: hero.name, dice, kind, paid, needs: check.needs, none }));
       answer = await this.askChoice({
         title: check.title ?? tr('Prova'),
         text: `${check.text}\n\n${rule}`,
         markdown: true,
-        choices: [...(canAdd ? [{ id: 'add', label: tr('{energy:1} +1 dado competenza') }] : []), { id: 'roll', label: tr('Effettua la prova'), primary: true }, ...(check.refusable ? [{ id: 'cancel', label: tr('Annulla') }] : [])],
+        choices: [...(canAdd ? [{ id: 'add', label: tr('{overclock:1} +1 dado competenza') }] : []), { id: 'roll', label: tr('Effettua la prova'), primary: true }, ...(check.refusable ? [{ id: 'cancel', label: tr('Annulla') }] : [])],
       });
       if (answer !== 'add') break;
-      hero.energy -= 1;
+      hero.overclock -= 1;
       extra += 1;
       this.pieces?.refreshActive();
     }
     if (answer === 'cancel') {
-      hero.energy += extra; // rinuncia: l'energia spesa torna
+      hero.overclock += extra; // rinuncia: l'overclock spesa torna
       const target = refuseCheck(this.state, check);
       if (target) this.pieces?.redraw(target); // il "?" torna sulla miniatura
-      this.pieces?.refreshActive(); // i punti e l'energia tornano all'eroe
+      this.pieces?.refreshActive(); // i punti e l'overclock tornano all'eroe
       this.showNotice(`${hero.name} rinuncia`, 'info', 'hero');
       return;
     }
@@ -1890,16 +1890,16 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /**
-   * Rigenerazione dei tessuti (Sporin): a inizio turno, prima che gli stati facciano effetto, chi ha la regola e soffre di qualche stato può spendere energia per togliersi
+   * Rigenerazione dei tessuti (Sporin): a inizio turno, prima che gli stati facciano effetto, chi ha la regola e soffre di qualche stato può spendere overclock per togliersi
    * un segnalino a sua scelta (anche uno solo di più: il livello scende di 1). Una dialog chiede quale; il segnalino tolto non produce effetti.
    */
   private async offerShedStatus(hero: Piece) {
     const cost = shedStatusCost(this.state, hero);
-    if (cost <= 0 || hero.energy < cost || !hasStatus(hero)) return;
+    if (cost <= 0 || hero.overclock < cost || !hasStatus(hero)) return;
     const kinds = (Object.keys(STATUS_NAMES) as StatusKind[]).filter((k) => hero.status[k] > 0);
     const id = await this.askChoice({
       title: tr('Rigenerazione dei tessuti'),
-      text: tr('{name} può spendere {energy:{n}} per togliersi un segnalino di uno stato che lo affligge: non farà effetto. Quale?', { name: hero.name, n: cost }),
+      text: tr('{name} può spendere {overclock:{n}} per togliersi un segnalino di uno stato che lo affligge: non farà effetto. Quale?', { name: hero.name, n: cost }),
       choices: [
         ...kinds.map((k) => ({ id: k, label: tr('{state}: da {from} a {to}', { state: STATUS_NAMES[k], from: hero.status[k], to: hero.status[k] - 1 }), primary: true })),
         { id: 'none', label: tr('Non usarla') },
@@ -1932,7 +1932,7 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   private writeSave(auto: boolean): boolean {
-    const ok = this.saves.save({ version: 1, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
+    const ok = this.saves.save({ version: 2, map: this.mapName, savedAt: Date.now(), auto, snapshot: this.state.snapshot() });
     if (ok) {
       this.justSaved.set(true);
       setTimeout(() => !this.destroyed && this.justSaved.set(false), 1400);
@@ -1992,13 +1992,13 @@ export class GameSceneComponent implements OnDestroy {
       await this.flushEvents();
       await this.playMonsters();
       if (!this.destroyed && this.state.status === 'playing') {
-        const energyBefore = new Map(this.state.pieces.map((p) => [p.id, p.energy] as const));
+        const overclockBefore = new Map(this.state.pieces.map((p) => [p.id, p.overclock] as const));
         const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
         const revived = endEvilTurn(this.state);
         snapshotSeen(this.state); // chi vedeva chi all'inizio del round (Colpo a tradimento)
         for (const h of this.state.pieces) {
-          const gained = h.energy - (energyBefore.get(h.id) ?? h.energy);
-          if (h.team === 'hero' && gained > 0 && ruleAmount(this.state, h, 'energyAtStart') > 0) this.showNotice(tr('{name} recupera {energy:{n}}', { name: h.name, n: gained }), 'water_drop', 'hero');
+          const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
+          if (h.team === 'hero' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'water_drop', 'hero');
           const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
           if (h.team === 'hero' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'hero');
         }
@@ -2558,14 +2558,14 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  /** Vigilanza: a ogni eroe che può, si chiede se spendere l'energia per attaccare il mostro appena arrivato accanto a lui (e con quale arma). */
+  /** Vigilanza: a ogni eroe che può, si chiede se spendere l'overclock per attaccare il mostro appena arrivato accanto a lui (e con quale arma). */
   private async resolveVigilance(monster: Piece, from: { cell: Cell; size: { w: number; h: number } }) {
     if (!this.board) return;
     for (const chance of vigilanceChances(this.state, this.board, monster, from)) {
       if (!this.state.pieces.includes(monster)) return;
       const answer = await this.askChoice({
         title: tr('Vigilanza'),
-        text: tr('{name} è entrato accanto a {name2}. Spendere {energy:{cost}} per attaccarlo subito?', { name: monster.name, name2: chance.hero.name, cost: chance.cost }),
+        text: tr('{name} è entrato accanto a {name2}. Spendere {overclock:{cost}} per attaccarlo subito?', { name: monster.name, name2: chance.hero.name, cost: chance.cost }),
         choices: [...chance.options.map((o) => ({ id: o.id, label: o.name, primary: true })), { id: 'no', label: tr('Rinuncia') }],
       });
       const option = chance.options.find((o) => o.id === answer);
@@ -2575,26 +2575,26 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /** Guardia: gli eroi con quell'ordine scelgono se interrompere il mostro con un attacco gratuito; l'ordine si perde dopo l'uso. */
-  /** Il cambio d'ordine di Ordini flessibili (Anarien): si sceglie fra gli altri due ordini, pagando l'energia. `monster` c'è se l'eroe sta per essere attaccato. */
+  /** Il cambio d'ordine di Ordini flessibili (Anarien): si sceglie fra gli altri due ordini, pagando l'overclock. `monster` c'è se l'eroe sta per essere attaccato. */
   private async offerOrderChange(hero: Piece, monster?: Piece) {
     const cost = orderChangeCost(this.state, hero);
     if (cost === null || !hero.order) return;
-    if (hero.energy < cost) {
-      if (!monster) this.showNotice(tr('Non hai abbastanza energia per cambiare ordine'), 'warning');
+    if (hero.overclock < cost) {
+      if (!monster) this.showNotice(tr('Non hai abbastanza overclock per cambiare ordine'), 'warning');
       return;
     }
     const others = (['aim', 'dodge', 'rest', 'guard'] as const).filter((o) => o !== hero.order);
     const answer = await this.askChoice({
       title: tr('Cambiare ordine?'),
       text: monster
-        ? tr('{name} sta per essere attaccato da {name2}. Ordine attuale: {order}. Spendere {energy:{cost}} per cambiarlo?', { name: hero.name, name2: monster.name, order: ORDER_NAMES[hero.order], cost })
-        : tr('Ordine attuale di {name}: {order}. Spendere {energy:{cost}} per cambiarlo?', { name: hero.name, order: ORDER_NAMES[hero.order], cost }),
+        ? tr('{name} sta per essere attaccato da {name2}. Ordine attuale: {order}. Spendere {overclock:{cost}} per cambiarlo?', { name: hero.name, name2: monster.name, order: ORDER_NAMES[hero.order], cost })
+        : tr('Ordine attuale di {name}: {order}. Spendere {overclock:{cost}} per cambiarlo?', { name: hero.name, order: ORDER_NAMES[hero.order], cost }),
       choices: [...others.map((o) => ({ id: o, label: ORDER_NAMES[o], primary: true })), { id: 'no', label: tr('Tieni {order}', { order: ORDER_NAMES[hero.order] }) }],
     });
     if (answer !== 'aim' && answer !== 'dodge' && answer !== 'rest' && answer !== 'guard') return;
     const r = changeOrder(this.state, hero, answer);
     if (!r.ok) return;
-    this.showNotice(tr('{name} cambia ordine: {order} ({energy:{cost}})', { name: hero.name, order: ORDER_NAMES[answer], cost: r.cost }), 'tactic', 'hero');
+    this.showNotice(tr('{name} cambia ordine: {order} ({overclock:{cost}})', { name: hero.name, order: ORDER_NAMES[answer], cost: r.cost }), 'tactic', 'hero');
     this.pieces?.refreshActive();
     this.showHud(this.pieces?.active ?? null);
   }
@@ -2626,7 +2626,7 @@ export class GameSceneComponent implements OnDestroy {
     }
   }
 
-  /** L'attacco della Vigilanza: la finestra normale dell'attacco (l'eroe tira i dadi), fuori turno e senza consumare i suoi attacchi; l'energia si paga all'applicazione. */
+  /** L'attacco della Vigilanza: la finestra normale dell'attacco (l'eroe tira i dadi), fuori turno e senza consumare i suoi attacchi; l'overclock si paga all'applicazione. */
   private async vigilanceAttack(hero: Piece, monster: Piece, option: AttackOption, pay: number) {
     await this.frameBoth(hero, monster);
     const plan = planAttack(this.state, hero, monster, option);
@@ -2846,7 +2846,7 @@ export class GameSceneComponent implements OnDestroy {
     };
     const potionEntries: CatalogEntry[] = [
       potion('potion-heal', tr('Pozione curativa'), 'heal', [tr('Recupera {potionHeal} ferite. Berla costa {potionDrinkCos} punto movimento.', { potionHeal: POTION_HEAL, potionDrinkCos: POTION_DRINK_COST }), tr('Si porta fino a 3 pozioni.')]),
-      potion('potion-energy', tr('Pozione dell\'Energia'), 'energy', [tr('Riporta l\'energia {energy} al massimo. Berla costa {mov:1}.'), tr('Si porta fino a 3 pozioni.')]),
+      potion('potion-overclock', tr('Pozione dell\'Overclock'), 'overclock', [tr('Riporta l\'overclock {overclock} al massimo. Berla costa {mov:1}.'), tr('Si porta fino a 3 pozioni.')]),
     ];
     const heroEntries = heroes.map((h): CatalogEntry => ({
       kind: 'hero', id: h.id, name: h.name, sheet: h, search: [h.name, h.class].join(' '),
@@ -2957,7 +2957,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     const answer = await this.askChoice({
       title: tr('Prepararsi: piazza un ordine'),
-      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o sei ferito. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'energia torna al massimo, se non sei ferito. Guardia: interrompi il turno del Maligno con un attacco, fino al tuo prossimo turno.'),
+      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o sei ferito. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'overclock torna al massimo, se non sei ferito. Guardia: interrompi il turno del Maligno con un attacco, fino al tuo prossimo turno.'),
       choices: [
         { id: 'aim', label: tr('Mira'), primary: true }, { id: 'dodge', label: tr('Schivata'), primary: true }, { id: 'rest', label: tr('Riposo'), primary: true }, { id: 'guard', label: tr('Guardia'), primary: true },
         { id: 'no', label: tr('Nessuno per ora') },
@@ -3542,13 +3542,13 @@ export class GameSceneComponent implements OnDestroy {
     this.showHud(this.pieces?.active ?? null);
     this.evilBusy.set(true);
     try {
-      const energyBefore = new Map(this.state.pieces.map((p) => [p.id, p.energy] as const));
+      const overclockBefore = new Map(this.state.pieces.map((p) => [p.id, p.overclock] as const));
         const woundsBefore = new Map(this.state.pieces.map((p) => [p.id, p.wounds] as const));
       const revived = endEvilTurn(this.state);
       snapshotSeen(this.state);
       for (const h of this.state.pieces) {
-        const gained = h.energy - (energyBefore.get(h.id) ?? h.energy);
-        if (h.team === 'hero' && gained > 0 && ruleAmount(this.state, h, 'energyAtStart') > 0) this.showNotice(tr('{name} recupera {energy:{n}}', { name: h.name, n: gained }), 'water_drop', 'hero');
+        const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
+        if (h.team === 'hero' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'water_drop', 'hero');
           const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
           if (h.team === 'hero' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'hero');
       }
@@ -4203,7 +4203,7 @@ export class GameSceneComponent implements OnDestroy {
     this.panel.set(null); // la scheda non deve coprire la mappa
     this.pieces?.setEnabled(false); // niente area di movimento mentre si sceglie
     this.pieces?.showCells(targets.flatMap((p) => footprint(p)));
-    this.telekinesis.set({ cost: card?.effects.reduce((n, e) => n + (((e as { cost?: { energy?: number } }).cost?.energy) ?? 0), 0) ?? 1, step: 'model' });
+    this.telekinesis.set({ cost: card?.effects.reduce((n, e) => n + (((e as { cost?: { overclock?: number } }).cost?.overclock) ?? 0), 0) ?? 1, step: 'model' });
   }
 
   protected cancelTelekinesis() {
@@ -4233,27 +4233,27 @@ export class GameSceneComponent implements OnDestroy {
       this.showNotice(tr('Tocca una delle caselle evidenziate'), 'warning');
       return;
     }
-    hero.energy = Math.max(0, hero.energy - t.cost); // si paga quando si sposta
+    hero.overclock = Math.max(0, hero.overclock - t.cost); // si paga quando si sposta
     this.telekinesis.set(null);
     this.pieces?.showCells(null);
     this.pieces?.setEnabled(true);
-    this.showNotice(tr('Telecinesi: {name} si sposta di 1 spazio ({energy:{cost}})', { name: model.name, cost: t.cost }), 'bolt');
+    this.showNotice(tr('Telecinesi: {name} si sposta di 1 spazio ({overclock:{cost}})', { name: model.name, cost: t.cost }), 'bolt');
     await this.pieces?.walk(model, [move]);
     this.pieces?.refreshActive();
     this.exploreAndNotify();
     this.refreshContext();
   }
 
-  /** Spende 1 energia per 1 punto movimento in più (dal valore dell'energia nel tab dell'eroe attivo). */
-  protected spendEnergyForMove() {
+  /** Spende 1 overclock per 1 punto movimento in più (dal valore dell'overclock nel tab dell'eroe attivo). */
+  protected spendOverclockForMove() {
     const hero = this.pieces?.active;
     if (!hero || this.evilBusy()) return;
-    const r = energyForMovement(this.state, hero);
+    const r = overclockForMovement(this.state, hero);
     if (r.code === 'ok') {
       this.pieces?.refreshActive();
-      this.showNotice(tr('Spesa {energy:1}: +{mov:1}'), 'water_drop');
-    } else if (r.code === 'none') this.showNotice(tr('Non hai più energia'), 'warning');
-    else this.showNotice(tr('Ora non puoi spendere energia'), 'warning');
+      this.showNotice(tr('Spesa {overclock:1}: +{mov:1}'), 'water_drop');
+    } else if (r.code === 'none') this.showNotice(tr('Non hai più overclock'), 'warning');
+    else this.showNotice(tr('Ora non puoi spendere overclock'), 'warning');
   }
 
   /** L'eroe attivo beve una pozione (dal bottone contestuale). */
@@ -4261,9 +4261,9 @@ export class GameSceneComponent implements OnDestroy {
     const r = this.pieces?.drinkPotion(kind);
     if (!r) return;
     const name = POTION_NAMES[kind];
-    if (r.code === 'drunk') this.showNotice(kind === 'energy' ? tr('{name} bevuta: energia al massimo', { name }) : tr('{name} bevuta: +{healed} ferite', { name, healed: r.healed }), 'tokens/potion');
+    if (r.code === 'drunk') this.showNotice(kind === 'overclock' ? tr('{name} bevuta: overclock al massimo', { name }) : tr('{name} bevuta: +{healed} ferite', { name, healed: r.healed }), 'tokens/potion');
     else if (r.code === 'full-health') this.showNotice(tr('Sei già in piena salute'), 'warning');
-    else if (r.code === 'full-energy') this.showNotice(tr('Hai già l\'energia al massimo'), 'warning');
+    else if (r.code === 'full-overclock') this.showNotice(tr('Hai già l\'overclock al massimo'), 'warning');
     else if (r.code === 'cost') this.showNotice(tr('Serve {mov:1}'), 'warning');
   }
 

@@ -32,7 +32,7 @@ import { HeroFaceComponent } from './hero-face.component';
         <div class="life"><app-hearts [wounds]="h.wounds" [max]="h.wounds" [size]="18" /><span class="dots" aria-hidden="true"></span><span class="health">{{ h.wounds }}</span></div>
         <div class="stats">
           <span class="stat speed" [title]="'stats.speed' | t"><app-icon name="footprint" [size]="18" /><span class="v">{{ h.speed }}<small>{{ 'detail.speed' | t }}</small></span></span>
-          <span class="stat energy" [title]="'stats.energy' | t"><app-icon name="water_drop" [size]="18" /><span class="v">{{ h.energy }}<small>{{ 'stats.energy' | t }}</small></span></span>
+          <span class="stat overclock" [title]="'stats.overclock' | t"><app-icon name="water_drop" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'stats.overclock' | t }}</small></span></span>
           <span class="stat" [title]="'detail.armorHint' | t"><app-icon name="shield" [size]="18" /><span class="v">{{ h.armor }}<small>{{ 'detail.armor' | t }}</small></span></span>
         </div>
 
@@ -64,7 +64,7 @@ import { HeroFaceComponent } from './hero-face.component';
     /* Numero ed etichetta sulla stessa linea di base, con un po' di spazio; l'icona resta centrata sul riquadro. */
     .stat .v { display: inline-flex; align-items: baseline; gap: 6px; }
     .stat.speed { color: var(--c-move); }
-    .stat.energy { color: var(--c-energy); }
+    .stat.overclock { color: var(--c-overclock); }
     small { font-weight: 400; color: var(--c-text-dim); }
     .ability { margin: 0; }
     .aname { text-transform: none; letter-spacing: 0; font: 600 13px/1 var(--font-ui); color: var(--c-text); }

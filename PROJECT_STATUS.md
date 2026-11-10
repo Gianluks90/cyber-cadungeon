@@ -4,7 +4,7 @@ Documento di contesto per chi non vede il codice. Fotografia presa leggendo il r
 
 ## 1. Obiettivo e relazione con CADungeon
 
-- Dungeon crawler a squadra, su griglia, nel browser, a tema cyberpunk: **2–4 eroi contro una Megacorp** (ruolo avversario, umano o automatico/script).
+- Dungeon crawler a squadra, su griglia, nel browser, a tema cyberpunk: **3 Mercenari contro un Avversario** (la Megacorp dell'ambientazione; ruolo umano o automatico/script).
 - Deriva da **CADungeon** (gioco fantasy, ora archiviato): il motore è stato copiato e adattato.
 - **Condiviso con CADungeon** (motore, sostanzialmente invariato):
   - griglia, movimento, linea di vista, porte, ostacoli;
@@ -106,7 +106,7 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 - Vibe coding: cambiamenti piccoli, gioco sempre avviabile, nessun dev server lanciato dall'assistente.
 
 **Debito / limiti**
-- **Nomenclatura doppia**: interfaccia "Megacorp/Allarme/Intrusione", dati e codice ancora `evil/hatred/magic`. Lista "da rinominare" in `CLAUDE.md` (glifo, runa, scrigno, Conquista, città/Tempio, famigli, ramo `magic`…).
+- **Nomenclatura doppia**: nomi decisi Avversario/Allarme/Intrusione/Mercenari/Overclock (vedi glossario in `CLAUDE.md`); dati e codice ancora `evil/hatred/magic/hero/energy` finché non si fa la rinomina (`docs/TODO-v2.md` L1.9). Lista "da rinominare" in `CLAUDE.md` (glifo, runa, scrigno, Conquista, città/Tempio, famigli, ramo `magic`…).
 - **Residui fantasy**: `familiars/`, `state/familiar*.ts`, `city.ts`, `telekinesis.ts` ancora nel codice benché i famigli siano "tolti".
 - **`game-scene.component.ts` e `game-state.ts` sono molto grandi** (monoliti): rischio di accoppiamento.
 - **Mappa del mondo**: tile e quote da server pubblici (`data.source.coop`, AWS Terrain) **solo per sviluppo**; in produzione servono file propri con Range e CORS.

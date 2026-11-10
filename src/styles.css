@@ -277,7 +277,7 @@ app-dialog ::placeholder {
   color: var(--c-text-dim);
 }
 
-/* Valore + icona dentro una frase (`{energy:3}`, `{mov:2}` nei testi in markdown): sulla linea del testo, nel colore del parametro. Le icone arrivano da main.ts (--ico-*). */
+/* Valore + icona dentro una frase (`{overclock:3}`, `{mov:2}` nei testi in markdown): sulla linea del testo, nel colore del parametro. Le icone arrivano da main.ts (--ico-*). */
 .tok {
   display: inline-flex;
   align-items: center;
@@ -306,11 +306,11 @@ app-dialog ::placeholder {
   --tok-icon: var(--ico-footprint);
 }
 
-.tok-energy {
-  color: var(--c-energy);
+.tok-overclock {
+  color: var(--c-overclock);
 }
 
-.tok-energy i {
+.tok-overclock i {
   --tok-icon: var(--ico-water-drop);
 }
 

@@ -51,8 +51,8 @@ interface FormEffect {
   dice: CheckDice;
   needs: string;
   refusable: boolean;
-  /** Solo per la Prova: l'eroe non può comprare dadi competenza con l'energia. */
-  noEnergy: boolean;
+  /** Solo per la Prova: l'eroe non può comprare dadi competenza con l'overclock. */
+  noOverclock: boolean;
   /** Solo per "Aggiungi al finale": il testo (markdown) e il modificatore dei punti Conquista (anche negativo). */
   endText: string;
   endPoints: string;
@@ -141,7 +141,7 @@ interface FormCondition {
   not: boolean;
 }
 
-const blank = (kind: EffectKind): FormEffect => ({ kind, dice: 'magic', needs: '1', refusable: false, noEnergy: false, endText: '', endPoints: '', ok: [], ko: [], title: '', text: '', amount: '1', variable: '', on: 'on', pieceIds: [], immunity: 'all', look: '', behavior: '', behaviorTarget: '', behaviorItem: '', reward: 'rune', rewardColor: 'red', rewardKeyId: '', rewardItem: '', rewardAmount: '1', markerId: '', areaId: '', zoneId: '', doorId: '', cell: '', state: '', wounds: '', speed: '', armor: '', turns: '2', distance: '8' });
+const blank = (kind: EffectKind): FormEffect => ({ kind, dice: 'magic', needs: '1', refusable: false, noOverclock: false, endText: '', endPoints: '', ok: [], ko: [], title: '', text: '', amount: '1', variable: '', on: 'on', pieceIds: [], immunity: 'all', look: '', behavior: '', behaviorTarget: '', behaviorItem: '', reward: 'rune', rewardColor: 'red', rewardKeyId: '', rewardItem: '', rewardAmount: '1', markerId: '', areaId: '', zoneId: '', doorId: '', cell: '', state: '', wounds: '', speed: '', armor: '', turns: '2', distance: '8' });
 
 const num = (s: string): number => {
   const n = Number(s.trim());
@@ -176,7 +176,7 @@ function toForm(e: EventEffect): FormEffect {
     case 'setBehavior': return { ...f, pieceIds: targetsOf(e), behavior: behaviorKind(e.behavior), behaviorTarget: behaviorTarget(e.behavior), behaviorItem: behaviorItem(e.behavior) };
     case 'removeImmunity': return { ...f, pieceIds: targetsOf(e), immunity: e.immunity };
     case 'openDoor': return { ...f, doorId: e.doorId };
-    case 'check': return { ...f, title: e.title ?? '', text: e.text, dice: e.dice, needs: String(e.needs ?? 1), refusable: !!e.refusable, noEnergy: !!e.noEnergy, ok: e.onSuccess.map(toForm), ko: e.onFail.map(toForm) };
+    case 'check': return { ...f, title: e.title ?? '', text: e.text, dice: e.dice, needs: String(e.needs ?? 1), refusable: !!e.refusable, noOverclock: !!e.noOverclock, ok: e.onSuccess.map(toForm), ko: e.onFail.map(toForm) };
     case 'hatred': return { ...f, amount: String(e.amount) };
     case 'drawCard': return { ...f, amount: String(e.count ?? 1) };
     case 'addEnding': return { ...f, endText: e.text ?? '', endPoints: e.points ? String(e.points) : '' };
@@ -216,7 +216,7 @@ function toEffect(f: FormEffect): EventEffect {
     case 'setBehavior': return { kind: 'setBehavior', ...targetFields(f), ...(behaviorFrom(f.behavior, f.behaviorTarget, f.behaviorItem) ? { behavior: behaviorFrom(f.behavior, f.behaviorTarget, f.behaviorItem) } : {}) };
     case 'removeImmunity': return { kind: 'removeImmunity', ...targetFields(f), immunity: f.immunity };
     case 'openDoor': return { kind: 'openDoor', doorId: f.doorId };
-    case 'check': return { kind: 'check', ...(f.title.trim() ? { title: f.title.trim() } : {}), text: f.text.trim(), dice: f.dice, needs: Math.max(1, num(f.needs)), ...(f.refusable ? { refusable: true } : {}), ...(f.noEnergy ? { noEnergy: true } : {}), onSuccess: f.ok.map(toEffect), onFail: f.ko.map(toEffect) };
+    case 'check': return { kind: 'check', ...(f.title.trim() ? { title: f.title.trim() } : {}), text: f.text.trim(), dice: f.dice, needs: Math.max(1, num(f.needs)), ...(f.refusable ? { refusable: true } : {}), ...(f.noOverclock ? { noOverclock: true } : {}), onSuccess: f.ok.map(toEffect), onFail: f.ko.map(toEffect) };
     case 'hatred': return { kind: 'hatred', amount: num(f.amount) };
     case 'drawCard': return { kind: 'drawCard', ...(num(f.amount) > 1 ? { count: num(f.amount) } : {}) };
     case 'addEnding': return { kind: 'addEnding', ...(f.endText.trim() ? { text: f.endText.trim() } : {}), ...(num(f.endPoints) !== 0 ? { points: num(f.endPoints) } : {}) };
@@ -597,7 +597,7 @@ const STATE_OPTIONS: SelectOption[] = [
                     </div>
                     <div class="check-opts">
                       <app-checkbox [checked]="e.refusable" (changed)="patch(loc, i, { refusable: $event })">{{ 'eventDialog.refusable' | t }}</app-checkbox>
-                      <app-checkbox [checked]="e.noEnergy" (changed)="patch(loc, i, { noEnergy: $event })">{{ 'eventDialog.noEnergyForDice' | t }}</app-checkbox>
+                      <app-checkbox [checked]="e.noOverclock" (changed)="patch(loc, i, { noOverclock: $event })">{{ 'eventDialog.noOverclockForDice' | t }}</app-checkbox>
                     </div>
                     <small class="dlg-hint">{{ 'eventDialog.checkHint' | t }}</small>
                     @for (branch of branches; track branch.id) {

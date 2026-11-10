@@ -1,6 +1,6 @@
 # CyberCadungeon
 
-Dungeon crawler a squadra su griglia, per browser, a tema cyberpunk: da 2 a 4 eroi contro una **Megacorp** (il ruolo che nel vecchio progetto era il "Maligno": umano o automatico).
+Dungeon crawler a squadra su griglia, per browser, a tema cyberpunk: una squadra di 3 **Mercenari** contro un **Avversario** (il ruolo che nel vecchio progetto era il "Maligno": umano o automatico; l'ambientazione lo chiama Megacorp).
 Il motore deriva da CADungeon (gioco fantasy, ora archiviato). Nomi, mostri, oggetti, testi e avventure sono provvisori e originali: niente materiale del gioco da tavolo che lo ispirava.
 Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzioni) è in `docs/legacy/CLAUDE-cadungeon.md`; le regole del gioco originale in `docs/legacy/REGOLE.md`. Sono solo fonte, non vincolanti.
 
@@ -58,12 +58,16 @@ Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzi
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
 - **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/evil/:map`, `/editor`).
 
-## Glossario provvisorio (nomi nuovi)
-- **Megacorp**: il ruolo avversario (era "Maligno"; nel codice resta `evil`, `state.evil`).
-- **Allarme**: la sua risorsa (era "Odio"; nel codice resta `hatred`, segnaposto `{hatred:N}`, token `--c-hatred`).
-- **Picchiatore** (mischia/tank), **Artigliere** (distanza), **Spettro** (furtivo/supporto): ruoli dei tre eroi di prova (`bastion`, `vesper`, `halo`). Da confermare.
-- **Intrusione**: l'attacco che nei dati è ancora `magic` (da confermare).
-- **Da rinominare**: "Maligno"/"Mazzo del Male"/"Carte del Male" nell'interfaccia e nelle chiavi `evil.*`; "Odio"→"Allarme"; "magia/magico"→"Intrusione"; "glifo", "runa/chiave runica", "scrigno", "Conquista", "dadi competenza", "scintille", "città/Tempio/Campo di addestramento"; ramo abilità `magic`; famigli (tolti); segnalino "Incontro". I nomi dei dati e del codice cambiano solo con un piano a parte.
+## Glossario (nomi decisi)
+Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.md`. Il codice è **in transizione**: finché la rinomina (TODO L1.9) non è finita, i nomi vecchi restano tra parentesi.
+- **Avversario**: il ruolo opposto (era "Maligno"/"Megacorp"; nel codice ancora `evil`, `state.evil`, rotta `/evil/:map`; diventerà `adversary`).
+- **Allarme**: la sua risorsa (era "Odio"; nel codice ancora `hatred`, `{hatred:N}`, `--c-hatred`; diventerà `alarm`).
+- **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice ancora `hero`, `heroes/`; diventerà `mercenary`). Li modella l'utente: `bastion`, `vesper`, `halo` sono solo di test e si ignorano.
+- **Picchiatore** (mischia), **Artigliere** (distanza), **Incursore** (Intrusione, ramo `hacking`): i tre archetipi.
+- **Intrusione**: attacco dell'Incursore (nei dati ancora `magic`; diventerà `intrusion`).
+- **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nei dati ancora `energy`, `{energy:N}`; diventerà `overclock`).
+- **Fama**: nome provvisorio di "Conquista" (nel codice `progress`).
+- **Da rinominare ancora**: "glifo"→Terminale, "runa/chiave runica", "scrigno", "dadi competenza", "scintille", "città/Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro". I nomi dei dati e del codice cambiano a passi piccoli (TODO L1.9), ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
 Mappa del mondo, missioni geolocalizzate, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.

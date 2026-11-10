@@ -30,8 +30,8 @@ export interface HeroSheet {
   portraitFull?: string;
   /** Ferite: sempre multipli di 4 (un cuore = 4 ferite). */
   wounds: number;
-  /** Energia (per ora solo dato: l'energia è fuori scope). */
-  energy: number;
+  /** Overclock (per ora solo dato: l'overclock è fuori scope). */
+  overclock: number;
   /** Armatura fissa: si sottrae al danno. */
   armor: number;
   /** Velocità: punti movimento a inizio turno. */

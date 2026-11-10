@@ -5,7 +5,7 @@
   "portrait": "characters/vesper-token.webp",
   "portraitFull": "characters/vesper-portrait.webp",
   "wounds": 8,
-  "energy": 4,
+  "overclock": 4,
   "armor": 1,
   "speed": 5,
   "value": 2,

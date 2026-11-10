@@ -896,7 +896,7 @@ export class PiecesController {
     this.refresh();
   }
 
-  /** Dopo un'azione che cambia le scorte dell'eroe attivo (per esempio l'energia spesa per un punto movimento): aggiorna interfaccia e caselle raggiungibili. */
+  /** Dopo un'azione che cambia le scorte dell'eroe attivo (per esempio l'overclock spesa per un punto movimento): aggiorna interfaccia e caselle raggiungibili. */
   refreshActive() {
     const active = this.active;
     if (active) this.onChange(active);

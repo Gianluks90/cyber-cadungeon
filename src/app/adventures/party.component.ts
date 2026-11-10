@@ -55,7 +55,7 @@ export const PARTY_MAX = 4;
               <div class="cap">
                 <app-value-star class="value" [value]="h.value" />
                 @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                <app-hero-stats-pill class="stats" [speed]="h.speed" [energy]="h.energy" />
+                <app-hero-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
                 <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + h.armor">
                 <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
                 <em>{{ h.armor }}</em>

@@ -258,7 +258,7 @@ export function unlinkedZones(map: MapData): string[] {
 /** Il nome di un oggetto a terra nell'elenco degli eventi: "Denaro · Area 2 · casella 3, 4" (senza l'area se la casella non ne ha). */
 export function pickupLabel(m: Marker, area?: string, itemName?: (id: string) => string | undefined): string {
   const name =
-    m.type === 'potion' ? (m.kind === 'heal' ? t('pickup.healPotion') : t('pickup.energyPotion'))
+    m.type === 'potion' ? (m.kind === 'heal' ? t('pickup.healPotion') : t('pickup.overclockPotion'))
     : m.type === 'coins' ? t('pickup.coins')
     : m.type === 'key' ? t('pickup.key')
     : m.type === 'rune' ? t('pickup.rune', { color: colorName(m.color) })

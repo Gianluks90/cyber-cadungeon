@@ -61,16 +61,16 @@ export function clearStatus(piece: Piece): void {
   piece.webbed = false;
 }
 
-/** Quanta energia costa togliersi un segnalino di stato (Rigenerazione dei tessuti di Sporin), 0 se non si può. */
+/** Quanta overclock costa togliersi un segnalino di stato (Rigenerazione dei tessuti di Sporin), 0 se non si può. */
 export function shedStatusCost(state: GameState, piece: Piece): number {
   return ruleAmount(state, piece, 'shedStatus');
 }
 
-/** Rigenerazione dei tessuti: paga l'energia e toglie un segnalino di `kind`, che non produce effetti. Restituisce se è riuscito. */
+/** Rigenerazione dei tessuti: paga l'overclock e toglie un segnalino di `kind`, che non produce effetti. Restituisce se è riuscito. */
 export function shedStatus(state: GameState, piece: Piece, kind: StatusKind): boolean {
   const cost = shedStatusCost(state, piece);
-  if (cost <= 0 || piece.energy < cost || piece.status[kind] < 1) return false;
-  piece.energy -= cost;
+  if (cost <= 0 || piece.overclock < cost || piece.status[kind] < 1) return false;
+  piece.overclock -= cost;
   piece.status[kind] -= 1;
   return true;
 }

@@ -15,9 +15,9 @@ Il motore resta quello: LOS, movimento, azioni contestuali, eventi, validatore. 
 
 | Termine | Vecchio nome | Note |
 |---|---|---|
-| **Avversario** | Maligno / Megacorp | il ruolo opposto (CPU o umano) |
-| **Allarme** | Odio | risorsa dell'Avversario |
-| **Intrusione** | Magia | tipo di attacco dell'Incursore |
+| **Avversario** | Maligno / Megacorp | il ruolo opposto (CPU o umano); nel codice `adversary` |
+| **Allarme** | Odio | risorsa dell'Avversario; nel codice `alarm` |
+| **Intrusione** | Magia | tipo di attacco dell'Incursore; nel codice `intrusion` (ramo abilità `hacking`) |
 | **Picchiatore / Artigliere / Incursore** | Spettro (ex runner) | i tre archetipi |
 | **Network** | fantasmi / compagni / Contatti | gli eroi CPU che riempiono la squadra |
 | **Briefing** | città / negozio iniziale | preparazione prima della missione |
@@ -25,7 +25,8 @@ Il motore resta quello: LOS, movimento, azioni contestuali, eventi, validatore. 
 | **Terminale** | glifo | Fama, commercio e rientro; rete **esterna**, non hackerabile |
 | **Nodo** | punto di accesso | rete **locale** dell'edificio: si hackera, si sovraccarica |
 | **Fama** *(nome provvisorio)* | Conquista | risorsa condivisa e punteggio finale |
-| **Fatica** | Energia | resta il nome nel codice finché non si rinomina |
+| **Overclock** | Energia / Fatica | risorsa di fatica del Mercenario; nome definitivo, anche nel codice (`overclock`). Dove il testo dice «Fatica», leggere «Overclock» |
+| **Mercenari** | Eroi | i personaggi della squadra (sempre 3); nel codice `mercenary` |
 
 ## 2. Squadra e archetipi [nuovo]
 

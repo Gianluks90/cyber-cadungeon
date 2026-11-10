@@ -28,8 +28,8 @@ export interface BarMember {
   wounds: number;
   maxWounds: number;
   points: number;
-  /** Energia, dalla scheda dell'eroe (per ora non si spende: l'energia è fuori scope). */
-  energy: number;
+  /** Overclock, dalla scheda dell'eroe (per ora non si spende: l'overclock è fuori scope). */
+  overclock: number;
   /** Armatura fissa, in bianco, dopo i contatori. */
   armor: number;
   /** Quante pozioni porta. */
@@ -56,7 +56,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
  * La barra in basso: una striscia di tab attaccati, uno per ogni eroe e uno per il Maligno, ognuno con lo stile del contenitore
  * a pillola (nero, bordo sottile, angoli alti arrotondati). Alle due estremità la striscia si raccorda al footer con una spalla
  * concava; fra un tab e l'altro, in alto, gli angoli arrotondati lasciano una piega.
- * Chi ha il turno ha il tab espanso (cuori, movimento, energia, attacchi): quando cambia, il tab di prima si comprime e il nuovo
+ * Chi ha il turno ha il tab espanso (cuori, movimento, overclock, attacchi): quando cambia, il tab di prima si comprime e il nuovo
  * si allarga, insieme.
  */
 @Component({
@@ -122,11 +122,11 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
               <app-hearts [wounds]="m.wounds" [max]="m.maxWounds" [poison]="m.status?.poison ?? 0" [size]="16" />
               <span class="stats">
                 <span class="stat movement" [title]="'Punti movimento' | tr"><app-icon name="footprint" [size]="16" />{{ m.points }}</span>
-                @if (m.active && m.energy > 0 && !publicView()) {
-                  <!-- Nel tab dell'eroe attivo l\\'energia è un tasto: 1 energia = 1 punto movimento in più. -->
-                  <button type="button" class="stat energy spend" [title]="'Energia: tocca per spendere 1 energia e avere 1 punto movimento in più' | tr" (click)="spendEnergy.emit()"><app-icon name="water_drop" [size]="16" />{{ m.energy }}</button>
+                @if (m.active && m.overclock > 0 && !publicView()) {
+                  <!-- Nel tab dell'eroe attivo l\\'overclock è un tasto: 1 overclock = 1 punto movimento in più. -->
+                  <button type="button" class="stat overclock spend" [title]="'Overclock: tocca per spendere 1 overclock e avere 1 punto movimento in più' | tr" (click)="spendOverclock.emit()"><app-icon name="water_drop" [size]="16" />{{ m.overclock }}</button>
                 } @else {
-                  <span class="stat energy" [title]="'Energia' | tr"><app-icon name="water_drop" [size]="16" />{{ m.energy }}</span>
+                  <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="water_drop" [size]="16" />{{ m.overclock }}</span>
                 }
                 <span class="stat" [title]="'Armatura: si sottrae al danno' | tr"><app-icon name="shield" [size]="16" />{{ m.armor }}</span>
                 <!-- Gli stati che durano (fiamma, rete, stordimento): un'icona con il numero, dopo l'armatura; se sono troppe, le prime e un "+". Il veleno sono i cuori verdi. -->
@@ -230,7 +230,7 @@ const ACTION_LABEL: Record<HeroAction, string> = { advance: '', get run() { retu
     .potion-count { display: inline-flex; align-items: center; gap: 4px; color: var(--c-line-strong); font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
     .stat { display: inline-flex; align-items: center; gap: 4px; font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
     .stat.movement { color: var(--c-move); }
-    .stat.energy { color: var(--c-energy); }
+    .stat.overclock { color: var(--c-overclock); }
     .stat.spend { padding: 0; border: 0; background: none; font: inherit; cursor: pointer; }
     .stat.spend:hover, .stat.spend:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 3px; }
     @media (prefers-reduced-motion: reduce) { .tab, .avatar, .details { transition: none; } }
@@ -283,8 +283,8 @@ export class PartyBarComponent {
   /** La Conquista del gruppo e se ha perso: si vedono nel piccolo footer della vista del Maligno. */
   readonly progress = input(0);
   readonly defeated = input(false);
-  /** Si tocca l'energia dell'eroe attivo: spende 1 energia per 1 punto movimento. */
-  readonly spendEnergy = output<void>();
+  /** Si tocca l'overclock dell'eroe attivo: spende 1 overclock per 1 punto movimento. */
+  readonly spendOverclock = output<void>();
   /** Un eroe con Ordini flessibili tocca il suo ordine per cambiarlo. */
   readonly changeOrder = output<string>();
   /** Si usa un'abilità dalla scheda. */

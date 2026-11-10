@@ -119,11 +119,11 @@ export type EventEffect =
   | { kind: 'finishRevival'; pieceId: string; pieceIds?: string[] }
   /**
    * Una prova con i dadi: l'eroe che ha fatto scattare l'evento legge `text` (markdown) e tira tanti dadi competenza quanti sono i dadi in più del suo attacco `dice` (come dice la sua
-   * scheda: nessun dado, nessun tiro e la prova fallisce; l'energia non si spende). Con almeno `needs` scintille (1 se manca) la prova è superata e valgono gli effetti di `onSuccess`,
-   * altrimenti quelli di `onFail`. Di base l'eroe può spendere 1 energia per ogni dado competenza in più prima di tirare (massimo `CHECK_MAX_DICE` dadi); con `noEnergy` non può. Con `refusable` l'eroe può anche rinunciare: non succede niente, e se la prova veniva da un'interazione il costo si restituisce e l'interazione
+   * scheda: nessun dado, nessun tiro e la prova fallisce; l'overclock non si spende). Con almeno `needs` scintille (1 se manca) la prova è superata e valgono gli effetti di `onSuccess`,
+   * altrimenti quelli di `onFail`. Di base l'eroe può spendere 1 overclock per ogni dado competenza in più prima di tirare (massimo `CHECK_MAX_DICE` dadi); con `noOverclock` non può. Con `refusable` l'eroe può anche rinunciare: non succede niente, e se la prova veniva da un'interazione il costo si restituisce e l'interazione
    * resta disponibile.
    */
-  | { kind: 'check'; title?: string; text: string; dice: 'melee' | 'ranged' | 'magic'; needs?: number; refusable?: boolean; noEnergy?: boolean; onSuccess: EventEffect[]; onFail: EventEffect[] }
+  | { kind: 'check'; title?: string; text: string; dice: 'melee' | 'ranged' | 'magic'; needs?: number; refusable?: boolean; noOverclock?: boolean; onSuccess: EventEffect[]; onFail: EventEffect[] }
   /** Si apre una porta evento (`lock: {kind:'event', id}`): da ora è una porta aperta e libera come le altre. */
   | { kind: 'openDoor'; doorId: string }
   /** Un nemico inattivo si attiva: perde il flag `inactive` e da ora agisce come un nemico qualunque (con i suoi valori normali). */
