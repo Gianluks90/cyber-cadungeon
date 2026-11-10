@@ -341,3 +341,9 @@ html,
 html *:not(input, textarea, [contenteditable], [style*='cursor']) {
   cursor: var(--cursor, auto) !important;
 }
+
+/* Il loader di un tassello della mappa del mondo in caricamento (creato da `world-map/tile-loading.ts`): sei segmenti, uno acceso alla volta, in loop. */
+.cad-tile-loader { display: flex; gap: 3px; width: 56px; box-sizing: border-box; padding: 6px; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); pointer-events: none; }
+.cad-tile-loader span { flex: 1 1 0; height: 4px; background: var(--c-line-strong); animation: cad-tile-seg 0.54s steps(1, end) infinite; }
+@keyframes cad-tile-seg { 0% { background: var(--c-interact); } 16.66% { background: var(--c-line-strong); } }
+@media (prefers-reduced-motion: reduce) { .cad-tile-loader span { animation-duration: 1.62s; } }

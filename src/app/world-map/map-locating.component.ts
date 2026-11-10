@@ -19,7 +19,7 @@ const format = (v: number, int: number): string => `${v < 0 ? '−' : '+'}${Math
     <div class="scrim">
       <section class="box" role="status" [class.found]="!!position()">
         <header>
-          <h2>{{ 'worldMap.locating.title' | t }}</h2>
+          <h2>{{ (position() ? 'worldMap.locating.loading' : 'worldMap.locating.title') | t }}</h2>
         </header>
         <hr />
         <div class="content" aria-hidden="true">
@@ -52,7 +52,6 @@ const format = (v: number, int: number): string => `${v < 0 ? '−' : '+'}${Math
     footer { padding: 14px; }
     .segments { display: flex; gap: 4px; }
     .segment { flex: 1 1 0; height: 4px; background: var(--c-line); animation: sweep 1.08s steps(1, end) infinite; }
-    .box.found .segment { animation: none; background: var(--c-you); }
     /* Il segmento si accende per un attimo e passa al successivo (i ritardi sono a scatti da 90ms su 12 segmenti = un giro di 1,08s). */
     @keyframes sweep { 0% { background: var(--c-interact); } 8.33% { background: var(--c-line); } }
     @media (prefers-reduced-motion: reduce) { .segment { animation-duration: 3.24s; } }

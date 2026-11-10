@@ -2040,6 +2040,7 @@
   "worldMap.nav.zoomOut": "Zoom out",
   "worldMap.logo": "CyberCadungeon",
   "worldMap.locating.title": "Locating…",
+  "worldMap.locating.loading": "Loading map…",
   "worldMap.locating.lat": "LAT",
   "worldMap.locating.lng": "LONG",
   "c.intrusione_e8b49": "Intrusion",

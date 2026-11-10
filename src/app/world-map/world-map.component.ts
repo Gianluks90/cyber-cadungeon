@@ -9,7 +9,8 @@ import { setGraphics, type GraphicsOptions } from '../game/graphics-settings';
 import { DropdownMenuComponent, type DropdownItem } from '../ui/dropdown-menu.component';
 import { GraphicsDialogComponent } from '../ui/graphics-dialog.component';
 import { IconComponent } from '../ui/icon.component';
-import { START_VIEW } from './map-config';
+import { BASEMAP_SOURCE_ID, START_VIEW } from './map-config';
+import { TileLoadingView } from './tile-loading';
 import { LocationConsentComponent } from './location-consent.component';
 import { GOOD_ACCURACY_M, LocationService, type UserPosition } from './location.service';
 import { applyTerrain, buildMapStyle } from './map-style';
@@ -182,6 +183,8 @@ export class WorldMapComponent {
   private readonly custom = signal<ReadonlySet<string>>(loadCustomFilters());
   protected readonly enabled = computed(() => enabledFor(this.preset(), this.custom()));
   private map: MapLibreMap | null = null;
+  /** Il bordo tratteggiato e il loader dei tasselli in arrivo. */
+  private tileLoading: TileLoadingView | null = null;
   private resizeObserver: ResizeObserver | null = null;
   private protocolRegistered = false;
 
@@ -255,6 +258,8 @@ export class WorldMapComponent {
       this.userMarker = null;
       this.resizeObserver?.disconnect();
       this.resizeObserver = null;
+      this.tileLoading?.destroy();
+      this.tileLoading = null;
       this.map?.remove(); // libera anche il contesto WebGL
       this.map = null;
       if (this.protocolRegistered) {
@@ -372,6 +377,7 @@ export class WorldMapComponent {
     this.showUser(map, this.location.position(), this.location.facing());
     // Lo stile si ricrea al cambio di tema e azzera le visibilità: i filtri si riapplicano a ogni caricamento.
     map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); });
+    this.tileLoading = new TileLoadingView(map, BASEMAP_SOURCE_ID);
     map.once('idle', () => this.ready.set(true)); // 'idle': ha finito di caricare e disegnare (anche se qualche tassello è fallito)
     map.on('rotate', () => this.bearing.set(Math.round(map.getBearing())));
     map.on('zoom', () => this.sizeHalo(map));
