@@ -1,6 +1,6 @@
 import type { Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
 import { layers } from '@protomaps/basemaps';
-import { ATTRIBUTION_HTML, BASEMAP_SOURCE_ID, DEM_ATTRIBUTION_HTML, DEM_SOURCE_ID, DEM_TILES_URL, GLYPHS_URL, LABEL_LANGUAGE, PMTILES_URL, SPRITE_BASE_URL, TERRAIN_EXAGGERATION } from './map-config';
+import { BASEMAP_SOURCE_ID, DEM_SOURCE_ID, DEM_TILES_URL, GLYPHS_URL, LABEL_LANGUAGE, PMTILES_URL, SPRITE_BASE_URL, TERRAIN_EXAGGERATION } from './map-config';
 import type { MapTheme } from './map-theme';
 
 /** Trasforma un tema nello stile completo di MapLibre (sorgente, font, icone, layer di Protomaps + contorno degli edifici). */
@@ -56,8 +56,9 @@ export function buildMapStyle(theme: MapTheme): StyleSpecification {
     glyphs: GLYPHS_URL,
     sprite: `${SPRITE_BASE_URL}/${theme.spriteName}`,
     sources: {
-      [BASEMAP_SOURCE_ID]: { type: 'vector', url: `pmtiles://${PMTILES_URL}`, attribution: ATTRIBUTION_HTML },
-      [DEM_SOURCE_ID]: { type: 'raster-dem', tiles: [DEM_TILES_URL], encoding: 'terrarium', tileSize: 256, maxzoom: 15, attribution: DEM_ATTRIBUTION_HTML },
+      [BASEMAP_SOURCE_ID]: { type: 'vector', url: `pmtiles://${PMTILES_URL}` },
+      // I crediti di queste sorgenti non stanno qui ma nella dialog del tasto info (vedi `map-config.ts`).
+      [DEM_SOURCE_ID]: { type: 'raster-dem', tiles: [DEM_TILES_URL], encoding: 'terrarium', tileSize: 256, maxzoom: 15 },
     },
     layers: allLayers,
   };

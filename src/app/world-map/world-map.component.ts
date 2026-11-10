@@ -1,9 +1,8 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, signal, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { AttributionControl, Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { AuthService } from '../auth/auth.service';
-import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
 import { START_VIEW } from './map-config';
@@ -11,6 +10,7 @@ import { LocationConsentComponent } from './location-consent.component';
 import { GOOD_ACCURACY_M, LocationService, type UserPosition } from './location.service';
 import { applyTerrain, buildMapStyle } from './map-style';
 import { MapNavComponent } from './map-nav.component';
+import { MapCreditsComponent } from './map-credits.component';
 import { MapFilterPanelComponent } from './map-filter-panel.component';
 import { FILTER_GROUPS, applyMapFilters, enabledFor, loadCustomFilters, loadPreset, saveCustomFilters, savePreset, type FilterPreset } from './map-filters';
 import { createCyberpunkTheme, type MapTheme } from './map-theme';
@@ -36,7 +36,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, MapFilterPanelComponent, MapNavComponent, LocationConsentComponent],
+  imports: [IconComponent, TranslatePipe, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, LocationConsentComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -53,6 +53,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
+    <app-map-credits />
     @if (location.searching()) {
       <p class="status">{{ 'location.searching' | t }}</p>
     } @else if (lowAccuracy(); as meters) {
@@ -270,8 +271,7 @@ export class WorldMapComponent {
       minPitch: this.view3d() ? PITCH_3D : 0, // l'inclinazione la scegliamo noi: min e max uguali la bloccano
       maxPitch: this.view3d() ? PITCH_3D : 0,
       trackResize: false, // il ridimensionamento lo segue solo il ResizeObserver qui sotto: due ascoltatori ridisegnavano due volte
-      attributionControl: false, // aggiunta a mano sotto, sempre aperta
-      locale: this.controlTexts(),
+      attributionControl: false, // i crediti stanno nella dialog del tasto info (`app-map-credits`)
     });
     this.map = map;
     this.setInteractive(map, !this.location.locked());
@@ -280,19 +280,10 @@ export class WorldMapComponent {
     map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); });
     map.on('rotate', () => this.bearing.set(Math.round(map.getBearing())));
     map.on('zoom', () => this.sizeHalo(map));
-    map.addControl(new AttributionControl({ compact: false }), 'bottom-right');
 
     // Se cambia la misura del contenitore senza che cambi la finestra, la mappa si ridisegna.
     this.resizeObserver = new ResizeObserver(() => map.resize());
     this.resizeObserver.observe(this.container().nativeElement);
-  }
-
-  /** I testi dei controlli di MapLibre (resta solo l'attribuzione), nella lingua di adesso (letti al momento della creazione). */
-  private controlTexts(): Record<string, string> {
-    return {
-      'AttributionControl.ToggleAttribution': translate('worldMap.toggleAttribution'),
-      'AttributionControl.MapFeedback': translate('worldMap.mapFeedback'),
-    };
   }
 
   /** Accende o spegne ogni modo di muovere la mappa (trascinare, zoom, tastiera, tocco). */
