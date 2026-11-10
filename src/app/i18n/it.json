@@ -2061,5 +2061,8 @@
   "enemy.overheat": "Surriscaldamento",
   "enemy.contagion": "Contagio",
   "enemy.short-circuit": "Cortocircuito",
-  "c.folgorazione_44598": "Folgorazione"
+  "c.folgorazione_44598": "Folgorazione",
+  "item.street-deck": "Deck da strada",
+  "item.military-deck": "Deck militare",
+  "item.silenced-pistol": "Pistola silenziata"
 }

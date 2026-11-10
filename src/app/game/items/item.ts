@@ -69,6 +69,10 @@ export interface ItemDef {
   spark?: { cost: number; effect: string }[];
   /** Il bonus di supporto: lo dà all'altra arma quando l'eroe ha due armi da mischia a una mano e attacca con l'altra (docs/REGOLE.md, "Brandire due armi"). */
   offHand?: string;
+  /** Gittata dell'arma in caselle (v2: la gittata sta sull'oggetto; per un cyberdeck è il raggio base). Per ora solo dato. */
+  range?: number;
+  /** Armatura digitale che l'oggetto dà contro l'Intrusione (cyberdeck e "firewall"). Per ora solo dato. */
+  ice?: number;
   /** Il nome di un'icona (public/icons/). */
   icon?: string;
   /** Etichette di categoria, per esempio `rune` (un oggetto "Runa": certe armature non permettono di equipaggiarlo). */

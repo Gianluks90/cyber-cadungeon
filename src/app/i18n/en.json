@@ -2061,5 +2061,8 @@
   "enemy.overheat": "Overheat",
   "enemy.contagion": "Contagion",
   "enemy.short-circuit": "Short circuit",
-  "c.folgorazione_44598": "Shock"
+  "c.folgorazione_44598": "Shock",
+  "item.street-deck": "Street deck",
+  "item.military-deck": "Military deck",
+  "item.silenced-pistol": "Silenced pistol"
 }

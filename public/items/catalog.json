@@ -41,7 +41,8 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/crossbow"
+      "icon": "tokens/items/crossbow",
+      "range": 5
     },
     {
       "id": "hack-deck",
@@ -64,7 +65,9 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/staff-a"
+      "icon": "tokens/items/staff-a",
+      "range": 4,
+      "ice": 1
     },
     {
       "id": "ballistic-vest",
@@ -156,7 +159,8 @@
       "rules": [
         "Perforare 3"
       ],
-      "icon": "tokens/items/bow-b"
+      "icon": "tokens/items/bow-b",
+      "range": 8
     },
     {
       "id": "plasma-cannon",
@@ -182,7 +186,77 @@
           "effect": "+1 gittata"
         }
       ],
-      "icon": "tokens/items/thrown"
+      "icon": "tokens/items/thrown",
+      "range": 6
+    },
+    {
+      "id": "street-deck",
+      "name": "Deck da strada",
+      "kind": "weapon",
+      "attack": "intrusion",
+      "hands": 2,
+      "price": 75,
+      "dice": [
+        "white"
+      ],
+      "range": 3,
+      "ice": 0,
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        }
+      ],
+      "icon": "tokens/items/staff-a"
+    },
+    {
+      "id": "military-deck",
+      "name": "Deck militare",
+      "kind": "weapon",
+      "attack": "intrusion",
+      "hands": 2,
+      "price": 300,
+      "dice": [
+        "white",
+        "green",
+        "yellow"
+      ],
+      "range": 5,
+      "ice": 2,
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        },
+        {
+          "cost": 2,
+          "effect": "+1 gittata"
+        }
+      ],
+      "icon": "tokens/items/staff-a"
+    },
+    {
+      "id": "silenced-pistol",
+      "name": "Pistola silenziata",
+      "kind": "weapon",
+      "attack": "ranged",
+      "hands": 1,
+      "price": 200,
+      "dice": [
+        "blue",
+        "green"
+      ],
+      "range": 4,
+      "tags": [
+        "silenced"
+      ],
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        }
+      ],
+      "icon": "tokens/items/crossbow"
     }
   ]
 }

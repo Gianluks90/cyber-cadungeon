@@ -62,6 +62,8 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Decisione**: sì → **Q6** (mappatura delle 4 voci esistenti, numeri), **Q7** (nomi).
 
 ### L0.5 — Oggetti v2: cyberdeck, armi con gittata, silenziate
+- **Fatto (valori provvisori, scelti da me per Q9)**: campi opzionali `range` e `ice` in `Item`; gittata scritta su `pulse-pistol` (5), `rail-rifle` (8), `plasma-cannon` (6). Tre cyberdeck: `street-deck` (1 dado bianco, raggio 3, ICE 0, 75), `hack-deck` (bianco+giallo, raggio 4, ICE 1, 150), `military-deck` (bianco+verde+giallo, raggio 5, ICE 2, 300). Nuova `silenced-pistol` (tag `silenced`, 200). Traduzioni `item.*`. Tutto inerte finché non ci sono L1.1/L2.1.
+- **Fatto anche L0.6**: scorte del negozio a 99 per tutti gli oggetti in `public/shops/city.json`.
 - **Serve**: 2–3 cyberdeck (`kind: weapon`, `attack: magic`, dadi bianchi), armi a distanza con gittata scritta, tag per armi silenziate. Il catalogo oggi ha 8 oggetti.
 - **Tocca**: `public/items/catalog.json` (campi come `range`, `ice`, tag `silenced` sono ignorati finché non ci sono L1.1, L2.1, L3.8); `i18n` `item.<id>`; icone in `public/icons/`.
 - **Dipende da**: niente per scriverli; L2.1/L3.2 per farli funzionare.

@@ -2,10 +2,13 @@
   "id": "city",
   "name": "Negozio della città",
   "stock": {
-    "mono-blade": 3,
-    "pulse-pistol": 2,
-    "hack-deck": 2,
-    "ballistic-vest": 3,
-    "shield": 2
+    "mono-blade": 99,
+    "pulse-pistol": 99,
+    "hack-deck": 99,
+    "ballistic-vest": 99,
+    "shield": 99,
+    "street-deck": 99,
+    "military-deck": 99,
+    "silenced-pistol": 99
   }
 }
