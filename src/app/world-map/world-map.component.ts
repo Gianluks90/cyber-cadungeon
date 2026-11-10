@@ -3,7 +3,9 @@ import { Router } from '@angular/router';
 import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { AuthService } from '../auth/auth.service';
+import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { DropdownMenuComponent, type DropdownItem } from '../ui/dropdown-menu.component';
 import { IconComponent } from '../ui/icon.component';
 import { START_VIEW } from './map-config';
 import { LocationConsentComponent } from './location-consent.component';
@@ -37,29 +39,29 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent],
+  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  // H tenuto premuto mostra i nomi dei tasti; se la finestra perde il fuoco mentre è premuto, il keyup non arriva: si spengono comunque.
-  host: { '(document:keydown)': 'onKey($event, true)', '(document:keyup)': 'onKey($event, false)', '(window:blur)': 'labels.set(false)' },
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
     @if (locating()) {
       <app-map-locating [position]="location.position()" />
     }
     <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
-    <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [labels]="labels()" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
-    <button type="button" class="fullscreen" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
-      <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="20" />
-    </button>
-    <button type="button" class="logout" [attr.aria-label]="'worldMap.logout' | t" [title]="'worldMap.logout' | t" (click)="logout()">
-      <app-icon name="logout" [size]="20" />
-    </button>
+    <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
+    <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
+      <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
+        <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />
+      </button>
+      <button dropdown-actions type="button" class="hbtn" disabled [attr.aria-label]="'worldMap.menu.settings' | t" [title]="'worldMap.menu.settings' | t">
+        <app-icon name="settings" [size]="18" />
+      </button>
+    </app-dropdown-menu>
     <p class="clock" role="timer" [attr.aria-label]="(isNight() ? 'worldMap.night' : 'worldMap.day') | t">
       <span class="sun" [class.swapping]="swapping()"><app-icon [name]="shownNight() ? 'bedtime' : 'light_mode'" [size]="20" /></span>
       {{ time() }}
     </p>
-    <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" [labels]="labels()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-map-credits />
+    <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
+    <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     @if (location.searching() && ready()) {
       <p class="status">{{ 'location.searching' | t }}</p>
     } @else if (lowAccuracy(); as meters) {
@@ -79,21 +81,20 @@ const USER_ZOOM = 16;
     .map { position: absolute; inset: 0; opacity: 0; transition: opacity var(--t-base); }
     /* La mappa compare quando ha disegnato i primi tasselli (all'avvio sul giocatore, dietro la finta dialog "Localizzazione in corso"). */
     .map.ready { opacity: 1; }
-    /* In alto a destra, a spigoli secchi come le altre cornici del progetto. */
-    /* In alto a sinistra, nel box come il logout; il logo è un SVG usato come maschera, quindi lo colora il testo. */
+    /* In alto a sinistra, nel box come i tasti; il logo è un SVG usato come maschera, quindi lo colora il testo. */
     .logo { position: absolute; top: 10px; left: 10px; z-index: 1; box-sizing: border-box; height: 36px; width: 82px; border: 1px solid var(--c-line-strong); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: none; }
     .logo::after { content: ''; position: absolute; inset: 0; margin: auto; width: 62px; height: 20px; background-color: var(--c-text); -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
-    .logout { position: absolute; top: 10px; right: 10px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
+    /* I tasti nell'intestazione della tendina (schermo intero, impostazioni): quadrati piccoli, a spigoli secchi. */
+    .hbtn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
+    .hbtn:hover:not(:disabled), .hbtn:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    .hbtn:disabled { opacity: 0.45; cursor: default; }
     /* Lo stato della ricerca della posizione: al centro in basso, senza spostare l'orologio. Su telefono occupa tutta la larghezza (meno 10px per lato). */
     .status { position: absolute; left: 50%; transform: translateX(-50%); bottom: 10px; z-index: 2; margin: 0; padding: 0 5px; max-width: calc(100% - 20px); box-sizing: border-box; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif; pointer-events: none; }
     .status { display: flex; align-items: center; gap: 4px; }
     .halo-toggle { pointer-events: auto; width: 20px; height: 20px; margin-right: -5px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast); }
     .halo-toggle:hover, .halo-toggle:focus-visible { color: var(--c-interact); outline: none; }
-    .fullscreen { position: absolute; top: 10px; right: 54px; z-index: 1; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
-    .fullscreen:hover, .fullscreen:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* L'orologio: un riquadro come i tasti (36px di altezza), in basso a sinistra. */
     .clock { position: absolute; left: 10px; bottom: 10px; z-index: 1; margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
-    .logout:hover, .logout:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* Il passaggio giorno/notte: l'icona scende, cambia mentre è nascosta e risale al suo posto. */
     .sun { display: inline-flex; transition: transform 240ms var(--ease-draw), opacity 240ms; }
     .sun.swapping { transform: translateY(28px); opacity: 0; }
@@ -139,8 +140,15 @@ export class WorldMapComponent {
   protected readonly shownNight = signal(this.isNight());
   /** L'icona è scesa e sta per cambiare. */
   protected readonly swapping = signal(false);
-  /** H tenuto premuto: si vedono i nomi dei tasti ai lati dello schermo. */
-  protected readonly labels = signal(false);
+  /** Il pannello laterale aperto: uno solo alla volta (aprirne uno chiude l'altro). */
+  protected readonly panel = signal<'filters' | 'menu' | null>(null);
+  /** La dialog dei crediti (voce Attribuzione del menu) è aperta. */
+  protected readonly creditsOpen = signal(false);
+  /** Le voci della tendina in alto a destra, nell'ordine in cui compaiono (si ricalcolano al cambio di lingua). */
+  protected readonly menuItems = computed<DropdownItem[]>(() => [
+    { id: 'credits', icon: 'info', label: translate('worldMap.menu.attribution') },
+    { id: 'logout', icon: 'logout', label: translate('worldMap.menu.logout') },
+  ]);
   /** Il contenitore esiste nel DOM: da qui si può creare la mappa. */
   private readonly domReady = signal(false);
   /** La mappa ha disegnato i primi tasselli: prima si vede il loader. */
@@ -251,16 +259,14 @@ export class WorldMapComponent {
     });
   }
 
-  /** H tenuto premuto mostra i nomi dei tasti; lasciarlo li nasconde (anche se il fuoco è in un campo di testo). */
-  protected onKey(e: KeyboardEvent, down: boolean): void {
-    if (e.key.toLowerCase() !== 'h') return;
-    if (!down) {
-      this.labels.set(false);
-      return;
-    }
-    const target = e.target as HTMLElement | null;
-    if (e.ctrlKey || e.metaKey || e.altKey || target?.closest('input, textarea, select, [contenteditable]')) return;
-    this.labels.set(true);
+  /** Un pannello dice che si apre o si chiude: aprendosi prende il posto dell'altro, chiudendosi lascia stare quello che c'è. */
+  protected setPanel(which: 'filters' | 'menu', open: boolean): void {
+    this.panel.update((current) => (open ? which : current === which ? null : current));
+  }
+
+  protected onMenu(id: string): void {
+    if (id === 'credits') this.creditsOpen.set(true);
+    else if (id === 'logout') void this.logout();
   }
 
   protected toggle(id: string): void {

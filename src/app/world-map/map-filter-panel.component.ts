@@ -1,7 +1,8 @@
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, input, model, output } from '@angular/core';
 import type { MessageKey } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
+import { KeyLabelComponent } from '../ui/key-label.component';
 import { FILTER_GROUPS, type FilterPreset, type FilterSection } from './map-filters';
 
 const PRESETS: { id: FilterPreset; label: MessageKey }[] = [
@@ -23,18 +24,18 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
  */
 @Component({
   selector: 'app-map-filter-panel',
-  imports: [IconComponent, TranslatePipe],
+  imports: [IconComponent, KeyLabelComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:keydown)': 'onKey($event)' },
   template: `
     <div class="wrap" [class.open]="open()">
-      <nav class="rail" [class.labels]="labels()">
+      <nav class="rail">
         <div class="item">
           <button type="button" class="tab" [class.on]="open()" [attr.aria-expanded]="open()" [attr.aria-label]="(open() ? 'worldMap.filter.close' : 'worldMap.filter.open') | t" (click)="open.set(!open())">
             <app-icon name="filter_list" [size]="20" />
             <kbd>F</kbd>
           </button>
-          <span class="tip" aria-hidden="true">{{ 'worldMap.filter.title' | t }}</span>
+          <app-key-label side="right">{{ 'worldMap.filter.title' | t }}</app-key-label>
         </div>
       </nav>
       <aside class="sheet" [attr.aria-label]="'worldMap.filter.title' | t">
@@ -82,9 +83,6 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
     /* Il container verticale lungo il lato sinistro: ospita i tasti quadrati. */
     .rail { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .item { position: relative; }
-    /* L'etichetta (tasto H): alla destra del tasto. */
-    .tip { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); height: 22px; padding: 0 8px; box-sizing: border-box; display: flex; align-items: center; white-space: nowrap; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; opacity: 0; pointer-events: none; transition: opacity var(--t-fast); }
-    .rail.labels .tip { opacity: 1; }
     .tab, .close { display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .tab { position: relative; pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
@@ -127,10 +125,9 @@ export class MapFilterPanelComponent {
   /** Il filtro scelto. */
   readonly preset = input.required<FilterPreset>();
   readonly presetChosen = output<FilterPreset>();
-  /** Mostra il nome del tasto (H tenuto premuto). */
-  readonly labels = input(false);
 
-  protected readonly open = signal(false);
+  /** Il pannello è aperto: lo tiene la Home (`[(open)]`), che ne lascia aperto uno solo alla volta. */
+  readonly open = model(false);
   protected readonly sections = SECTIONS;
   protected readonly presets = PRESETS;
   protected readonly presetLabel = computed<MessageKey>(() => PRESETS.find((p) => p.id === this.preset())!.label);
