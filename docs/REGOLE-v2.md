@@ -24,9 +24,11 @@ Il motore resta quello: LOS, movimento, azioni contestuali, eventi, validatore. 
 | **Fondi** | monete | i 300 del Briefing e quelli trovati in missione |
 | **Terminale** | glifo | Fama, commercio e rientro; rete **esterna**, non hackerabile |
 | **Nodo** | punto di accesso | rete **locale** dell'edificio: si hackera, si sovraccarica |
-| **Fama** *(nome provvisorio)* | Conquista | risorsa condivisa e punteggio finale |
+| **Fama** | Conquista | risorsa condivisa e punteggio finale |
 | **Overclock** | Energia / Fatica | risorsa di fatica del Mercenario; nome definitivo, anche nel codice (`overclock`). Dove il testo dice «Fatica», leggere «Overclock» |
 | **Mercenari** | Eroi | i personaggi della squadra (sempre 3); nel codice `mercenary` |
+| **Cassa** | scrigno / baule | contenitore di ricompense (in inglese "chest") |
+| **Mazzo Avversario** | Mazzo del Male | le Carte dell'Avversario |
 
 ## 2. Squadra e archetipi [nuovo]
 

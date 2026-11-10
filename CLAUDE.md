@@ -65,9 +65,11 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice `mercenary`, cartelle `mercenaries/`). Li modella l'utente: `bastion`, `vesper`, `halo` sono solo di test e si ignorano.
 - **Picchiatore** (mischia), **Artigliere** (distanza), **Incursore** (Intrusione, ramo `hacking`): i tre archetipi.
 - **Intrusione**: attacco dell'Incursore (nei dati `intrusion`; il ramo abilità è `hacking`, "Hacking").
-- **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nei dati ancora `energy`, `{energy:N}`; diventerà `overclock`).
-- **Fama**: nome provvisorio di "Conquista" (nel codice `progress`).
-- **Da rinominare ancora**: "glifo"→Terminale, "runa/chiave runica", "scrigno", "dadi competenza", "scintille", "città/Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro". I nomi dei dati e del codice cambiano a passi piccoli (TODO L1.9), ogni nuova chiave sostituisce per intero la vecchia, senza alias.
+- **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nel codice `overclock`, `{overclock:N}`).
+- **Fama**: nome della risorsa condivisa (era "Conquista"; nel codice ancora `progress`).
+- **Cassa**: era "scrigno"/"baule" (nei testi; in inglese "chest"). **Terminale**: era "glifo" (testi: it "terminale", en "terminal"; nel codice ancora `glyph`). **Mazzo Avversario / Carte dell'Avversario**: era "Mazzo/Carte del Male".
+- **Restano com'erano**: "città" e "dadi competenza" (decisione presa).
+- **Da rinominare ancora**: "runa/chiave runica", "scintille", "Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro"; "Briefing" e Megacorp ancora da decidere. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
 Mappa del mondo, missioni geolocalizzate, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.

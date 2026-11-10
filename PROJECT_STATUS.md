@@ -106,7 +106,7 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 - Vibe coding: cambiamenti piccoli, gioco sempre avviabile, nessun dev server lanciato dall'assistente.
 
 **Debito / limiti**
-- **Nomenclatura doppia**: nomi decisi Avversario/Allarme/Intrusione/Mercenari/Overclock (vedi glossario in `CLAUDE.md`); dati e codice rinominati (`adversary/alarm/intrusion/mercenary/overclock`, TODO L1.9 completata); restano da aggiornare i **testi visibili** (L0.2). Lista "da rinominare" in `CLAUDE.md` (glifo, runa, scrigno, Conquista, città/Tempio, famigli, ramo `magic`…).
+- **Nomenclatura doppia**: nomi decisi Avversario/Allarme/Intrusione/Mercenari/Overclock (vedi glossario in `CLAUDE.md`); dati e codice rinominati (`adversary/alarm/intrusion/mercenary/overclock`, TODO L1.9 completata); i **testi visibili** sono allineati (L0.2: Avversario, Allarme, mercenario, Fama, cassa, terminale, Mazzo Avversario). Lista "da rinominare" in `CLAUDE.md` (runa, scintille, Tempio, famigli, Briefing, Megacorp; chiavi di codice `glyph`/`progress`).
 - **Residui fantasy**: `familiars/`, `state/familiar*.ts`, `city.ts`, `telekinesis.ts` ancora nel codice benché i famigli siano "tolti".
 - **`game-scene.component.ts` e `game-state.ts` sono molto grandi** (monoliti): rischio di accoppiamento.
 - **Mappa del mondo**: tile e quote da server pubblici (`data.source.coop`, AWS Terrain) **solo per sviluppo**; in produzione servono file propri con Range e CORS.
