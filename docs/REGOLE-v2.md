@@ -1,5 +1,7 @@
 # Regolamento di Cyber CADungeon (v2, bozza 0)
 
+> **Aggiornamento 2026-11-11**: `docs/DESIGN-MOD-CONTRATTI.md` sostituisce parti di questo file: §3 (pin e abilità secondarie casuali), §4 (equipaggiamento, abilità, fondi che avanzano), §7 (il cyberdeck non è più solo dell'Incursore), §9 («Fama» di missione diventa **Progresso**; Fama è il punteggio del giocatore), §12 (i pin). Dove c'è conflitto, vale il nuovo documento.
+
 Questo file nasce da `docs/legacy/REGOLE.md` (v1) e lo adatta al nuovo gioco. Per ogni sezione c'è l'etichetta **[resta]**, **[cambia]**, **[cade]** o **[nuovo]** rispetto alla v1. I numeri segnati *(da bilanciare)* sono valori di partenza.
 Il motore resta quello: LOS, movimento, azioni contestuali, eventi, validatore. Le regole qui sotto non vanno testate a tavolino, vanno ottimizzate in gioco.
 

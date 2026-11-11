@@ -28,6 +28,17 @@ Per tutto ciò che è testo visibile vale la regola di `CLAUDE.md`: riga in `it.
 
 ---
 
+## Aggiornamento 2026-11-11 (design mod/contratti)
+
+Vedi `docs/DESIGN-MOD-CONTRATTI.md`.
+
+- **Cadono**: L1.6 (pescaggio casuale delle abilità) e L4.3 (pin e progressione dell'eroe). Il Briefing non pesca più abilità.
+- **Cambiano**: L0.5 (oggetti: da catalogo di oggetti a oggetti base con slot + catalogo di mod), L0.7 (abilità di hacking → cyberware scelti da lista corta), L2.4 e L2.5/L3.10 (il Briefing sceglie mod e intel, non compra oggetti; fondi che avanzano vanno ai terminali), L0.8/L3.1 (facce dei dadi: restano cuori, scintille, Mancato).
+- **Nuove (da fare dopo il prototipo)**: sistema di slot e mod (passive/attive con scintille); cyberdeck per tutti con funzione per archetipo (Berserk, Aggancio; l'Incursore resta L3.2-L3.5); abilità-cyberware; intel a pagamento; profili di debolezza per contratto; testi «Fama» → «Progresso».
+- Il prototipo minimo è in `docs/DESIGN-MOD-CONTRATTI.md` §8.
+
+---
+
 ## Livello 0 · Solo dati e testi
 
 Si può fare senza toccare il codice (ciò che il motore non legge ancora resta inerte, ma si scrive già).
@@ -115,7 +126,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Tocca**: `game/constants.ts` (le misure vanno lì per regola di progetto). Già presenti: `EVIL_DECK_END_PENALTY = 3` (v2: −3 ✓), `GLYPH_PROGRESS = 3` (v2: +3 ✓), `POTION_LIMIT = 3`, `BACKPACK_LIMIT = 3`, `DEFAULT_PROGRESS = 20`.
 - **Decisione**: valori "da bilanciare" nelle bozze; si scrivono i valori di partenza.
 
-### L1.6 — Pescaggio delle abilità con seme
+### ~~L1.6 — Pescaggio delle abilità con seme~~ (CADUTA, vedi aggiornamento 2026-11-11)
 - **Serve**: pescare le abilità secondarie in modo ripetibile (seme del contratto) e tenere fuori quelle in pin.
 - **Tocca**: `drawSkillCards` (`heroes/party-setup.ts:112`) usa `Math.random()` e non ha seme; chiamata anche da `lobby/lobby-net.ts:166`. Il generatore con seme c'è già in `map/rng.ts` e in `GameState.random()`.
 - **Dipende da**: Q12 (seme: del contratto, del giocatore o di entrambi?). Le parti sui pin sono L4.3.
@@ -271,7 +282,7 @@ Budget fisso: `check()` in `heroes/hero-sheet.ts:58` avvisa già se dadi o punti
 - **Tocca**: unione `Marker` (`board/marker.ts:8`) e `MapData.markers`; `markers/marker-view.ts` + `markers/marker-rules.ts`; editor (strumenti, ispettore, `validator.ts`); trigger degli eventi (`defeated`, `interact`); `AttackOption`/bersagli (oggi `attackOptions` accetta solo `Piece`); icone, token, `i18n`.
 - **Dipende da**: L2.1, L3.9. **Decisione**: Q18.
 
-### L4.3 — Pin e progressione dell'eroe
+### ~~L4.3 — Pin e progressione dell'eroe~~ (CADUTA, vedi aggiornamento 2026-11-11)
 - **Serve**: 3 slot di pin per eroe, sbloccati giocando (1→2→3), abilità "già viste", persistenza per eroe.
 - **Tocca**: non esiste uno store per gli eroi (`SaveStore` salva una partita per avventura; l'`eroe persistente` è fuori scope in `CLAUDE.md`). Servono: nuova interfaccia `HeroStore` (locale, poi Firestore), regole di sblocco, schermata dei pin, integrazione in `drawSkillCards` (L1.6) e nel Briefing (L2.4).
 - **Decisione**: **Q29, Q30** (quando si sblocca un pin; dove vive la progressione senza account).

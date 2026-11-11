@@ -1,5 +1,7 @@
 # CyberCadungeon — stato del progetto
 
+> **Nota 2026-11-11**: questa fotografia è precedente alle rinomine (TODO L1.9, `monster`→`enemy`, `hero`→`mercenary`, `evil`→`adversary`) e a parte della pulizia; i nomi di cartelle, i 9 nemici e i cataloghi qui sotto possono essere indietro. Per i nomi vale `CLAUDE.md` (glossario) e per il design in corso `docs/DESIGN-MOD-CONTRATTI.md`.
+
 Documento di contesto per chi non vede il codice. Fotografia presa leggendo il repository (non ho eseguito build né test: non so se `npm run build` passa adesso).
 
 ## 1. Obiettivo e relazione con CADungeon

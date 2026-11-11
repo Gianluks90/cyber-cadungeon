@@ -3,12 +3,13 @@
 Dungeon crawler a squadra su griglia, per browser, a tema cyberpunk: una squadra di 3 **Mercenari** contro un **Avversario** (il ruolo che nel vecchio progetto era il "Maligno": umano o automatico; l'ambientazione lo chiama Megacorp).
 Il motore deriva da CADungeon (gioco fantasy, ora archiviato). Nomi, nemici, oggetti, testi e avventure sono provvisori e originali: niente materiale del gioco da tavolo che lo ispirava.
 Il vecchio `CLAUDE.md` (regole di gioco, editor nel dettaglio, catalogo di funzioni) è in `docs/legacy/CLAUDE-cadungeon.md`; le regole del gioco originale in `docs/legacy/REGOLE.md`. Sono solo fonte, non vincolanti.
+Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, contratti, Fixer), un delta di `docs/REGOLE-v2.md`. Fa fede solo la parte «Deciso»; «Da provare» solo nel prototipo; «Rimandato» non si implementa.
 
 ## Come lavoriamo
 - Vibe coding: spiega le scelte in modo semplice, senza troppo gergo.
 - Prima di scrivere codice per una funzione nuova, descrivi in due righe cosa farai.
 - Cambiamenti piccoli e verificabili: dopo ogni passo il gioco resta avviabile (`/play/test` si carica) e `npm run build` passa.
-- Se una decisione cambia l'architettura e non è qui, chiedi prima. Il motore (`src/app/game`, `editor`, `lobby`) non si tocca se non è indispensabile.
+- Se una decisione cambia l'architettura e non è qui, chiedi prima. Il motore (`src/app/game`, `editor`, `lobby`) non si tocca se non è indispensabile. **Eccezione autorizzata**: il layer equipaggiamento (oggetti, negozio, casse, effetti delle scintille) verrà sostituito dal sistema mod/slot/cyberware: non estenderlo con oggetti o livelli vecchi, e sostituiscilo a passi piccoli seguendo `docs/DESIGN-MOD-CONTRATTI.md`.
 - Non avviare dev server né comandi long-running (`ng serve`, `npm start`…): se serve verificare, chiedi all'utente.
 - Nomi nel codice (variabili, funzioni, campi, classi CSS, file, chiavi di traduzione a nome) **in inglese**; si traduce solo ciò che l'utente legge, e l'interfaccia è **in italiano** (con l'inglese accanto, vedi Multilingua). Termini da gioco, non da informatici.
 
@@ -66,12 +67,16 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Picchiatore** (mischia), **Artigliere** (distanza), **Incursore** (Intrusione, ramo `hacking`): i tre archetipi.
 - **Intrusione**: attacco dell'Incursore (nei dati `intrusion`; il ramo abilità è `hacking`, "Hacking").
 - **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nel codice `overclock`, `{overclock:N}`).
-- **Fama**: nome della risorsa condivisa (era "Conquista"; nel codice ancora `progress`).
+- **Progresso**: la risorsa condivisa della missione (era "Fama" nelle bozze e "Conquista"; nel codice `progress`, già giusto). A 0 la missione è fallita. I testi in interfaccia che dicono "Fama" per questa risorsa vanno cambiati in "Progresso" (follow-up di L0.2).
+- **Fama**: la risorsa del giocatore come mercenario (a fine missione il Progresso diventa Fama; missione fallita = 0). **Reputazione**: la risorsa dello stesso giocatore come Fixer, separata. Entrambe danno status e accessi, mai potere in partita. Non esistono ancora nel codice.
 - **Cassa**: era "scrigno"/"baule" (nei testi; in inglese "chest"). **Terminale**: era "glifo" (testi: it "terminale", en "terminal"; nel codice ancora `glyph`). **Mazzo Avversario / Carte dell'Avversario**: era "Mazzo/Carte del Male".
 - **Restano com'erano**: "città" e "dadi competenza" (decisione presa).
-- **Da rinominare ancora**: "runa/chiave runica", "scintille", "Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro".
+- **Da rinominare ancora**: "runa/chiave runica", "Tempio/Campo di addestramento"; famigli (tolti); segnalino "Incontro".
+- **Scintille**: le saette dei dadi neri; attivano gli effetti **attivi** degli oggetti. Il nome resta. **Overclock** è un'altra cosa: movimento extra (1 OC = 1 movimento) e abilità (2 OC).
+- **Mod**: modifica di un oggetto (arma, armatura, cyberdeck) in uno slot, passiva o attiva (le attive spendono scintille). **Cyberware / abilità**: modifiche del corpo (braccia, gambe, vista, pelle), scelte da una lista corta, attive (OC) o passive. **Cyberdeck**: ce l'hanno tutti, con una funzione per archetipo (Incursore: Demoni; Picchiatore: Berserk; Artigliere: Aggancio).
+- **Contratto**: una missione trovata sulla mappa. **Fixer**: chi crea e pubblica contratti (i suoi o di altri giocatori). **Eurodollari**: il budget unico (300) del Briefing, per mod e intel. **Territorio** (`territory` nel codice, non `zones`, che sono già le aree di evento): influenza delle Corp sui luoghi, prima espansione, rimandata.
 - **Briefing**: la nuova fase di negozio del setup. **Megacorp / megacorporazione / corp**: parole dell'ambientazione. **Spettro** decade: l'archetipo si chiama solo Incursore.
 - **Nemico** sostituisce "mostro" (nel codice `enemy`, cartelle `enemies/`, rinomina fatta; "mostro/mostri" resta solo nei testi di carte e abilità, che verranno rifatti). Il catalogo ha i 9 nemici di `docs/NEMICI.md`. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
-Mappa del mondo, missioni geolocalizzate, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.
+La **mappa del mondo esiste ed è la home** (MapLibre + Protomaps, posizione con consenso). Fuori scope: il collegamento tra posizione e contratti, Fixer e contratti degli altri, territori delle Corp, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.
