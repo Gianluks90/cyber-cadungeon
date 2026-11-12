@@ -2126,5 +2126,10 @@
   "contract.routeFailed": "Percorso a piedi non disponibile.",
   "c.contrattoDiProva2_04d98": "Contratto di prova 2",
   "contract.label": "Contratti",
-  "contract.accept": "Accetta"
+  "contract.acceptCount": "Accetta {n}/{max}",
+  "contract.accepted": "Accettato",
+  "contract.play": "Gioca",
+  "contract.listOpen": "Apri i contratti accettati",
+  "contract.listClose": "Chiudi i contratti",
+  "contract.listEmpty": "Non hai accettato nessun contratto."
 }

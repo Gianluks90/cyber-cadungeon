@@ -23,6 +23,9 @@ import { createCyberpunkTheme, type MapTheme } from './map-theme';
 import type { Contract } from '../game/contracts/contract';
 import { JsonContractStore, type ContractStore } from '../game/contracts/contract-store';
 import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-store';
+import { LocalHeldStore, type HeldStore } from '../game/contracts/held-store';
+import { CONTRACT_SLOTS } from '../game/constants';
+import { ContractListPanelComponent } from './contract-list-panel.component';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractPanelComponent, contractNumber } from './contract-panel.component';
 import { distanceMeters } from '../game/contracts/unlock-rule';
@@ -56,7 +59,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, MapLegendPanelComponent],
+  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -66,7 +69,8 @@ const USER_ZOOM = 16;
     <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
-    <app-contract-counter [count]="heldContracts()" />
+    <app-contract-counter [count]="heldContracts().length" [open]="panel() === 'contracts'" (toggle)="setPanel('contracts', panel() !== 'contracts')" />
+    <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" (play)="playContract($event)" />
     <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
         <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />
@@ -80,7 +84,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="playContract($event)" (devUnlock)="devUnlock($event)" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -162,7 +166,7 @@ export class WorldMapComponent {
   /** L'icona è scesa e sta per cambiare. */
   protected readonly swapping = signal(false);
   /** Il pannello laterale aperto: uno solo alla volta (aprirne uno chiude l'altro). */
-  protected readonly panel = signal<'filters' | 'legend' | 'menu' | null>(null);
+  protected readonly panel = signal<'filters' | 'legend' | 'menu' | 'contracts' | null>(null);
   /** La dialog della grafica (tasto impostazioni del menu) è aperta. */
   protected readonly settingsOpen = signal(false);
   /** La dialog dei crediti (voce Attribuzione del menu) è aperta. */
@@ -197,8 +201,12 @@ export class WorldMapComponent {
   private readonly contracts = computed(() => [...this.realContracts(), ...this.devList()]);
   protected readonly unlockedIds = signal<ReadonlySet<string>>(this.unlockStore.unlocked());
   protected readonly selectedId = signal<string | null>(null);
-  /** Quanti contratti ha il giocatore: per ora quelli sbloccati (il contatore ne mostra al massimo CONTRACT_SLOTS). */
-  protected readonly heldContracts = computed(() => this.contracts().filter((c) => this.unlockedIds().has(c.id)).length);
+  /** I contratti accettati (stato del giocatore, nel localStorage; quelli di prova di sviluppo restano solo in memoria) e quanti se ne possono tenere. */
+  private readonly heldStore: HeldStore = new LocalHeldStore();
+  protected readonly heldIds = signal<readonly string[]>(this.heldStore.held());
+  protected readonly maxHeld = CONTRACT_SLOTS;
+  /** I contratti accettati, in ordine di numero (quelli che non si trovano più nell'elenco non contano). */
+  protected readonly heldContracts = computed(() => this.contracts().filter((c) => this.heldIds().includes(c.id)).sort((a, b) => a.number - b.number));
   protected readonly selectedContract = computed(() => this.contracts().find((c) => c.id === this.selectedId()) ?? null);
   /** Quanto dista il giocatore dal contratto aperto, in metri (null senza posizione). */
   protected readonly selectedDistance = computed(() => {
@@ -347,7 +355,7 @@ export class WorldMapComponent {
   }
 
   /** Un pannello dice che si apre o si chiude: aprendosi prende il posto dell'altro, chiudendosi lascia stare quello che c'è. */
-  protected setPanel(which: 'filters' | 'legend' | 'menu', open: boolean): void {
+  protected setPanel(which: 'filters' | 'legend' | 'menu' | 'contracts', open: boolean): void {
     if (open) this.selectedId.set(null); // aprire un pannello laterale chiude quello del contratto
     this.panel.update((current) => (open ? which : current === which ? null : current));
   }
@@ -551,7 +559,14 @@ export class WorldMapComponent {
     });
   }
 
-  /** Il tasto Gioca della scheda: si gioca da casa, la partita parte dal Briefing. */
+  /** Il tasto Accetta: il contratto sbloccato passa fra quelli accettati, se c'è posto. Quelli di prova di sviluppo restano solo in memoria. */
+  protected acceptContract(c: Contract): void {
+    if (!this.unlockedIds().has(c.id) || this.heldIds().includes(c.id) || this.heldIds().length >= CONTRACT_SLOTS) return;
+    if (!c.id.startsWith(DEV_CONTRACT_PREFIX) && !this.heldStore.add(c.id)) return;
+    this.heldIds.set([...this.heldIds(), c.id]);
+  }
+
+  /** Il tasto Gioca di un contratto accettato: si gioca da casa, la partita parte dal Briefing. */
   protected playContract(c: Contract): void {
     void this.router.navigate(['/party', c.mapId]);
   }

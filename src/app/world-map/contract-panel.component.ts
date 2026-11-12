@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, effect, input, isDevMode, output, signal } from '@angular/core';
 import type { Contract } from '../game/contracts/contract';
-import { UNLOCK_RADIUS_M } from '../game/constants';
+import { CONTRACT_SLOTS, UNLOCK_RADIUS_M } from '../game/constants';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
@@ -23,7 +23,7 @@ const formatDuration = (seconds: number): string => {
  * su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione; su telefono (fino a 640px) un foglio che sale dal basso.
  * Si apre quando `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
  * Titolo nell'intestazione; sotto numero e stato, la didascalia, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
- * (spento finché è bloccato). Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
+ * con quanti contratti hai (es. «Accetta 3/5»): spento se è bloccato, già accettato o i posti sono finiti. Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
  */
 @Component({
   selector: 'app-contract-panel',
@@ -52,7 +52,7 @@ const formatDuration = (seconds: number): string => {
             @else if (routeStatus() === 'failed') { <p class="info">{{ 'contract.routeFailed' | t }}</p> }
             <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p>
           }
-          <button type="button" class="dlg-btn primary" [attr.aria-disabled]="unlocked() ? null : 'true'" (click)="unlocked() && accept.emit(c)">{{ 'contract.accept' | t }}</button>
+          <button type="button" class="dlg-btn primary" [attr.aria-disabled]="canAccept() ? null : 'true'" (click)="canAccept() && accept.emit(c)">{{ (accepted() ? 'contract.accepted' : 'contract.acceptCount') | t: { n: heldCount(), max: maxHeld() } }}</button>
           @if (dev && !unlocked()) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
         </div>
       }
@@ -96,11 +96,16 @@ export class ContractPanelComponent {
   /** Il percorso a piedi fino al contratto e a che punto è il calcolo. */
   readonly route = input<WalkingRoute | null>(null);
   readonly routeStatus = input<'idle' | 'loading' | 'failed'>('idle');
+  /** Il contratto è già fra quelli accettati, quanti ne ha il giocatore e quanti può tenerne al massimo. */
+  readonly accepted = input(false);
+  readonly heldCount = input(0);
+  readonly maxHeld = input(CONTRACT_SLOTS);
   readonly closed = output<void>();
-  /** Il tasto «Accetta» (attivo solo se il contratto è sbloccato). Per ora porta al Briefing. */
+  /** Il tasto «Accetta»: attivo se il contratto è sbloccato, non è già accettato e c'è posto. */
   readonly accept = output<Contract>();
   readonly devUnlock = output<Contract>();
 
+  protected readonly canAccept = computed(() => this.unlocked() && !this.accepted() && this.heldCount() < this.maxHeld());
   protected readonly dev = isDevMode();
   protected readonly radius = UNLOCK_RADIUS_M;
   protected readonly number = contractNumber;

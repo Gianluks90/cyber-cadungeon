@@ -2126,5 +2126,10 @@
   "contract.routeFailed": "Walking route not available.",
   "c.contrattoDiProva2_04d98": "Test contract 2",
   "contract.label": "Contracts",
-  "contract.accept": "Accept"
+  "contract.acceptCount": "Accept {n}/{max}",
+  "contract.accepted": "Accepted",
+  "contract.play": "Play",
+  "contract.listOpen": "Open accepted contracts",
+  "contract.listClose": "Close contracts",
+  "contract.listEmpty": "You have not accepted any contract."
 }
