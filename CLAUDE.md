@@ -56,6 +56,7 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 - **Eventi dell'avventura**: `game/state/events.ts` (+ tipi in `game/map/map-data.ts`); l'Avversario in `game/state/adversary.ts`, `adversary-deck.ts`, `game/adversary/`.
 - **Editor**: `src/app/editor/` (`editor.component.ts`, `tile-editor.ts` senza interfaccia, `validator.ts` per la Verifica, `map-camera.ts`). Esiste un editor completo con strumenti per tessere, porte, ostacoli, oggetti, nemici, aree, glifi ed eventi; i dettagli sono nel legacy.
 - **Cataloghi**: `public/{mercenaries,enemies,items,skills,adversary,shops}/`, caricati da `game/{mercenaries,enemies,items,skills,adversary}/`. Squadra predefinita in `game/mercenaries/mercenary-sheet.ts` (`DEFAULT_PARTY`).
+- **Contratti** (da creare, passo 1 di `docs/PIANO-PROTOTIPO.md`): intestazioni in `public/contracts/index.json` + `game/contracts/`; la missione resta un `MapData` in `public/maps/`. Titolo della missione = fonte, quello del contratto è una copia.
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
 - **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 
@@ -79,4 +80,4 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Nemico** sostituisce "mostro" (nel codice `enemy`, cartelle `enemies/`, rinomina fatta; "mostro/mostri" resta solo nei testi di carte e abilità, che verranno rifatti). Il catalogo ha i 9 nemici di `docs/NEMICI.md`. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
-La **mappa del mondo esiste ed è la home** (MapLibre + Protomaps, posizione con consenso). Fuori scope: il collegamento tra posizione e contratti, Fixer e contratti degli altri, territori delle Corp, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.
+La **mappa del mondo esiste ed è la home** (MapLibre + Protomaps, posizione con consenso). In lavorazione: il collegamento tra posizione e contratti (piano in `docs/PIANO-PROTOTIPO.md`). Fuori scope: Fixer-giocatori e contratti degli altri, territori delle Corp, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.

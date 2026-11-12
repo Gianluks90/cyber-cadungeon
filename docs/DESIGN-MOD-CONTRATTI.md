@@ -65,6 +65,14 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - Un contratto, per essere pubblicato, deve essere **vinto dal suo fixer**: il validatore dice «è coerente», la vittoria dice «è battibile». *(Se il pool di profili è casuale, la vittoria prova un solo estratto: da risolvere, §7.)*
 - Diventare fixer è un **diritto che si guadagna** con la Fama.
 
+### 2.7b Contratto, missione, stato del giocatore
+- **Tre livelli**: il **contratto** è un'intestazione leggera (numero, titolo, didascalia breve, coordinate, `visibility`, `mapId`, fixer segnaposto) che la mappa del mondo mostra senza scaricare la missione; la **missione** è il `MapData` (mappa, pedine, eventi, ricompense, introduzione, obiettivo, budget, profili dei nemici) e si legge solo dopo lo sblocco; lo **stato del giocatore** (sbloccato, tentativi, miglior Fama) sta a parte (locale, poi Firestore).
+- Motivi: peso della mappa, **intel segreta** (il profilo dei nemici non si legge dalla scheda del contratto) e fixer che modificano il contratto senza toccare l'editor.
+- **Sincronizzazione a senso unico**: il `title` della missione è la fonte, il titolo del contratto è una copia in sola lettura. La **didascalia** appartiene al contratto (la scrive l'autore; lo strumento «Posiziona» potrà proporla dall'introduzione, poi resta indipendente).
+- **Stati**: *bloccato* (numero, titolo e la frase «Fuori dal campo di sincronizzazione»), *sbloccato* (titolo, didascalia, Gioca; si gioca da casa), *nascosto* (campo previsto, ⏳).
+- **Sblocco a 50 m** con la precisione del GPS (`distanza − precisione ≤ 50`), calcolato solo sul dispositivo. Il **numero** è collezionabile, stabile e assegnato una volta.
+- Test in sviluppo: due contratti generati rispetto alla posizione (~30 m e ~5 km).
+
 ### 2.8 Progresso, Fama, Reputazione
 - **Progresso**: la risorsa condivisa della missione (era «Fama» in REGOLE-v2 §9, e «Conquista»; nel codice resta `progress`). A **0 la missione è fallita**. Cambiano solo i testi.
 - **Fama**: la risorsa del giocatore **come mercenario**. A fine missione il Progresso diventa Fama; **missione fallita = Fama 0** (per ora).
@@ -93,6 +101,8 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - Scelta «N abilità tra M» più larga, se la lista corta non basta.
 - Funzioni del deck per l'Artigliere oltre l'Aggancio (furtività: per ora la gestiscono le abilità cyberware «passi silenziosi»).
 
+- Strumento **«Posiziona»** nell'editor (sceglie un punto sulla mappa e genera il contratto dalla missione; riusa `WorldMapComponent`); contratti **nascosti**; contatore della collezione (rivelerebbe i nascosti); teaser pubblico.
+
 ## 5. Contratti degli altri: qualità
 - Reputazione e valutazioni dei giocatori come filtro (⏳ la moderazione vera).
 - Fixer modulare (nome, logo, specialità, 2-3 contatti dal catalogo): ⏳.
@@ -114,7 +124,9 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - Cosa succede a **Fama** con le ripetizioni e dove si salva il record (oggi non c'è un profilo giocatore).
 - Nome di codice di **Fama/Reputazione** quando serviranno (oggi non esistono nel codice: solo `progress`).
 
-## 8. Prototipo minimo (su `/play/test`)
+## 8. Prototipo minimo (Briefing del contratto di prova → `/play/test`)
+
+Ordine dei passi, file e criteri in `docs/PIANO-PROTOTIPO.md` (contratti sulla mappa inclusi, §2.7b).
 - **1 Picchiatore**: arma (2 slot), armatura (2 slot), deck (2 slot) con **Berserk**.
 - 3-4 mod (almeno una attiva che usa scintille), 2-3 abilità cyberware, 1-2 nemici.
 - Schermata di **Briefing** con budget 300, scelta delle mod e un tasto intel.
