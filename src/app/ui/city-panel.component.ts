@@ -7,7 +7,6 @@ import { AttackDice } from '../game/mercenaries/mercenary-sheet';
 import { CityService } from '../game/pieces/piece';
 import { SkillSchool } from '../game/skills/skill';
 import { MercenaryDetails } from './mercenary-sheet.component';
-import { IconComponent } from './icon.component';
 import { ItemCardComponent } from './item-card.component';
 
 /** Ciò che l'eroe fa in città dal pannello. */
@@ -30,12 +29,12 @@ export type CityEvent =
  */
 @Component({
   selector: 'app-city-panel',
-  imports: [TrPipe, IconComponent, ItemCardComponent, NgTemplateOutlet],
+  imports: [TrPipe, ItemCardComponent, NgTemplateOutlet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (mercenary(); as h) {
       @if (h.city; as c) {
-        <div class="row"><span class="coins" [title]="'Monete del mercenario' | tr"><app-icon name="tokens/gold_pile" [size]="18" />{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
+        <div class="row"><span class="coins" [title]="'Monete del mercenario' | tr">{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
 
         @if (!c.service) {
           <h3>{{ 'Servizi' | tr }} <small>{{ 'uno solo per visita' | tr }}</small></h3>
@@ -104,7 +103,7 @@ export type CityEvent =
     <ng-template #offer let-o let-event="event" let-label="label">
       <div class="service" [class.off]="!o.enabled">
         <div class="what"><b>{{ o.name }}</b></div>
-        <span class="price"><app-icon name="tokens/gold_pile" [size]="14" />{{ o.price }}</span>
+        <span class="price">{{ o.price }}</span>
         <button type="button" class="act" [class.off]="!o.enabled" [attr.aria-disabled]="!o.enabled" [title]="o.reason ?? ''" (click)="o.enabled ? cityAction.emit(event) : denied.emit(o.reason ?? notPossible())">{{ label }}</button>
       </div>
     </ng-template>

@@ -35,7 +35,8 @@
   --c-armor:         #b7bcc6;  /* armatura / difesa */
   --c-intrusion:         #a98bf0;  /* Intrusione / pozioni di Intrusione */
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
-  --c-loot:          #c9b88c;  /* monete, chiavi, tesori (sabbia spenta, NON oro) */
+  --c-loot:          #c9b88c;  /* chiavi e tesori (sabbia spenta, NON oro); il denaro è --c-money */
+  --c-money:         #ffe033;  /* denaro (Eurodollari, monete, scrigno d'oro): giallo pieno, NON oro */
   --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
   --c-you:           #2bff88;  /* SOLO: la posizione del giocatore sulla mappa del mondo (verde neon, con glow) */
   --c-ok:            #6cc08a;  /* verifica dell'avventura: tutto a posto */

@@ -13,6 +13,7 @@
   "coins": 300,
   "items": [],
   "potions": [],
+  "startingGear": ["iron-fists", "adonis-skin", "berserker-mk1"],
   "skills": {
     "combat": 3,
     "cunning": 0,

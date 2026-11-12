@@ -260,6 +260,118 @@
         }
       ],
       "icon": "target"
+    },
+    {
+      "id": "iron-fists",
+      "name": "Pugni di ferro",
+      "kind": "weapon",
+      "attack": "melee",
+      "hands": 2,
+      "price": 0,
+      "slots": 2,
+      "dice": [
+        "red",
+        "green"
+      ],
+      "icon": "swords"
+    },
+    {
+      "id": "adonis-skin",
+      "name": "Epidermide Adone",
+      "kind": "armor",
+      "hands": 0,
+      "armor": 1,
+      "price": 0,
+      "slots": 2,
+      "icon": "frame_person"
+    },
+    {
+      "id": "berserker-mk1",
+      "name": "Berserker MK-I",
+      "kind": "other",
+      "hands": 0,
+      "price": 0,
+      "slots": 2,
+      "tags": [
+        "deck"
+      ],
+      "icon": "deployed_code"
+    },
+    {
+      "id": "wire-knife",
+      "name": "Coltello a filo",
+      "kind": "weapon",
+      "attack": "melee",
+      "hands": 1,
+      "price": 0,
+      "slots": 2,
+      "dice": [
+        "red"
+      ],
+      "icon": "swords"
+    },
+    {
+      "id": "wetsuit",
+      "name": "Tuta da immersione",
+      "kind": "armor",
+      "hands": 0,
+      "armor": 0,
+      "price": 0,
+      "slots": 2,
+      "icon": "frame_person"
+    },
+    {
+      "id": "kitsune-9",
+      "name": "Kitsune-9",
+      "kind": "weapon",
+      "attack": "intrusion",
+      "hands": 0,
+      "price": 0,
+      "slots": 2,
+      "dice": [
+        "white",
+        "yellow"
+      ],
+      "range": 4,
+      "ice": 1,
+      "icon": "deployed_code"
+    },
+    {
+      "id": "voss-sr90",
+      "name": "Voss SR-90",
+      "kind": "weapon",
+      "attack": "ranged",
+      "hands": 2,
+      "price": 0,
+      "slots": 2,
+      "dice": [
+        "blue",
+        "green"
+      ],
+      "range": 6,
+      "icon": "target"
+    },
+    {
+      "id": "standard-camo",
+      "name": "Mimetica standard",
+      "kind": "armor",
+      "hands": 0,
+      "armor": 1,
+      "price": 0,
+      "slots": 2,
+      "icon": "frame_person"
+    },
+    {
+      "id": "headshot-beta",
+      "name": "Headshot Beta",
+      "kind": "other",
+      "hands": 0,
+      "price": 0,
+      "slots": 2,
+      "tags": [
+        "deck"
+      ],
+      "icon": "deployed_code"
     }
   ]
 }

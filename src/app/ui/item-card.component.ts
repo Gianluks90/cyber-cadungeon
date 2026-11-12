@@ -59,7 +59,7 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
 
       <footer class="foot">
         <div class="actions"><ng-content /></div>
-        @if ((price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr"><app-icon name="tokens/gold_pile" [size]="14" />{{ price() ?? def().price }}</span> }
+        @if ((price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr">{{ price() ?? def().price }}</span> }
       </footer>
     </article>
   `,

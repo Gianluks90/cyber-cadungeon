@@ -77,7 +77,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         @for (k of potionKinds; track k) {
           <div class="row">
             <b>{{ potionName(k) }}</b>
-            <span class="price"><app-icon name="tokens/gold_pile" [size]="14" />{{ potionPrice(k) }}</span>
+            <span class="price">{{ potionPrice(k) }}</span>
             <button type="button" class="act" [class.off]="!!potionReason(k)" [attr.aria-disabled]="!!potionReason(k)" [title]="potionReason(k)" (click)="buyPotion(k)">{{ 'shop.buy' | t }}</button>
           </div>
         }
@@ -89,7 +89,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
           @for (k of treasureTiers(); track k) {
             <div class="row">
               <b>{{ treasureName(k) }}</b>
-              <span class="price"><app-icon name="tokens/gold_pile" [size]="14" />{{ treasurePrice(k) }}</span>
+              <span class="price">{{ treasurePrice(k) }}</span>
               <button type="button" class="act" [class.off]="!!treasureReason(k)" [attr.aria-disabled]="!!treasureReason(k)" [title]="treasureReason(k)" (click)="buyTreasure(k)">{{ 'shop.buy' | t }}</button>
             </div>
           }
@@ -111,28 +111,28 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         @for (id of loadout().items; track $index) {
           <div class="row">
             <b>{{ itemName(id) }}</b>
-            <span class="price"><app-icon name="tokens/gold_pile" [size]="14" />{{ itemPrice(id) }}</span>
+            <span class="price">{{ itemPrice(id) }}</span>
             <button type="button" class="act" (click)="removeItem($index)">{{ 'shop.refund' | t }}</button>
           </div>
         }
         @for (k of loadout().potions; track $index) {
           <div class="row">
             <b>{{ potionName(k) }}</b>
-            <span class="price"><app-icon name="tokens/gold_pile" [size]="14" />{{ potionPrice(k) }}</span>
+            <span class="price">{{ potionPrice(k) }}</span>
             <button type="button" class="act" (click)="removePotion($index)">{{ 'shop.refund' | t }}</button>
           </div>
         }
         @for (k of loadout().treasures ?? []; track $index) {
           <div class="row">
             <b>{{ treasureName(k) }}</b>
-            <span class="price"><app-icon name="tokens/gold_pile" [size]="14" />{{ treasurePrice(k) }}</span>
+            <span class="price">{{ treasurePrice(k) }}</span>
             <button type="button" class="act" (click)="removeTreasure($index)">{{ 'shop.refund' | t }}</button>
           </div>
         }
         @if (!loadout().items.length && !loadout().potions.length && !loadout().treasures?.length) { <p class="none">{{ 'shop.nothing' | t }}</p> }
       </div>
       <!-- Le monete a sinistra del piede, con le due mani (una specchiata): si accendono in base alle mani occupate dalle armi scelte. -->
-      <div dialogFooterStart class="coins" [title]="'shop.coins' | t"><app-icon name="tokens/gold_pile" [size]="20" /><b>{{ coinsLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: mercenary().coins } }}</small></div>
+      <div dialogFooterStart class="coins" [title]="'shop.coins' | t"><b>{{ coinsLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: mercenary().coins } }}</small></div>
       <div dialogFooterStart class="budget" [title]="'briefing.budget' | t"><b>€{{ budgetLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: shop().budget } }}</small></div>
       <div dialogFooterStart class="hands" [title]="'shop.hands' | t: { used: handsUsed(), max: handsMax }">
         <span class="hand left" [class.on]="handsUsed() >= 1"><app-icon name="back_hand" [size]="22" /></span>

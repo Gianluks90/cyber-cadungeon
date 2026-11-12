@@ -13,6 +13,7 @@
   "coins": 300,
   "items": [],
   "potions": [],
+  "startingGear": ["wire-knife", "wetsuit", "kitsune-9"],
   "skills": {
     "combat": 1,
     "cunning": 1,

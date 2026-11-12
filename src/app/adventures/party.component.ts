@@ -17,7 +17,7 @@ import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
 import { FamiliarDef, familiarsOfSheet, loadFamiliarCatalog } from '../game/familiars/familiar';
 import { HeartsComponent } from '../ui/hearts.component';
-import { MercenaryLoadoutComponent } from '../ui/mercenary-loadout.component';
+import { BriefingColumnComponent } from '../ui/briefing-column.component';
 import { IconComponent } from '../ui/icon.component';
 import { PageNavComponent } from '../ui/page-nav.component';
 import { ADVENTURES } from './adventures';
@@ -33,7 +33,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
  */
 @Component({
   selector: 'app-party',
-  imports: [CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, IconComponent, PageNavComponent, TranslatePipe],
+  imports: [CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -77,7 +77,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
       } @else {
         <div class="squad">
           @for (h of squad(); track h.id) {
-            <app-mercenary-loadout [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" (changed)="setLoadout(h.id, $event)" />
+            <app-briefing-column [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" [ready]="readyIds().includes(h.id)" (readyChange)="setReady(h.id, $event)" (changed)="setLoadout(h.id, $event)" />
           }
         </div>
       }
@@ -87,7 +87,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
         <button type="button" class="dlg-btn primary confirm" [class.off]="!ready()" [attr.aria-disabled]="ready() ? null : 'true'" (click)="confirm()">{{ 'party.confirm' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
         @if (!ready()) { <p class="warn" role="status"><app-icon name="warning" [size]="18" />{{ warning() }}</p> }
       } @else {
-        <button type="button" class="dlg-btn primary confirm" (click)="start()">{{ 'party.begin' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
+        <button type="button" class="dlg-btn primary confirm" [class.off]="!allReady()" [attr.aria-disabled]="allReady() ? null : 'true'" (click)="start()">{{ 'party.begin' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
       }
     </footer>
     <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
@@ -109,9 +109,9 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     h1 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .hint, .count { margin: 0; color: var(--c-text-dim); font-size: 13px; }
     .hint p { margin: 0; }
-    /* Gli eroi con il loro spazio: una griglia 2×2. */
-    .squad { display: grid; grid-template-columns: repeat(2, max-content); gap: 22px 48px; justify-content: center; padding: 12px 16px; }
-    @media (max-width: 700px) { .squad { grid-template-columns: max-content; } }
+    /* Un mercenario per colonna: 3 colonne uguali, una sola su schermi stretti. */
+    .squad { display: grid; grid-template-columns: repeat(3, minmax(0, 240px)); gap: 24px; justify-content: center; align-items: stretch; width: 100%; box-sizing: border-box; padding: 12px 24px; }
+    @media (max-width: 900px) { .squad { grid-template-columns: minmax(0, 240px); } }
     .warn { display: inline-flex; align-items: center; gap: 6px; margin: 0; max-width: calc(100% - 340px); color: var(--c-warn); font-size: 13px; text-align: center; }
     /* «Conferma» in basso a destra, alto quanto la freccia indietro in basso a sinistra (36px, 44px sul tocco), con la freccia a destra della scritta. */
     .confirm { position: fixed; z-index: 3; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; }
@@ -229,6 +229,15 @@ export class PartyComponent {
 
   protected setLoadout(id: string, l: Loadout) {
     this.loadouts.update((all) => ({ ...all, [id]: l }));
+    // Cambiare il Briefing toglie il «Pronto»: va riconfermato.
+    this.readyIds.update((r) => r.filter((x) => x !== id));
+  }
+
+  /** I mercenari che hanno detto «Pronto»: si parte solo quando lo sono tutti. */
+  protected readonly readyIds = signal<string[]>([]);
+  protected readonly allReady = computed(() => this.squad().length > 0 && this.squad().every((h) => this.readyIds().includes(h.id)));
+  protected setReady(id: string, on: boolean) {
+    this.readyIds.update((r) => (on ? [...new Set([...r, id])] : r.filter((x) => x !== id)));
   }
 
   /** La freccia: dalla schermata degli acquisti si torna agli eroi, da quella degli eroi alla mappa del mondo. */
@@ -244,6 +253,7 @@ export class PartyComponent {
   protected confirm() {
     if (!this.ready()) return;
     this.assignSkills();
+    this.readyIds.set([]);
     this.step.set('gear');
     this.skillNotice.set(true);
   }
@@ -278,7 +288,7 @@ export class PartyComponent {
   protected readonly detail = signal<MercenarySheet | null>(null);
 
   protected start() {
-    if (!this.ready()) return;
+    if (!this.ready() || !this.allReady()) return;
     if (this.unspentNames()) this.askUnspent.set(true);
     else this.go();
   }

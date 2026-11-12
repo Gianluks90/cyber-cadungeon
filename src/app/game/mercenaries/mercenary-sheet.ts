@@ -2,7 +2,8 @@ import { PotionKind } from '../board/marker';
 import { PARTY_SIZE } from '../constants';
 import type { SkillEffect } from '../skills/skill';
 
-/** L'archetipo primario: lo slot che il Mercenario occupa nella squadra (docs/REGOLE-v2.md §2). aider è l'Incursore. */
+/** L'archetipo primario: lo slot che il Mercenario occupa nella squadra (docs/REGOLE-v2.md §2). 
+aider è l'Incursore. */
 export type Archetype = 'brawler' | 'gunner' | 'raider';
 
 /** Quanti dadi extra ha un eroe per ognuno dei tre tipi di attacco. */
@@ -50,6 +51,8 @@ export interface MercenarySheet {
   coins: number;
   items: string[];
   potions: PotionKind[];
+  /** La fornitura iniziale (id di public/items/), a parte ciò che si compra nel Briefing. Non è ancora in catalogo: se manca, il Briefing mostra un errore. */
+  startingGear?: string[];
   /** Il nome dell'abilità primaria (per esempio "Ordini flessibili"): si mostra accanto all'etichetta "Abilità primaria". */
   abilityName?: string;
   /** La storia dell'eroe (testo libero): si mostra nella scheda di dettaglio; senza, c'è un segnaposto. */

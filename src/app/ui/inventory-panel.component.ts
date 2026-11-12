@@ -21,7 +21,7 @@ import { ItemCardComponent } from './item-card.component';
   template: `
     @if (mercenary(); as h) {
       <section>
-        <div class="row"><span class="coins" [title]="'Monete del mercenario' | tr"><app-icon name="tokens/gold_pile" [size]="18" />{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
+        <div class="row"><span class="coins" [title]="'Monete del mercenario' | tr">{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
 
         <h3>{{ 'Pozioni' | tr }}</h3>
         <div class="row">

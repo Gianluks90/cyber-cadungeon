@@ -13,6 +13,7 @@
   "coins": 300,
   "items": [],
   "potions": [],
+  "startingGear": ["voss-sr90", "standard-camo", "headshot-beta"],
   "skills": {
     "combat": 1,
     "cunning": 2,

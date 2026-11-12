@@ -31,7 +31,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
         <b>{{ mercenary().name }}</b><span>{{ mercenary().class | ct }}</span></div>
     </div>
     <button type="button" class="slot" [disabled]="!editable()" [attr.aria-label]="'shop.open' | t: { name: mercenary().name }" [title]="(editable() ? 'shop.open' : 'shop.notYours') | t: { name: mercenary().name }" (click)="open.set(true)">
-      <span class="coins"><app-icon name="tokens/gold_pile" [size]="16" />{{ coinsLeft() }}</span>
+      <span class="coins">{{ coinsLeft() }}</span>
       <span class="things">
         @for (n of names(); track $index) { <span class="chip">{{ n }}</span> }
         @empty { <span class="empty">{{ 'shop.empty' | t }}</span> }
