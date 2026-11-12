@@ -240,6 +240,8 @@ export const COIN_CIRCLE_SEGMENTS = 12;
 export const POTION_LIMIT = 3;
 /** Il budget in eurodollari del Briefing (per mod e intel): sempre 300, salvo `AdventureSetup.budget` (docs/DESIGN-MOD-CONTRATTI.md, §2.6). */
 export const BRIEFING_BUDGET = 300;
+/** Quanti contratti al massimo può tenere il giocatore (gli spazi del contatore sulla mappa). */
+export const CONTRACT_SLOTS = 5;
 /** A che distanza (in metri, tolta la precisione del GPS) si sblocca un contratto. */
 export const UNLOCK_RADIUS_M = 50;
 /** Il Berserk del cyberdeck del Picchiatore (valori da provare): costo in Overclock, round che dura, danno in mischia in più, Armatura e ICE che si perdono. */

@@ -2111,5 +2111,11 @@
   "contract.marker": "Contratto {n} sulla mappa",
   "c.provaContrattoVicino_0fc17": "Prova: contratto vicino",
   "c.provaContrattoLontano_b75b2": "Prova: contratto lontano",
-  "c.generatoRispettoAllaTuaPosizione_b435e": "Generato rispetto alla tua posizione, solo in sviluppo."
+  "c.generatoRispettoAllaTuaPosizione_b435e": "Generato rispetto alla tua posizione, solo in sviluppo.",
+  "worldMap.legend.title": "Legenda",
+  "worldMap.legend.open": "Apri la legenda",
+  "worldMap.legend.close": "Chiudi la legenda",
+  "worldMap.legend.you": "La tua posizione",
+  "worldMap.legend.contract": "Contratto",
+  "contract.counter": "Contratti: {n} su {max}"
 }

@@ -25,6 +25,8 @@ import { JsonContractStore, type ContractStore } from '../game/contracts/contrac
 import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-store';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractCardComponent, contractNumber } from './contract-card.component';
+import { ContractCounterComponent } from './contract-counter.component';
+import { MapLegendPanelComponent } from './map-legend-panel.component';
 
 /** Inclinazione fissa della vista 3D, in gradi: non si regola a mano. */
 const PITCH_3D = 60;
@@ -47,7 +49,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractCardComponent],
+  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractCardComponent, ContractCounterComponent, MapLegendPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -56,6 +58,8 @@ const USER_ZOOM = 16;
     }
     <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
+    <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
+    <app-contract-counter [count]="heldContracts()" />
     <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
         <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />
@@ -151,7 +155,7 @@ export class WorldMapComponent {
   /** L'icona è scesa e sta per cambiare. */
   protected readonly swapping = signal(false);
   /** Il pannello laterale aperto: uno solo alla volta (aprirne uno chiude l'altro). */
-  protected readonly panel = signal<'filters' | 'menu' | null>(null);
+  protected readonly panel = signal<'filters' | 'legend' | 'menu' | null>(null);
   /** La dialog della grafica (tasto impostazioni del menu) è aperta. */
   protected readonly settingsOpen = signal(false);
   /** La dialog dei crediti (voce Attribuzione del menu) è aperta. */
@@ -186,6 +190,8 @@ export class WorldMapComponent {
   private readonly contracts = computed(() => [...this.realContracts(), ...this.devList()]);
   protected readonly unlockedIds = signal<ReadonlySet<string>>(this.unlockStore.unlocked());
   protected readonly selectedId = signal<string | null>(null);
+  /** Quanti contratti ha il giocatore: per ora quelli sbloccati (il contatore ne mostra al massimo CONTRACT_SLOTS). */
+  protected readonly heldContracts = computed(() => this.contracts().filter((c) => this.unlockedIds().has(c.id)).length);
   protected readonly selectedContract = computed(() => this.contracts().find((c) => c.id === this.selectedId()) ?? null);
   /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
   private readonly mapCreated = signal(false);
@@ -309,7 +315,7 @@ export class WorldMapComponent {
   }
 
   /** Un pannello dice che si apre o si chiude: aprendosi prende il posto dell'altro, chiudendosi lascia stare quello che c'è. */
-  protected setPanel(which: 'filters' | 'menu', open: boolean): void {
+  protected setPanel(which: 'filters' | 'legend' | 'menu', open: boolean): void {
     this.panel.update((current) => (open ? which : current === which ? null : current));
   }
 
@@ -460,10 +466,19 @@ export class WorldMapComponent {
       const open = unlocked.has(c.id);
       const el = document.createElement('button');
       el.type = 'button';
-      el.textContent = contractNumber(c.number);
       el.setAttribute('aria-label', translate('contract.marker', { n: contractNumber(c.number) }));
+      // Un quadrato con un punto esclamativo al centro (l'icona `contract`, come nella legenda): sfondo scuro sotto, icona colorata sopra; in risalto se è quello aperto.
       const color = open ? 'var(--c-interact)' : 'var(--c-text-dim)';
-      el.style.cssText = `box-sizing:border-box;min-width:44px;height:28px;padding:0 6px;cursor:pointer;border:1px solid ${color};border-radius:var(--radius-1);background:var(--c-surface);color:${color};font:600 12px/1 var(--font-mono);letter-spacing:0.06em;${selected === c.id ? `box-shadow:0 0 0 1px ${color},0 0 10px ${color};` : ''}`;
+      const iconUrl = new URL('icons/contract.svg', document.baseURI).href;
+      el.style.cssText = 'position:relative;width:32px;height:32px;padding:0;border:0;background:none;cursor:pointer';
+      const fill = document.createElement('span');
+      fill.style.cssText = 'position:absolute;inset:4px;background:var(--c-surface)';
+      const glyph = document.createElement('span');
+      glyph.style.cssText = `position:absolute;inset:0;background-color:${color};-webkit-mask:url("${iconUrl}") center / contain no-repeat;mask:url("${iconUrl}") center / contain no-repeat`;
+      const glow = document.createElement('span');
+      glow.style.cssText = `position:absolute;inset:0;${selected === c.id ? `filter:drop-shadow(0 0 3px ${color}) drop-shadow(0 0 8px ${color})` : ''}`;
+      glow.append(glyph);
+      el.append(fill, glow);
       el.addEventListener('click', (e) => { e.stopPropagation(); this.ngZone.run(() => this.selectedId.set(c.id)); });
       return new Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(map);
     });
