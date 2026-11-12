@@ -2133,5 +2133,6 @@
   "contract.listClose": "Chiudi i contratti",
   "contract.listEmpty": "Non hai accettato nessun contratto.",
   "contract.cancel": "Annulla",
-  "contract.cancelFor": "Annulla il contratto {n}"
+  "contract.cancelFor": "Annulla il contratto {n}",
+  "contract.encrypted": "Testo cifrato"
 }

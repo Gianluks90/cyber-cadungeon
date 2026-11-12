@@ -4,6 +4,7 @@ import { CONTRACT_SLOTS, UNLOCK_RADIUS_M } from '../game/constants';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
+import { CipherTextComponent } from './cipher-text.component';
 import type { WalkingRoute } from './route-service';
 
 /** Il numero collezionabile scritto come #001. */
@@ -22,12 +23,12 @@ const formatDuration = (seconds: number): string => {
  * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
  * su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione; su telefono (fino a 640px) un foglio che sale dal basso.
  * Si apre quando `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
- * Titolo nell'intestazione; sotto numero e stato, la didascalia, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
+ * Titolo nell'intestazione; sotto numero e stato, la didascalia (da bloccato è cifrata: caratteri casuali al posto del testo), e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
  * con quanti contratti hai (es. «Accetta 3/5»): spento se è bloccato, già accettato o i posti sono finiti. Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
  */
 @Component({
   selector: 'app-contract-panel',
-  imports: [CatalogTextPipe, IconComponent, TranslatePipe],
+  imports: [CatalogTextPipe, CipherTextComponent, IconComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- Non .panel: è una classe globale con il suo padding (come nel menu a tendina). -->
@@ -43,7 +44,7 @@ const formatDuration = (seconds: number): string => {
             <span class="num">{{ number(c.number) }}</span>
             <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
           </p>
-          <p class="caption">{{ c.caption | ct }}</p>
+          @if (unlocked()) { <p class="caption">{{ c.caption | ct }}</p> } @else { <app-cipher-text [text]="c.caption | ct" /> }
           @if (!unlocked()) {
             <p class="muted">{{ 'contract.locked' | t }}</p>
             @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
