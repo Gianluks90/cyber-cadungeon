@@ -520,7 +520,9 @@ export class WorldMapComponent {
     this.breachSince = performance.now();
     this.breach.set(0);
     this.breachTimer = setInterval(() => {
-      const progress = Math.min(1, (performance.now() - this.breachSince) / (UNLOCK_BREACH_MS + UNLOCK_DECRYPT_MS));
+      // Una sola barra: la violazione ne occupa la metà e la decrittazione l'altra metà, anche se durano diverso.
+      const elapsed = performance.now() - this.breachSince;
+      const progress = Math.min(1, elapsed < UNLOCK_BREACH_MS ? (0.5 * elapsed) / UNLOCK_BREACH_MS : 0.5 + (0.5 * (elapsed - UNLOCK_BREACH_MS)) / UNLOCK_DECRYPT_MS);
       this.breach.set(progress);
       if (progress < 1) return;
       const done = this.contracts().find((x) => x.id === this.breachId);

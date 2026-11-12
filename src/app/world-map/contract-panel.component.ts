@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, effect, input, isDevMode, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, isDevMode, output, signal, untracked } from '@angular/core';
 import type { Contract } from '../game/contracts/contract';
 import { CONTRACT_SLOTS, UNLOCK_RADIUS_M } from '../game/constants';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
@@ -42,7 +42,7 @@ const formatDuration = (seconds: number): string => {
         <div class="body">
           <p class="meta">
             <span class="num">{{ number(c.number) }}</span>
-            <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
+            <span class="state" [class.on]="badgeUnlocked()" [class.flash]="flash()"><app-icon [name]="badgeUnlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (badgeUnlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
           </p>
           <app-cipher-text class="caption" [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" [reveal]="reveal()" />
           <!-- Le uniche frasi che spariscono da un contratto sbloccato (o a portata, dove la violazione è in corso): fuori dal campo di sincronizzazione e il raggio per sbloccare. La distanza resta sempre. -->
@@ -94,6 +94,10 @@ const formatDuration = (seconds: number): string => {
     .num { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; }
     .state { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .state.on { color: var(--c-interact); }
+    /* Violazione compiuta: «Bloccato» lampeggia di verde due volte e diventa «Sbloccato». */
+    .state.flash { animation: unlock-flash 0.6s ease-in-out 2; }
+    @keyframes unlock-flash { 50% { color: var(--c-you); text-shadow: 0 0 8px var(--c-you); } }
+    @media (prefers-reduced-motion: reduce) { .state.flash { animation: none; } }
     .caption { color: var(--c-text); }
     .muted { color: var(--c-text-dim); font-style: italic; }
     /* La violazione: etichetta e percentuale ai due lati, sotto una barra che si riempie. */
@@ -147,6 +151,13 @@ export class ContractPanelComponent {
     const b = this.breach();
     return b === null ? null : Math.max(0, (b - 0.5) * 2);
   });
+  /** L'etichetta dello stato: a violazione compiuta (metà barra) passa a «Sbloccato», anche se la decrittazione deve ancora finire. */
+  protected readonly badgeUnlocked = computed(() => this.unlocked() || (this.breach() ?? 0) >= 0.5);
+  /** Lampeggia di verde per un attimo quando lo stato passa a «Sbloccato» mentre si guarda il pannello (non riaprendo un contratto già sbloccato). */
+  protected readonly flash = signal(false);
+  private badgeId: string | null = null;
+  private badgeWas = false;
+  private flashTimer: ReturnType<typeof setTimeout> | null = null;
   protected readonly percent = computed(() => Math.floor((this.breach() ?? 0) * 100));
   protected readonly canAccept = computed(() => this.unlocked() && !this.accepted() && this.heldCount() < this.maxHeld());
   protected readonly dev = isDevMode();
@@ -165,6 +176,22 @@ export class ContractPanelComponent {
   });
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      if (this.flashTimer) clearTimeout(this.flashTimer);
+    });
+    effect(() => {
+      const id = this.shown()?.id ?? null;
+      const now = this.badgeUnlocked();
+      untracked(() => {
+        if (id === this.badgeId && now && !this.badgeWas) {
+          this.flash.set(true);
+          if (this.flashTimer) clearTimeout(this.flashTimer);
+          this.flashTimer = setTimeout(() => this.flash.set(false), 1400);
+        }
+        this.badgeId = id;
+        this.badgeWas = now;
+      });
+    });
     effect(() => {
       const c = this.contract();
       const values = {

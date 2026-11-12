@@ -242,9 +242,9 @@ export const POTION_LIMIT = 3;
 export const BRIEFING_BUDGET = 300;
 /** Quanti contratti al massimo può tenere il giocatore (gli spazi del contatore sulla mappa). */
 export const CONTRACT_SLOTS = 5;
-/** Lo sblocco di un contratto è una procedura in due fasi, con una sola barra: prima la violazione (metà della barra), poi la decrittazione (l'altra metà) in cui i simboli diventano testo vero. Durate in millisecondi, a portata del contratto per tutto il tempo (test). */
+/** Lo sblocco di un contratto è una procedura in due fasi, con una sola barra: prima la violazione (metà della barra), poi la decrittazione (l'altra metà, anche se dura meno) in cui i simboli diventano testo vero. Durate in millisecondi, a portata del contratto per tutto il tempo (test). */
 export const UNLOCK_BREACH_MS = 5000;
-export const UNLOCK_DECRYPT_MS = 5000;
+export const UNLOCK_DECRYPT_MS = 3000;
 /** A che distanza (in metri, tolta la precisione del GPS) si sblocca un contratto. */
 export const UNLOCK_RADIUS_M = 50;
 /** Il Berserk del cyberdeck del Picchiatore (valori da provare): costo in Overclock, round che dura, danno in mischia in più, Armatura e ICE che si perdono. */
