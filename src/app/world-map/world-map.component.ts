@@ -74,7 +74,7 @@ const USER_ZOOM = 16;
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
     <app-contract-counter [count]="heldContracts().length" [open]="panel() === 'contracts'" (toggle)="setPanel('contracts', panel() !== 'contracts')" />
-    <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" (play)="playContract($event)" />
+    <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" (play)="playContract($event)" (cancel)="cancelContract($event)" />
     <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
         <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />
@@ -605,6 +605,13 @@ export class WorldMapComponent {
     if (!this.unlockedIds().has(c.id) || this.heldIds().includes(c.id) || this.heldIds().length >= CONTRACT_SLOTS) return;
     if (!c.id.startsWith(DEV_CONTRACT_PREFIX) && !this.heldStore.add(c.id)) return;
     this.heldIds.set([...this.heldIds(), c.id]);
+  }
+
+  /** Il tasto Annulla di un contratto accettato: esce da quelli che si tengono e il posto torna libero (resta sbloccato: lo si può riaccettare). */
+  protected cancelContract(c: Contract): void {
+    if (!this.heldIds().includes(c.id)) return;
+    if (!c.id.startsWith(DEV_CONTRACT_PREFIX) && !this.heldStore.remove(c.id)) return;
+    this.heldIds.set(this.heldIds().filter((id) => id !== c.id));
   }
 
   /** Il tasto Gioca di un contratto accettato: si gioca da casa, la partita parte dal Briefing. */

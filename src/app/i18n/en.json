@@ -2131,5 +2131,7 @@
   "contract.play": "Play",
   "contract.listOpen": "Open accepted contracts",
   "contract.listClose": "Close contracts",
-  "contract.listEmpty": "You have not accepted any contract."
+  "contract.listEmpty": "You have not accepted any contract.",
+  "contract.cancel": "Cancel",
+  "contract.cancelFor": "Cancel contract {n}"
 }

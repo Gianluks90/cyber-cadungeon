@@ -28,7 +28,10 @@ import { contractNumber } from './contract-panel.component';
             <p class="meta"><span class="num">{{ number(c.number) }}</span></p>
             <h3>{{ c.title | ct }}</h3>
             <p class="caption">{{ c.caption | ct }}</p>
-            <button type="button" class="dlg-btn primary" (click)="play.emit(c)">{{ 'contract.play' | t }}</button>
+            <div class="actions">
+              <button type="button" class="dlg-btn primary" (click)="play.emit(c)">{{ 'contract.play' | t }}</button>
+              <button type="button" class="dlg-btn" [attr.aria-label]="'contract.cancelFor' | t: { n: number(c.number) }" (click)="cancel.emit(c)">{{ 'contract.cancel' | t }}</button>
+            </div>
           </article>
         } @empty {
           <p class="empty">{{ 'contract.listEmpty' | t }}</p>
@@ -58,6 +61,8 @@ import { contractNumber } from './contract-panel.component';
     .num { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; color: var(--c-interact); }
     h3 { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .caption { color: var(--c-text-dim); font-size: 13px; }
+    .actions { display: flex; gap: 8px; }
+    .actions .dlg-btn { flex: 1; }
     .empty { margin: 0; color: var(--c-text-dim); font-style: italic; }
   `,
 })
@@ -67,6 +72,8 @@ export class ContractListPanelComponent {
   /** I contratti accettati, già in ordine di numero. */
   readonly contracts = input<readonly Contract[]>([]);
   readonly play = output<Contract>();
+  /** Si annulla un contratto: lo si toglie da quelli accettati. */
+  readonly cancel = output<Contract>();
   protected readonly number = contractNumber;
 
   protected onKey(e: KeyboardEvent): void {
