@@ -9,6 +9,8 @@ export interface HeldStore {
   add(id: string): boolean;
   /** Toglie un contratto da quelli accettati (annullarlo): il posto torna libero. Restituisce false se il browser non lascia scrivere. */
   remove(id: string): boolean;
+  /** Dimentica tutti i contratti accettati (per ricominciare da capo in sviluppo). */
+  clear(): void;
 }
 
 const KEY = 'cad-contracts-held';
@@ -21,6 +23,14 @@ export class LocalHeldStore implements HeldStore {
       return Array.isArray(ids) ? [...new Set(ids.filter((x): x is string => typeof x === 'string'))] : [];
     } catch {
       return []; // niente storage o dati rovinati: nessun contratto
+    }
+  }
+
+  clear(): void {
+    try {
+      localStorage.removeItem(KEY);
+    } catch {
+      // niente storage: niente da cancellare
     }
   }
 

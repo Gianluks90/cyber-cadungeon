@@ -2136,5 +2136,6 @@
   "contract.cancelFor": "Cancel contract {n}",
   "contract.encrypted": "Encrypted text",
   "contract.breach": "Breaching...",
-  "contract.decrypt": "Decrypting..."
+  "contract.decrypt": "Decrypting...",
+  "contract.devReset": "Reset contracts (dev only)"
 }

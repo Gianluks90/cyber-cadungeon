@@ -64,6 +64,7 @@ const formatDuration = (seconds: number): string => {
             <button type="button" class="dlg-btn primary" [attr.aria-disabled]="canAccept() ? null : 'true'" (click)="canAccept() && accept.emit(c)">{{ (accepted() ? 'contract.accepted' : 'contract.acceptCount') | t: { n: heldCount(), max: maxHeld() } }}</button>
             @if (dev && !unlocked()) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
           }
+          @if (dev) { <button type="button" class="dlg-btn" (click)="devReset.emit()">{{ 'contract.devReset' | t }}</button> }
         </div>
       }
     </aside>
@@ -123,6 +124,8 @@ export class ContractPanelComponent {
   /** Il tasto «Accetta»: attivo se il contratto è sbloccato, non è già accettato e c'è posto. */
   readonly accept = output<Contract>();
   readonly devUnlock = output<Contract>();
+  /** Solo in sviluppo: azzera sblocchi e contratti accettati. */
+  readonly devReset = output<void>();
 
   /**
    * I valori che il pannello mostra: copie di quelli che arrivano da fuori, aggiornate solo finché il pannello è aperto. Quando si chiude (il contratto torna null, e chi lo usa

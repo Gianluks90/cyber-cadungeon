@@ -2136,5 +2136,6 @@
   "contract.cancelFor": "Annulla il contratto {n}",
   "contract.encrypted": "Testo cifrato",
   "contract.breach": "Violazione...",
-  "contract.decrypt": "Decrittazione..."
+  "contract.decrypt": "Decrittazione...",
+  "contract.devReset": "Azzera i contratti (solo sviluppo)"
 }

@@ -88,7 +88,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -664,6 +664,16 @@ export class WorldMapComponent {
   /** Il tasto Gioca di un contratto accettato: si gioca da casa, la partita parte dal Briefing. */
   protected playContract(c: Contract): void {
     void this.router.navigate(['/party', c.mapId]);
+  }
+
+  /** Solo in sviluppo: azzera sblocchi e contratti accettati (nel localStorage e in memoria), per riprovare da capo senza svuotare il browser. */
+  protected devReset(): void {
+    this.stopBreach();
+    this.devForced.set(null);
+    this.unlockStore.clear();
+    this.heldStore.clear();
+    this.unlockedIds.set(new Set());
+    this.heldIds.set([]);
   }
 
   /** Solo in sviluppo: fa partire la violazione come se si fosse a portata (5 secondi, poi si sblocca), per vedere la procedura senza GPS. */
