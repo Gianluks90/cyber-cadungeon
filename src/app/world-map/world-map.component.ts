@@ -24,7 +24,7 @@ import type { Contract } from '../game/contracts/contract';
 import { JsonContractStore, type ContractStore } from '../game/contracts/contract-store';
 import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-store';
 import { LocalHeldStore, type HeldStore } from '../game/contracts/held-store';
-import { CONTRACT_SLOTS } from '../game/constants';
+import { CONTRACT_SLOTS, UNLOCK_BREACH_MS } from '../game/constants';
 import { ContractListPanelComponent } from './contract-list-panel.component';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractPanelComponent, contractNumber } from './contract-panel.component';
@@ -88,7 +88,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -205,6 +205,11 @@ export class WorldMapComponent {
   private readonly contracts = computed(() => [...this.realContracts(), ...this.devList()]);
   protected readonly unlockedIds = signal<ReadonlySet<string>>(this.unlockStore.unlocked());
   protected readonly selectedId = signal<string | null>(null);
+  /** La violazione del contratto aperto (0-1) mentre il giocatore resta a portata, o null; il tempo in cui è iniziata e il timer. */
+  protected readonly breach = signal<number | null>(null);
+  private breachId: string | null = null;
+  private breachSince = 0;
+  private breachTimer: ReturnType<typeof setInterval> | null = null;
   /** I contratti accettati (stato del giocatore, nel localStorage; quelli di prova di sviluppo restano solo in memoria) e quanti se ne possono tenere. */
   private readonly heldStore: HeldStore = new LocalHeldStore();
   protected readonly heldIds = signal<readonly string[]>(this.heldStore.held());
@@ -332,18 +337,27 @@ export class WorldMapComponent {
       if (this.mapCreated()) this.ngZone.runOutsideAngular(() => untracked(() => this.paintRoute()));
     });
 
-    // Lo sblocco: a ogni posizione nuova, i contratti da cui distanza - precisione <= 50 m si sbloccano (e restano sbloccati). Il calcolo è solo sul dispositivo.
+    // In sviluppo, alla prima posizione nascono i due contratti di prova.
     effect(() => {
       const pos = this.location.position();
-      const list = this.contracts();
-      if (!pos) return;
-      untracked(() => this.unlockNear(pos, list));
+      if (pos && isDevMode()) untracked(() => this.ensureDevContracts(pos));
+    });
+
+    // Lo sblocco non è istantaneo: col pannello del contratto aperto e il giocatore a portata (distanza - precisione <= 50 m) parte la violazione, che dura UNLOCK_BREACH_MS; se esce
+    // dalla portata, chiude il pannello o ne apre un altro riparte da zero. Il calcolo è solo sul dispositivo.
+    effect(() => {
+      const c = this.selectedContract();
+      const pos = this.location.position();
+      const unlocked = this.unlockedIds();
+      const active = !!c && !!pos && !unlocked.has(c.id) && canUnlock(c, pos);
+      untracked(() => this.setBreach(active ? c : null));
     });
 
     this.location.start();
 
     this.destroyRef.onDestroy(() => {
       this.location.stop();
+      this.stopBreach();
       this.userMarker?.remove();
       this.userMarker = null;
       cancelAnimationFrame(this.routeFrame);
@@ -483,17 +497,43 @@ export class WorldMapComponent {
     this.mapCreated.set(true);
   }
 
-  /** Sblocca i contratti vicini a pos. In sviluppo, alla prima posizione nascono anche i due contratti di prova. Quelli di prova si sbloccano solo in memoria. */
-  private unlockNear(pos: UserPosition, list: readonly Contract[]): void {
-    if (isDevMode() && !this.devList().length) {
-      this.devList.set(devContracts(pos));
-      return; // l'effetto riparte con l'elenco completo
+  /** Solo in sviluppo: alla prima posizione nascono i due contratti di prova (non si salvano). */
+  private ensureDevContracts(pos: UserPosition): void {
+    if (!this.devList().length) this.devList.set(devContracts(pos));
+  }
+
+  /** Avvia (o continua) la violazione del contratto, o la ferma se `c` è null. Arrivata al 100% sblocca il contratto. */
+  private setBreach(c: Contract | null): void {
+    if (!c) {
+      this.stopBreach();
+      return;
     }
-    const already = this.unlockedIds();
-    const now = list.filter((c) => !already.has(c.id) && canUnlock(c, pos));
-    if (!now.length) return;
-    for (const c of now) if (!c.id.startsWith(DEV_CONTRACT_PREFIX)) this.unlockStore.unlock(c.id);
-    this.unlockedIds.set(new Set([...already, ...now.map((c) => c.id)]));
+    if (this.breachId === c.id && this.breachTimer) return; // già in corso
+    this.stopBreach();
+    this.breachId = c.id;
+    this.breachSince = performance.now();
+    this.breach.set(0);
+    this.breachTimer = setInterval(() => {
+      const progress = Math.min(1, (performance.now() - this.breachSince) / UNLOCK_BREACH_MS);
+      this.breach.set(progress);
+      if (progress < 1) return;
+      const done = this.contracts().find((x) => x.id === this.breachId);
+      this.stopBreach();
+      if (done) this.unlockContract(done);
+    }, 100);
+  }
+
+  private stopBreach(): void {
+    if (this.breachTimer) clearInterval(this.breachTimer);
+    this.breachTimer = null;
+    this.breachId = null;
+    if (this.breach() !== null) this.breach.set(null);
+  }
+
+  /** Il contratto resta sbloccato (nel localStorage; quelli di prova di sviluppo solo in memoria). */
+  private unlockContract(c: Contract): void {
+    if (!c.id.startsWith(DEV_CONTRACT_PREFIX) && !this.unlockStore.unlock(c.id)) return;
+    this.unlockedIds.set(new Set([...this.unlockedIds(), c.id]));
   }
 
   /** Chiede (o toglie) il percorso a piedi per il contratto aperto. */
@@ -621,8 +661,7 @@ export class WorldMapComponent {
 
   /** Solo in sviluppo: sblocca a mano il contratto, per vedere la scheda aperta senza GPS (la regola vera dei 50 m è il passo 4). */
   protected devUnlock(c: Contract): void {
-    if (c.id.startsWith(DEV_CONTRACT_PREFIX)) this.unlockedIds.set(new Set([...this.unlockedIds(), c.id]));
-    else if (this.unlockStore.unlock(c.id)) this.unlockedIds.set(new Set([...this.unlockedIds(), c.id]));
+    this.unlockContract(c);
   }
 
   /** Un segnaposto per contratto: il numero, in verde se sbloccato, spento se bloccato, in risalto se è quello aperto. Il tocco apre la scheda (fuori da NgZone, quindi rientra con un). */

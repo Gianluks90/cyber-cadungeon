@@ -2134,5 +2134,6 @@
   "contract.listEmpty": "Non hai accettato nessun contratto.",
   "contract.cancel": "Annulla",
   "contract.cancelFor": "Annulla il contratto {n}",
-  "contract.encrypted": "Testo cifrato"
+  "contract.encrypted": "Testo cifrato",
+  "contract.breach": "Violazione..."
 }

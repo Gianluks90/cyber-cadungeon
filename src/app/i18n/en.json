@@ -2134,5 +2134,6 @@
   "contract.listEmpty": "You have not accepted any contract.",
   "contract.cancel": "Cancel",
   "contract.cancelFor": "Cancel contract {n}",
-  "contract.encrypted": "Encrypted text"
+  "contract.encrypted": "Encrypted text",
+  "contract.breach": "Breaching..."
 }

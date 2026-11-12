@@ -23,7 +23,7 @@ const formatDuration = (seconds: number): string => {
  * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
  * su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione; su telefono (fino a 640px) un foglio che sale dal basso.
  * Si apre quando `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
- * Titolo nell'intestazione; sotto numero e stato, la didascalia. Da bloccato titolo e didascalia sono cifrati (caratteri casuali dello stesso aspetto del testo vero); se si sblocca mentre li guardi si decifrano un poco alla volta, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
+ * Titolo nell'intestazione; sotto numero e stato, la didascalia. Da bloccato titolo e didascalia sono cifrati (caratteri casuali dello stesso aspetto del testo vero); se si sblocca mentre li guardi si decifrano un poco alla volta, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Mentre il contratto si sta sbloccando (a portata) al posto del tasto c'è la barra «Violazione… X%». Il tasto è sempre «Accetta»
  * con quanti contratti hai (es. «Accetta 3/5»): spento se è bloccato, già accettato o i posti sono finiti. Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
  */
 @Component({
@@ -45,16 +45,25 @@ const formatDuration = (seconds: number): string => {
             <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
           </p>
           <app-cipher-text class="caption" [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" />
+          <!-- Le uniche frasi che spariscono da un contratto sbloccato (o a portata, dove la violazione è in corso): fuori dal campo di sincronizzazione e il raggio per sbloccare. La distanza resta sempre. -->
+          @if (!unlocked() && breach() === null) { <p class="muted">{{ 'contract.locked' | t }}</p> }
+          @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
           @if (!unlocked()) {
-            <p class="muted">{{ 'contract.locked' | t }}</p>
-            @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
             @if (walkText(); as w) { <p class="info"><app-icon name="footprint" [size]="16" />{{ 'contract.walk' | t: { walk: w } }}</p> }
             @else if (routeStatus() === 'loading') { <p class="info">{{ 'contract.routeLoading' | t }}</p> }
             @else if (routeStatus() === 'failed') { <p class="info">{{ 'contract.routeFailed' | t }}</p> }
-            <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p>
+            @if (breach() === null) { <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p> }
           }
-          <button type="button" class="dlg-btn primary" [attr.aria-disabled]="canAccept() ? null : 'true'" (click)="canAccept() && accept.emit(c)">{{ (accepted() ? 'contract.accepted' : 'contract.acceptCount') | t: { n: heldCount(), max: maxHeld() } }}</button>
-          @if (dev && !unlocked()) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
+          @if (breach() !== null) {
+            <!-- La violazione: restando a portata per qualche secondo la barra si riempie (a riempimento, non a segmenti) e il contratto si sblocca. Prende il posto del tasto. -->
+            <div class="breach" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()" [attr.aria-label]="'contract.breach' | t">
+              <div class="breach-row"><span>{{ 'contract.breach' | t }}</span><span class="pct">{{ percent() }}%</span></div>
+              <div class="track"><div class="fill" [style.width.%]="percent()"></div></div>
+            </div>
+          } @else {
+            <button type="button" class="dlg-btn primary" [attr.aria-disabled]="canAccept() ? null : 'true'" (click)="canAccept() && accept.emit(c)">{{ (accepted() ? 'contract.accepted' : 'contract.acceptCount') | t: { n: heldCount(), max: maxHeld() } }}</button>
+            @if (dev && !unlocked()) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
+          }
         </div>
       }
     </aside>
@@ -86,6 +95,12 @@ const formatDuration = (seconds: number): string => {
     .state.on { color: var(--c-interact); }
     .caption { color: var(--c-text); }
     .muted { color: var(--c-text-dim); font-style: italic; }
+    /* La violazione: etichetta e percentuale ai due lati, sotto una barra che si riempie. */
+    .breach { display: flex; flex-direction: column; gap: 6px; }
+    .breach-row { display: flex; justify-content: space-between; align-items: baseline; font: 600 12px/1.2 var(--font-ui); letter-spacing: 0.06em; text-transform: uppercase; color: var(--c-text); }
+    .pct { font-variant-numeric: tabular-nums; color: var(--c-interact); }
+    .track { height: 8px; box-sizing: border-box; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-bg); overflow: hidden; }
+    .fill { height: 100%; background: var(--c-interact); transition: width 120ms linear; }
     .info { display: flex; align-items: center; gap: 6px; color: var(--c-text-dim); font-size: 13px; }
   `,
 })
@@ -98,6 +113,8 @@ export class ContractPanelComponent {
   /** Il percorso a piedi fino al contratto e a che punto è il calcolo. */
   readonly route = input<WalkingRoute | null>(null);
   readonly routeStatus = input<'idle' | 'loading' | 'failed'>('idle');
+  /** La violazione in corso (0-1) mentre si resta a portata, o null se non è in corso. */
+  readonly breach = input<number | null>(null);
   /** Il contratto è già fra quelli accettati, quanti ne ha il giocatore e quanti può tenerne al massimo. */
   readonly accepted = input(false);
   readonly heldCount = input(0);
@@ -107,6 +124,7 @@ export class ContractPanelComponent {
   readonly accept = output<Contract>();
   readonly devUnlock = output<Contract>();
 
+  protected readonly percent = computed(() => Math.floor((this.breach() ?? 0) * 100));
   protected readonly canAccept = computed(() => this.unlocked() && !this.accepted() && this.heldCount() < this.maxHeld());
   protected readonly dev = isDevMode();
   protected readonly radius = UNLOCK_RADIUS_M;

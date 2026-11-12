@@ -242,6 +242,8 @@ export const POTION_LIMIT = 3;
 export const BRIEFING_BUDGET = 300;
 /** Quanti contratti al massimo può tenere il giocatore (gli spazi del contatore sulla mappa). */
 export const CONTRACT_SLOTS = 5;
+/** Quanto deve restare a portata un contratto (millisecondi) perché la violazione lo sblocchi. */
+export const UNLOCK_BREACH_MS = 5000;
 /** A che distanza (in metri, tolta la precisione del GPS) si sblocca un contratto. */
 export const UNLOCK_RADIUS_M = 50;
 /** Il Berserk del cyberdeck del Picchiatore (valori da provare): costo in Overclock, round che dura, danno in mischia in più, Armatura e ICE che si perdono. */
