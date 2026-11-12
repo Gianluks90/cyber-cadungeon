@@ -24,7 +24,7 @@ import type { Contract } from '../game/contracts/contract';
 import { JsonContractStore, type ContractStore } from '../game/contracts/contract-store';
 import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-store';
 import { LocalHeldStore, type HeldStore } from '../game/contracts/held-store';
-import { CONTRACT_SLOTS, UNLOCK_BREACH_MS } from '../game/constants';
+import { CONTRACT_SLOTS, UNLOCK_BREACH_MS, UNLOCK_DECRYPT_MS } from '../game/constants';
 import { ContractListPanelComponent } from './contract-list-panel.component';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractPanelComponent, contractNumber } from './contract-panel.component';
@@ -520,7 +520,7 @@ export class WorldMapComponent {
     this.breachSince = performance.now();
     this.breach.set(0);
     this.breachTimer = setInterval(() => {
-      const progress = Math.min(1, (performance.now() - this.breachSince) / UNLOCK_BREACH_MS);
+      const progress = Math.min(1, (performance.now() - this.breachSince) / (UNLOCK_BREACH_MS + UNLOCK_DECRYPT_MS));
       this.breach.set(progress);
       if (progress < 1) return;
       const done = this.contracts().find((x) => x.id === this.breachId);

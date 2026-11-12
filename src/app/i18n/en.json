@@ -2135,5 +2135,6 @@
   "contract.cancel": "Cancel",
   "contract.cancelFor": "Cancel contract {n}",
   "contract.encrypted": "Encrypted text",
-  "contract.breach": "Breaching..."
+  "contract.breach": "Breaching...",
+  "contract.decrypt": "Decrypting..."
 }

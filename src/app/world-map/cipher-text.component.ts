@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, afterRenderEffect, effect, inject, input, signal, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, afterRenderEffect, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { TranslatePipe } from '../i18n/translate.pipe';
 
 /**
@@ -16,14 +16,14 @@ const randomGlyph = () => {
 /** Ogni quanto cambia il testo cifrato (ms) e quanta parte dei caratteri cambia a ogni giro. */
 const TICK_MS = 130;
 const REVOLVE = 0.15;
-/** Durante la decifratura il ritmo è un po' più serrato. */
-const REVEAL_TICK_MS = 85;
 
 /**
  * Un testo che non si può ancora leggere: al suo posto una serie di caratteri e simboli casuali, come se fosse cifrato, con qualche carattere che cambia di continuo
- * (stessa lunghezza e stessi spazi del testo vero, e lo stesso carattere tipografico; blu finché è cifrato, e ogni carattere che si fissa diventa bianco: usato per la didascalia e per il titolo). Quando `unlocked` diventa vero **mentre lo si guarda** il testo vero compare un poco alla volta, carattere per carattere in
- * ordine sparso, come se si decifrasse. Se è già sbloccato all'inizio (o con «riduci le animazioni») si legge subito, senza effetto.
- * Mentre è cifrato il testo vero non sta nella pagina (solo la sua forma).
+ * (stessa lunghezza e stessi spazi del testo vero, e lo stesso carattere tipografico; blu finché è cifrato, e ogni carattere che si fissa diventa bianco: usato per la didascalia e per
+ * il titolo). La decifratura non ha un tempo suo: la guida `reveal` (0-1, dato da chi lo usa, per esempio la barra di una procedura di sblocco): a `reveal` il testo vero compare per
+ * quella parte dei caratteri, in ordine sparso, e gli altri continuano a cambiare. Se `reveal` torna null o scende, i caratteri tornano cifrati. Se `unlocked` è vero il testo si legge
+ * subito, intero (anche riaprendo un contratto già sbloccato).
+ * Mentre è cifrato il testo vero non sta nella pagina, se non per la parte già rivelata.
  */
 @Component({
   selector: 'app-cipher-text',
@@ -40,20 +40,26 @@ const REVEAL_TICK_MS = 85;
   `,
 })
 export class CipherTextComponent {
-  /** Il testo vero: finché è cifrato se ne usa solo la forma (lunghezza e spazi). */
+  /** Il testo vero: finché è cifrato se ne usa solo la forma (lunghezza e spazi) più la parte già rivelata. */
   readonly text = input('');
   /** Se il testo si può leggere. */
   readonly unlocked = input(false);
-  /** Di chi è il testo (l'id del contratto): due contratti con lo stesso testo non sono lo stesso testo che si sblocca. */
+  /** Di chi è il testo (l'id del contratto): due contratti con lo stesso testo hanno un ordine di decifratura diverso. */
   readonly owner = input<string | null>(null);
+  /** Quanto del testo è decifrato (0-1) o null se non si sta decifrando. */
+  readonly reveal = input<number | null>(null);
   protected readonly shown = signal<string[]>([]);
-  /** Il testo vero è completamente visibile (anche dopo la decifratura). */
+  /** Il testo vero è completamente visibile. */
   protected readonly plain = signal(false);
-  /** Durante la decifratura: quali caratteri si sono già fissati (e sono bianchi). */
+  /** Quali caratteri sono già fissati (veri e bianchi). */
   protected readonly fixed = signal<boolean[]>([]);
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly textEl = viewChild<ElementRef<HTMLElement>>('t');
+  private chars: string[] = [];
+  /** L'ordine sparso (indici dei caratteri non spazio) in cui compaiono quelli veri. */
+  private order: number[] = [];
+  private fixedSet = new Set<number>();
 
   /**
    * Fissa l'altezza del testo cifrato a quella che avrà il testo vero alla larghezza di adesso: si misura una copia del testo vero messa un attimo fuori vista e subito tolta.
@@ -78,13 +84,18 @@ export class CipherTextComponent {
     el.style.height = height ? `${height}px` : '';
   }
 
-  /** Per riconoscere il passaggio da cifrato a leggibile sullo stesso testo. */
-  private lastText: string | null = null;
-  private lastOwner: string | null = null;
-  private lastUnlocked = false;
+  /** Fissa la parte `r` (0-1) dei caratteri, nell'ordine sparso; quelli che non lo sono più tornano casuali. */
+  private applyReveal(r: number | null): void {
+    const count = r === null ? 0 : Math.min(this.order.length, Math.max(0, Math.floor(r * this.order.length)));
+    const before = this.fixed();
+    this.fixedSet = new Set(this.order.slice(0, count));
+    const now = this.chars.map((_, i) => this.fixedSet.has(i));
+    this.fixed.set(now);
+    this.shown.update((s) => s.map((ch, i) => (now[i] ? this.chars[i] : before[i] ? randomGlyph() : ch)));
+  }
 
   constructor() {
-    // Dopo ogni disegno in cui cambia il testo (o la decifratura finisce) si rimisura l'altezza; se cambia la larghezza (telefono girato, pannello ridimensionato) si rimisura.
+    // Dopo ogni disegno in cui cambia il testo (o diventa leggibile) si rimisura l'altezza; se cambia la larghezza (telefono girato, pannello ridimensionato) si rimisura.
     afterRenderEffect(() => {
       this.text();
       this.plain();
@@ -103,55 +114,39 @@ export class CipherTextComponent {
       destroyRef.onDestroy(() => observer.disconnect());
     });
 
+    // La forma del testo: se è sbloccato si legge intero, altrimenti è cifrato e qualche carattere cambia a ogni giro.
     effect((onCleanup) => {
       const text = this.text();
       const unlocked = this.unlocked();
-      const chars = Array.from(text);
-      const owner = this.owner();
-      const decrypting = unlocked && this.lastText === text && this.lastOwner === owner && !this.lastUnlocked; // era cifrato e adesso si sblocca, davanti agli occhi
-      this.lastText = text;
-      this.lastOwner = owner;
-      this.lastUnlocked = unlocked;
-      const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      if (unlocked && (!decrypting || still)) {
-        this.shown.set(chars);
+      this.owner();
+      this.chars = Array.from(text);
+      this.order = this.chars.map((_, i) => i).filter((i) => !/\s/.test(this.chars[i]));
+      for (let i = this.order.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [this.order[i], this.order[j]] = [this.order[j], this.order[i]];
+      }
+      this.fixedSet = new Set();
+      this.fixed.set([]);
+      if (unlocked) {
+        this.shown.set(this.chars);
         this.plain.set(true);
         return;
       }
       this.plain.set(false);
-      this.fixed.set([]);
-      this.shown.set(chars.map((ch) => (/\s/.test(ch) ? ch : randomGlyph())));
-      if (still) return;
-
-      if (!decrypting) {
-        // Cifrato: qualche carattere cambia a ogni giro.
-        const timer = setInterval(() => this.shown.update((s) => s.map((ch, i) => (/\s/.test(chars[i]) || Math.random() > REVOLVE ? ch : randomGlyph()))), TICK_MS);
-        onCleanup(() => clearInterval(timer));
-        return;
-      }
-
-      // Decifratura: i caratteri veri compaiono in ordine sparso, gli altri continuano a cambiare; alla fine il testo diventa normale.
-      const order = chars.map((_, i) => i).filter((i) => !/\s/.test(chars[i]));
-      for (let i = order.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [order[i], order[j]] = [order[j], order[i]];
-      }
-      const ticks = Math.max(8, Math.round(Math.min(2200, 500 + order.length * 18) / REVEAL_TICK_MS));
-      const perTick = Math.ceil(order.length / ticks);
-      const revealed = new Set<number>();
-      const timer = setInterval(() => {
-        for (const i of order.splice(0, perTick)) revealed.add(i);
-        if (!order.length) {
-          clearInterval(timer);
-          this.shown.set(chars);
-          this.plain.set(true);
-          return;
-        }
-        this.shown.set(chars.map((ch, i) => (/\s/.test(ch) || revealed.has(i) ? ch : randomGlyph())));
-        this.fixed.set(chars.map((_, i) => revealed.has(i)));
-      }, REVEAL_TICK_MS);
+      this.shown.set(this.chars.map((ch) => (/\s/.test(ch) ? ch : randomGlyph())));
+      untracked(() => this.applyReveal(this.reveal())); // se il pannello si apre a decifratura già iniziata
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+      const chars = this.chars;
+      const timer = setInterval(() => this.shown.update((s) => s.map((ch, i) => (/\s/.test(chars[i]) || this.fixedSet.has(i) || Math.random() > REVOLVE ? ch : randomGlyph()))), TICK_MS);
       onCleanup(() => clearInterval(timer));
+    });
+
+    // La decifratura: segue `reveal`.
+    effect(() => {
+      const r = this.reveal();
+      untracked(() => {
+        if (!this.plain()) this.applyReveal(r);
+      });
     });
   }
 }

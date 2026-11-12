@@ -23,7 +23,7 @@ const formatDuration = (seconds: number): string => {
  * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
  * su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione; su telefono (fino a 640px) un foglio che sale dal basso.
  * Si apre quando `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
- * Titolo nell'intestazione; sotto numero e stato, la didascalia. Da bloccato titolo e didascalia sono cifrati (caratteri casuali dello stesso aspetto del testo vero); se si sblocca mentre li guardi si decifrano un poco alla volta, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Mentre il contratto si sta sbloccando (a portata) al posto del tasto c'è la barra «Violazione… X%». Il tasto è sempre «Accetta»
+ * Titolo nell'intestazione; sotto numero e stato, la didascalia. Da bloccato titolo e didascalia sono cifrati (caratteri casuali dello stesso aspetto del testo vero); se si sblocca mentre li guardi si decifrano un poco alla volta, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Mentre il contratto si sta sbloccando (a portata) al posto del tasto c'è una sola barra «X%» in due metà: «Violazione…» e poi «Decrittazione…», in cui titolo e didascalia passano da simboli a testo vero. Il tasto è sempre «Accetta»
  * con quanti contratti hai (es. «Accetta 3/5»): spento se è bloccato, già accettato o i posti sono finiti. Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
  */
 @Component({
@@ -35,7 +35,7 @@ const formatDuration = (seconds: number): string => {
     <aside class="sheet" [class.open]="open()" [attr.aria-hidden]="!open()" [attr.aria-label]="shown() ? ('contract.card' | t: { n: number(shown()!.number) }) : null">
       @if (shown(); as c) {
         <header>
-          <h2><app-cipher-text [text]="c.title | ct" [unlocked]="unlocked()" [owner]="c.id" /></h2>
+          <h2><app-cipher-text [text]="c.title | ct" [unlocked]="unlocked()" [owner]="c.id" [reveal]="reveal()" /></h2>
           <button type="button" class="close" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
         </header>
         <hr />
@@ -44,7 +44,7 @@ const formatDuration = (seconds: number): string => {
             <span class="num">{{ number(c.number) }}</span>
             <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
           </p>
-          <app-cipher-text class="caption" [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" />
+          <app-cipher-text class="caption" [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" [reveal]="reveal()" />
           <!-- Le uniche frasi che spariscono da un contratto sbloccato (o a portata, dove la violazione è in corso): fuori dal campo di sincronizzazione e il raggio per sbloccare. La distanza resta sempre. -->
           @if (!unlocked() && breach() === null) { <p class="muted">{{ 'contract.locked' | t }}</p> }
           @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
@@ -56,8 +56,8 @@ const formatDuration = (seconds: number): string => {
           }
           @if (breach() !== null) {
             <!-- La violazione: restando a portata per qualche secondo la barra si riempie (a riempimento, non a segmenti) e il contratto si sblocca. Prende il posto del tasto. -->
-            <div class="breach" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()" [attr.aria-label]="'contract.breach' | t">
-              <div class="breach-row"><span>{{ 'contract.breach' | t }}</span><span class="pct">{{ percent() }}%</span></div>
+            <div class="breach" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()" [attr.aria-label]="(decrypting() ? 'contract.decrypt' : 'contract.breach') | t">
+              <div class="breach-row"><span>{{ (decrypting() ? 'contract.decrypt' : 'contract.breach') | t }}</span><span class="pct">{{ percent() }}%</span></div>
               <div class="track"><div class="fill" [style.width.%]="percent()"></div></div>
             </div>
           } @else {
@@ -138,6 +138,12 @@ export class ContractPanelComponent {
   protected readonly heldCount = signal(0);
   protected readonly maxHeld = signal(CONTRACT_SLOTS);
 
+  /** La procedura ha una sola barra in due metà: prima la violazione, poi la decrittazione (da lì i simboli diventano testo vero, tanto quanto la barra va oltre la metà). */
+  protected readonly decrypting = computed(() => (this.breach() ?? 0) >= 0.5);
+  protected readonly reveal = computed(() => {
+    const b = this.breach();
+    return b === null ? null : Math.max(0, (b - 0.5) * 2);
+  });
   protected readonly percent = computed(() => Math.floor((this.breach() ?? 0) * 100));
   protected readonly canAccept = computed(() => this.unlocked() && !this.accepted() && this.heldCount() < this.maxHeld());
   protected readonly dev = isDevMode();
