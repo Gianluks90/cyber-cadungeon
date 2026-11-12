@@ -48,6 +48,10 @@ const loadHaloShown = (): boolean => {
 const ROUTE_SOURCE = 'contract-route';
 const ROUTE_LAYER = 'contract-route';
 const ROUTE_REFRESH_M = 150;
+/** Il colore della linea come sfumatura lungo il percorso (MapLibre vuole una sfumatura per animare la comparsa): tutta dello stesso colore. */
+const routeGradient = (color: string) => ['interpolate', ['linear'], ['line-progress'], 0, color, 1, color] as never;
+/** La linea tracciata solo fino a `fraction` (0-1) del percorso, dal punto di partenza: il resto è trasparente. */
+const routeGradientUntil = (color: string, fraction: number) => ['step', ['line-progress'], color, Math.max(fraction, 0.0001), 'rgba(0,0,0,0)'] as never;
 
 /** Quanto la mappa si avvicina al giocatore quando lo trova. */
 const USER_ZOOM = 16;
@@ -220,6 +224,9 @@ export class WorldMapComponent {
   protected readonly routeStatus = signal<'idle' | 'loading' | 'failed'>('idle');
   private routeAsked: { id: string; from: { lat: number; lng: number } } | null = null;
   private routeToken = 0;
+  /** C'è già una linea disegnata (una nuova che compare corre dal punto A al punto B; un aggiornamento dello stesso percorso no) e il fotogramma dell'animazione in corso. */
+  private routeDrawn = false;
+  private routeFrame = 0;
   /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
   private readonly mapCreated = signal(false);
   private contractMarkers: Marker[] = [];
@@ -339,6 +346,7 @@ export class WorldMapComponent {
       this.location.stop();
       this.userMarker?.remove();
       this.userMarker = null;
+      cancelAnimationFrame(this.routeFrame);
       this.contractMarkers.forEach((m) => m.remove());
       this.contractMarkers = [];
       this.resizeObserver?.disconnect();
@@ -511,29 +519,62 @@ export class WorldMapComponent {
     });
   }
 
-  /** Disegna (o toglie) la linea del percorso: dello stesso verde della posizione del giocatore. Dopo un cambio di tema la linea si ridisegna da `style.load`. */
+  /**
+   * Disegna (o toglie) la linea del percorso, dello stesso verde della posizione del giocatore. Quando la linea compare corre dal punto A (la posizione del giocatore) al punto B (il contratto):
+   * una sfumatura lungo il percorso che si allunga da trasparente a piena (con "riduci le animazioni" compare intera). Un aggiornamento dello stesso percorso (il giocatore si è mosso) non
+   * la rifà; dopo un cambio di tema la linea si ridisegna da `style.load` senza animazione.
+   */
   private paintRoute(): void {
     const map = this.map;
     if (!map) return;
     const route = this.route();
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--c-you').trim();
     const data = { type: 'FeatureCollection' as const, features: route ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates: route.coordinates } }] : [] };
+    const animate = !!route && !this.routeDrawn && !matchMedia('(prefers-reduced-motion: reduce)').matches;
     try {
       const source = map.getSource(ROUTE_SOURCE);
       if (source && 'setData' in source) {
+        if (animate) map.setPaintProperty(ROUTE_LAYER, 'line-gradient', routeGradientUntil(color, 0)); // prima di mostrare la linea nuova: nascosta
         (source as GeoJSONSource).setData(data);
-        return;
+      } else {
+        map.addSource(ROUTE_SOURCE, { type: 'geojson', data, lineMetrics: true }); // lineMetrics: serve alla sfumatura lungo la linea
+        map.addLayer({
+          id: ROUTE_LAYER,
+          type: 'line',
+          source: ROUTE_SOURCE,
+          layout: { 'line-cap': 'round', 'line-join': 'round' },
+          paint: { 'line-gradient': animate ? routeGradientUntil(color, 0) : routeGradient(color), 'line-width': 4, 'line-opacity': 0.9 },
+        });
       }
-      map.addSource(ROUTE_SOURCE, { type: 'geojson', data });
-      map.addLayer({
-        id: ROUTE_LAYER,
-        type: 'line',
-        source: ROUTE_SOURCE,
-        layout: { 'line-cap': 'round', 'line-join': 'round' },
-        paint: { 'line-color': getComputedStyle(document.documentElement).getPropertyValue('--c-you').trim(), 'line-width': 4, 'line-opacity': 0.9 },
-      });
     } catch {
       map.once('idle', () => this.paintRoute()); // lo stile non è ancora pronto (cambio di tema o primi tasselli): si riprova a riposo
+      return;
     }
+    cancelAnimationFrame(this.routeFrame);
+    if (!route) {
+      this.routeDrawn = false;
+      return;
+    }
+    if (animate) this.animateRoute(map, color, route.distanceM);
+    else map.setPaintProperty(ROUTE_LAYER, 'line-gradient', routeGradient(color));
+    this.routeDrawn = true;
+  }
+
+  /** Fa correre la linea da A a B: la parte colorata cresce da 0 a tutto il percorso, rallentando verso la fine; dura da 0,9 a 2,2 secondi secondo la lunghezza. */
+  private animateRoute(map: MapLibreMap, color: string, distanceM: number): void {
+    const duration = Math.min(2200, 900 + distanceM * 0.4);
+    const start = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      const eased = 1 - (1 - t) ** 3;
+      try {
+        map.setPaintProperty(ROUTE_LAYER, 'line-gradient', t < 1 ? routeGradientUntil(color, eased) : routeGradient(color));
+      } catch {
+        return; // lo stile è cambiato nel frattempo: ci pensa `style.load`
+      }
+      if (t < 1) this.routeFrame = requestAnimationFrame(step);
+    };
+    this.routeFrame = requestAnimationFrame(step);
   }
 
   /** Si tocca un contratto: la mappa va alle sue coordinate (spostando il centro fuori dal pannello che si apre) e si apre il pannello con le info. */
