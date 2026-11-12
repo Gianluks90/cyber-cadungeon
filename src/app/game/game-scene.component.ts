@@ -137,7 +137,7 @@ import type { SkillDef } from './skills/skill';
 import type { AdversaryCardDef } from './adversary/card';
 import { partySetupStore } from './mercenaries/party-setup';
 import { composeRules } from './state/setup-text';
-import { DEFAULT_PARTY, MercenarySheet, loadAllMercenarySheets, loadMercenarySheets } from './mercenaries/mercenary-sheet';
+import { DEFAULT_PARTY, MercenarySheet, loadAllMercenarySheets, loadMercenarySheets, validParty } from './mercenaries/mercenary-sheet';
 import { loadItemCatalog, loadShopStock } from './items/item';
 import { loadSkillCatalog } from './skills/skill';
 import { activeSparks, loadModCatalog, passiveEffects } from './mods/mod';
@@ -606,11 +606,10 @@ export class GameSceneComponent implements OnDestroy {
       this.placed = placed;
       // Pedine dalla mappa; senza, parte un solo eroe al centro del primo tile.
       const start = this.startCell(placed);
-      // Le avventure fatte con l'editor non hanno eroi: la squadra è della partita (per ora i due eroi che ci sono), e prende posto sulle caselle di partenza alla preparazione.
+      // Le avventure fatte con l'editor non hanno eroi: la squadra è della partita, e prende posto sulle caselle di partenza alla preparazione.
       const hasMercenaries = (data.pieces ?? []).some((p) => p.team === 'mercenary');
-      // Una partita multiplayer porta la squadra scelta nella sala d'attesa (`?party=a,b`); senza, quella di base.
-      const chosen = (this.route.snapshot.queryParamMap.get('party') ?? '').split(',').filter((id) => /^[a-z0-9-]+$/.test(id));
-      const partyIds = chosen.length ? chosen : this.adversaryMode ? ['bastion', 'vesper', 'halo'] : DEFAULT_PARTY; // `/adversary/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
+      // La squadra scelta (`?party=a,b,c`) conta solo se sono esattamente 3 mercenari diversi; qualunque altra cosa (due, quattro, doppioni) ripiega sulla squadra di base, anch'essa di 3.
+      const partyIds = validParty((this.route.snapshot.queryParamMap.get('party') ?? '').split(',')) ?? DEFAULT_PARTY;
       // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
       const setup = partySetupStore.take();
       const modCatalog = await loadModCatalog();
@@ -1476,7 +1475,7 @@ export class GameSceneComponent implements OnDestroy {
     await this.attackImpact(attacker, target, se.option, outcome, se.plan.area.breath && se.breathDir && this.board ? { cells: areaCells(this.board, attacker, target, se.plan, se.spent, se.breathDir), shape: se.breathDir } : undefined);
     // Il nome delle abilità e la sagoma sono già stati mostrati prima del tiro (`announceAttack`); qui solo gli stati inflitti sopra chi li subisce.
     result.applied.forEach((a, i) => this.pieces?.floatTag(target, STATUS_NAMES[a.kind], a.kind, i * 450));
-    if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'water_drop', 'mercenary'); // Furia del dolore
+    if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'speed', 'mercenary'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
     const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
     const by = attacker.team === 'enemy' ? 'adversary' : 'mercenary';
@@ -1911,7 +1910,7 @@ export class GameSceneComponent implements OnDestroy {
     const kind = kinds.find((k) => k === id);
     if (!kind || !shedStatus(this.state, mercenary, kind)) return;
     this.pieces?.refreshActive();
-    this.showNotice(tr('{name} si rigenera: {state} −1', { name: mercenary.name, state: STATUS_NAMES[kind] }), 'water_drop', 'mercenary');
+    this.showNotice(tr('{name} si rigenera: {state} −1', { name: mercenary.name, state: STATUS_NAMES[kind] }), 'speed', 'mercenary');
   }
 
   /** Tocca al Maligno: ogni nemico, uno alla volta, si muove verso l'eroe più vicino e attacca; poi comincia il nuovo round. */
@@ -2001,7 +2000,7 @@ export class GameSceneComponent implements OnDestroy {
         snapshotSeen(this.state); // chi vedeva chi all'inizio del round (Colpo a tradimento)
         for (const h of this.state.pieces) {
           const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
-          if (h.team === 'mercenary' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'water_drop', 'mercenary');
+          if (h.team === 'mercenary' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'speed', 'mercenary');
           const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
           if (h.team === 'mercenary' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'mercenary');
         }
@@ -3551,7 +3550,7 @@ export class GameSceneComponent implements OnDestroy {
       snapshotSeen(this.state);
       for (const h of this.state.pieces) {
         const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
-        if (h.team === 'mercenary' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'water_drop', 'mercenary');
+        if (h.team === 'mercenary' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'speed', 'mercenary');
           const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
           if (h.team === 'mercenary' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'mercenary');
       }
@@ -4254,7 +4253,7 @@ export class GameSceneComponent implements OnDestroy {
     const r = overclockForMovement(this.state, mercenary);
     if (r.code === 'ok') {
       this.pieces?.refreshActive();
-      this.showNotice(tr('Spesa {overclock:1}: +{mov:1}'), 'water_drop');
+      this.showNotice(tr('Spesa {overclock:1}: +{mov:1}'), 'speed');
     } else if (r.code === 'none') this.showNotice(tr('Non hai più overclock'), 'warning');
     else this.showNotice(tr('Ora non puoi spendere overclock'), 'warning');
   }

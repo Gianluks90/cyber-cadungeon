@@ -1,6 +1,6 @@
 /**
  * I valori nei testi: si scrive `{mov:N}` (punti movimento), `{overclock:N}` (overclock) o `{alarm:N}` (Odio) e l'interfaccia li mostra come il valore con l'icona, nel colore
- * giusto (impronte gialle, goccia verde, teschio rosso), invece di "N punti movimento" o "N overclock". Senza numero (`{overclock}`) c'è solo l'icona, da mettere dopo la parola
+ * giusto (impronte gialle, icona speed, teschio rosso), invece di "N punti movimento" o "N overclock". Senza numero (`{overclock}`) c'è solo l'icona, da mettere dopo la parola
  * ("l'overclock {overclock} al massimo"). Dove il testo non può avere icone (un suggerimento col mouse), `plainCostText` li riscrive a parole (e toglie quelle senza numero).
  */
 const COST = /\{(mov|overclock|alarm)(?::(\d+))?\}/g;

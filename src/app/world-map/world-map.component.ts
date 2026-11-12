@@ -8,6 +8,7 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { setGraphics, type GraphicsOptions } from '../game/graphics-settings';
 import { DropdownMenuComponent, type DropdownItem } from '../ui/dropdown-menu.component';
 import { GraphicsDialogComponent } from '../ui/graphics-dialog.component';
+import { BrandLogoComponent } from '../ui/brand-logo.component';
 import { IconComponent } from '../ui/icon.component';
 import { BASEMAP_SOURCE_ID, START_VIEW } from './map-config';
 import { TileLoadingView } from './tile-loading';
@@ -64,14 +65,14 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent],
+  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
     @if (locating()) {
       <app-map-locating [position]="location.position()" />
     }
-    <div class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" [style.--logo]="logoUrl"></div>
+    <app-brand-logo class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" />
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
     <app-contract-counter [count]="heldContracts().length" [open]="panel() === 'contracts'" (toggle)="setPanel('contracts', panel() !== 'contracts')" />
@@ -119,9 +120,8 @@ const USER_ZOOM = 16;
     .map { position: absolute; inset: 0; opacity: 0; transition: opacity var(--t-base); }
     /* La mappa compare quando ha disegnato i primi tasselli (all'avvio sul giocatore, dietro la finta dialog "Localizzazione in corso"). */
     .map.ready { opacity: 1; }
-    /* In alto a sinistra, nel box come i tasti; il logo è un SVG usato come maschera, quindi lo colora il testo. */
-    .logo { position: absolute; top: 10px; left: 10px; z-index: 1; box-sizing: border-box; height: 36px; width: 82px; border: 1px solid var(--c-line-strong); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: none; }
-    .logo::after { content: ''; position: absolute; inset: 0; margin: auto; width: 62px; height: 20px; background-color: var(--c-text); -webkit-mask: var(--logo) center / contain no-repeat; mask: var(--logo) center / contain no-repeat; }
+    /* In alto a sinistra, nel box come i tasti; il logo (app-brand-logo) è un SVG usato come maschera, quindi lo colora il testo. */
+    .logo { position: absolute; top: 10px; left: 10px; z-index: 1; color: var(--c-text); pointer-events: none; }
     /* I tasti nell'intestazione della tendina (schermo intero, impostazioni): quadrati piccoli, a spigoli secchi. */
     .hbtn { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .hbtn:hover:not(:disabled), .hbtn:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
@@ -166,7 +166,6 @@ export class WorldMapComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   protected readonly location = inject(LocationService);
-  protected readonly logoUrl = `url("${new URL('logo/logoipsum-421.svg', document.baseURI).href}")`;
   /** Se la posizione è poco precisa, di quanti metri (altrimenti niente). */
   protected readonly lowAccuracy = computed(() => {
     const a = this.location.position()?.accuracy;

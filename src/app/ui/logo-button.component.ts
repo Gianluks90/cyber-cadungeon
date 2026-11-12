@@ -1,6 +1,6 @@
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { ChangeDetectionStrategy, Component, ElementRef, inject, input, output, signal } from '@angular/core';
-import { IconComponent } from './icon.component';
+import { BrandLogoComponent } from './brand-logo.component';
 
 /** Una voce del menu dell'app. */
 export interface MenuItem {
@@ -9,17 +9,17 @@ export interface MenuItem {
 }
 
 /**
- * Il logo dell'app (public/logo/, usato come maschera: prende il colore del testo) come bottone a pillola: è il primo elemento delle pillole in alto e apre
+ * Il logo dell'app (`app-brand-logo`, usato come maschera: prende il colore del testo) come bottone: è il primo elemento delle pillole in alto e apre
  * il menu generale dell'app, una tendina sotto di lui (stile mat-menu: una colonna di voci, si chiude con un tocco fuori, Esc o una scelta).
  */
 @Component({
   selector: 'app-logo-button',
-  imports: [TranslatePipe, IconComponent],
+  imports: [TranslatePipe, BrandLogoComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: { '(document:pointerdown)': 'outside($event)', '(document:keydown.escape)': 'open.set(false)' },
   template: `
     <button type="button" class="logo" [attr.aria-label]="'logoMenu.menu' | t" [title]="'logoMenu.menu' | t" aria-haspopup="menu" [attr.aria-expanded]="open()" [class.open]="open()" (click)="press()">
-      <app-icon name="logo/logoipsum-419" [size]="20" />
+      <app-brand-logo />
     </button>
     @if (open()) {
       <div class="menu" role="menu">
@@ -31,14 +31,12 @@ export interface MenuItem {
   `,
   styles: `
     :host { position: relative; display: inline-flex; pointer-events: auto; }
-    .logo {
-      display: inline-flex; align-items: center; justify-content: center; padding: 6px; border-radius: var(--radius-1); cursor: pointer;
-      background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-strong);
-      transition: border-color 0.15s, color 0.15s;
-    }
+    /* Il riquadro col bordo lo disegna app-brand-logo: il bottone gli dà solo colore e stati. */
+    .logo { display: inline-flex; padding: 0; border: 0; background: none; color: var(--c-text); cursor: pointer; transition: color 0.15s; }
     /* Tocco: grande quanto gli altri tasti accanto (44 px, come Salva e i comandi della camera). */
-    @media (pointer: coarse) { .logo { padding: 11px; } }
-    .logo:hover, .logo:focus-visible, .logo.open { border-color: var(--c-interact); color: var(--c-interact); outline: none; }
+    @media (pointer: coarse) { .logo { --logo-h: 44px; } }
+    .logo:hover, .logo:focus-visible, .logo.open { color: var(--c-interact); outline: none; }
+    .logo:hover app-brand-logo, .logo:focus-visible app-brand-logo, .logo.open app-brand-logo { border-color: var(--c-interact); }
     /* La tendina: sotto il logo, una colonna di voci */
     .menu {
       position: absolute; z-index: 40; top: calc(100% + 6px); left: 0; min-width: 210px; display: flex; flex-direction: column; padding: 4px 0;

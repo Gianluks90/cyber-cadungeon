@@ -27,11 +27,8 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
       <app-hearts class="hearts" [wounds]="stats().wounds" [max]="stats().wounds" [size]="heartSize" />
       <div class="cap">
         <app-value-star class="value" [value]="mercenary().value" />
-        <app-mercenary-stats-pill class="stats" [speed]="stats().speed" [overclock]="stats().overclock" />
-        <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + stats().armor">
-          <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
-          <em>{{ stats().armor }}</em>
-        </i><b>{{ mercenary().name }}</b><span>{{ mercenary().class | ct }}</span></div>
+        <app-mercenary-stats-pill class="stats" [speed]="stats().speed" [overclock]="stats().overclock" [armor]="stats().armor" />
+        <b>{{ mercenary().name }}</b><span>{{ mercenary().class | ct }}</span></div>
     </div>
     <button type="button" class="slot" [disabled]="!editable()" [attr.aria-label]="'shop.open' | t: { name: mercenary().name }" [title]="(editable() ? 'shop.open' : 'shop.notYours') | t: { name: mercenary().name }" (click)="open.set(true)">
       <span class="coins"><app-icon name="tokens/gold_pile" [size]="16" />{{ coinsLeft() }}</span>
@@ -59,14 +56,10 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .coins { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--cad-coin); }
     .things { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; flex: 1; }
     .chip { padding: 3px 8px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); font-size: 0.85em; }
-    /* I punti ferita in cuori, in colonna in alto a sinistra; l'armatura in uno scudo nero sopra il piede (come nella finestra dell'attacco). */
-    .hearts { position: absolute; top: 6px; left: 6px; display: flex; flex-direction: column; gap: 2px; }
+    /* I punti ferita in cuori, in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra (come nelle altre carte). */
+    .hearts { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .stats { position: absolute; left: 6px; bottom: calc(100% + 6px); transform: scale(0.8); transform-origin: left bottom; }
-    .value { position: absolute; right: 47px; bottom: calc(100% + 6px); transform: scale(0.8); transform-origin: right bottom; }
-    .armor { transform: scale(0.8); transform-origin: right bottom; position: absolute; right: 16px; bottom: calc(100% + 6px); width: 34px; height: 40px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; }
-    .armor svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .armor path { fill: var(--c-bg); stroke: var(--c-line-strong); stroke-width: 1; stroke-linejoin: round; }
-    .armor em { position: relative; margin-top: -2px; font: 700 14px/1 var(--font-mono); font-style: normal; color: var(--c-text); }
+    .value { position: absolute; right: 6px; bottom: calc(100% + 6px); transform: scale(0.8); transform-origin: right bottom; }
     .empty { color: var(--c-text-dim); font-size: 0.9em; }
     .go { display: inline-flex; align-items: center; gap: 6px; color: var(--c-interact); font-size: 0.9em; font-weight: 600; }
   `,

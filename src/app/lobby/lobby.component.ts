@@ -49,7 +49,7 @@ import { composeRules } from '../game/state/setup-text';
       @if (state(); as s) {
         @if (!isHost && !s.started) {
           @if (showGear()) {
-            <p class="note"><b class="sec">{{ 'party.gear' | t }}</b> · {{ 'lobby.gearHint' | t }}</p>
+            <p class="note"><b class="sec">{{ 'party.briefing' | t }}</b> · {{ 'lobby.gearHint' | t }}</p>
           } @else {
             <div class="adv-box">
               <div class="adv-text">
@@ -101,11 +101,7 @@ import { composeRules } from '../game/state/setup-text';
                 <div class="cap">
                   <app-value-star class="value" [value]="h.value" />
                   @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                  <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
-                  <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + h.armor">
-                  <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
-                  <em>{{ h.armor }}</em>
-              </i>
+                  <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
                   <b>{{ h.name }}</b><span>{{ h.class | ct }}</span>
                 </div>
                 @if (takenBy(h.id)) { <span class="badge">{{ 'lobby.taken' | t }}</span> }
@@ -183,18 +179,14 @@ import { composeRules } from '../game/state/setup-text';
     .mercenary.taken { cursor: not-allowed; }
     .mercenary.taken img { filter: grayscale(1) brightness(0.45); }
     .mercenary.taken:hover { border-color: var(--c-line-strong); transform: rotate(4deg); }
-    .badge { position: absolute; top: 8px; right: 46px; padding: 3px 7px; border-radius: var(--radius-1); background: rgba(0, 0, 0, 0.75); font-size: 11px; font-weight: 600; }
-    /* I punti ferita in cuori in colonna in alto a sinistra; l'armatura in uno scudo nero in basso a destra sopra il piede (come in partita). */
-    .hearts { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 2px; }
+    .badge { position: absolute; top: 8px; left: 46px; padding: 3px 7px; border-radius: var(--radius-1); background: rgba(0, 0, 0, 0.75); font-size: 11px; font-weight: 600; }
+    /* I punti ferita in cuori in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra (come nella scelta della squadra). */
+    .hearts { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .fam { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 54px); }
     .stats { position: absolute; left: 8px; bottom: calc(100% + 6px); }
-    .value { position: absolute; right: 48px; bottom: calc(100% + 6px); }
-    .armor { position: absolute; right: 8px; bottom: calc(100% + 6px); width: 34px; height: 40px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; }
-    .armor svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .armor path { fill: var(--c-bg); stroke: var(--c-line-strong); stroke-width: 1; stroke-linejoin: round; }
-    .armor em { position: relative; margin-top: -2px; font: 700 14px/1 var(--font-mono); font-style: normal; color: var(--c-text); }
-    /* Il tasto "i": un pallino scuro in alto a destra che apre la scheda di dettaglio. */
-    .info { position: absolute; z-index: 2; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
+    .value { position: absolute; right: 8px; bottom: calc(100% + 6px); }
+    /* Il tasto "i": un pallino scuro in alto a sinistra che apre la scheda di dettaglio. */
+    .info { position: absolute; z-index: 2; top: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
     .info:hover, .info:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     .cap small { color: var(--cad-coin); font-size: 11px; }
     .squad { display: grid; grid-template-columns: repeat(2, max-content); gap: 22px 48px; justify-content: center; padding: 12px 16px; }

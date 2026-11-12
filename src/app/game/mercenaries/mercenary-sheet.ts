@@ -1,4 +1,5 @@
 import { PotionKind } from '../board/marker';
+import { PARTY_SIZE } from '../constants';
 import type { SkillEffect } from '../skills/skill';
 
 /** L'archetipo primario: lo slot che il Mercenario occupa nella squadra (docs/REGOLE-v2.md §2). aider è l'Incursore. */
@@ -99,5 +100,14 @@ export async function loadAllMercenarySheets(): Promise<MercenarySheet[]> {
   }
 }
 
-/** La squadra di una partita su un'avventura senza eroi nei dati (quelle fatte con l'editor): gli id delle schede in `public/mercenaries/`, nell'ordine in cui entrano in campo. */
-export const DEFAULT_PARTY: readonly string[] = ['vesper', 'bastion'];
+/** La squadra di una partita quando non ne è stata scelta una valida (avventure fatte con l'editor, `/adversary/<map>`): tre id di schede in `public/mercenaries/`, nell'ordine in cui entrano in campo. */
+export const DEFAULT_PARTY: readonly string[] = ['bastion', 'vesper', 'halo'];
+
+/**
+ * La squadra scelta, se è valida: esattamente PARTY_SIZE mercenari, tutti diversi, con id scritti bene. Qualunque altra cosa (due, quattro, un doppione, un id strano) non è una squadra:
+ * restituisce null e chi la usa ripiega su `DEFAULT_PARTY`.
+ */
+export function validParty(ids: readonly string[]): string[] | null {
+  const unique = new Set(ids);
+  return ids.length === PARTY_SIZE && unique.size === PARTY_SIZE && ids.every((id) => /^[a-z0-9-]+$/.test(id)) ? [...ids] : null;
+}

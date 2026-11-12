@@ -1,13 +1,13 @@
 {
   "id": "bastion",
   "name": "Bastion",
-  "class": "Soldato corazzato",
+  "class": "Pugno di ferro",
   "archetype": "brawler",
   "portrait": "characters/bastion-token.webp",
   "portraitFull": "characters/bastion-portrait.webp",
-  "wounds": 20,
+  "wounds": 16,
   "overclock": 3,
-  "armor": 3,
+  "armor": 2,
   "speed": 3,
   "value": 4,
   "coins": 300,
@@ -23,8 +23,8 @@
     "ranged": 0,
     "intrusion": 0
   },
-  "abilityName": "Assorbitori cinetici",
-  "ability": "Ogni volta che subisci ferite da un attacco recuperi {overclock:1}.",
+  "abilityName": "Falange di titanio",
+  "ability": "Anche con un risultato mancato il tuo attacco in mischia infligge sempre almeno 1 danno a purchè combatti senza armi.",
   "effects": [
     {
       "kind": "rule",

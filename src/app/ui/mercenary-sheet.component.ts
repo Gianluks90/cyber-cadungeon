@@ -74,7 +74,7 @@ export interface MercenaryDetails {
       </div>
       <div class="row stats">
         <span class="stat speed" [title]="'Velocità: punti movimento a inizio turno' | tr"><app-icon name="footprint" [size]="18" /><span class="v">{{ h.speed }}<small>{{ 'Velocità' | tr }}</small></span></span>
-        <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="water_drop" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'Overclock' | tr }}</small></span></span>
+        <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="speed" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'Overclock' | tr }}</small></span></span>
         <span class="stat" [title]="'Armatura: si sottrae al danno' | tr"><app-icon name="shield" [size]="18" /><span class="v">{{ h.armor }}<small>{{ 'Armatura' | tr }}</small></span></span>
       </div>
 

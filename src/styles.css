@@ -311,7 +311,11 @@ app-dialog ::placeholder {
 }
 
 .tok-overclock i {
-  --tok-icon: var(--ico-water-drop);
+  --tok-icon: var(--ico-speed);
+  /* L'icona speed occupa meno altezza delle altre: un po' più grande per leggersi bene anche a bassa risoluzione, con margini negativi perché non allarghi la riga. */
+  width: 18px;
+  height: 18px;
+  margin: -2px 0;
 }
 
 .tok-alarm {

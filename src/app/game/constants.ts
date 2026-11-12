@@ -242,6 +242,8 @@ export const POTION_LIMIT = 3;
 export const BRIEFING_BUDGET = 300;
 /** Quanti contratti al massimo può tenere il giocatore (gli spazi del contatore sulla mappa). */
 export const CONTRACT_SLOTS = 5;
+/** Quanti mercenari compongono la squadra di una partita: sempre 3, né di più né di meno (scelta della squadra, avvio della partita). */
+export const PARTY_SIZE = 3;
 /** Lo sblocco di un contratto è una procedura in due fasi, con una sola barra: prima la violazione (metà della barra), poi la decrittazione (l'altra metà, anche se dura meno) in cui i simboli diventano testo vero. Durate in millisecondi, a portata del contratto per tutto il tempo (test). */
 export const UNLOCK_BREACH_MS = 5000;
 export const UNLOCK_DECRYPT_MS = 3000;

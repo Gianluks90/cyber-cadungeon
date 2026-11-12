@@ -75,7 +75,7 @@ Valori in `theme.ts`. Per ora c'è un solo tema, quello scuro. Un tema blueprint
 | `ui.panel` | `#000000` | Fondo nero dei contenitori (pillole in alto, barra degli eroi in basso) |
 | `ui.panelBorder` | `#5a554d` | Bordo sottile (1 px) di pillole, barra, notifiche e pallini del bottone contestuale: il nero da solo non si distingue dallo sfondo |
 | `stat.movement` | `#e0a040` | Punti movimento nella barra (giallo, come il perimetro di movimento: token `--c-move`) |
-| `stat.energy` | `#6cc08a` | Energia nella barra (verde, goccia, come la pozione dell'Energia: token `--c-energy`) |
+| `stat.energy` | `#6cc08a` | Overclock (verde, icona speed: token `--c-overclock`) |
 | `health` | `#d2504a` | Cuori carichi (la salute): il rosso è riconosciuto come tale dal giocatore |
 
 L'interfaccia in HTML (testi e pulsanti) prende i colori da variabili CSS (`--cad-bg`, `--cad-ui-text`,
@@ -201,7 +201,7 @@ di porte e ostacoli, tile "fantasma") si disegnano nel livello della cosa che an
 - **Tratto sottile**, vettoriali, alla scala `LINE`. Un solo colore per significato: ambra (`accentReach`) per movimento
   e costo, rosso (`danger`) solo per il danno, `doorKey` per le chiavi normali, `rune.*` per le runiche.
 - Nessuna icona usa un colore che non sia un ruolo; nessun riempimento pieno oltre al disco del distintivo (colore del pavimento).
-- Icone dell'interfaccia in HTML (`<app-icon>`, maschera CSS colorata come il testo): `brightness_empty` (Conquista), `autorenew` (Round), `footprint` (punti movimento), `swords` (attacchi), `skull` (Maligno, Odio), `water_drop` (energia), `frame_person` (centra sull'eroe), `shield` (armatura), `bolt` (una scintilla), `inventory_2` (anche il tasto dell'inventario nel tab), `castle` (la città: azione sul glifo, tasto nel tab, notifiche), `tokens/items/bow.svg` (l'Arco), `tokens/items/sword.svg` (la carta Spada), `deployed_code` (un dado extra, ripetuta per valore), `close`, `priority_high` (bottone contestuale), `door_front`, `lock`, `lock_open`, `inventory_2` (scrigno), `stairs`, `warning` e `info` (azioni e notifiche).
+- Icone dell'interfaccia in HTML (`<app-icon>`, maschera CSS colorata come il testo): `brightness_empty` (Conquista), `autorenew` (Round), `footprint` (punti movimento), `swords` (attacchi), `skull` (Maligno, Odio), `speed` (overclock), `frame_person` (centra sull'eroe), `shield` (armatura), `bolt` (una scintilla), `inventory_2` (anche il tasto dell'inventario nel tab), `castle` (la città: azione sul glifo, tasto nel tab, notifiche), `tokens/items/bow.svg` (l'Arco), `tokens/items/sword.svg` (la carta Spada), `deployed_code` (un dado extra, ripetuta per valore), `close`, `priority_high` (bottone contestuale), `door_front`, `lock`, `lock_open`, `inventory_2` (scrigno), `stairs`, `warning` e `info` (azioni e notifiche).
 - Icone oggi: `tokens/padlock` (lucchetto sulla porta a chiave, colore `doorKey`) e `diamond` (porta runica), più gli SVG
   degli oggetti a terra in `public/tokens/` (pozione, pila di monete, chiave, chiave runica). `public/icons/key.svg` non è più usato. Il percorso non ha ancora icone: evidenzia solo le
   caselle in `accentUiSoft`.

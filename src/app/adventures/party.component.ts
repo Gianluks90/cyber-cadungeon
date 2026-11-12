@@ -1,11 +1,14 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
+import { PARTY_SIZE } from '../game/constants';
 import type { AdventureSetup } from '../game/map/map-data';
-import { MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
+import { Archetype, MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
 import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
+import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
+import { MarkdownPipe } from '../ui/markdown.pipe';
 import { DotTrailComponent } from '../ui/dot-trail.component';
 import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
 import { MercenaryDetailDialogComponent } from '../ui/mercenary-detail-dialog.component';
@@ -19,17 +22,18 @@ import { IconComponent } from '../ui/icon.component';
 import { PageNavComponent } from '../ui/page-nav.component';
 import { ADVENTURES } from './adventures';
 
-/** Quanti eroi si possono portare (sempre almeno 2: da soli si gioca con la squadra, mai con un eroe solo). */
-export const PARTY_MIN = 2;
-export const PARTY_MAX = 4;
+
+/** I tre ruoli della squadra, nell'ordine in cui si elencano, e il testo di quando uno manca. */
+const ROLES: readonly Archetype[] = ['brawler', 'gunner', 'raider'];
+const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGunner', raider: 'party.missingRaider' } as const;
 
 /**
- * La scelta degli eroi del giocatore singolo (`/party/<map>`, dopo la scelta dell'avventura, con uno scorrimento di lato): da 2 a 4 eroi, nell'ordine in cui si toccano. Il Maligno è
+ * La scelta degli eroi del giocatore singolo (`/party/<map>`, dopo la scelta del contratto, con uno scorrimento di lato): esattamente 3 mercenari, nell'ordine in cui si toccano. Il Maligno è
  * controllato dal gioco. "Inizia" apre la partita su `/play/<map>?new&party=a,b,…`.
  */
 @Component({
   selector: 'app-party',
-  imports: [CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, IconComponent, PageNavComponent, TranslatePipe],
+  imports: [CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, IconComponent, PageNavComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -38,10 +42,11 @@ export const PARTY_MAX = 4;
       <span class="kicker">{{ title }}</span>
       @if (step() === 'pick') {
         <h1>{{ 'party.title' | t }}</h1>
-        <p class="hint">{{ 'party.hint' | t: { min: min, max: max } }}</p>
+        <p class="hint">{{ 'party.hint' | t: { n: size } }}</p>
+        <p class="hint">{{ 'party.adversaryHint' | t }}</p>
       } @else {
-        <h1>{{ 'party.gear' | t }}</h1>
-        <p class="hint">{{ 'party.gearHint' | t: { coins: startCoins() } }}</p>
+        <h1>{{ 'party.briefing' | t }}</h1>
+        <div class="hint" [innerHTML]="'party.briefingHint' | t: { budget: startCoins() } | markdown"></div>
       }
     </header>
     <main>
@@ -55,11 +60,7 @@ export const PARTY_MAX = 4;
               <div class="cap">
                 <app-value-star class="value" [value]="h.value" />
                 @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" />
-                <i class="armor" [title]="'shop.armor' | t" [attr.aria-label]="('shop.armor' | t) + ' ' + h.armor">
-                <svg viewBox="0 0 40 46" aria-hidden="true"><path d="M20 2 36 8v14c0 11-7 19-16 22C11 41 4 33 4 22V8Z" /></svg>
-                <em>{{ h.armor }}</em>
-              </i>
+                <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
                 <b>{{ h.name }}</b><span>{{ h.class | ct }}</span>
                 @if (order(h.id) > 0) { <span class="n">{{ order(h.id) }}</span> }
               </div>
@@ -83,10 +84,10 @@ export const PARTY_MAX = 4;
     </main>
     <footer class="foot">
       @if (step() === 'pick') {
-        <button type="button" class="dlg-btn primary" [attr.aria-disabled]="ready() ? null : 'true'" (click)="confirm()">{{ 'party.confirm' | t }}</button>
-        @if (!ready()) { <p class="warn"><app-icon name="warning" [size]="18" />{{ 'party.warning' | t }}</p> }
+        <button type="button" class="dlg-btn primary confirm" [class.off]="!ready()" [attr.aria-disabled]="ready() ? null : 'true'" (click)="confirm()">{{ 'party.confirm' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
+        @if (!ready()) { <p class="warn" role="status"><app-icon name="warning" [size]="18" />{{ warning() }}</p> }
       } @else {
-        <button type="button" class="dlg-btn primary" (click)="start()">{{ 'party.start' | t }}</button>
+        <button type="button" class="dlg-btn primary confirm" (click)="start()">{{ 'party.begin' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
       }
     </footer>
     <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
@@ -107,10 +108,16 @@ export const PARTY_MAX = 4;
     .kicker { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     h1 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .hint, .count { margin: 0; color: var(--c-text-dim); font-size: 13px; }
+    .hint p { margin: 0; }
     /* Gli eroi con il loro spazio: una griglia 2×2. */
     .squad { display: grid; grid-template-columns: repeat(2, max-content); gap: 22px 48px; justify-content: center; padding: 12px 16px; }
     @media (max-width: 700px) { .squad { grid-template-columns: max-content; } }
-    .warn { display: inline-flex; align-items: center; gap: 6px; margin: 0; color: var(--c-warn); font-size: 13px; }
+    .warn { display: inline-flex; align-items: center; gap: 6px; margin: 0; max-width: calc(100% - 340px); color: var(--c-warn); font-size: 13px; text-align: center; }
+    /* «Conferma» in basso a destra, alto quanto la freccia indietro in basso a sinistra (36px, 44px sul tocco), con la freccia a destra della scritta. */
+    .confirm { position: fixed; z-index: 3; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; }
+    @media (pointer: coarse) { .confirm { height: 44px; } }
+    /* Su telefono i due tasti occupano gli angoli in basso: l'avviso sale sopra, a tutta larghezza. */
+    @media (max-width: 600px) { .foot { padding-bottom: calc(66px + env(safe-area-inset-bottom)); } .warn { max-width: 100%; } }
     .row { display: flex; gap: 24px; width: 100%; box-sizing: border-box; padding: 18px 28px 22px 56px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 56px 28px; overscroll-behavior-x: contain; }
     /* Con poche carte stanno al centro, con tante partono da sinistra: i margini automatici si azzerano quando non c'è spazio (con il centramento diretto la parte a sinistra restava tagliata e irraggiungibile). */
     .row > :first-child { margin-inline-start: auto; }
@@ -135,17 +142,13 @@ export const PARTY_MAX = 4;
     img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter 0.2s; }
     /* Il numero di scelta sta nel piede, a destra, accanto al nome. */
     .cap .n { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-round); background: var(--c-interact); color: var(--c-bg); font: 700 13px/1 var(--font-mono); letter-spacing: 0; text-transform: none; }
-    /* I punti ferita in cuori in colonna in alto a sinistra; l'armatura in uno scudo nero in basso a destra sopra il piede (come in partita). */
-    .hearts { position: absolute; top: 8px; left: 8px; display: flex; flex-direction: column; gap: 2px; }
+    /* I punti ferita in cuori in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra. */
+    .hearts { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .fam { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 54px); }
     .stats { position: absolute; left: 8px; bottom: calc(100% + 6px); }
-    .value { position: absolute; right: 48px; bottom: calc(100% + 6px); }
-    .armor { position: absolute; right: 8px; bottom: calc(100% + 6px); width: 34px; height: 40px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; }
-    .armor svg { position: absolute; inset: 0; width: 100%; height: 100%; }
-    .armor path { fill: var(--c-bg); stroke: var(--c-line-strong); stroke-width: 1; stroke-linejoin: round; }
-    .armor em { position: relative; margin-top: -2px; font: 700 14px/1 var(--font-mono); font-style: normal; color: var(--c-text); }
-    /* Il tasto "i": un pallino scuro in alto a destra che apre la scheda di dettaglio. */
-    .info { position: absolute; z-index: 2; top: 8px; right: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
+    .value { position: absolute; right: 8px; bottom: calc(100% + 6px); }
+    /* Il tasto "i": un pallino scuro in alto a sinistra che apre la scheda di dettaglio. */
+    .info { position: absolute; z-index: 2; top: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
     .info:hover, .info:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 10px; background: var(--c-surface); border-top: 1px solid var(--c-line-strong); text-align: left; }
     .cap b { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.04em; }
@@ -156,8 +159,7 @@ export class PartyComponent {
   private readonly router = inject(Router);
   private readonly map = inject(ActivatedRoute).snapshot.paramMap.get('map') ?? '';
   protected readonly title = ADVENTURES.find((a) => a.map === this.map)?.title ?? this.map;
-  protected readonly min = PARTY_MIN;
-  protected readonly max = PARTY_MAX;
+  protected readonly size = PARTY_SIZE;
   private readonly rawMercenaries = signal<MercenarySheet[]>([]);
   /** La variante di preparazione dell'avventura (monete in più, tesori in negozio): letta dal file della mappa. */
   private readonly adventureSetup = signal<AdventureSetup>({});
@@ -165,7 +167,19 @@ export class PartyComponent {
   protected readonly mercenaries = computed(() => this.rawMercenaries().map((h) => ({ ...h, coins: coinsWithSetup(h.coins, this.adventureSetup()) })));
   /** Gli eroi scelti, nell'ordine in cui si sono toccati. */
   protected readonly chosen = signal<string[]>([]);
-  protected readonly ready = computed(() => this.chosen().length >= PARTY_MIN);
+  /** I ruoli (Picchiatore, Artigliere, Incursore) che i mercenari scelti non coprono ancora: la squadra è valida solo con tutti e tre (docs/REGOLE-v2.md, §2). */
+  protected readonly missingRoles = computed<Archetype[]>(() => {
+    const covered = new Set(this.chosen().map((id) => this.mercenaries().find((h) => h.id === id)?.archetype));
+    return ROLES.filter((role) => !covered.has(role));
+  });
+  protected readonly ready = computed(() => this.chosen().length === PARTY_SIZE && this.missingRoles().length === 0);
+  /** Perché «Conferma» è spento: quanti mercenari mancano e quali ruoli sono scoperti. Si aggiorna a ogni scelta (e al cambio di lingua). */
+  protected readonly warning = computed(() => {
+    const left = PARTY_SIZE - this.chosen().length;
+    const head = left > 1 ? translate('party.remaining', { n: left }) : left === 1 ? translate('party.remainingOne') : translate('party.coverage');
+    const roles = this.missingRoles().map((role) => translate(MISSING_ROLE[role])).join(', ');
+    return roles ? `${head} ${roles}.` : head;
+  });
   /** Le schede degli eroi scelti, nell'ordine della squadra, e ciò che ognuno ha comprato. */
   protected readonly squad = computed(() => this.chosen().flatMap((id) => this.mercenaries().find((h) => h.id === id) ?? []));
   protected readonly shop = signal<ShopData | null>(null);
@@ -181,7 +195,7 @@ export class PartyComponent {
   protected readonly step = signal<'pick' | 'gear'>('pick');
   protected readonly loadouts = signal<Record<string, Loadout>>({});
   protected readonly startCoins = computed(() => this.squad()[0]?.coins ?? 300);
-  protected readonly full = computed(() => this.chosen().length >= PARTY_MAX);
+  protected readonly full = computed(() => this.chosen().length >= PARTY_SIZE);
 
   constructor() {
     void loadAllMercenarySheets().then((h) => this.rawMercenaries.set(h));
@@ -199,7 +213,7 @@ export class PartyComponent {
   }
 
   protected toggle(id: string) {
-    this.chosen.update((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < PARTY_MAX ? [...c, id] : c));
+    this.chosen.update((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < PARTY_SIZE ? [...c, id] : c));
     // Un eroe lasciato a casa rimette in negozio ciò che aveva comprato.
     this.loadouts.update((l) => Object.fromEntries(Object.entries(l).filter(([mercenary]) => this.chosen().includes(mercenary))));
   }

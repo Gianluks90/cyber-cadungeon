@@ -31,7 +31,7 @@ import { PictureComponent } from './picture.component';
         </div>
         <div class="stats">
           <span class="speed" [title]="'Velocità' | tr"><app-icon name="footprint" [size]="16" />{{ h.speed }}</span>
-          <span class="overclock" [title]="'Overclock' | tr"><app-icon name="water_drop" [size]="16" />{{ h.overclock }}</span>
+          <span class="overclock" [title]="'Overclock' | tr"><app-icon name="speed" [size]="16" />{{ h.overclock }}</span>
           <span [title]="'Armatura' | tr"><app-icon name="shield" [size]="16" />{{ h.armor }}</span>
           <span [title]="'Valore: la Fama che si perde se muore' | tr"><app-icon name="brightness_empty" [size]="16" />{{ h.value }}</span>
         </div>

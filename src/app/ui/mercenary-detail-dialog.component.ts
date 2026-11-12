@@ -32,7 +32,7 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
         <div class="life"><app-hearts [wounds]="h.wounds" [max]="h.wounds" [size]="18" /><span class="dots" aria-hidden="true"></span><span class="health">{{ h.wounds }}</span></div>
         <div class="stats">
           <span class="stat speed" [title]="'stats.speed' | t"><app-icon name="footprint" [size]="18" /><span class="v">{{ h.speed }}<small>{{ 'detail.speed' | t }}</small></span></span>
-          <span class="stat overclock" [title]="'stats.overclock' | t"><app-icon name="water_drop" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'stats.overclock' | t }}</small></span></span>
+          <span class="stat overclock" [title]="'stats.overclock' | t"><app-icon name="speed" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'stats.overclock' | t }}</small></span></span>
           <span class="stat" [title]="'detail.armorHint' | t"><app-icon name="shield" [size]="18" /><span class="v">{{ h.armor }}<small>{{ 'detail.armor' | t }}</small></span></span>
         </div>
 
@@ -43,7 +43,7 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
         @if (h.ability) { <div class="ability md" [innerHTML]="h.ability | ct | markdown"></div> } @else { <p class="soon">{{ 'detail.soon' | t }}</p> }
 
         <h3>{{ 'detail.attributes' | t }}</h3>
-        <p class="soon">{{ 'detail.attributesHint' | t: { n: total() } }}</p>
+        <div class="soon" [innerHTML]="'detail.attributesHint' | t: { n: total() } | markdown"></div>
         <div class="slots">
           @for (s of slots(); track $index) {
             <div class="slot" [attr.data-school]="s.school"><b>{{ s.name }}</b></div>
@@ -69,6 +69,7 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
     .ability { margin: 0; }
     .aname { text-transform: none; letter-spacing: 0; font: 600 13px/1 var(--font-ui); color: var(--c-text); }
     .soon { margin: 0; color: var(--c-text-dim); font-size: 12px; }
+    .soon :is(p) { margin: 0; }
     .slots { display: flex; gap: 10px; }
     .slot { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 14px 8px; text-align: center; border-radius: var(--radius-1); border: 1px dashed var(--c-line-strong); background: var(--c-bg); color: var(--c-text-dim); }
     .slot b { font: 600 12px/1.2 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text); }

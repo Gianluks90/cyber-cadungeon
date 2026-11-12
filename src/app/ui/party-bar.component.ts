@@ -124,9 +124,9 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
                 <span class="stat movement" [title]="'Punti movimento' | tr"><app-icon name="footprint" [size]="16" />{{ m.points }}</span>
                 @if (m.active && m.overclock > 0 && !publicView()) {
                   <!-- Nel tab dell'eroe attivo l\\'overclock è un tasto: 1 overclock = 1 punto movimento in più. -->
-                  <button type="button" class="stat overclock spend" [title]="'Overclock: tocca per spendere 1 overclock e avere 1 punto movimento in più' | tr" (click)="spendOverclock.emit()"><app-icon name="water_drop" [size]="16" />{{ m.overclock }}</button>
+                  <button type="button" class="stat overclock spend" [title]="'Overclock: tocca per spendere 1 overclock e avere 1 punto movimento in più' | tr" (click)="spendOverclock.emit()"><app-icon name="speed" [size]="16" />{{ m.overclock }}</button>
                 } @else {
-                  <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="water_drop" [size]="16" />{{ m.overclock }}</span>
+                  <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="speed" [size]="16" />{{ m.overclock }}</span>
                 }
                 <span class="stat" [title]="'Armatura: si sottrae al danno' | tr"><app-icon name="shield" [size]="16" />{{ m.armor }}</span>
                 <!-- Gli stati che durano (fiamma, rete, stordimento): un'icona con il numero, dopo l'armatura; se sono troppe, le prime e un "+". Il veleno sono i cuori verdi. -->

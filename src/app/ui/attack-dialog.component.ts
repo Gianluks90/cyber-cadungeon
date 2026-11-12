@@ -140,7 +140,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                 <div class="overclock-row">
                   <button type="button" class="btn" [class.on]="sw.on" [class.off]="!sw.enough" [attr.aria-pressed]="sw.on" [attr.aria-disabled]="!sw.enough"
                     [title]="(sw.on ? 'Spazzata attiva: tocca di nuovo per toglierla e riavere l\\'overclock' : sw.enough ? 'Spendi {n} overclock per aggiungere Spazzata: l\\'attacco colpisce anche tutti i nemici adiacenti' : 'Non hai abbastanza overclock') | tr: { n: sw.cost }"
-                    (click)="sw.enough ? sweep.emit() : null"><app-icon name="water_drop" [size]="16" />{{ sw.cost }} {{ 'Spazzata' | tr }}</button>
+                    (click)="sw.enough ? sweep.emit() : null"><app-icon name="speed" [size]="16" />{{ sw.cost }} {{ 'Spazzata' | tr }}</button>
                 </div>
               }
               @if (v.needsRange && v.step === 'preview') { <p class="hint">{{ 'Serve una gittata di almeno {n}.' | tr: { n: v.distance } }}</p> }
@@ -183,8 +183,8 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                   <div class="overclock-row">
                     <button type="button" class="btn" [class.off]="v.overclock < 1 || v.blackDice >= maxBlack || adding()" [attr.aria-disabled]="v.overclock < 1 || v.blackDice >= maxBlack || adding()"
                       [title]="(v.blackDice >= maxBlack ? 'Hai già 5 dadi competenza' : v.overclock < 1 ? 'Non hai più overclock' : 'Spendi 1 overclock per tirare un dado competenza in più') | tr"
-                      (click)="v.overclock < 1 || v.blackDice >= maxBlack || adding() ? null : addDie.emit()"><app-icon name="water_drop" [size]="16" />{{ '1 +1 dado competenza' | tr }}</button>
-                    <small>{{ 'Overclock' | tr }} <app-icon name="water_drop" [size]="13" class="overclock-icon" />{{ v.overclock }} · {{ 'dadi competenza {a}/{b}' | tr: { a: v.blackDice, b: maxBlack } }}</small>
+                      (click)="v.overclock < 1 || v.blackDice >= maxBlack || adding() ? null : addDie.emit()"><app-icon name="speed" [size]="16" />{{ '1 +1 dado competenza' | tr }}</button>
+                    <small>{{ 'Overclock' | tr }} <app-icon name="speed" [size]="17" class="overclock-icon" />{{ v.overclock }} · {{ 'dadi competenza {a}/{b}' | tr: { a: v.blackDice, b: maxBlack } }}</small>
                   </div>
                 }
                 @if (v.sorcery.level > 0 && !v.outcome?.miss) {
@@ -333,7 +333,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
     .overclock-row .btn:hover:not(.off), .overclock-row .btn:focus-visible:not(.off) { border-color: var(--tone); color: var(--c-text); background: color-mix(in srgb, var(--tone) 8%, transparent); }
     .overclock-row .btn.off:hover { border-color: var(--c-line-strong); }
     .overclock-row .btn app-icon, .overclock-row .overclock-icon { color: var(--c-overclock); }
-    .overclock-row .overclock-icon { vertical-align: -2px; }
+    .overclock-row .overclock-icon { vertical-align: -3px; margin-block: -2px; }
     .sorcery-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .sorcery-row b { min-width: 14px; text-align: center; font: 700 16px var(--font-mono); }
     .step { width: 26px; height: 26px; padding: 0; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; border: 1px solid var(--c-line-strong); font: 600 15px/1 var(--font-ui); }
