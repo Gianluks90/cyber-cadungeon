@@ -191,7 +191,7 @@ export function drawTreasureFor(state: GameState, mercenary: Piece, tier: ChestT
       mercenary.coins += item.instant.coins ?? 0;
       const potion = item.instant.potion;
       const gotPotion = !!potion && mercenary.potions.length < POTION_LIMIT && (mercenary.potions.push(potion), true);
-      const gains = [item.instant.coins ? `+${item.instant.coins} monete` : '', gotPotion ? (potion === 'heal' ? tr('+1 pozione di cura') : tr('+1 pozione dell\'Overclock')) : ''].filter(Boolean);
+      const gains = [item.instant.coins ? `+${item.instant.coins} E$` : '', gotPotion ? (potion === 'heal' ? tr('+1 pozione di cura') : tr('+1 pozione dell\'Overclock')) : ''].filter(Boolean);
       lines.push(`${mercenary.name}: ${item.name}${gains.length ? ` (${gains.join(', ')})` : ''}`);
       toDraw += item.instant.draw ?? 0;
       continue;
@@ -199,7 +199,7 @@ export function drawTreasureFor(state: GameState, mercenary: Piece, tier: ChestT
     const where = receiveItem(state, mercenary, id);
     if (where === 'none') {
       mercenary.coins += TREASURE_SELL_COINS[tier];
-      lines.push(tr('{name}: {name2} scartata per {tier} monete', { name: mercenary.name, name2: item.name, tier: TREASURE_SELL_COINS[tier] }));
+      lines.push(tr('{name}: {name2} scartata per {tier} E$', { name: mercenary.name, name2: item.name, tier: TREASURE_SELL_COINS[tier] }));
     } else lines.push(`${mercenary.name}: ${item.name} (${where === 'equipped' ? 'equipaggiata' : 'nello zaino'})`);
   }
   return lines;

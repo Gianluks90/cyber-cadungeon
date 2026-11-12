@@ -164,7 +164,7 @@ const RUNE_NAMES = { get red() { return tr('rossa'); }, get blue() { return tr('
 
 /** Cosa dire quando un'azione in città non va a buon fine. */
 const CITY_TEXTS: Record<string, string> = {
-  get soon() { return tr('Presto disponibile'); }, get late() { return tr('Devi tornare nel dungeon'); }, get coins() { return tr('Non hai abbastanza monete'); }, get full() { return tr('Non hai posto'); }, get 'sold-out'() { return tr('Esaurito'); }, get stock() { return tr('Esaurito'); }, get already() { return tr('Hai già scelto un servizio'); },
+  get soon() { return tr('Presto disponibile'); }, get late() { return tr('Devi tornare nel dungeon'); }, get coins() { return tr('Non hai abbastanza E$'); }, get full() { return tr('Non hai posto'); }, get 'sold-out'() { return tr('Esaurito'); }, get stock() { return tr('Esaurito'); }, get already() { return tr('Hai già scelto un servizio'); },
   get 'full-health'() { return tr('Sei già in piena salute'); }, get 'not-yet'() { return tr('Potrai tornare nel dungeon al prossimo turno'); }, get occupied() { return tr('Quel terminale non è libero'); }, get busy() { return tr('Ora non puoi'); },
   get 'wrong-service'() { return tr('Prima scegli questo servizio'); }, get maxed() { return tr('Hai già il massimo di dadi'); }, get locked() { return tr('Apri prima una cassa di quel tipo'); }, get none() { return tr('Non hai questo oggetto'); }, get unknown() { return tr('Non è possibile'); },
 };
@@ -1477,7 +1477,7 @@ export class GameSceneComponent implements OnDestroy {
     result.applied.forEach((a, i) => this.pieces?.floatTag(target, STATUS_NAMES[a.kind], a.kind, i * 450));
     if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'speed', 'mercenary'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
-    const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} monete', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
+    const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} E$', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
     const by = attacker.team === 'enemy' ? 'adversary' : 'mercenary';
     if (outcome.alarmLoss) this.showHud(this.pieces?.active ?? null);
     if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('L\'Avversario perde 1 punto Allarme') : tr('L\'Avversario perde {n} punti Allarme', { n: outcome.alarmLoss }), 'skull', 'adversary');
@@ -4340,7 +4340,7 @@ export class GameSceneComponent implements OnDestroy {
     this.returnMode.set(true);
     this.panel.set(null);
     this.hint.set(tr('Scegli il terminale su cui tornare: clic su uno di quelli che brillano'));
-    this.showNotice(tr('{name} torna nel dungeon: il terminale di partenza è gratis, gli altri costano {cityTeleportCo} monete', { name: active.name, cityTeleportCo: cityRules.CITY_TELEPORT_COST_TEXT }), 'castle');
+    this.showNotice(tr('{name} torna nel dungeon: il terminale di partenza è gratis, gli altri costano {cityTeleportCo} E$', { name: active.name, cityTeleportCo: cityRules.CITY_TELEPORT_COST_TEXT }), 'castle');
     this.focusCell(choices.find((c) => c.coins === 0)?.cell ?? choices[0].cell);
   }
 

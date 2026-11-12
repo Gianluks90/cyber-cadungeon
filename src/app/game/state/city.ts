@@ -80,7 +80,7 @@ export function returnFromCity(state: GameState, board: Board, piece: Piece, cel
   piece.coins -= choice.coins;
   piece.cell = { ...choice.cell };
   piece.city = null;
-  return { code: 'ok', notice: choice.coins ? tr('Teletrasporto: {coins} monete', { coins: choice.coins }) : undefined };
+  return { code: 'ok', notice: choice.coins ? tr('Teletrasporto: {coins} E$', { coins: choice.coins }) : undefined };
 }
 
 /** Sceglie il servizio da visitare (uno solo per visita). */
@@ -154,7 +154,7 @@ export function sellItem(state: GameState, piece: Piece, id: string): CityResult
   list.splice(list.indexOf(id), 1);
   piece.coins += sellPrice(item);
   if (id in state.shop) state.shop[id] = (state.shop[id] ?? 0) + 1;
-  return { code: 'ok', notice: tr('{name} venduto per {sellPrice} monete', { name: item.name, sellPrice: sellPrice(item) }) };
+  return { code: 'ok', notice: tr('{name} venduto per {sellPrice} E$', { name: item.name, sellPrice: sellPrice(item) }) };
 }
 
 /** I tre attacchi, con il nome per l'interfaccia. */
@@ -243,7 +243,7 @@ export function cityView(state: GameState, piece: Piece): CityView | null {
     mustReturn: canReturn(state, piece),
     teleportCost: CITY_TELEPORT_COST,
   };
-  const coins = (price: number) => (piece.coins >= price ? undefined : tr('Non hai abbastanza monete'));
+  const coins = (price: number) => (piece.coins >= price ? undefined : tr('Non hai abbastanza E$'));
   if (stay.service === 'shop' && turn) {
     view.shop = {
       potions: (['heal', 'overclock'] as PotionKind[]).map((k) => ({

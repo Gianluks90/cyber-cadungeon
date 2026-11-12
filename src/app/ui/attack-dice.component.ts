@@ -4,7 +4,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { AttackDice } from '../game/mercenaries/mercenary-sheet';
 import { IconComponent } from './icon.component';
 
-/** I dadi d'attacco extra di un eroe: per ogni tipo (mischia, distanza, Intrusione) il nome e un cubo per ogni dado; a zero, un trattino. */
+/** I dadi competenza di un eroe: per ogni tipo (mischia, distanza, Intrusione) il nome e un cubo per ogni dado; a zero, un trattino. */
 @Component({
   selector: 'app-attack-dice',
   imports: [TrPipe, IconComponent],

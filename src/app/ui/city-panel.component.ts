@@ -1,4 +1,5 @@
 import { tr } from '../i18n/catalog-text';
+import { money } from '../game/money';
 import { TrPipe } from '../i18n/tr.pipe';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
@@ -34,7 +35,7 @@ export type CityEvent =
   template: `
     @if (mercenary(); as h) {
       @if (h.city; as c) {
-        <div class="row"><span class="coins" [title]="'Monete del mercenario' | tr">{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
+        <div class="row"><span class="coins" [title]="'Denaro del mercenario' | tr">{{ money(h.coins) }}<small>{{ 'Denaro' | tr }}</small></span></div>
 
         @if (!c.service) {
           <h3>{{ 'Servizi' | tr }} <small>{{ 'uno solo per visita' | tr }}</small></h3>
@@ -93,7 +94,7 @@ export type CityEvent =
         }
 
         <h3>{{ 'Torna nel dungeon' | tr }}</h3>
-        <p class="note">{{ 'Al tuo prossimo turno scegli il terminale su cui tornare, anche se non visiti niente: quello da cui sei partito è gratis, un altro terminale acceso costa {cost} monete (il teletrasporto).' | tr: { cost: c.teleportCost } }}</p>
+        <p class="note">{{ 'Al tuo prossimo turno scegli il terminale su cui tornare, anche se non visiti niente: quello da cui sei partito è gratis, un altro terminale acceso costa {cost} E$ (il teletrasporto).' | tr: { cost: c.teleportCost } }}</p>
         <div class="foot">
           <button type="button" class="act strong" (click)="cityAction.emit({ kind: 'conclude' })">{{ (c.service ? 'Concludi la visita' : 'Passa il turno senza visitare') | tr }}</button>
         </div>
@@ -103,7 +104,7 @@ export type CityEvent =
     <ng-template #offer let-o let-event="event" let-label="label">
       <div class="service" [class.off]="!o.enabled">
         <div class="what"><b>{{ o.name }}</b></div>
-        <span class="price">{{ o.price }}</span>
+        <span class="price">{{ money(o.price) }}</span>
         <button type="button" class="act" [class.off]="!o.enabled" [attr.aria-disabled]="!o.enabled" [title]="o.reason ?? ''" (click)="o.enabled ? cityAction.emit(event) : denied.emit(o.reason ?? notPossible())">{{ label }}</button>
       </div>
     </ng-template>
@@ -135,6 +136,7 @@ export type CityEvent =
   `,
 })
 export class CityPanelComponent {
+  protected readonly money = money;
   /** Il motivo di riserva quando un'azione spenta non ne dà uno. */
   protected readonly notPossible = () => tr('Non è possibile');
   readonly mercenary = input<MercenaryDetails | null>(null);

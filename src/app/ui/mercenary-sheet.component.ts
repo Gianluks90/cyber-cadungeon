@@ -81,7 +81,7 @@ export interface MercenaryDetails {
       <h3>{{ 'Attributi' | tr }}</h3>
       <p class="soon">{{ 'Presto disponibile' | tr }}</p>
 
-      <h3>{{ 'Dadi d\\'attacco extra' | tr }}</h3>
+      <h3>{{ 'Dadi competenza' | tr }}</h3>
       <app-attack-dice [dice]="h.dice" />
 
       @if (h.ability) {

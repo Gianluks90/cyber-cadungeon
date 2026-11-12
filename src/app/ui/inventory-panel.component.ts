@@ -1,4 +1,5 @@
 import { tr } from '../i18n/catalog-text';
+import { money } from '../game/money';
 import { TrPipe } from '../i18n/tr.pipe';
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
@@ -21,7 +22,7 @@ import { ItemCardComponent } from './item-card.component';
   template: `
     @if (mercenary(); as h) {
       <section>
-        <div class="row"><span class="coins" [title]="'Monete del mercenario' | tr">{{ h.coins }}<small>{{ 'Monete' | tr }}</small></span></div>
+        <div class="row"><span class="coins" [title]="'Denaro del mercenario' | tr">{{ money(h.coins) }}<small>{{ 'Denaro' | tr }}</small></span></div>
 
         <h3>{{ 'Pozioni' | tr }}</h3>
         <div class="row">
@@ -87,6 +88,7 @@ import { ItemCardComponent } from './item-card.component';
   `,
 })
 export class InventoryPanelComponent {
+  protected readonly money = money;
   /** Il motivo di riserva quando un'azione spenta non ne dà uno. */
   protected readonly notPossible = () => tr('Non è possibile');
   /** L'eroe di cui si mostra l'inventario. */

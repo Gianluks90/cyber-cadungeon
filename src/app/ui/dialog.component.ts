@@ -21,10 +21,11 @@ import { IconComponent } from './icon.component';
       <!-- Facoltativo: una carta inclinata infilata sotto il bordo del pannello (dialogSide), come nella finestra dell'attacco. Sta nella cornice, sotto il pannello. -->
       <ng-content select="[dialogSide]" />
       <section class="box" [class.adversary]="adversary()" role="dialog" aria-modal="true" [attr.aria-label]="title()">
-        <header>
+        <header [class.tall]="!!subtitle()">
           <div class="heading">
             @if (kicker()) { <span class="kicker">{{ kicker() }}</span> }
             <h2>{{ title() }}</h2>
+            @if (subtitle()) { <p class="subtitle">{{ subtitle() }}</p> }
           </div>
           @if (closable()) {
             <button type="button" class="close" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
@@ -52,8 +53,11 @@ import { IconComponent } from './icon.component';
     /* Le dialog del Maligno: bordo e linee rossi. */
     .box.adversary { --dlg-line: var(--c-faction-adversary); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 14px 14px 20px; border-bottom: 1px solid var(--dlg-line); }
+    /* Con il sottotitolo l'intestazione è più alta: la X resta in alto a destra e non al centro. */
+    header.tall .close { align-self: flex-start; }
     .heading { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
     .kicker { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    .subtitle { margin: 0; max-width: 56ch; color: var(--c-text-dim); font-size: 13px; line-height: 1.4; }
     h2 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color 0.15s; }
     .close:hover, .close:focus-visible { color: var(--c-interact); outline: none; }
@@ -75,6 +79,8 @@ export class DialogComponent {
   readonly title = input.required<string>();
   /** Una riga piccola sopra il titolo (per esempio "Introduzione"). */
   readonly kicker = input('');
+  /** Una frase sotto il titolo, in piccolo (per spiegare a cosa serve la finestra). */
+  readonly subtitle = input('');
   /** Larghezza della finestra (un valore CSS). */
   readonly width = input('min(560px, 100%)');
   /** Altezza fissa della finestra (un valore CSS); senza, si adatta al contenuto. */

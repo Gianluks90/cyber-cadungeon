@@ -116,7 +116,7 @@ export function collectLoot(state: GameState, loot: readonly Loot[], receiver?: 
     if (l.kind === 'coins') {
       const amount = l.amount ?? COINS_PER_TOKEN;
       for (const mercenary of state.pieces) if (mercenary.team === 'mercenary') mercenary.coins += amount;
-      return tr('Denaro: +{amount} monete a ogni mercenario', { amount });
+      return tr('Denaro: +{amount} E$ a ogni mercenario', { amount });
     }
     if (l.kind === 'curse') {
       // Ogni Maledizione dà al Maligno tanto Odio quanti sono gli eroi (docs/REGOLE.md, sezione 3c).

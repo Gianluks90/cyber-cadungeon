@@ -1,4 +1,5 @@
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { SkillDef } from '../game/skills/skill';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
@@ -29,7 +30,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
         <b>{{ mercenary().name }}</b><span>{{ mercenary().class | ct }}</span></div>
     </div>
     <button type="button" class="slot" [disabled]="!editable()" [attr.aria-label]="'shop.open' | t: { name: mercenary().name }" [title]="(editable() ? 'shop.open' : 'shop.notYours') | t: { name: mercenary().name }" (click)="open.set(true)">
-      <span class="coins">{{ coinsLeft() }}</span>
+      <span class="coins">{{ money(coinsLeft()) }}</span>
       <span class="things">
         @for (n of names(); track $index) { <span class="chip">{{ n }}</span> }
         @empty { <span class="empty">{{ 'shop.empty' | t }}</span> }
@@ -62,6 +63,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
   `,
 })
 export class MercenaryLoadoutComponent {
+  protected readonly money = money;
   readonly mercenary = input.required<MercenarySheet>();
   readonly loadout = input.required<Loadout>();
   /** Il negozio (finché non è caricato il riquadro non si apre). */

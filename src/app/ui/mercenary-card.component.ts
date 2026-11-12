@@ -30,7 +30,7 @@ import { PictureComponent } from './picture.component';
           <span [title]="'Valore: la Fama che si perde se muore' | tr"><app-icon name="brightness_empty" [size]="16" />{{ h.value }}</span>
         </div>
         <section>
-          <h5>{{ 'Dadi d\\'attacco extra' | tr }}</h5>
+          <h5>{{ 'Dadi competenza' | tr }}</h5>
           <app-attack-dice [dice]="h.dice" />
         </section>
         <section>

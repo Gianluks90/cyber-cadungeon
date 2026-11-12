@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, viewChild } from '@angular/core';
-import { EQUIP_HANDS, POTION_LIMIT, POTION_PRICES } from '../game/constants';
+import { POTION_LIMIT, POTION_PRICES } from '../game/constants';
+import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
 import { Loadout, ShopData, TREASURE_KEYS, equippedDefs, loadoutCost, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
@@ -18,8 +19,8 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
 import { DialogComponent } from './dialog.component';
-import { IconComponent } from './icon.component';
 import { ItemCardComponent } from './item-card.component';
+import { MoneyCounterComponent } from './money-counter.component';
 
 const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
 
@@ -30,10 +31,10 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, TranslatePipe],
+  imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-dialog [kicker]="'shop.kicker' | t" [title]="mercenary().name" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
+    <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
       <!-- A sinistra la carta dell'eroe con i suoi parametri, a destra le sue abilità secondarie (già assegnate) in una carta che scorre da sola. Sono inclinate e infilate sotto il pannello. -->
       <figure dialogSide class="card left"><app-mercenary-face [mercenary]="mercenary()" [stats]="stats()" /></figure>
       <figure dialogSide class="card right">
@@ -43,14 +44,13 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
           @empty { <p class="none">{{ 'shop.noSkills' | t }}</p> }
         </div>
       </figure>
-      <!-- Seconda intestazione fissa: i dadi d'attacco extra dell'eroe, per sapere che armi conviene comprare. -->
+      <!-- Seconda intestazione fissa: i dadi competenza dell'eroe, per sapere che armi conviene comprare. -->
       <div dialogSub class="dice">
         <span class="cap">{{ 'detail.dice' | t }}</span>
         <app-attack-dice [dice]="mercenary().dice" />
       </div>
 
-      <!-- Il Briefing: le mod negli slot dell'arma, dell'armatura e del deck, pagate con gli eurodollari. -->
-      <h3>{{ 'briefing.title' | t }} <small>{{ 'briefing.hint' | t }}</small></h3>
+      <!-- Le mod negli slot dell'arma, dell'armatura e del deck, pagate con gli eurodollari. -->
       @for (g of modGroups(); track g.slot) {
         <div class="list">
           <div class="gear">
@@ -65,7 +65,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
                 @for (r of o.mod.passive?.rules ?? []; track r) { <small>{{ 'briefing.passive' | t }}: {{ r | ct }}</small> }
                 @for (a of o.mod.active ?? []; track a.effect) { <small>{{ 'briefing.active' | t: { n: a.sparks } }}: {{ a.effect | ct }}</small> }
               </div>
-              <span class="price">€{{ o.mod.cost }}</span>
+              <span class="price">{{ money(o.mod.cost) }}</span>
               <button type="button" class="act" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [title]="o.reason" (click)="toggleMod(g.slot, o.mod.id)">{{ (o.on ? 'briefing.remove' : 'briefing.install') | t }}</button>
             </div>
           }
@@ -77,7 +77,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         @for (k of potionKinds; track k) {
           <div class="row">
             <b>{{ potionName(k) }}</b>
-            <span class="price">{{ potionPrice(k) }}</span>
+            <span class="price">{{ money(potionPrice(k)) }}</span>
             <button type="button" class="act" [class.off]="!!potionReason(k)" [attr.aria-disabled]="!!potionReason(k)" [title]="potionReason(k)" (click)="buyPotion(k)">{{ 'shop.buy' | t }}</button>
           </div>
         }
@@ -89,7 +89,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
           @for (k of treasureTiers(); track k) {
             <div class="row">
               <b>{{ treasureName(k) }}</b>
-              <span class="price">{{ treasurePrice(k) }}</span>
+              <span class="price">{{ money(treasurePrice(k)) }}</span>
               <button type="button" class="act" [class.off]="!!treasureReason(k)" [attr.aria-disabled]="!!treasureReason(k)" [title]="treasureReason(k)" (click)="buyTreasure(k)">{{ 'shop.buy' | t }}</button>
             </div>
           }
@@ -101,7 +101,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         @for (o of offers(); track o.id) {
           <app-item-card [def]="o.def" [icon]="o.def.icon ?? 'inventory_2'" [detail]="o.detail">
             <span class="stock" [title]="'shop.stock' | t">×{{ o.left }}</span>
-            <button type="button" class="act" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [title]="o.reason" (click)="buyItem(o.id)">{{ 'shop.buy' | t }} · {{ o.def.price }}</button>
+            <button type="button" class="act" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [title]="o.reason" (click)="buyItem(o.id)">{{ 'shop.buy' | t }} · {{ money(o.def.price) }}</button>
           </app-item-card>
         }
       </div>
@@ -111,33 +111,28 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         @for (id of loadout().items; track $index) {
           <div class="row">
             <b>{{ itemName(id) }}</b>
-            <span class="price">{{ itemPrice(id) }}</span>
+            <span class="price">{{ money(itemPrice(id)) }}</span>
             <button type="button" class="act" (click)="removeItem($index)">{{ 'shop.refund' | t }}</button>
           </div>
         }
         @for (k of loadout().potions; track $index) {
           <div class="row">
             <b>{{ potionName(k) }}</b>
-            <span class="price">{{ potionPrice(k) }}</span>
+            <span class="price">{{ money(potionPrice(k)) }}</span>
             <button type="button" class="act" (click)="removePotion($index)">{{ 'shop.refund' | t }}</button>
           </div>
         }
         @for (k of loadout().treasures ?? []; track $index) {
           <div class="row">
             <b>{{ treasureName(k) }}</b>
-            <span class="price">{{ treasurePrice(k) }}</span>
+            <span class="price">{{ money(treasurePrice(k)) }}</span>
             <button type="button" class="act" (click)="removeTreasure($index)">{{ 'shop.refund' | t }}</button>
           </div>
         }
         @if (!loadout().items.length && !loadout().potions.length && !loadout().treasures?.length) { <p class="none">{{ 'shop.nothing' | t }}</p> }
       </div>
-      <!-- Le monete a sinistra del piede, con le due mani (una specchiata): si accendono in base alle mani occupate dalle armi scelte. -->
-      <div dialogFooterStart class="coins" [title]="'shop.coins' | t"><b>{{ coinsLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: mercenary().coins } }}</small></div>
-      <div dialogFooterStart class="budget" [title]="'briefing.budget' | t"><b>€{{ budgetLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: shop().budget } }}</small></div>
-      <div dialogFooterStart class="hands" [title]="'shop.hands' | t: { used: handsUsed(), max: handsMax }">
-        <span class="hand left" [class.on]="handsUsed() >= 1"><app-icon name="back_hand" [size]="22" /></span>
-        <span class="hand right" [class.on]="handsUsed() >= 2"><app-icon name="back_hand" [size]="22" /></span>
-      </div>
+      <!-- A sinistra del piede, una sola volta, il denaro che resta (un solo budget per mod e oggetti). -->
+      <div dialogFooterStart class="budget" [title]="'briefing.budget' | t"><b><app-money-counter [value]="budgetLeft()" /></b></div>
       <ng-container dialogFooter><button type="button" class="dlg-btn primary" (click)="closed.emit()">{{ 'shop.done' | t }}</button></ng-container>
     </app-dialog>
   `,
@@ -148,22 +143,17 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
     small { color: var(--c-text-dim); }
     /* Le due carte laterali: inclinate e infilate sotto il pannello, come nella finestra dell'attacco. */
     /* Il margine a sinistra della carta delle abilità (14 px) è tarato a occhio perché risulti uguale a quello di destra (10 px più l'inclinazione). Alte al massimo come la finestra dell'attacco (500 px), centrate in verticale anche se la dialog è più alta. */
-    .card { position: absolute; z-index: 0; top: 0; bottom: 0; margin-block: auto; height: min(484px, calc(100% - 16px)); width: 220px; margin-inline: 0; overflow: hidden; border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
+    .card { position: absolute; z-index: 0; top: 0; bottom: 0; margin-block: auto; height: min(484px, calc(100% - 16px)); width: 220px; box-sizing: border-box; margin-inline: 0; overflow: hidden; border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
     .card.left { --face-inset: 14px; right: calc(100% - 14px); transform: rotate(-4deg); transform-origin: 70% 100%; }
-    .card.right { left: calc(100% - 14px); transform: rotate(4deg); transform-origin: 30% 100%; display: flex; flex-direction: column; background: var(--c-surface); }
+    /* La carta delle abilità, larga come quella del mercenario, ha gli angoli normali. */
+    .card.right { border-radius: var(--radius-1); left: calc(100% - 14px); transform: rotate(4deg); transform-origin: 30% 100%; display: flex; flex-direction: column; background: var(--c-surface); }
     .card .head { flex: none; padding: 10px 10px 8px 14px; border-bottom: 1px solid var(--c-line-strong); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .scroller { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 10px 14px; scrollbar-width: none; }
     .scroller::-webkit-scrollbar { display: none; }
     @media (max-width: 1000px) { .card { display: none; } }
-    .dice { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .dice { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
     .dice .cap { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
-    .hands { display: inline-flex; align-items: center; gap: 4px; }
-    .hand { display: inline-flex; opacity: 0.25; transition: opacity 0.2s; }
-    .hand.right { transform: scaleX(-1); }
-    .hand.on { opacity: 1; }
-    .coins { display: inline-flex; align-items: center; gap: 8px; color: var(--cad-coin); font-variant-numeric: tabular-nums; }
-    .coins b { font-size: 18px; }
-    .budget { display: inline-flex; align-items: baseline; gap: 6px; color: var(--c-interact); font-variant-numeric: tabular-nums; }
+    .budget { display: inline-flex; align-items: baseline; gap: 6px; color: var(--c-money); font-variant-numeric: tabular-nums; }
     .budget b { font-size: 18px; }
     .gear { display: flex; align-items: baseline; gap: 10px; }
     .gear b { font: 600 13px/1.2 var(--font-ui); }
@@ -198,19 +188,12 @@ export class PregameShopDialogComponent {
   protected readonly potionKinds = POTIONS;
   /** I parametri che avrà, con le abilità assegnate e gli oggetti comprati (per la carta a sinistra). */
   protected readonly stats = computed(() => mercenaryStats(this.mercenary(), this.skills(), equippedDefs(this.loadout(), this.shop())));
-  protected readonly handsMax = EQUIP_HANDS;
-  /** Le mani occupate dagli oggetti che l'eroe riesce a equipaggiare (armi e scudi). */
-  protected readonly handsUsed = computed(() => {
-    const s = this.shop();
-    const placed = placeItems(this.loadout().items, s);
-    return (placed?.equipped ?? []).reduce((n, id) => n + (s.items.get(id)?.hands ?? 0), 0);
-  });
   protected readonly potionLimit = POTION_LIMIT;
   /** I tipi di tesoro che questa avventura vende già in preparazione. */
   protected readonly treasureTiers = computed(() => this.shop().treasureTiers);
-  protected readonly coinsLeft = computed(() => this.mercenary().coins - loadoutCost(this.loadout(), this.shop()));
-  /** Gli eurodollari del Briefing che restano, tolte le mod scelte. */
-  protected readonly budgetLeft = computed(() => this.shop().budget - modsCost(this.loadout().mods, this.shop().mods));
+  /** Gli eurodollari che restano: un solo budget per mod, oggetti, pozioni e tesori. */
+  protected readonly budgetLeft = computed(() => this.shop().budget - modsCost(this.loadout().mods, this.shop().mods) - loadoutCost(this.loadout(), this.shop()));
+  protected readonly money = money;
   /** Per arma, armatura e deck: l'oggetto base, gli slot usati e le mod che ci stanno (con il motivo se non si può installare). */
   protected readonly modGroups = computed(() => {
     const shop = this.shop();
@@ -239,7 +222,7 @@ export class PregameShopDialogComponent {
       .filter((i) => i.id in shop.stock)
       .map((def) => {
         const left = this.left()[def.id];
-        const reason = left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.coinsLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop) ? '' : this.i18n.t('shop.noRoom');
+        const reason = left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.budgetLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop) ? '' : this.i18n.t('shop.noRoom');
         return { id: def.id, def, left, reason, detail: itemDetail(def) };
       })
       .sort((a, b) => a.def.name.localeCompare(b.def.name, 'it'));
@@ -301,7 +284,7 @@ export class PregameShopDialogComponent {
   protected treasurePrice = (k: ChestTier) => TREASURE_PRICES[k];
 
   protected treasureReason(k: ChestTier): string {
-    if (TREASURE_PRICES[k] > this.coinsLeft()) return this.i18n.t('shop.noCoins');
+    if (TREASURE_PRICES[k] > this.budgetLeft()) return this.i18n.t('shop.noCoins');
     return treasureRoom(this.loadout(), this.shop()) ? '' : this.i18n.t('shop.noRoom');
   }
 
@@ -315,7 +298,7 @@ export class PregameShopDialogComponent {
 
   protected potionReason(k: PotionKind): string {
     if (this.loadout().potions.length >= POTION_LIMIT) return this.i18n.t('shop.potionsFull', { n: POTION_LIMIT });
-    return POTION_PRICES[k] > this.coinsLeft() ? this.i18n.t('shop.noCoins') : '';
+    return POTION_PRICES[k] > this.budgetLeft() ? this.i18n.t('shop.noCoins') : '';
   }
 
   protected buyPotion(k: PotionKind) {

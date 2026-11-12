@@ -10,7 +10,7 @@ import { IconComponent } from './icon.component';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 
 /**
- * La scheda di un eroe nella scelta della squadra: solo ciò che è fisso, cioè i parametri, i dadi d'attacco extra, l'abilità primaria e gli attributi (i punti nei tre rami) che decidono le
+ * La scheda di un eroe nella scelta della squadra: solo ciò che è fisso, cioè i parametri, i dadi competenza, l'abilità primaria e gli attributi (i punti nei tre rami) che decidono le
  * 3 abilità secondarie: a inizio partita l'eroe pesca a caso una carta per ogni punto, dal mazzo di quel ramo. Le carte vere non si vedono qui perché non sono ancora state pescate.
  */
 @Component({

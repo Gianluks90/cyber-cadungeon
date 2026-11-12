@@ -1,13 +1,14 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { ItemDef } from '../game/items/item';
-import { Loadout, ShopData } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, loadoutCost } from '../game/mercenaries/party-setup';
 import { modsCost } from '../game/mods/mod';
 import { SkillDef } from '../game/skills/skill';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from './icon.component';
+import { MoneyCounterComponent } from './money-counter.component';
 import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
 
 /**
@@ -16,7 +17,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
  */
 @Component({
   selector: 'app-briefing-column',
-  imports: [CatalogTextPipe, IconComponent, NgTemplateOutlet, PregameShopDialogComponent, TranslatePipe],
+  imports: [CatalogTextPipe, IconComponent, MoneyCounterComponent, NgTemplateOutlet, PregameShopDialogComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="frame">
@@ -27,7 +28,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
       </span>
     </button>
     <!-- Il budget è un badge a cavallo del bordo in alto a destra (fuori dal token, che ritaglia). -->
-    <span class="budget" [title]="'briefing.budget' | t">{{ 'briefing.amount' | t: { n: budgetLeft() } }}</span>
+    <span class="budget" [title]="'briefing.budget' | t"><app-money-counter [value]="badgeBudget()" /></span>
     <!-- «Pronto»: un badge con la spunta in alto a sinistra, specchio del budget. Diventa verde quando è premuto. -->
     <button type="button" class="ready" [class.on]="ready()" [class.off]="!visited()" [attr.aria-disabled]="visited() ? null : 'true'" [attr.aria-pressed]="ready()" [attr.aria-label]="'briefing.ready' | t" [title]="(visited() ? 'briefing.ready' : 'briefing.readyLocked') | t: { name: mercenary().name }" (click)="toggleReady()"><app-icon name="check" [size]="18" /></button>
     </div>
@@ -136,10 +137,16 @@ export class BriefingColumnComponent {
     if (this.visited()) this.readyChange.emit(!this.ready());
   }
 
-  /** Gli eurodollari che restano, tolte le mod scelte. */
+  /** Gli eurodollari che restano: un solo budget per mod, oggetti, pozioni e tesori. */
   protected readonly budgetLeft = computed(() => {
     const s = this.shop();
-    return s ? s.budget - modsCost(this.loadout().mods, s.mods) : 0;
+    return s ? s.budget - modsCost(this.loadout().mods, s.mods) - loadoutCost(this.loadout(), s) : 0;
+  });
+  /** Il budget mostrato dal badge: segue quello vero solo a negozio chiuso, così il conto scorre quando si preme «Fatto» e non durante gli acquisti. */
+  protected readonly badgeBudget = signal(0);
+  private readonly syncBadge = effect(() => {
+    const left = this.budgetLeft();
+    if (!this.open()) this.badgeBudget.set(left);
   });
   /** Gli oggetti della fornitura iniziale; vuoto se il mercenario non ce l'ha nel json (o non è nel catalogo): la colonna mostra l'errore. */
   protected readonly kit = computed<ItemDef[]>(() => {

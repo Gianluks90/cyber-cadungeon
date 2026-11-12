@@ -1,4 +1,5 @@
 import { tr } from '../i18n/catalog-text';
+import { money } from '../game/money';
 import { TrPipe } from '../i18n/tr.pipe';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { ChangeDetectionStrategy, Component, inject, input } from '@angular/core';
@@ -59,7 +60,7 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
 
       <footer class="foot">
         <div class="actions"><ng-content /></div>
-        @if ((price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr">{{ price() ?? def().price }}</span> }
+        @if ((price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr">{{ money(price() ?? def().price) }}</span> }
       </footer>
     </article>
   `,
@@ -87,6 +88,7 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
   `,
 })
 export class ItemCardComponent {
+  protected readonly money = money;
   private readonly dice = inject(DiceService);
   readonly def = input.required<ItemDef>();
   readonly icon = input.required<string>();
