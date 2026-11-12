@@ -19,38 +19,41 @@ const formatDuration = (seconds: number): string => {
 };
 
 /**
- * Il pannello con le info di un contratto: su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione, su telefono (fino a 640px) un foglio che sale dal basso. Si apre quando
- * `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
- * Bloccato: numero, titolo, stato, distanza e cosa serve per sbloccarlo (niente didascalia né missione). Sbloccato: titolo, didascalia e il tasto Gioca (si gioca da casa).
- * Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
+ * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
+ * su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione; su telefono (fino a 640px) un foglio che sale dal basso.
+ * Si apre quando `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
+ * Titolo nell'intestazione; sotto numero e stato, la didascalia, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
+ * (spento finché è bloccato). Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
  */
 @Component({
   selector: 'app-contract-panel',
   imports: [CatalogTextPipe, IconComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <aside class="panel" [class.open]="open()" [attr.aria-hidden]="!open()" [attr.aria-label]="shown() ? ('contract.card' | t: { n: number(shown()!.number) }) : null">
+    <!-- Non .panel: è una classe globale con il suo padding (come nel menu a tendina). -->
+    <aside class="sheet" [class.open]="open()" [attr.aria-hidden]="!open()" [attr.aria-label]="shown() ? ('contract.card' | t: { n: number(shown()!.number) }) : null">
       @if (shown(); as c) {
         <header>
-          <span class="num">{{ number(c.number) }}</span>
-          <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
-          <button type="button" class="x" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" (click)="closed.emit()"><app-icon name="close" [size]="16" /></button>
+          <h2>{{ c.title | ct }}</h2>
+          <button type="button" class="close" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
         </header>
         <hr />
         <div class="body">
-          <h2>{{ c.title | ct }}</h2>
-          @if (unlocked()) {
-            <p class="caption">{{ c.caption | ct }}</p>
-            <button type="button" class="dlg-btn primary" (click)="play.emit(c)">{{ 'contract.play' | t }}</button>
-          } @else {
+          <p class="meta">
+            <span class="num">{{ number(c.number) }}</span>
+            <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
+          </p>
+          <p class="caption">{{ c.caption | ct }}</p>
+          @if (!unlocked()) {
             <p class="muted">{{ 'contract.locked' | t }}</p>
             @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
             @if (walkText(); as w) { <p class="info"><app-icon name="footprint" [size]="16" />{{ 'contract.walk' | t: { walk: w } }}</p> }
             @else if (routeStatus() === 'loading') { <p class="info">{{ 'contract.routeLoading' | t }}</p> }
             @else if (routeStatus() === 'failed') { <p class="info">{{ 'contract.routeFailed' | t }}</p> }
             <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p>
-            @if (dev) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
           }
+          <button type="button" class="dlg-btn primary" [attr.aria-disabled]="unlocked() ? null : 'true'" (click)="unlocked() && accept.emit(c)">{{ 'contract.accept' | t }}</button>
+          @if (dev && !unlocked()) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
         </div>
       }
     </aside>
@@ -58,25 +61,28 @@ const formatDuration = (seconds: number): string => {
   styles: `
     :host { display: contents; }
     /* Desktop: lo specchio dei filtri e della legenda, dall'altra parte. Nasce a metà altezza, oltre i tasti di navigazione (10px dal bordo + 36px di tasto + 10px di respiro = 56px), scivola da destra e cresce dal centro lasciando liberi la barra in alto e l'orologio. Sta sotto i tasti (z-index 0 contro l'1 dei tasti). */
-    .panel { --w: min(320px, 82vw); --rail: 56px; position: absolute; z-index: 0; top: 50%; right: var(--rail); max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translate(calc(var(--w) + var(--rail)), -50%); transition: transform var(--t-base) var(--ease-draw); }
-    .panel.open { transform: translate(0, -50%); }
-    .panel:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
+    .sheet { --w: min(320px, 82vw); --rail: 56px; position: absolute; z-index: 0; top: 50%; right: var(--rail); max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translate(calc(var(--w) + var(--rail)), -50%); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet.open { transform: translate(0, -50%); }
+    .sheet:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     /* Telefono: un foglio che sale dal basso a tutta larghezza. */
     @media (max-width: 640px) {
-      .panel { z-index: 2; top: auto; right: 0; bottom: 0; left: 0; width: auto; max-height: 60dvh; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }
-      .panel.open { transform: none; }
+      .sheet { z-index: 2; top: auto; right: 0; bottom: 0; left: 0; width: auto; max-height: 60dvh; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }
+      .sheet.open { transform: none; }
     }
-    header { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; color: var(--c-text-dim); }
-    .num { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; }
-    .state { flex: 1; display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
-    .state.on { color: var(--c-interact); }
-    .x { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
-    .x:hover, .x:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    /* Intestazione, divisore e tasto di chiusura: gli stessi dei filtri. */
+    header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px 10px 14px; }
+    h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-line-strong); }
-    .body { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 14px; }
-    h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.03em; }
+    .close { flex: none; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
+    .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    /* Il contenuto con le spaziature dell'elenco dei filtri. */
+    .body { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px 14px; }
     p { margin: 0; }
-    .caption { color: var(--c-text-dim); }
+    .meta { display: flex; align-items: center; gap: 10px; color: var(--c-text-dim); }
+    .num { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; }
+    .state { display: inline-flex; align-items: center; gap: 6px; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
+    .state.on { color: var(--c-interact); }
+    .caption { color: var(--c-text); }
     .muted { color: var(--c-text-dim); font-style: italic; }
     .info { display: flex; align-items: center; gap: 6px; color: var(--c-text-dim); font-size: 13px; }
   `,
@@ -91,7 +97,8 @@ export class ContractPanelComponent {
   readonly route = input<WalkingRoute | null>(null);
   readonly routeStatus = input<'idle' | 'loading' | 'failed'>('idle');
   readonly closed = output<void>();
-  readonly play = output<Contract>();
+  /** Il tasto «Accetta» (attivo solo se il contratto è sbloccato). Per ora porta al Briefing. */
+  readonly accept = output<Contract>();
   readonly devUnlock = output<Contract>();
 
   protected readonly dev = isDevMode();
@@ -104,7 +111,6 @@ export class ContractPanelComponent {
     const d = this.distance();
     return d === null ? '' : formatDistance(d);
   });
-
   protected readonly walkText = computed(() => {
     const r = this.route();
     return r ? `${formatDistance(r.distanceM)} · ${formatDuration(r.durationS)}` : '';

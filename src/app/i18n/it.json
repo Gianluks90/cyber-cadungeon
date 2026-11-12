@@ -2105,7 +2105,6 @@
   "c.berserkAccesoDamageDannoIn_2934d": "Berserk acceso: +{damage} danno in mischia, −{loss} Armatura e −{ice} ICE",
   "c.berserkRoundRimastiN_9fb2e": "Berserk: round rimasti {n}",
   "contract.locked": "Fuori dal campo di sincronizzazione",
-  "contract.play": "Gioca",
   "contract.devUnlock": "Sblocca (solo sviluppo)",
   "contract.card": "Contratto {n}",
   "contract.marker": "Contratto {n} sulla mappa",
@@ -2120,11 +2119,12 @@
   "contract.counter": "Contratti: {n} su {max}",
   "contract.unlocked": "Sbloccato",
   "contract.lockedState": "Bloccato",
-  "contract.distance": "A {distance} da te",
-  "contract.approach": "Avvicinati a meno di {n} m per sbloccarlo.",
+  "contract.distance": "A {distance} dalla tua posizione",
+  "contract.approach": "Devi essere a circa {n} m per sbloccare il contratto",
   "contract.walk": "A piedi: {walk}",
   "contract.routeLoading": "Calcolo del percorso a piedi…",
   "contract.routeFailed": "Percorso a piedi non disponibile.",
   "c.contrattoDiProva2_04d98": "Contratto di prova 2",
-  "contract.label": "Contratti"
+  "contract.label": "Contratti",
+  "contract.accept": "Accetta"
 }

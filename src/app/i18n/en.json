@@ -2105,7 +2105,6 @@
   "c.berserkAccesoDamageDannoIn_2934d": "Berserk on: +{damage} melee damage, −{loss} Armor and −{ice} ICE",
   "c.berserkRoundRimastiN_9fb2e": "Berserk: {n} rounds left",
   "contract.locked": "Out of sync range",
-  "contract.play": "Play",
   "contract.devUnlock": "Unlock (dev only)",
   "contract.card": "Contract {n}",
   "contract.marker": "Contract {n} on the map",
@@ -2120,11 +2119,12 @@
   "contract.counter": "Contracts: {n} of {max}",
   "contract.unlocked": "Unlocked",
   "contract.lockedState": "Locked",
-  "contract.distance": "{distance} from you",
-  "contract.approach": "Get within {n} m to unlock it.",
+  "contract.distance": "{distance} from your position",
+  "contract.approach": "You need to be within about {n} m to unlock the contract",
   "contract.walk": "On foot: {walk}",
   "contract.routeLoading": "Working out the walking route…",
   "contract.routeFailed": "Walking route not available.",
   "c.contrattoDiProva2_04d98": "Test contract 2",
-  "contract.label": "Contracts"
+  "contract.label": "Contracts",
+  "contract.accept": "Accept"
 }

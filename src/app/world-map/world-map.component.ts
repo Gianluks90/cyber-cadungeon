@@ -80,7 +80,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (play)="playContract($event)" (devUnlock)="devUnlock($event)" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="playContract($event)" (devUnlock)="devUnlock($event)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
