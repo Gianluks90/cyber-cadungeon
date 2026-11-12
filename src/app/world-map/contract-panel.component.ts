@@ -107,22 +107,36 @@ const formatDuration = (seconds: number): string => {
 export class ContractPanelComponent {
   /** Il contratto da mostrare; `null` chiude il pannello. */
   readonly contract = input<Contract | null>(null);
-  readonly unlocked = input(false);
+  readonly unlockedIn = input(false, { alias: 'unlocked' });
   /** Quanto dista il giocatore dal contratto, in metri (null se non si conosce la posizione). */
-  readonly distance = input<number | null>(null);
+  readonly distanceIn = input<number | null>(null, { alias: 'distance' });
   /** Il percorso a piedi fino al contratto e a che punto è il calcolo. */
-  readonly route = input<WalkingRoute | null>(null);
-  readonly routeStatus = input<'idle' | 'loading' | 'failed'>('idle');
+  readonly routeIn = input<WalkingRoute | null>(null, { alias: 'route' });
+  readonly routeStatusIn = input<'idle' | 'loading' | 'failed'>('idle', { alias: 'routeStatus' });
   /** La violazione in corso (0-1) mentre si resta a portata, o null se non è in corso. */
-  readonly breach = input<number | null>(null);
+  readonly breachIn = input<number | null>(null, { alias: 'breach' });
   /** Il contratto è già fra quelli accettati, quanti ne ha il giocatore e quanti può tenerne al massimo. */
-  readonly accepted = input(false);
-  readonly heldCount = input(0);
-  readonly maxHeld = input(CONTRACT_SLOTS);
+  readonly acceptedIn = input(false, { alias: 'accepted' });
+  readonly heldCountIn = input(0, { alias: 'heldCount' });
+  readonly maxHeldIn = input(CONTRACT_SLOTS, { alias: 'maxHeld' });
   readonly closed = output<void>();
   /** Il tasto «Accetta»: attivo se il contratto è sbloccato, non è già accettato e c'è posto. */
   readonly accept = output<Contract>();
   readonly devUnlock = output<Contract>();
+
+  /**
+   * I valori che il pannello mostra: copie di quelli che arrivano da fuori, aggiornate solo finché il pannello è aperto. Quando si chiude (il contratto torna null, e chi lo usa
+   * azzera distanza, sblocco, accettazione...) il pannello scivola via con lo stesso aspetto che aveva, senza tornare per un attimo allo stato "da bloccato" con i tasti doppi,
+   * e riaprendolo un contratto già sbloccato non si rivede la cifratura.
+   */
+  protected readonly unlocked = signal(false);
+  protected readonly distance = signal<number | null>(null);
+  protected readonly route = signal<WalkingRoute | null>(null);
+  protected readonly routeStatus = signal<'idle' | 'loading' | 'failed'>('idle');
+  protected readonly breach = signal<number | null>(null);
+  protected readonly accepted = signal(false);
+  protected readonly heldCount = signal(0);
+  protected readonly maxHeld = signal(CONTRACT_SLOTS);
 
   protected readonly percent = computed(() => Math.floor((this.breach() ?? 0) * 100));
   protected readonly canAccept = computed(() => this.unlocked() && !this.accepted() && this.heldCount() < this.maxHeld());
@@ -144,7 +158,26 @@ export class ContractPanelComponent {
   constructor() {
     effect(() => {
       const c = this.contract();
-      if (c) this.shown.set(c);
+      const values = {
+        unlocked: this.unlockedIn(),
+        distance: this.distanceIn(),
+        route: this.routeIn(),
+        routeStatus: this.routeStatusIn(),
+        breach: this.breachIn(),
+        accepted: this.acceptedIn(),
+        heldCount: this.heldCountIn(),
+        maxHeld: this.maxHeldIn(),
+      };
+      if (!c) return; // chiuso: restano i valori di prima
+      this.shown.set(c);
+      this.unlocked.set(values.unlocked);
+      this.distance.set(values.distance);
+      this.route.set(values.route);
+      this.routeStatus.set(values.routeStatus);
+      this.breach.set(values.breach);
+      this.accepted.set(values.accepted);
+      this.heldCount.set(values.heldCount);
+      this.maxHeld.set(values.maxHeld);
     });
   }
 }

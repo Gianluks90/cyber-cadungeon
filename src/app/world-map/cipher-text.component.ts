@@ -21,7 +21,7 @@ const REVEAL_TICK_MS = 85;
 
 /**
  * Un testo che non si può ancora leggere: al suo posto una serie di caratteri e simboli casuali, come se fosse cifrato, con qualche carattere che cambia di continuo
- * (stessa lunghezza e stessi spazi del testo vero, e lo stesso carattere tipografico e colore: usato per la didascalia e per il titolo). Quando `unlocked` diventa vero **mentre lo si guarda** il testo vero compare un poco alla volta, carattere per carattere in
+ * (stessa lunghezza e stessi spazi del testo vero, e lo stesso carattere tipografico; blu finché è cifrato, e ogni carattere che si fissa diventa bianco: usato per la didascalia e per il titolo). Quando `unlocked` diventa vero **mentre lo si guarda** il testo vero compare un poco alla volta, carattere per carattere in
  * ordine sparso, come se si decifrasse. Se è già sbloccato all'inizio (o con «riduci le animazioni») si legge subito, senza effetto.
  * Mentre è cifrato il testo vero non sta nella pagina (solo la sua forma).
  */
@@ -29,11 +29,12 @@ const REVEAL_TICK_MS = 85;
   selector: 'app-cipher-text',
   imports: [TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span #t class="text" [class.plain]="plain()" [attr.role]="plain() ? null : 'img'" [attr.aria-label]="plain() ? null : ('contract.encrypted' | t)">{{ shown().join('') }}</span>`,
+  template: `<span #t class="text" [class.plain]="plain()" [attr.role]="plain() ? null : 'img'" [attr.aria-label]="plain() ? null : ('contract.encrypted' | t)">@for (ch of shown(); track $index) {<span [class.fixed]="fixed()[$index]">{{ ch }}</span>}</span>`,
   styles: `
-    /* Niente font né colore propri: il testo cifrato ha lo stesso aspetto del testo finale (li decide chi usa il componente), così alla decifratura non cambia niente tranne i caratteri. */
+    /* Il carattere tipografico è quello del testo finale (lo decide chi usa il componente). Cifrato è blu (l'accento dell'interfaccia stemperato); ogni carattere che si fissa durante la decifratura diventa bianco (il colore del testo), e a fine decifratura lo è tutto. */
     :host { display: block; }
-    .text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; color: color-mix(in srgb, var(--c-interact) 55%, var(--c-text-dim)); }
+    .text .fixed, .text.plain { color: var(--c-text); }
     /* Finché è cifrato ha l'altezza del testo vero (la imposta il metodo measure) e ciò che la supera si taglia: i simboli hanno larghezze diverse dalle lettere e andrebbero a capo in punti diversi, facendo ballare il pannello. */
     .text:not(.plain) { user-select: none; overflow: hidden; }
   `,
@@ -48,6 +49,8 @@ export class CipherTextComponent {
   protected readonly shown = signal<string[]>([]);
   /** Il testo vero è completamente visibile (anche dopo la decifratura). */
   protected readonly plain = signal(false);
+  /** Durante la decifratura: quali caratteri si sono già fissati (e sono bianchi). */
+  protected readonly fixed = signal<boolean[]>([]);
 
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly textEl = viewChild<ElementRef<HTMLElement>>('t');
@@ -117,6 +120,7 @@ export class CipherTextComponent {
         return;
       }
       this.plain.set(false);
+      this.fixed.set([]);
       this.shown.set(chars.map((ch) => (/\s/.test(ch) ? ch : randomGlyph())));
       if (still) return;
 
@@ -145,6 +149,7 @@ export class CipherTextComponent {
           return;
         }
         this.shown.set(chars.map((ch, i) => (/\s/.test(ch) || revealed.has(i) ? ch : randomGlyph())));
+        this.fixed.set(chars.map((_, i) => revealed.has(i)));
       }, REVEAL_TICK_MS);
       onCleanup(() => clearInterval(timer));
     });
