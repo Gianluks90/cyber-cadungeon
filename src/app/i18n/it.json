@@ -2121,5 +2121,9 @@
   "contract.unlocked": "Sbloccato",
   "contract.lockedState": "Bloccato",
   "contract.distance": "A {distance} da te",
-  "contract.approach": "Avvicinati a meno di {n} m per sbloccarlo."
+  "contract.approach": "Avvicinati a meno di {n} m per sbloccarlo.",
+  "contract.walk": "A piedi: {walk}",
+  "contract.routeLoading": "Calcolo del percorso a piedi…",
+  "contract.routeFailed": "Percorso a piedi non disponibile.",
+  "c.contrattoDiProva2_04d98": "Contratto di prova 2"
 }

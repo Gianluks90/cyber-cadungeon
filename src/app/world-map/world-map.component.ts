@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, isDevMode, signal, untracked, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
-import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
+import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { AuthService } from '../auth/auth.service';
 import { translate } from '../i18n/i18n.service';
@@ -26,6 +26,7 @@ import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-sto
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractPanelComponent, contractNumber } from './contract-panel.component';
 import { distanceMeters } from '../game/contracts/unlock-rule';
+import { OsrmFootRouteService, type RouteService, type WalkingRoute } from './route-service';
 import { ContractCounterComponent } from './contract-counter.component';
 import { MapLegendPanelComponent } from './map-legend-panel.component';
 
@@ -39,6 +40,11 @@ const readFlag = (key: string): boolean => {
 const loadHaloShown = (): boolean => {
   try { return localStorage.getItem(HALO_KEY) !== '0'; } catch { return true; }
 };
+
+/** Il percorso a piedi: id della sorgente e del livello della linea, e di quanto deve spostarsi il giocatore (metri) perché lo si richieda. */
+const ROUTE_SOURCE = 'contract-route';
+const ROUTE_LAYER = 'contract-route';
+const ROUTE_REFRESH_M = 150;
 
 /** Quanto la mappa si avvicina al giocatore quando lo trova. */
 const USER_ZOOM = 16;
@@ -74,7 +80,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [distance]="selectedDistance()" (closed)="selectedId.set(null)" (play)="playContract($event)" (devUnlock)="devUnlock($event)" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (play)="playContract($event)" (devUnlock)="devUnlock($event)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -200,6 +206,12 @@ export class WorldMapComponent {
     const c = this.selectedContract();
     return pos && c ? distanceMeters(c, pos) : null;
   });
+  /** Il percorso a piedi fino al contratto aperto (servizio dietro interfaccia: oggi uno pubblico gratuito), a che punto è il calcolo e per quale contratto e da dove è stato chiesto. */
+  private readonly routeService: RouteService = new OsrmFootRouteService();
+  protected readonly route = signal<WalkingRoute | null>(null);
+  protected readonly routeStatus = signal<'idle' | 'loading' | 'failed'>('idle');
+  private routeAsked: { id: string; from: { lat: number; lng: number } } | null = null;
+  private routeToken = 0;
   /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
   private readonly mapCreated = signal(false);
   private contractMarkers: Marker[] = [];
@@ -290,6 +302,18 @@ export class WorldMapComponent {
       const selected = this.selectedId();
       if (!this.mapCreated()) return;
       this.ngZone.runOutsideAngular(() => untracked(() => this.showContracts(list, unlocked, selected)));
+    });
+
+    // Il percorso a piedi: si chiede quando si apre un contratto e c'è una posizione, e di nuovo se ci si sposta di più di ROUTE_REFRESH_M (non a ogni lettura del GPS: il servizio è a uso equo).
+    effect(() => {
+      const c = this.selectedContract();
+      const pos = this.location.position();
+      untracked(() => this.updateRoute(c, pos));
+    });
+    // La linea sulla mappa segue il percorso.
+    effect(() => {
+      this.route();
+      if (this.mapCreated()) this.ngZone.runOutsideAngular(() => untracked(() => this.paintRoute()));
     });
 
     // Lo sblocco: a ogni posizione nuova, i contratti da cui distanza - precisione <= 50 m si sbloccano (e restano sbloccati). Il calcolo è solo sul dispositivo.
@@ -429,7 +453,7 @@ export class WorldMapComponent {
     this.setInteractive(map, !this.location.locked());
     this.showUser(map, this.location.position(), this.location.facing());
     // Lo stile si ricrea al cambio di tema e azzera le visibilità: i filtri si riapplicano a ogni caricamento.
-    map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); });
+    map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); this.paintRoute(); });
     this.tileLoading = new TileLoadingView(map, BASEMAP_SOURCE_ID);
     map.once('idle', () => this.ready.set(true)); // 'idle': ha finito di caricare e disegnare (anche se qualche tassello è fallito)
     map.on('rotate', () => this.bearing.set(Math.round(map.getBearing())));
@@ -453,6 +477,54 @@ export class WorldMapComponent {
     if (!now.length) return;
     for (const c of now) if (!c.id.startsWith(DEV_CONTRACT_PREFIX)) this.unlockStore.unlock(c.id);
     this.unlockedIds.set(new Set([...already, ...now.map((c) => c.id)]));
+  }
+
+  /** Chiede (o toglie) il percorso a piedi per il contratto aperto. */
+  private updateRoute(c: Contract | null, pos: UserPosition | null): void {
+    if (!c) {
+      this.routeToken++;
+      this.routeAsked = null;
+      this.route.set(null);
+      this.routeStatus.set('idle');
+      return;
+    }
+    if (!pos) return;
+    const from = { lat: pos.lat, lng: pos.lng };
+    if (this.routeAsked?.id === c.id && distanceMeters(this.routeAsked.from, from) < ROUTE_REFRESH_M) return;
+    if (this.routeAsked?.id !== c.id) this.route.set(null); // un altro contratto: via la linea vecchia
+    this.routeAsked = { id: c.id, from };
+    this.routeStatus.set('loading');
+    const token = ++this.routeToken;
+    void this.routeService.walk(from, c).then((r) => {
+      if (token !== this.routeToken) return; // nel frattempo si è aperto altro o si è chiuso
+      this.route.set(r);
+      this.routeStatus.set(r ? 'idle' : 'failed');
+    });
+  }
+
+  /** Disegna (o toglie) la linea del percorso: dello stesso verde della posizione del giocatore. Dopo un cambio di tema la linea si ridisegna da `style.load`. */
+  private paintRoute(): void {
+    const map = this.map;
+    if (!map) return;
+    const route = this.route();
+    const data = { type: 'FeatureCollection' as const, features: route ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates: route.coordinates } }] : [] };
+    try {
+      const source = map.getSource(ROUTE_SOURCE);
+      if (source && 'setData' in source) {
+        (source as GeoJSONSource).setData(data);
+        return;
+      }
+      map.addSource(ROUTE_SOURCE, { type: 'geojson', data });
+      map.addLayer({
+        id: ROUTE_LAYER,
+        type: 'line',
+        source: ROUTE_SOURCE,
+        layout: { 'line-cap': 'round', 'line-join': 'round' },
+        paint: { 'line-color': getComputedStyle(document.documentElement).getPropertyValue('--c-you').trim(), 'line-width': 4, 'line-opacity': 0.9 },
+      });
+    } catch {
+      map.once('idle', () => this.paintRoute()); // lo stile non è ancora pronto (cambio di tema o primi tasselli): si riprova a riposo
+    }
   }
 
   /** Si tocca un contratto: la mappa va alle sue coordinate (spostando il centro fuori dal pannello che si apre) e si apre il pannello con le info. */

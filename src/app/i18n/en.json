@@ -2121,5 +2121,9 @@
   "contract.unlocked": "Unlocked",
   "contract.lockedState": "Locked",
   "contract.distance": "{distance} from you",
-  "contract.approach": "Get within {n} m to unlock it."
+  "contract.approach": "Get within {n} m to unlock it.",
+  "contract.walk": "On foot: {walk}",
+  "contract.routeLoading": "Working out the walking route…",
+  "contract.routeFailed": "Walking route not available.",
+  "c.contrattoDiProva2_04d98": "Test contract 2"
 }

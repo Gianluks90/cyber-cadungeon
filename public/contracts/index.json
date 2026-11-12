@@ -10,6 +10,17 @@
       "lat": 41.9028,
       "visibility": "visible",
       "fixer": "app"
+    },
+    {
+      "id": "test-genoa",
+      "number": 2,
+      "title": "Contratto di prova 2",
+      "caption": "Un lavoro di collaudo: serve solo a provare il Briefing e la mappa.",
+      "mapId": "test",
+      "lng": 8.88384573669939,
+      "lat": 44.42347400221174,
+      "visibility": "visible",
+      "fixer": "app"
     }
   ]
 }

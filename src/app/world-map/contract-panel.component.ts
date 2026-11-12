@@ -4,12 +4,19 @@ import { UNLOCK_RADIUS_M } from '../game/constants';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
+import type { WalkingRoute } from './route-service';
 
 /** Il numero collezionabile scritto come #001. */
 export const contractNumber = (n: number): string => `#${String(n).padStart(3, '0')}`;
 
 /** Una distanza leggibile: in metri sotto il chilometro, poi in chilometri con un decimale. */
 const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`);
+
+/** Il tempo a piedi in forma breve: "12 min" o "1 h 5 min" (almeno 1 minuto). */
+const formatDuration = (seconds: number): string => {
+  const min = Math.max(1, Math.round(seconds / 60));
+  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
+};
 
 /**
  * Il pannello con le info di un contratto: su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione, su telefono (fino a 640px) un foglio che sale dal basso. Si apre quando
@@ -38,6 +45,9 @@ const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.roun
           } @else {
             <p class="muted">{{ 'contract.locked' | t }}</p>
             @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
+            @if (walkText(); as w) { <p class="info"><app-icon name="footprint" [size]="16" />{{ 'contract.walk' | t: { walk: w } }}</p> }
+            @else if (routeStatus() === 'loading') { <p class="info">{{ 'contract.routeLoading' | t }}</p> }
+            @else if (routeStatus() === 'failed') { <p class="info">{{ 'contract.routeFailed' | t }}</p> }
             <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p>
             @if (dev) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
           }
@@ -77,6 +87,9 @@ export class ContractPanelComponent {
   readonly unlocked = input(false);
   /** Quanto dista il giocatore dal contratto, in metri (null se non si conosce la posizione). */
   readonly distance = input<number | null>(null);
+  /** Il percorso a piedi fino al contratto e a che punto è il calcolo. */
+  readonly route = input<WalkingRoute | null>(null);
+  readonly routeStatus = input<'idle' | 'loading' | 'failed'>('idle');
   readonly closed = output<void>();
   readonly play = output<Contract>();
   readonly devUnlock = output<Contract>();
@@ -90,6 +103,11 @@ export class ContractPanelComponent {
   protected readonly distanceText = computed(() => {
     const d = this.distance();
     return d === null ? '' : formatDistance(d);
+  });
+
+  protected readonly walkText = computed(() => {
+    const r = this.route();
+    return r ? `${formatDistance(r.distanceM)} · ${formatDuration(r.durationS)}` : '';
   });
 
   constructor() {
