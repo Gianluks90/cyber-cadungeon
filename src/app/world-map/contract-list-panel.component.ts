@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, input, model, output } from '@angular/core';
 import type { Contract } from '../game/contracts/contract';
+import { CONTRACT_SLOTS } from '../game/constants';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
@@ -18,19 +19,21 @@ import { contractNumber } from './contract-panel.component';
   template: `
     <aside class="sheet" [class.open]="open()" [attr.aria-hidden]="!open()" [attr.aria-label]="'contract.label' | t">
       <header>
-        <h2>{{ 'contract.label' | t }}</h2>
+        <h2>{{ 'contract.label' | t }} <span class="count" [attr.aria-label]="'contract.counter' | t: { n: contracts().length, max: max() }">{{ contracts().length }}/{{ max() }}</span></h2>
         <button type="button" class="close" [attr.aria-label]="'contract.listClose' | t" [title]="'contract.listClose' | t" (click)="open.set(false)"><app-icon name="close" [size]="20" /></button>
       </header>
       <hr />
       <div class="list">
         @for (c of contracts(); track c.id) {
           <article class="card">
-            <p class="meta"><span class="num">{{ number(c.number) }}</span></p>
+            <p class="meta">
+              <span class="num">{{ number(c.number) }}</span>
+              <button type="button" class="trash" [attr.aria-label]="'contract.cancelFor' | t: { n: number(c.number) }" [title]="'contract.cancel' | t" (click)="cancel.emit(c)"><app-icon name="delete" [size]="18" /></button>
+            </p>
             <h3>{{ c.title | ct }}</h3>
             <p class="caption">{{ c.caption | ct }}</p>
             <div class="actions">
-              <button type="button" class="dlg-btn primary" (click)="play.emit(c)">{{ 'contract.play' | t }}</button>
-              <button type="button" class="dlg-btn" [attr.aria-label]="'contract.cancelFor' | t: { n: number(c.number) }" (click)="cancel.emit(c)">{{ 'contract.cancel' | t }}</button>
+              <button type="button" class="dlg-btn primary" (click)="play.emit(c)">{{ 'contract.start' | t }}</button>
             </div>
           </article>
         } @empty {
@@ -51,6 +54,8 @@ import { contractNumber } from './contract-panel.component';
     }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
+    /* Il contatore accanto al titolo: contratti accettati su posti disponibili. */
+    .count { margin-left: 6px; font-family: var(--font-mono); color: var(--c-interact); }
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-line-strong); }
     .close { flex: none; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
@@ -58,6 +63,10 @@ import { contractNumber } from './contract-panel.component';
     .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 14px; }
     .card { flex: none; display: flex; flex-direction: column; align-items: stretch; gap: 8px; padding: 10px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); }
     .card p, .card h3 { margin: 0; }
+    /* Il numero a sinistra e il cestino azzurro (annulla il contratto) a destra, sulla stessa riga. */
+    .meta { display: flex; align-items: center; justify-content: space-between; }
+    .trash { flex: none; width: 24px; height: 24px; margin: -4px -4px -4px 0; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--c-interact); cursor: pointer; transition: color var(--t-fast), filter var(--t-fast); }
+    .trash:hover, .trash:focus-visible { color: var(--c-text); outline: none; }
     .num { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; color: var(--c-interact); }
     h3 { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .caption { color: var(--c-text-dim); font-size: 13px; }
@@ -71,6 +80,8 @@ export class ContractListPanelComponent {
   readonly open = model(false);
   /** I contratti accettati, già in ordine di numero. */
   readonly contracts = input<readonly Contract[]>([]);
+  /** Quanti contratti si possono tenere al massimo (il contatore accanto al titolo). */
+  readonly max = input(CONTRACT_SLOTS);
   readonly play = output<Contract>();
   /** Si annulla un contratto: lo si toglie da quelli accettati. */
   readonly cancel = output<Contract>();

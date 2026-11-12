@@ -217,10 +217,10 @@ export class PartyComponent {
     this.loadouts.update((all) => ({ ...all, [id]: l }));
   }
 
-  /** La freccia: dalla schermata degli acquisti si torna agli eroi, da quella degli eroi alla scelta dell'avventura. */
+  /** La freccia: dalla schermata degli acquisti si torna agli eroi, da quella degli eroi alla mappa del mondo. */
   protected back() {
     if (this.step() === 'gear') this.step.set('pick');
-    else void this.router.navigate(['/adventures']);
+    else void this.router.navigate(['/']);
   }
 
   protected home() {

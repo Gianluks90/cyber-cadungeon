@@ -11,7 +11,6 @@ export const routes: Routes = [
     children: [
       // La home è la mappa del mondo (MapLibre pesa circa 1 MB: si scarica solo qui).
       { path: '', loadComponent: () => import('./world-map/world-map.component').then((m) => m.WorldMapComponent) },
-      { path: 'adventures', loadComponent: () => import('./adventures/adventures.component').then((m) => m.AdventuresComponent) },
       { path: 'party/:map', loadComponent: () => import('./adventures/party.component').then((m) => m.PartyComponent) },
       { path: 'lobby/:code', loadComponent: () => import('./lobby/lobby.component').then((m) => m.LobbyComponent) },
       { path: 'editor', loadComponent: () => import('./editor/editor.component').then((m) => m.EditorComponent) },

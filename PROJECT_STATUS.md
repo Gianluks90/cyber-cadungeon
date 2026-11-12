@@ -35,14 +35,14 @@ Documento di contesto per chi non vede il codice. Fotografia presa leggendo il r
 **Cartelle**
 - `src/app/game/` — motore: `board/`, `state/`, `map/`, `pieces/`, `markers/`, `doors/`, `obstacles/`, `adversary/`, `mercenaries/`, `items/`, `enemies/`, `skills/`, `dice/`, `torches/`, `familiars/` (residuo), più `game-scene.component.ts` (scena Pixi + HUD). Nuove: `contracts/` (`Contract`, `ContractStore`, `UnlockStore`, regola di sblocco), `mods/` (catalogo mod, effetti passivi e attivi), `state/berserk.ts`.
 - `src/app/editor/` — editor completo (tessere, porte, ostacoli, oggetti, nemici, aree, zone, eventi, verifica).
-- `src/app/lobby/` — lobby PeerJS. `src/app/auth/` — login finto. `src/app/world-map/` — mappa del mondo. `src/app/adventures/` — scelta avventura e squadra.
+- `src/app/lobby/` — lobby PeerJS. `src/app/auth/` — login finto. `src/app/world-map/` — mappa del mondo. `src/app/adventures/` — scelta della squadra (`/party/:map`); la route `/adventures` è stata rimossa.
 - `src/app/ui/` — componenti HTML sopra il canvas. `src/app/i18n/` — traduzioni (`it.json`, `en.json`, pipe `t`, `tr`, `ct`).
 - `public/` — dati: `contracts/` (intestazioni), `mods/`, `tiles/`, `maps/`, `mercenaries/`, `enemies/`, `items/`, `skills/`, `adversary/`, `shops/`, `icons/` (SVG), `characters/`, `mobs/`, `dice/`.
 - `docs/` — `style-guide.md`, `PIANO-DESIGN.md`, `PIANO-CHIAVI-I18N.md`, `legacy/`.
 - `scripts/i18n-check.mjs` — controlla che ogni testo `tr()` abbia la riga in entrambe le lingue (`npm run i18n:check`).
 
 **Rotte** (`app.routes.ts`, tutte lazy; tutte dietro `authGuard` tranne `/login`)
-- `/login`, `/` (mappa del mondo), `/adventures`, `/party/:map`, `/lobby/:code`, `/editor`, `/play/:map`, `/adversary/:map` (stessa scena vista dalla Megacorp, per sviluppo; `?party=a,b,…`).
+- `/login`, `/` (mappa del mondo), `/party/:map`, `/lobby/:code`, `/editor`, `/play/:map`, `/adversary/:map` (stessa scena vista dalla Megacorp, per sviluppo; `?party=a,b,…`).
 
 ## 3. Architettura del motore
 

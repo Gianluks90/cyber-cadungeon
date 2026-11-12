@@ -60,7 +60,7 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 - **Mod e Briefing**: catalogo in `public/mods/` + `game/mods/mod.ts`; scelta nel dialog `ui/pregame-shop-dialog.component.ts`; Berserk in `game/state/berserk.ts`. Cosa resta è in `docs/TODO-v2.md` («Aggiornamento 2026-11-12»).
 - **Allerta meteo** (solo avviso, nessun effetto sulle regole): `world-map/weather-alert.ts` (`WeatherAlertService`, oggi i bollettini DPC su GitHub, CC BY 4.0, citati nei crediti; la zona si cerca sul dispositivo, la posizione non esce). Blocchetto «Allerta meteo» accanto all'orologio; conta solo l'allerta di adesso (non «domani»).
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
-- **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
+- **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 
 ## Glossario (nomi decisi)
 Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.md`. La rinomina nel codice e nei dati (TODO L1.9) è completata: non restano alias dei nomi vecchi.

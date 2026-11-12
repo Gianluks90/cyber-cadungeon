@@ -39,6 +39,7 @@
   --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
   --c-you:           #2bff88;  /* SOLO: la posizione del giocatore sulla mappa del mondo (verde neon, con glow) */
   --c-ok:            #6cc08a;  /* verifica dell'avventura: tutto a posto */
+  --c-rare:           var(--px-amber);  /* contratti rari sulla mappa del mondo (giallo, come il segnaposto) */
   --c-warn:           var(--px-amber);  /* verifica dell'avventura: va bene ma manca qualcosa */
   --c-error:         var(--c-danger);  /* verifica dell'avventura: qualcosa è sbagliato */
 

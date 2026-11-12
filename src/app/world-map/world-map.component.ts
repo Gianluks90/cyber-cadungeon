@@ -75,7 +75,7 @@ const USER_ZOOM = 16;
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
     <app-contract-counter [count]="heldContracts().length" [open]="panel() === 'contracts'" (toggle)="setPanel('contracts', panel() !== 'contracts')" />
-    <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" (play)="playContract($event)" (cancel)="cancelContract($event)" />
+    <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" [max]="maxHeld" (play)="playContract($event)" (cancel)="cancelContract($event)" />
     <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
         <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />

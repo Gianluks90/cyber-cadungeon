@@ -7,7 +7,10 @@ import { KeyLabelComponent } from '../ui/key-label.component';
 /** Una riga della legenda: l'icona com'è sulla mappa, nel suo colore, e cosa significa. */
 const ENTRIES: { icon: string; color: string; label: MessageKey }[] = [
   { icon: 'navigation', color: 'var(--c-you)', label: 'worldMap.legend.you' },
+  { icon: 'home', color: 'var(--c-you)', label: 'worldMap.legend.yourHangout' },
+  { icon: 'home', color: 'var(--c-interact)', label: 'worldMap.legend.hangout' },
   { icon: 'contract', color: 'var(--c-interact)', label: 'worldMap.legend.contract' },
+  { icon: 'contract', color: 'var(--c-rare)', label: 'worldMap.legend.rareContract' },
 ];
 
 /**
@@ -37,7 +40,7 @@ const ENTRIES: { icon: string; color: string; label: MessageKey }[] = [
         </header>
         <hr />
         <ul class="list">
-          @for (e of entries; track e.icon) {
+          @for (e of entries; track e.label) {
             <li class="row">
               <span class="glyph" [style.color]="e.color"><app-icon [name]="e.icon" [size]="24" /></span>
               <span class="name">{{ e.label | t }}</span>
