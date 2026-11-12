@@ -55,6 +55,7 @@ Piano dei passi in `docs/PIANO-PROTOTIPO.md`. **Fatto** (build e `i18n:check` ve
 - anteprima dei parametri del Briefing che conti anche le mod; mod attive del deck (oggi il Driver Berserk è passivo);
 - budget che avanza → terminali (§2.6) e il resto di L3.10;
 - validatore del contratto (budget alto/basso) e formula di minaccia (§3 del design).
+- **cluster dei marker** sulla mappa quando i contratti saranno tanti (oggi un marker per contratto, senza raggruppamento).
 
 ---
 
