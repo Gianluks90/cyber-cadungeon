@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { DialogComponent } from '../ui/dialog.component';
-import { DATA_CREDITS, MAP_FEEDBACK_URL, SOFTWARE_CREDITS, TERRAIN_CREDITS, TERRAIN_SOURCES_URL } from './map-config';
+import { DATA_CREDITS, MAP_FEEDBACK_URL, SOFTWARE_CREDITS, TERRAIN_CREDITS, TERRAIN_SOURCES_URL, WEATHER_CREDITS } from './map-config';
 
 /**
  * La dialog con i crediti della mappa (dati, terreno, software), che prende il posto del box dei crediti di MapLibre: si apre dalla voce Attribuzione del menu della Home (open).
@@ -33,6 +33,14 @@ import { DATA_CREDITS, MAP_FEEDBACK_URL, SOFTWARE_CREDITS, TERRAIN_CREDITS, TERR
           </ul>
         </section>
         <section>
+          <h3>{{ 'worldMap.credits.weather' | t }}</h3>
+          <ul>
+            @for (c of weatherCredits; track c.text) {
+              <li>@if (c.url) { <a [href]="c.url" target="_blank" rel="noopener">{{ c.text }}</a> } @else { {{ c.text }} }</li>
+            }
+          </ul>
+        </section>
+        <section>
           <h3>{{ 'worldMap.credits.software' | t }}</h3>
           <ul>
             @for (c of softwareCredits; track c.text) {
@@ -58,6 +66,7 @@ export class MapCreditsComponent {
   readonly closed = output<void>();
   protected readonly dataCredits = DATA_CREDITS;
   protected readonly terrainCredits = TERRAIN_CREDITS;
+  protected readonly weatherCredits = WEATHER_CREDITS;
   protected readonly softwareCredits = SOFTWARE_CREDITS;
   protected readonly terrainSourcesUrl = TERRAIN_SOURCES_URL;
   protected readonly feedbackUrl = MAP_FEEDBACK_URL;

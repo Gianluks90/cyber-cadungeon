@@ -6,6 +6,7 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { IconComponent } from '../ui/icon.component';
 import { CipherTextComponent } from './cipher-text.component';
 import type { WalkingRoute } from './route-service';
+import type { AlertLevel } from './weather-alert';
 
 /** Il numero collezionabile scritto come #001. */
 export const contractNumber = (n: number): string => `#${String(n).padStart(3, '0')}`;
@@ -15,6 +16,8 @@ const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.roun
 
 /** Passo a piedi in metri al secondo (circa 4,5 km/h), per stimare il tempo quando manca il percorso. */
 const WALK_SPEED_MS = 1.25;
+/** Oltre questa distanza (metri) dal contratto, con un'allerta meteo in corso, il pannello avvisa: bisogna uscire e camminare. */
+const WEATHER_NOTE_FROM_M = 500;
 
 /**
  * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
@@ -45,6 +48,9 @@ const WALK_SPEED_MS = 1.25;
           <!-- Le uniche frasi che spariscono da un contratto sbloccato (o a portata, dove la violazione è in corso): fuori dal campo di sincronizzazione e il raggio per sbloccare. La distanza resta sempre. -->
           @if (!unlocked() && breach() === null) { <p class="muted">{{ 'contract.locked' | t }}</p> }
           @if (distanceLine(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ d.key | t: d.params }}</p> }
+          @if (alertLevel(); as level) {
+            @if (far()) { <p class="info warn" [class.blink]="open()" [attr.data-level]="level" role="status"><app-icon name="warning" [size]="16" />{{ 'contract.weatherAlert' | t }}</p> }
+          }
           @if (!unlocked() && breach() === null) { <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p> }
           @if (breach() !== null) {
             <!-- La violazione: restando a portata per qualche secondo la barra si riempie (a riempimento, non a segmenti) e il contratto si sblocca. Prende il posto del tasto. -->
@@ -99,6 +105,14 @@ const WALK_SPEED_MS = 1.25;
     .track { height: 8px; box-sizing: border-box; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-bg); overflow: hidden; }
     .fill { height: 100%; background: var(--c-interact); transition: width 120ms linear; }
     .info { display: flex; align-items: center; gap: 6px; color: var(--c-text-dim); font-size: 13px; }
+    /* L'avviso di allerta meteo: il colore del livello (come il blocchetto sulla mappa); ogni volta che il pannello si apre lampeggia due volte e poi resta fisso. */
+    .warn { color: var(--alert-color); }
+    .warn[data-level='yellow'] { --alert-color: var(--c-warn); }
+    .warn[data-level='orange'] { --alert-color: var(--c-missing); }
+    .warn[data-level='red'] { --alert-color: var(--c-danger); }
+    .warn.blink { animation: alert-blink 1s ease-in-out 2; }
+    @keyframes alert-blink { 50% { opacity: 0.15; } }
+    @media (prefers-reduced-motion: reduce) { .warn.blink { animation: none; } }
   `,
 })
 export class ContractPanelComponent {
@@ -115,6 +129,8 @@ export class ContractPanelComponent {
   readonly acceptedIn = input(false, { alias: 'accepted' });
   readonly heldCountIn = input(0, { alias: 'heldCount' });
   readonly maxHeldIn = input(CONTRACT_SLOTS, { alias: 'maxHeld' });
+  /** Il livello dell'allerta meteo in corso dove si trova il giocatore, o null se non ce n'è. */
+  readonly alertLevelIn = input<AlertLevel | null>(null, { alias: 'alertLevel' });
   readonly closed = output<void>();
   /** Il tasto «Accetta»: attivo se il contratto è sbloccato, non è già accettato e c'è posto. */
   readonly accept = output<Contract>();
@@ -134,6 +150,13 @@ export class ContractPanelComponent {
   protected readonly accepted = signal(false);
   protected readonly heldCount = signal(0);
   protected readonly maxHeld = signal(CONTRACT_SLOTS);
+  protected readonly alertLevel = signal<AlertLevel | null>(null);
+  /** Il contratto è più lontano di WEATHER_NOTE_FROM_M (come la distanza mostrata: a piedi se c'è il percorso): solo allora serve l'avviso, da vicino si è già fuori. */
+  protected readonly far = computed(() => {
+    const route = this.route();
+    const meters = route ? route.distanceM : this.distance();
+    return meters !== null && meters > WEATHER_NOTE_FROM_M;
+  });
 
   /** La procedura ha una sola barra in due metà: prima la violazione, poi la decrittazione (da lì i simboli diventano testo vero, tanto quanto la barra va oltre la metà). */
   protected readonly decrypting = computed(() => (this.breach() ?? 0) >= 0.5);
@@ -198,6 +221,7 @@ export class ContractPanelComponent {
         accepted: this.acceptedIn(),
         heldCount: this.heldCountIn(),
         maxHeld: this.maxHeldIn(),
+        alertLevel: this.alertLevelIn(),
       };
       if (!c) return; // chiuso: restano i valori di prima
       this.shown.set(c);
@@ -208,6 +232,7 @@ export class ContractPanelComponent {
       this.accepted.set(values.accepted);
       this.heldCount.set(values.heldCount);
       this.maxHeld.set(values.maxHeld);
+      this.alertLevel.set(values.alertLevel);
     });
   }
 }

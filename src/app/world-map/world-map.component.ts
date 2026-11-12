@@ -29,6 +29,7 @@ import { ContractListPanelComponent } from './contract-list-panel.component';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractPanelComponent, contractNumber } from './contract-panel.component';
 import { distanceMeters } from '../game/contracts/unlock-rule';
+import { DpcWeatherAlertService, WEATHER_CHECK_EVERY_MS, type WeatherAlert, type WeatherAlertService } from './weather-alert';
 import { OsrmFootRouteService, type RouteService, type WalkingRoute } from './route-service';
 import { ContractCounterComponent } from './contract-counter.component';
 import { MapLegendPanelComponent } from './map-legend-panel.component';
@@ -83,12 +84,20 @@ const USER_ZOOM = 16;
         <app-icon name="settings" [size]="18" />
       </button>
     </app-dropdown-menu>
-    <p class="clock" role="timer" [attr.aria-label]="(isNight() ? 'worldMap.night' : 'worldMap.day') | t">
-      <span class="sun" [class.swapping]="swapping()"><app-icon [name]="shownNight() ? 'bedtime' : 'light_mode'" [size]="20" /></span>
-      {{ time() }}
-    </p>
+    <div class="corner">
+      <p class="clock" role="timer" [attr.aria-label]="(isNight() ? 'worldMap.night' : 'worldMap.day') | t">
+        <span class="sun" [class.swapping]="swapping()"><app-icon [name]="shownNight() ? 'bedtime' : 'light_mode'" [size]="20" /></span>
+        {{ time() }}
+      </p>
+      @if (weatherAlert(); as alert) {
+        <p class="weather" [attr.data-level]="alert.level" role="status" [attr.aria-label]="alertTitle()" [title]="alertTitle()">
+          <app-icon name="warning" [size]="20" />
+          {{ 'worldMap.weather.alert' | t }}
+        </p>
+      }
+    </div>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [alertLevel]="weatherAlert()?.level ?? null" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -122,15 +131,25 @@ const USER_ZOOM = 16;
     .status { display: flex; align-items: center; gap: 4px; }
     .halo-toggle { pointer-events: auto; width: 20px; height: 20px; margin-right: -5px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast); }
     .halo-toggle:hover, .halo-toggle:focus-visible { color: var(--c-interact); outline: none; }
-    /* L'orologio: un riquadro come i tasti (36px di altezza), in basso a sinistra. */
-    .clock { position: absolute; left: 10px; bottom: 10px; z-index: 1; margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; pointer-events: none; }
+    /* In basso a sinistra una fila di riquadri come i tasti (36px di altezza): l'orologio e, se c'è, l'avviso di allerta meteo. */
+    .corner { position: absolute; left: 10px; bottom: 10px; z-index: 1; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+    .clock, .weather { margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; }
+    /* L'allerta prende il colore del suo livello (gialla, arancione, rossa); il nome del livello e della zona sta nel suggerimento. */
+    .weather { pointer-events: auto; border-color: var(--alert-color); color: var(--alert-color); animation: weather-blink 1s ease-in-out 2; }
+    /* Quando compare (anche a ogni ricarica della pagina) lampeggia due volte e poi resta fisso. */
+    @keyframes weather-blink { 50% { opacity: 0.15; } }
+    @media (prefers-reduced-motion: reduce) { .weather { animation: none; } }
+    .weather[data-level='yellow'] { --alert-color: var(--c-warn); }
+    .weather[data-level='orange'] { --alert-color: var(--c-missing); }
+    .weather[data-level='red'] { --alert-color: var(--c-danger); }
     /* Il passaggio giorno/notte: l'icona scende, cambia mentre è nascosta e risale al suo posto. */
     .sun { display: inline-flex; transition: transform 240ms var(--ease-draw), opacity 240ms; }
     .sun.swapping { transform: translateY(28px); opacity: 0; }
     @media (prefers-reduced-motion: reduce) { .sun { transition: none; } }
-    /* Su telefono l'orologio non si vede e l'avviso di posizione prende tutta la larghezza. */
+    /* Su telefono l'orologio non si vede, l'allerta resta (è una sicurezza) e sale sopra l'avviso di posizione, che prende tutta la larghezza. */
     @media (max-width: 640px) {
       .clock { display: none; }
+      .corner { bottom: 52px; }
       .status { left: 10px; right: 10px; transform: none; max-width: none; justify-content: center; }
     }
   `,
@@ -169,6 +188,15 @@ export class WorldMapComponent {
   protected readonly shownNight = signal(this.isNight());
   /** L'icona è scesa e sta per cambiare. */
   protected readonly swapping = signal(false);
+  /** L'allerta meteo in corso dove si trova il giocatore (null: nessuna o non si sa), dal servizio della Protezione Civile; ultimo controllo e posizione per cui è stato fatto. */
+  private readonly weatherService: WeatherAlertService = new DpcWeatherAlertService();
+  protected readonly weatherAlert = signal<WeatherAlert | null>(null);
+  private weatherAskedAt = 0;
+  /** Il suggerimento dell'avviso: livello e zona («Allerta arancione · Bacini Liguri Marittimi di Centro»). */
+  protected readonly alertTitle = computed(() => {
+    const a = this.weatherAlert();
+    return a ? translate(`worldMap.weather.${a.level}`, { zone: a.zone }) : '';
+  });
   /** Il pannello laterale aperto: uno solo alla volta (aprirne uno chiude l'altro). */
   protected readonly panel = signal<'filters' | 'legend' | 'menu' | 'contracts' | null>(null);
   /** La dialog della grafica (tasto impostazioni del menu) è aperta. */
@@ -315,6 +343,12 @@ export class WorldMapComponent {
       });
     });
 
+    // L'allerta meteo: si controlla alla prima posizione, poi una volta all'ora (non a ogni lettura del GPS: le fonti sono a uso equo).
+    effect(() => {
+      const pos = this.location.position();
+      if (pos) untracked(() => this.checkWeather(pos));
+    });
+
     // I contratti: letti una volta; i segnaposto si ridisegnano quando cambiano i contratti, gli sblocchi o la scheda aperta.
     void this.contractStore.list().then((list) => this.realContracts.set(list));
     effect(() => {
@@ -453,6 +487,8 @@ export class WorldMapComponent {
   protected toggleHalo(): void {
     this.showHalo.update((v) => !v);
     try { localStorage.setItem(HALO_KEY, this.showHalo() ? '1' : '0'); } catch { /* vale solo per questa visita */ }
+    // L'alone è un elemento della mappa fuori da Angular: va aggiornato subito, non quando arriva una nuova posizione o si cambia zoom.
+    this.ngZone.runOutsideAngular(() => { if (this.map) this.sizeHalo(this.map); });
   }
 
   protected toggleFullscreen(): void {
@@ -542,6 +578,13 @@ export class WorldMapComponent {
   private unlockContract(c: Contract): void {
     if (!c.id.startsWith(DEV_CONTRACT_PREFIX) && !this.unlockStore.unlock(c.id)) return;
     this.unlockedIds.set(new Set([...this.unlockedIds(), c.id]));
+  }
+
+  /** Chiede l'allerta meteo alla prima posizione e poi una volta all'ora (il servizio tiene l'ultimo esito nel localStorage e non chiama la rete prima). La posizione resta sul dispositivo: la zona si cerca qui. */
+  private checkWeather(pos: UserPosition): void {
+    if (this.weatherAskedAt && Date.now() - this.weatherAskedAt < WEATHER_CHECK_EVERY_MS) return;
+    this.weatherAskedAt = Date.now();
+    void this.weatherService.at(pos, new Date()).then((alert) => this.weatherAlert.set(alert));
   }
 
   /** Chiede (o toglie) il percorso a piedi per il contratto aperto. */

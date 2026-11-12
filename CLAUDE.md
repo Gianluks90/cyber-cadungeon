@@ -58,6 +58,7 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 - **Cataloghi**: `public/{mercenaries,enemies,items,skills,adversary,shops}/`, caricati da `game/{mercenaries,enemies,items,skills,adversary}/`. Squadra predefinita in `game/mercenaries/mercenary-sheet.ts` (`DEFAULT_PARTY`).
 - **Contratti** (passi 1-4 di `docs/PIANO-PROTOTIPO.md` fatti): intestazioni in `public/contracts/index.json` + `game/contracts/` (`ContractStore`, `UnlockStore`, regola di sblocco); la missione resta un `MapData` in `public/maps/`. Titolo della missione = fonte, quello del contratto è una copia. Marker e scheda in `world-map/`.
 - **Mod e Briefing**: catalogo in `public/mods/` + `game/mods/mod.ts`; scelta nel dialog `ui/pregame-shop-dialog.component.ts`; Berserk in `game/state/berserk.ts`. Cosa resta è in `docs/TODO-v2.md` («Aggiornamento 2026-11-12»).
+- **Allerta meteo** (solo avviso, nessun effetto sulle regole): `world-map/weather-alert.ts` (`WeatherAlertService`, oggi i bollettini DPC su GitHub, CC BY 4.0, citati nei crediti; la zona si cerca sul dispositivo, la posizione non esce). Blocchetto «Allerta meteo» accanto all'orologio; conta solo l'allerta di adesso (non «domani»).
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
 - **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 

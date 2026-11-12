@@ -61,6 +61,11 @@ export const DATA_CREDITS: readonly MapCredit[] = [
   { text: 'Protomaps', url: 'https://github.com/protomaps/basemaps' },
 ];
 
+/** Le allerte meteo: bollettini del Dipartimento della Protezione Civile, licenza CC BY 4.0 (la licenza chiede di citare la fonte). */
+export const WEATHER_CREDITS: readonly MapCredit[] = [
+  { text: 'Dipartimento della Protezione Civile, Bollettini di criticità idrogeologica e idraulica (CC BY 4.0)', url: 'https://github.com/pcm-dpc/DPC-Bollettini-Criticita-Idrogeologica-Idraulica' },
+];
+
 /** Le altezze del terreno: vedi le note su `DEM_TILES_URL` (cosa manca prima del rilascio). */
 export const TERRAIN_CREDITS: readonly MapCredit[] = [
   { text: 'Mapzen, AWS Terrain Tiles', url: 'https://registry.opendata.aws/terrain-tiles/' },
