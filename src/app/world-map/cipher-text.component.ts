@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, effect, input, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, afterRenderEffect, effect, inject, input, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../i18n/translate.pipe';
 
 /** I caratteri con cui si "cifra" un testo: blocchi, simboli e cifre esadecimali. */
@@ -20,12 +20,13 @@ const REVEAL_TICK_MS = 60;
   selector: 'app-cipher-text',
   imports: [TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  template: `<span class="text" [class.plain]="plain()" [attr.role]="plain() ? null : 'img'" [attr.aria-label]="plain() ? null : ('contract.encrypted' | t)">{{ shown().join('') }}</span>`,
+  template: `<span #t class="text" [class.plain]="plain()" [attr.role]="plain() ? null : 'img'" [attr.aria-label]="plain() ? null : ('contract.encrypted' | t)">{{ shown().join('') }}</span>`,
   styles: `
     /* Niente font né colore propri: il testo cifrato ha lo stesso aspetto del testo finale (li decide chi usa il componente), così alla decifratura non cambia niente tranne i caratteri. */
     :host { display: block; }
     .text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
-    .text:not(.plain) { user-select: none; }
+    /* Finché è cifrato ha l'altezza del testo vero (la imposta il metodo measure) e ciò che la supera si taglia: i simboli hanno larghezze diverse dalle lettere e andrebbero a capo in punti diversi, facendo ballare il pannello. */
+    .text:not(.plain) { user-select: none; overflow: hidden; }
   `,
 })
 export class CipherTextComponent {
@@ -39,12 +40,57 @@ export class CipherTextComponent {
   /** Il testo vero è completamente visibile (anche dopo la decifratura). */
   protected readonly plain = signal(false);
 
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly textEl = viewChild<ElementRef<HTMLElement>>('t');
+
+  /**
+   * Fissa l'altezza del testo cifrato a quella che avrà il testo vero alla larghezza di adesso: si misura una copia del testo vero messa un attimo fuori vista e subito tolta.
+   * Decifrato, l'altezza torna libera (è la stessa, quindi non si sposta niente).
+   */
+  private measure(): void {
+    const el = this.textEl()?.nativeElement;
+    if (!el) return;
+    if (this.plain()) {
+      el.style.height = '';
+      return;
+    }
+    const probe = el.cloneNode(false) as HTMLElement;
+    probe.removeAttribute('role');
+    probe.removeAttribute('aria-label');
+    probe.setAttribute('aria-hidden', 'true');
+    probe.textContent = this.text();
+    probe.style.cssText = `position:absolute;visibility:hidden;pointer-events:none;height:auto;width:${el.clientWidth}px`;
+    this.host.nativeElement.appendChild(probe);
+    const height = probe.getBoundingClientRect().height;
+    probe.remove();
+    el.style.height = height ? `${height}px` : '';
+  }
+
   /** Per riconoscere il passaggio da cifrato a leggibile sullo stesso testo. */
   private lastText: string | null = null;
   private lastOwner: string | null = null;
   private lastUnlocked = false;
 
   constructor() {
+    // Dopo ogni disegno in cui cambia il testo (o la decifratura finisce) si rimisura l'altezza; se cambia la larghezza (telefono girato, pannello ridimensionato) si rimisura.
+    afterRenderEffect(() => {
+      this.text();
+      this.plain();
+      this.measure();
+    });
+    const destroyRef = inject(DestroyRef);
+    afterNextRender(() => {
+      let width = this.host.nativeElement.clientWidth;
+      const observer = new ResizeObserver(() => {
+        const now = this.host.nativeElement.clientWidth;
+        if (now === width) return;
+        width = now;
+        this.measure();
+      });
+      observer.observe(this.host.nativeElement);
+      destroyRef.onDestroy(() => observer.disconnect());
+    });
+
     effect((onCleanup) => {
       const text = this.text();
       const unlocked = this.unlocked();
