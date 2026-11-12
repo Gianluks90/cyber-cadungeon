@@ -12,7 +12,7 @@ const REVEAL_TICK_MS = 60;
 
 /**
  * Un testo che non si può ancora leggere: al suo posto una serie di caratteri e simboli casuali, come se fosse cifrato, con qualche carattere che cambia di continuo
- * (stessa lunghezza e stessi spazi del testo vero). Quando `unlocked` diventa vero **mentre lo si guarda** il testo vero compare un poco alla volta, carattere per carattere in
+ * (stessa lunghezza e stessi spazi del testo vero, e lo stesso carattere tipografico e colore: usato per la didascalia e per il titolo). Quando `unlocked` diventa vero **mentre lo si guarda** il testo vero compare un poco alla volta, carattere per carattere in
  * ordine sparso, come se si decifrasse. Se è già sbloccato all'inizio (o con «riduci le animazioni») si legge subito, senza effetto.
  * Mentre è cifrato il testo vero non sta nella pagina (solo la sua forma).
  */
@@ -22,10 +22,10 @@ const REVEAL_TICK_MS = 60;
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `<span class="text" [class.plain]="plain()" [attr.role]="plain() ? null : 'img'" [attr.aria-label]="plain() ? null : ('contract.encrypted' | t)">{{ shown().join('') }}</span>`,
   styles: `
+    /* Niente font né colore propri: il testo cifrato ha lo stesso aspetto del testo finale (li decide chi usa il componente), così alla decifratura non cambia niente tranne i caratteri. */
     :host { display: block; }
-    .text { display: block; font: 13px/1.5 var(--font-mono); letter-spacing: 0.04em; white-space: pre-wrap; overflow-wrap: anywhere; color: color-mix(in srgb, var(--c-interact) 55%, var(--c-text-dim)); user-select: none; }
-    /* Decifrato: torna un testo normale. */
-    .text.plain { font: 14px/1.4 var(--font-ui); letter-spacing: normal; color: var(--c-text); user-select: text; }
+    .text { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .text:not(.plain) { user-select: none; }
   `,
 })
 export class CipherTextComponent {

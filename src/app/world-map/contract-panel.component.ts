@@ -23,7 +23,7 @@ const formatDuration = (seconds: number): string => {
  * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
  * su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione; su telefono (fino a 640px) un foglio che sale dal basso.
  * Si apre quando `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
- * Titolo nell'intestazione; sotto numero e stato, la didascalia (da bloccato è cifrata: caratteri casuali al posto del testo; se si sblocca mentre la guardi si decifra un poco alla volta), e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
+ * Titolo nell'intestazione; sotto numero e stato, la didascalia. Da bloccato titolo e didascalia sono cifrati (caratteri casuali dello stesso aspetto del testo vero); se si sblocca mentre li guardi si decifrano un poco alla volta, e se è bloccato a che distanza sei e cosa serve per sbloccarlo. Il tasto è sempre «Accetta»
  * con quanti contratti hai (es. «Accetta 3/5»): spento se è bloccato, già accettato o i posti sono finiti. Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
  */
 @Component({
@@ -35,7 +35,7 @@ const formatDuration = (seconds: number): string => {
     <aside class="sheet" [class.open]="open()" [attr.aria-hidden]="!open()" [attr.aria-label]="shown() ? ('contract.card' | t: { n: number(shown()!.number) }) : null">
       @if (shown(); as c) {
         <header>
-          <h2>{{ c.title | ct }}</h2>
+          <h2><app-cipher-text [text]="c.title | ct" [unlocked]="unlocked()" [owner]="c.id" /></h2>
           <button type="button" class="close" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
         </header>
         <hr />
@@ -44,7 +44,7 @@ const formatDuration = (seconds: number): string => {
             <span class="num">{{ number(c.number) }}</span>
             <span class="state" [class.on]="unlocked()"><app-icon [name]="unlocked() ? 'lock_open' : 'lock'" [size]="16" />{{ (unlocked() ? 'contract.unlocked' : 'contract.lockedState') | t }}</span>
           </p>
-          <app-cipher-text [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" />
+          <app-cipher-text class="caption" [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" />
           @if (!unlocked()) {
             <p class="muted">{{ 'contract.locked' | t }}</p>
             @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
