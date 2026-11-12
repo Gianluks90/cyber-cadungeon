@@ -2,7 +2,6 @@ import { ChangeDetectionStrategy, Component, computed, input } from '@angular/co
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { MercenaryStats } from '../game/mercenaries/mercenary-stats';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
-import { HeartsComponent } from './hearts.component';
 import { MercenaryStatsPillComponent } from './mercenary-stats-pill.component';
 import { ValueStarComponent } from './value-star.component';
 
@@ -12,15 +11,14 @@ import { ValueStarComponent } from './value-star.component';
  */
 @Component({
   selector: 'app-mercenary-face',
-  imports: [CatalogTextPipe, HeartsComponent, MercenaryStatsPillComponent, ValueStarComponent],
+  imports: [CatalogTextPipe, MercenaryStatsPillComponent, ValueStarComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (mercenary(); as h) {
       <img [src]="h.portraitFull" [alt]="h.name" />
-      <app-hearts class="hearts" [wounds]="shown().wounds" [max]="shown().wounds" [size]="18" />
+      <app-value-star class="value" [value]="h.value" />
       <div class="cap">
-        <app-mercenary-stats-pill class="stats" [speed]="shown().speed" [overclock]="shown().overclock" [armor]="shown().armor" />
-        <app-value-star class="value" [value]="h.value" />
+        <app-mercenary-stats-pill class="stats" [health]="shown().wounds" [speed]="shown().speed" [overclock]="shown().overclock" [armor]="shown().armor" />
         <b>{{ h.name }}</b><span>{{ h.class | ct }}</span>
       </div>
     }
@@ -28,13 +26,12 @@ import { ValueStarComponent } from './value-star.component';
   styles: `
     :host { position: absolute; inset: 0; display: block; }
     img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
-    .hearts { position: absolute; top: 8px; right: calc(8px + var(--face-inset, 0px)); display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 10px; background: var(--c-surface); border-top: 1px solid var(--c-line-strong); text-align: left; }
     .cap b { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.04em; }
     .cap span { color: var(--c-text-dim); font-size: 11px; font-weight: 600; letter-spacing: var(--label-tracking); text-transform: uppercase; }
-    .stats { position: absolute; left: 8px; bottom: calc(100% + 6px); }
+    .stats { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 6px); }
     /* --face-inset: quanto la carta è infilata sotto un pannello sul lato destro (le cose a destra si spostano di tanto, per restare visibili). */
-    .value { position: absolute; right: calc(8px + var(--face-inset, 0px)); bottom: calc(100% + 6px); }
+    .value { position: absolute; right: calc(8px + var(--face-inset, 0px)); top: 8px; }
   `,
 })
 export class MercenaryFaceComponent {

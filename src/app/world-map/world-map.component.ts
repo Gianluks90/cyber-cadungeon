@@ -734,7 +734,7 @@ export class WorldMapComponent {
       // Un quadrato con un punto esclamativo al centro (l'icona `contract`, come nella legenda): sfondo scuro sotto, icona colorata sopra; in risalto se è quello aperto.
       const color = open ? 'var(--c-interact)' : 'var(--c-text-dim)';
       const iconUrl = new URL('icons/contract.svg', document.baseURI).href;
-      el.style.cssText = 'width:32px;height:32px;padding:0;border:0;background:none;cursor:pointer'; // niente `position`: la classe `.maplibregl-marker` lo vuole absolute, così il marker segue le coordinate
+      el.style.cssText = 'width:32px;height:32px;padding:0;border:0;background:none'; // niente `position`: la classe `.maplibregl-marker` lo vuole absolute, così il marker segue le coordinate
       const fill = document.createElement('span');
       fill.style.cssText = 'position:absolute;inset:4px;background:var(--c-surface)';
       const glyph = document.createElement('span');

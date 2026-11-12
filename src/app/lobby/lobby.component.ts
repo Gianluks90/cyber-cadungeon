@@ -15,7 +15,6 @@ import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
 import { FamiliarDef, familiarsOfSheet, loadFamiliarCatalog } from '../game/familiars/familiar';
-import { HeartsComponent } from '../ui/hearts.component';
 import { MercenaryLoadoutComponent } from '../ui/mercenary-loadout.component';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { DotTrailComponent } from '../ui/dot-trail.component';
@@ -35,7 +34,7 @@ import { composeRules } from '../game/state/setup-text';
  */
 @Component({
   selector: 'app-lobby',
-  imports: [AdventureDialogComponent, CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, FieldComponent, IconComponent, PageNavComponent, SelectComponent, TranslatePipe],
+  imports: [AdventureDialogComponent, CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, FieldComponent, IconComponent, PageNavComponent, SelectComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -97,11 +96,10 @@ import { composeRules } from '../game/state/setup-text';
                 [attr.aria-disabled]="takenBy(h.id) ? 'true' : null" (click)="pick(h.id)" (keydown.enter)="pick(h.id)" (keydown.space)="pick(h.id); $event.preventDefault()">
                 <img [src]="h.portraitFull" [alt]="h.name" />
                 <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
-                <app-hearts class="hearts" [wounds]="h.wounds" [max]="h.wounds" [size]="18" />
+                <app-value-star class="value" [value]="h.value" />
                 <div class="cap">
-                  <app-value-star class="value" [value]="h.value" />
                   @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                  <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
+                  <app-mercenary-stats-pill class="stats" [health]="h.wounds" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
                   <b>{{ h.name }}</b><span>{{ h.class | ct }}</span>
                 </div>
                 @if (takenBy(h.id)) { <span class="badge">{{ 'lobby.taken' | t }}</span> }
@@ -160,7 +158,7 @@ import { composeRules } from '../game/state/setup-text';
     /* Lo stile delle carte accanto ai pannelli: inclinata di 4°, riquadro con ombra, immagine a tutta carta e un piede opaco con il nome e il sottotitolo (la classe, in maiuscolo). */
     .card {
       position: relative; flex: none; box-sizing: border-box; width: 210px; height: min(440px, 56dvh); min-height: 300px; margin: 0; padding: 0; overflow: hidden; scroll-snap-align: center;
-      border-radius: var(--radius-1); border: 1px dashed var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit;
+      border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px dashed var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit;
       display: flex; align-items: center; justify-content: center; transform: rotate(4deg); transform-origin: 30% 100%; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55);
     }
     .card.filled, .card.mercenary { border-style: solid; }
@@ -181,10 +179,9 @@ import { composeRules } from '../game/state/setup-text';
     .mercenary.taken:hover { border-color: var(--c-line-strong); transform: rotate(4deg); }
     .badge { position: absolute; top: 8px; left: 46px; padding: 3px 7px; border-radius: var(--radius-1); background: rgba(0, 0, 0, 0.75); font-size: 11px; font-weight: 600; }
     /* I punti ferita in cuori in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra (come nella scelta della squadra). */
-    .hearts { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .fam { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 54px); }
-    .stats { position: absolute; left: 8px; bottom: calc(100% + 6px); }
-    .value { position: absolute; right: 8px; bottom: calc(100% + 6px); }
+    .stats { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 6px); }
+    .value { position: absolute; right: 8px; top: 8px; }
     /* Il tasto "i": un pallino scuro in alto a sinistra che apre la scheda di dettaglio. */
     .info { position: absolute; z-index: 2; top: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
     .info:hover, .info:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }

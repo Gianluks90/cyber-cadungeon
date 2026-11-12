@@ -7,7 +7,6 @@ import { translate } from '../i18n/i18n.service';
 import { POTION_NAMES } from '../game/markers/marker-rules';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
-import { HeartsComponent } from './hearts.component';
 import { MercenaryStatsPillComponent } from './mercenary-stats-pill.component';
 import { ValueStarComponent } from './value-star.component';
 import { IconComponent } from './icon.component';
@@ -19,15 +18,14 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
  */
 @Component({
   selector: 'app-mercenary-loadout',
-  imports: [CatalogTextPipe, HeartsComponent, MercenaryStatsPillComponent, ValueStarComponent, IconComponent, PregameShopDialogComponent, TranslatePipe],
+  imports: [CatalogTextPipe, MercenaryStatsPillComponent, ValueStarComponent, IconComponent, PregameShopDialogComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mini">
       <img [src]="mercenary().portraitFull" [alt]="mercenary().name" />
-      <app-hearts class="hearts" [wounds]="stats().wounds" [max]="stats().wounds" [size]="heartSize" />
+      <app-value-star class="value" [value]="mercenary().value" />
       <div class="cap">
-        <app-value-star class="value" [value]="mercenary().value" />
-        <app-mercenary-stats-pill class="stats" [speed]="stats().speed" [overclock]="stats().overclock" [armor]="stats().armor" />
+        <app-mercenary-stats-pill class="stats" [health]="stats().wounds" [speed]="stats().speed" [overclock]="stats().overclock" [armor]="stats().armor" />
         <b>{{ mercenary().name }}</b><span>{{ mercenary().class | ct }}</span></div>
     </div>
     <button type="button" class="slot" [disabled]="!editable()" [attr.aria-label]="'shop.open' | t: { name: mercenary().name }" [title]="(editable() ? 'shop.open' : 'shop.notYours') | t: { name: mercenary().name }" (click)="open.set(true)">
@@ -44,7 +42,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
   `,
   styles: `
     :host { display: flex; align-items: stretch; text-align: left; }
-    .mini { position: relative; z-index: 0; flex: none; height: clamp(150px, 29dvh, 300px); aspect-ratio: 2 / 3; overflow: hidden; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-tile); transform: rotate(4deg); transform-origin: 30% 100%; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55); }
+    .mini { position: relative; z-index: 0; flex: none; height: clamp(150px, 29dvh, 300px); aspect-ratio: 2 / 3; overflow: hidden; border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); transform: rotate(4deg); transform-origin: 30% 100%; box-shadow: 0 6px 16px rgba(0, 0, 0, 0.55); }
     img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; padding: 6px 10px 8px; background: var(--c-surface); border-top: 1px solid var(--c-line-strong); }
     .cap b { font: 600 clamp(12px, 1.9dvh, 19px)/1.2 var(--font-display); }
@@ -57,9 +55,8 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .things { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; flex: 1; }
     .chip { padding: 3px 8px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); font-size: 0.85em; }
     /* I punti ferita in cuori, in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra (come nelle altre carte). */
-    .hearts { position: absolute; top: 6px; right: 6px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
-    .stats { position: absolute; left: 6px; bottom: calc(100% + 6px); transform: scale(0.8); transform-origin: left bottom; }
-    .value { position: absolute; right: 6px; bottom: calc(100% + 6px); transform: scale(0.8); transform-origin: right bottom; }
+    .stats { position: absolute; left: 50%; bottom: calc(100% + 6px); transform: translateX(-50%) scale(0.8); transform-origin: center bottom; }
+    .value { position: absolute; right: 6px; top: 6px; transform: scale(0.8); transform-origin: right top; }
     .empty { color: var(--c-text-dim); font-size: 0.9em; }
     .go { display: inline-flex; align-items: center; gap: 6px; color: var(--c-interact); font-size: 0.9em; font-weight: 600; }
   `,

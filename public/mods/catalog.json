@@ -45,15 +45,6 @@
       "cost": 40,
       "text": "Un muro digitale contro le intrusioni: +1 ICE.",
       "passive": { "ice": 1 }
-    },
-    {
-      "id": "berserk-driver",
-      "name": "Driver Berserk",
-      "slot": "deck",
-      "compatible": ["street-deck"],
-      "cost": 60,
-      "text": "Tiene acceso più a lungo il Berserk.",
-      "passive": { "rules": ["Il Berserk dura un turno in più"], "effects": [{ "kind": "rule", "rule": "berserkDuration", "amount": 1 }] }
     }
   ]
 }

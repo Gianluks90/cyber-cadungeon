@@ -16,7 +16,6 @@ import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
 import { FamiliarDef, familiarsOfSheet, loadFamiliarCatalog } from '../game/familiars/familiar';
-import { HeartsComponent } from '../ui/hearts.component';
 import { BriefingColumnComponent } from '../ui/briefing-column.component';
 import { IconComponent } from '../ui/icon.component';
 import { PageNavComponent } from '../ui/page-nav.component';
@@ -33,7 +32,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
  */
 @Component({
   selector: 'app-party',
-  imports: [CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, HeartsComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
+  imports: [CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -56,11 +55,10 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
             <div class="card" role="button" tabindex="0" [class.on]="order(h.id) > 0" [attr.aria-pressed]="order(h.id) > 0" [attr.aria-disabled]="!order(h.id) && full() ? 'true' : null" (click)="toggle(h.id)" (keydown.enter)="toggle(h.id)" (keydown.space)="toggle(h.id); $event.preventDefault()">
               <img [src]="h.portraitFull" [alt]="h.name" />
               <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
-<app-hearts class="hearts" [wounds]="h.wounds" [max]="h.wounds" [size]="18" />
+      <app-value-star class="value" [value]="h.value" />
               <div class="cap">
-                <app-value-star class="value" [value]="h.value" />
                 @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
-                <app-mercenary-stats-pill class="stats" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
+                <app-mercenary-stats-pill class="stats" [health]="h.wounds" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
                 <b>{{ h.name }}</b><span>{{ h.class | ct }}</span>
                 @if (order(h.id) > 0) { <span class="n">{{ order(h.id) }}</span> }
               </div>
@@ -77,7 +75,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
       } @else {
         <div class="squad">
           @for (h of squad(); track h.id) {
-            <app-briefing-column [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" [ready]="readyIds().includes(h.id)" (readyChange)="setReady(h.id, $event)" (changed)="setLoadout(h.id, $event)" />
+            <app-briefing-column [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" [visited]="visitedIds().includes(h.id)" (shopOpened)="markVisited(h.id)" [ready]="readyIds().includes(h.id)" (readyChange)="setReady(h.id, $event)" (changed)="setLoadout(h.id, $event)" />
           }
         </div>
       }
@@ -124,13 +122,13 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     .row > :last-child { margin-inline-end: auto; }
     .card {
       position: relative; flex: none; box-sizing: border-box; width: 210px; height: min(440px, 56dvh); min-height: 300px; margin: 0; padding: 0; overflow: hidden; scroll-snap-align: start; cursor: pointer;
-      border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit;
+      border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit;
       transform: rotate(4deg); transform-origin: 30% 100%; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); transition: border-color 0.15s, transform 0.15s;
     }
     /* In fondo alla fila: una carta vuota, grande come le altre, con il bordo tratteggiato; la frase al centro e il tasto (spento, per ora) in basso. */
     .more {
       position: relative; flex: none; box-sizing: border-box; width: 210px; height: min(440px, 56dvh); min-height: 300px; display: grid; place-items: center; padding: 16px 16px 64px;
-      border-radius: var(--radius-1); border: 1px dashed var(--c-line-strong); transform: rotate(4deg); transform-origin: 30% 100%; scroll-snap-align: start;
+      border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px dashed var(--c-line-strong); transform: rotate(4deg); transform-origin: 30% 100%; scroll-snap-align: start;
     }
     .more p { margin: 0; text-align: center; color: var(--c-text-dim); font-size: 14px; font-style: italic; }
     .more .dlg-btn { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); white-space: nowrap; }
@@ -143,10 +141,9 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     /* Il numero di scelta sta nel piede, a destra, accanto al nome. */
     .cap .n { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-round); background: var(--c-interact); color: var(--c-bg); font: 700 13px/1 var(--font-mono); letter-spacing: 0; text-transform: none; }
     /* I punti ferita in cuori in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra. */
-    .hearts { position: absolute; top: 8px; right: 8px; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
     .fam { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 54px); }
-    .stats { position: absolute; left: 8px; bottom: calc(100% + 6px); }
-    .value { position: absolute; right: 8px; bottom: calc(100% + 6px); }
+    .stats { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 6px); }
+    .value { position: absolute; right: 8px; top: 8px; }
     /* Il tasto "i": un pallino scuro in alto a sinistra che apre la scheda di dettaglio. */
     .info { position: absolute; z-index: 2; top: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
     .info:hover, .info:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
@@ -235,8 +232,14 @@ export class PartyComponent {
 
   /** I mercenari che hanno detto «Pronto»: si parte solo quando lo sono tutti. */
   protected readonly readyIds = signal<string[]>([]);
+  /** I mercenari il cui negozio è stato aperto almeno una volta: solo questi possono dire «Pronto» (comprare niente è permesso, ma il negozio si apre). */
+  protected readonly visitedIds = signal<string[]>([]);
+  protected markVisited(id: string) {
+    this.visitedIds.update((v) => (v.includes(id) ? v : [...v, id]));
+  }
   protected readonly allReady = computed(() => this.squad().length > 0 && this.squad().every((h) => this.readyIds().includes(h.id)));
   protected setReady(id: string, on: boolean) {
+    if (on && !this.visitedIds().includes(id)) return;
     this.readyIds.update((r) => (on ? [...new Set([...r, id])] : r.filter((x) => x !== id)));
   }
 
@@ -254,6 +257,7 @@ export class PartyComponent {
     if (!this.ready()) return;
     this.assignSkills();
     this.readyIds.set([]);
+    this.visitedIds.set([]);
     this.step.set('gear');
     this.skillNotice.set(true);
   }

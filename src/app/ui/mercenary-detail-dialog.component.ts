@@ -6,7 +6,6 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { AttackDiceComponent } from './attack-dice.component';
 import { DialogComponent } from './dialog.component';
 import { MarkdownPipe } from './markdown.pipe';
-import { HeartsComponent } from './hearts.component';
 import { IconComponent } from './icon.component';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 
@@ -16,7 +15,7 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
  */
 @Component({
   selector: 'app-mercenary-detail-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, MarkdownPipe, DialogComponent, HeartsComponent, IconComponent, MercenaryFaceComponent, TranslatePipe],
+  imports: [AttackDiceComponent, CatalogTextPipe, MarkdownPipe, DialogComponent, IconComponent, MercenaryFaceComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (mercenary(); as h) {
@@ -29,8 +28,8 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
         </figure>
 
         <h3>{{ 'detail.params' | t }}</h3>
-        <div class="life"><app-hearts [wounds]="h.wounds" [max]="h.wounds" [size]="18" /><span class="dots" aria-hidden="true"></span><span class="health">{{ h.wounds }}</span></div>
         <div class="stats">
+          <span class="stat life" [title]="'stats.healthHint' | t"><app-icon name="favorite" [size]="18" /><span class="v">{{ h.wounds }}<small>{{ 'stats.health' | t }}</small></span></span>
           <span class="stat speed" [title]="'stats.speed' | t"><app-icon name="footprint" [size]="18" /><span class="v">{{ h.speed }}<small>{{ 'detail.speed' | t }}</small></span></span>
           <span class="stat overclock" [title]="'stats.overclock' | t"><app-icon name="speed" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'stats.overclock' | t }}</small></span></span>
           <span class="stat" [title]="'detail.armorHint' | t"><app-icon name="shield" [size]="18" /><span class="v">{{ h.armor }}<small>{{ 'detail.armor' | t }}</small></span></span>
@@ -56,13 +55,11 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
   styles: `
     h3 { margin: 6px 0 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     h3:first-of-type { margin-top: 0; }
-    .life { display: flex; align-items: center; gap: 10px; }
-    .dots { flex: 1; min-width: 12px; border-bottom: 2px dotted color-mix(in srgb, var(--c-text) 12%, transparent); transform: translateY(3px); }
-    .health { font: 600 16px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
     .stats { display: flex; flex-wrap: wrap; gap: 8px 18px; }
     .stat { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-variant-numeric: tabular-nums; }
     /* Numero ed etichetta sulla stessa linea di base, con un po' di spazio; l'icona resta centrata sul riquadro. */
     .stat .v { display: inline-flex; align-items: baseline; gap: 6px; }
+    .stat.life { color: var(--c-life); }
     .stat.speed { color: var(--c-move); }
     .stat.overclock { color: var(--c-overclock); }
     small { font-weight: 400; color: var(--c-text-dim); }

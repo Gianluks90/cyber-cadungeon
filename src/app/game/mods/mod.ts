@@ -18,6 +18,8 @@ export interface ModDef {
   name: string;
   /** In che tipo di oggetto si monta. */
   slot: ModSlot;
+  /** Le categorie della mod (es. `hacking`): un oggetto con `modTags` accetta solo le mod che ne hanno una. */
+  tags?: string[];
   /** Gli id degli oggetti base che la accettano; se manca va bene ogni oggetto di quel tipo. */
   compatible?: string[];
   /** Il prezzo in eurodollari (il budget del Briefing). */
@@ -62,7 +64,7 @@ export function modsCost(mods: ModLoadout | undefined, catalog: ReadonlyMap<stri
 }
 
 /** Le mod scelte sono valide? Oggetto base con abbastanza slot, mod compatibili e senza doppioni, costo entro il budget. */
-export function validMods(mods: ModLoadout | undefined, catalog: ReadonlyMap<string, ModDef>, items: ReadonlyMap<string, { id: string; slots?: number }>, budget: number): boolean {
+export function validMods(mods: ModLoadout | undefined, catalog: ReadonlyMap<string, ModDef>, items: ReadonlyMap<string, { id: string; slots?: number; modTags?: string[] }>, budget: number): boolean {
   if (mods === undefined) return true;
   if (typeof mods !== 'object' || mods === null) return false;
   let cost = 0;
@@ -102,7 +104,7 @@ export function activeSparks(mods: ModLoadout | undefined, catalog: ReadonlyMap<
   return (mods?.weapon ?? []).flatMap((id) => (catalog.get(id)?.active ?? []).map((a) => ({ cost: a.sparks, effect: a.effect })));
 }
 
-/** La mod `mod` si può montare su `item` (un oggetto base con gli slot)? Serve che il tipo corrisponda e, se la mod ha un elenco, che l'oggetto ci sia. */
-export function modFits(mod: ModDef, item: { id: string }, itemSlot: ModSlot): boolean {
-  return mod.slot === itemSlot && (!mod.compatible || mod.compatible.includes(item.id));
+/** La mod `mod` si può montare su `item` (un oggetto base con gli slot)? Serve che il tipo corrisponda, che l'oggetto ci sia se la mod ha un elenco e che la categoria sia ammessa se l'oggetto ne chiede una. */
+export function modFits(mod: ModDef, item: { id: string; modTags?: string[] }, itemSlot: ModSlot): boolean {
+  return mod.slot === itemSlot && (!mod.compatible || mod.compatible.includes(item.id)) && (!item.modTags || item.modTags.some((t) => mod.tags?.includes(t)));
 }

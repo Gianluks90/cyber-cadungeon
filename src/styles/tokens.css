@@ -36,6 +36,7 @@
   --c-intrusion:         #a98bf0;  /* Intrusione / pozioni di Intrusione */
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
   --c-loot:          #c9b88c;  /* chiavi e tesori (sabbia spenta, NON oro); il denaro è --c-money */
+  --c-hacking:       #ff3d9a;  /* slot (e mod) solo hacking: hot pink, in prova */
   --c-money:         #ffe033;  /* denaro (Eurodollari, monete, scrigno d'oro): giallo pieno, NON oro */
   --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
   --c-you:           #2bff88;  /* SOLO: la posizione del giocatore sulla mappa del mondo (verde neon, con glow) */
@@ -127,7 +128,7 @@
   /* ---------- Forme: stile tecnico, angoli secchi ---------- */
   --radius-0: 0;
   --radius-1: 2px;     /* pannelli, pill, bottoni */
-  --radius-2: 10px;    /* solo gli angoli smussati del logo e della pillola dei parametri delle carte */
+  --radius-2: 10px;    /* solo gli angoli smussati (alto a destra e basso a sinistra) di logo, carte e pillola dei parametri */
   --radius-round: 50%; /* SOLO token/pedine */
   --stroke-thin: 1px;
   --stroke-base: 1.5px;

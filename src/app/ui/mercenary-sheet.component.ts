@@ -8,7 +8,6 @@ import { CityView } from '../game/state/city';
 import { SkillDef } from '../game/skills/skill';
 import { SkillAction } from '../game/state/skills';
 import { AttackDiceComponent } from './attack-dice.component';
-import { HeartsComponent } from './hearts.component';
 import { FamiliarDef } from '../game/familiars/familiar';
 import { FamiliarCardComponent } from './familiar-card.component';
 import { MarkdownPipe } from './markdown.pipe';
@@ -62,17 +61,13 @@ export interface MercenaryDetails {
  */
 @Component({
   selector: 'app-mercenary-sheet',
-  imports: [FamiliarCardComponent, MarkdownPipe, TrPipe, CatalogTextPipe, AttackDiceComponent, HeartsComponent, IconComponent, SkillCardComponent],
+  imports: [FamiliarCardComponent, MarkdownPipe, TrPipe, CatalogTextPipe, AttackDiceComponent, IconComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (mercenary(); as h) {
       <h3 class="first">{{ 'Parametri' | tr }}</h3>
-      <div class="life">
-        <app-hearts [wounds]="h.wounds" [max]="h.maxWounds" [poison]="h.poison" [size]="18" />
-        <span class="dots" aria-hidden="true"></span>
-        <span class="health" [title]="'Ferite rimaste' | tr">{{ h.wounds }}</span>
-      </div>
       <div class="row stats">
+        <span class="stat life" [title]="'Ferite rimaste' | tr"><app-icon name="favorite" [size]="18" /><span class="v">{{ h.wounds }}<small>{{ 'Salute' | tr }}</small></span></span>
         <span class="stat speed" [title]="'Velocità: punti movimento a inizio turno' | tr"><app-icon name="footprint" [size]="18" /><span class="v">{{ h.speed }}<small>{{ 'Velocità' | tr }}</small></span></span>
         <span class="stat overclock" [title]="'Overclock' | tr"><app-icon name="speed" [size]="18" /><span class="v">{{ h.overclock }}<small>{{ 'Overclock' | tr }}</small></span></span>
         <span class="stat" [title]="'Armatura: si sottrae al danno' | tr"><app-icon name="shield" [size]="18" /><span class="v">{{ h.armor }}<small>{{ 'Armatura' | tr }}</small></span></span>
@@ -114,15 +109,13 @@ export interface MercenaryDetails {
     h3 { margin: 14px 0 6px; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     h3.first { margin-top: 0; }
     /* I cuori a sinistra, il valore della salute a destra, e in mezzo una riga a puntini quasi invisibile: si allunga quanto serve in base ai cuori. */
-    .life { display: flex; align-items: center; gap: 10px; }
-    .dots { flex: 1; min-width: 12px; border-bottom: 2px dotted color-mix(in srgb, var(--c-text) 12%, transparent); transform: translateY(3px); }
-    .health { font: 600 16px/1 var(--font-ui); font-variant-numeric: tabular-nums; }
     .row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 16px; }
     .row.stats { margin-top: 10px; }
     .stat { display: inline-flex; align-items: center; gap: 5px; font-variant-numeric: tabular-nums; font-weight: 600; }
     /* Numero ed etichetta sulla stessa linea di base, con un po' di spazio; l'icona resta centrata sul riquadro. */
     .stat .v { display: inline-flex; align-items: baseline; gap: 6px; }
     small { font-weight: 400; color: var(--c-text-dim); }
+    .stat.life { color: var(--c-life); }
     .stat.speed { color: var(--c-move); }
     .stat.overclock { color: var(--c-overclock); }
     .cards { display: flex; flex-direction: column; gap: 6px; }

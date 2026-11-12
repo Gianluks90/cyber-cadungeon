@@ -148,7 +148,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
     small { color: var(--c-text-dim); }
     /* Le due carte laterali: inclinate e infilate sotto il pannello, come nella finestra dell'attacco. */
     /* Il margine a sinistra della carta delle abilità (14 px) è tarato a occhio perché risulti uguale a quello di destra (10 px più l'inclinazione). Alte al massimo come la finestra dell'attacco (500 px), centrate in verticale anche se la dialog è più alta. */
-    .card { position: absolute; z-index: 0; top: 0; bottom: 0; margin-block: auto; height: min(484px, calc(100% - 16px)); width: 220px; margin-inline: 0; overflow: hidden; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
+    .card { position: absolute; z-index: 0; top: 0; bottom: 0; margin-block: auto; height: min(484px, calc(100% - 16px)); width: 220px; margin-inline: 0; overflow: hidden; border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
     .card.left { --face-inset: 14px; right: calc(100% - 14px); transform: rotate(-4deg); transform-origin: 70% 100%; }
     .card.right { left: calc(100% - 14px); transform: rotate(4deg); transform-origin: 30% 100%; display: flex; flex-direction: column; background: var(--c-surface); }
     .card .head { flex: none; padding: 10px 10px 8px 14px; border-bottom: 1px solid var(--c-line-strong); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }

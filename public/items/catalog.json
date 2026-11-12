@@ -273,17 +273,27 @@
         "red",
         "green"
       ],
-      "icon": "swords"
+      "icon": "swords",
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        }
+      ]
     },
     {
       "id": "adonis-skin",
       "name": "Epidermide Adone",
       "kind": "armor",
       "hands": 0,
-      "armor": 1,
+      "armor": 2,
       "price": 0,
       "slots": 2,
-      "icon": "frame_person"
+      "icon": "frame_person",
+      "speedCap": 4,
+      "rules": [
+        "Velocità massima 4"
+      ]
     },
     {
       "id": "berserker-mk1",
@@ -291,11 +301,22 @@
       "kind": "other",
       "hands": 0,
       "price": 0,
-      "slots": 2,
+      "slots": 0,
       "tags": [
         "deck"
       ],
-      "icon": "deployed_code"
+      "icon": "deployed_code",
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "ice",
+          "amount": 1
+        }
+      ],
+      "rules": [
+        "ICE 1",
+        "2 Overclock per entrare in Berserk"
+      ]
     },
     {
       "id": "wire-knife",
@@ -304,11 +325,17 @@
       "attack": "melee",
       "hands": 1,
       "price": 0,
-      "slots": 2,
+      "slots": 1,
       "dice": [
         "red"
       ],
-      "icon": "swords"
+      "icon": "swords",
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        }
+      ]
     },
     {
       "id": "wetsuit",
@@ -318,7 +345,17 @@
       "armor": 0,
       "price": 0,
       "slots": 2,
-      "icon": "frame_person"
+      "icon": "frame_person",
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "ice",
+          "amount": 1
+        }
+      ],
+      "rules": [
+        "ICE +1"
+      ]
     },
     {
       "id": "kitsune-9",
@@ -327,14 +364,26 @@
       "attack": "intrusion",
       "hands": 0,
       "price": 0,
-      "slots": 2,
+      "slots": 3,
       "dice": [
         "white",
         "yellow"
       ],
       "range": 4,
-      "ice": 1,
-      "icon": "deployed_code"
+      "icon": "deployed_code",
+      "modTags": [
+        "hacking"
+      ],
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "ice",
+          "amount": 2
+        }
+      ],
+      "rules": [
+        "ICE 2"
+      ]
     },
     {
       "id": "voss-sr90",
@@ -343,13 +392,26 @@
       "attack": "ranged",
       "hands": 2,
       "price": 0,
-      "slots": 2,
+      "slots": 1,
       "dice": [
         "blue",
         "green"
       ],
-      "range": 6,
-      "icon": "target"
+      "range": 5,
+      "icon": "target",
+      "rules": [
+        "Perforare 1"
+      ],
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        },
+        {
+          "cost": 3,
+          "effect": "+1 gittata"
+        }
+      ]
     },
     {
       "id": "standard-camo",
@@ -367,11 +429,29 @@
       "kind": "other",
       "hands": 0,
       "price": 0,
-      "slots": 2,
+      "slots": 1,
       "tags": [
         "deck"
       ],
-      "icon": "deployed_code"
+      "icon": "deployed_code",
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "ice",
+          "amount": 2
+        },
+        {
+          "kind": "attack",
+          "on": [
+            "ranged"
+          ],
+          "range": 1
+        }
+      ],
+      "rules": [
+        "ICE 2",
+        "+1 gittata alle armi a distanza"
+      ]
     }
   ]
 }

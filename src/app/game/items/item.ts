@@ -71,10 +71,10 @@ export interface ItemDef {
   offHand?: string;
   /** Gittata dell'arma in caselle (v2: la gittata sta sull'oggetto; per un cyberdeck è il raggio base). Per ora solo dato. */
   range?: number;
-  /** Armatura digitale che l'oggetto dà contro l'Intrusione (cyberdeck e "firewall"). Per ora solo dato. */
-  ice?: number;
   /** Quanti slot per le mod ha questo oggetto base (arma, armatura o deck; prototipo: 2). Senza, non accetta mod. Vedi `game/mods/mod.ts`. */
   slots?: number;
+  /** Se c'è, l'oggetto accetta solo mod con almeno una di queste categorie (`ModDef.tags`): il Kitsune-9 solo `hacking`. */
+  modTags?: string[];
   /** Il nome di un'icona (public/icons/). */
   icon?: string;
   /** Etichette di categoria, per esempio `rune` (un oggetto "Runa": certe armature non permettono di equipaggiarlo). */
