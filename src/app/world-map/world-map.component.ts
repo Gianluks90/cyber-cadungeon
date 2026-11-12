@@ -462,8 +462,8 @@ export class WorldMapComponent {
     const map = this.map;
     if (!map) return;
     const phone = matchMedia('(max-width: 640px)').matches;
-    // Il contratto resta al centro dello spazio che il pannello lascia libero: a destra su schermo largo, sopra il foglio su telefono.
-    const padding = phone ? { top: 0, left: 0, right: 0, bottom: Math.round(window.innerHeight * 0.4) } : { top: 0, left: 0, bottom: 0, right: 360 };
+    // Il contratto resta al centro dello spazio che il pannello lascia libero: a sinistra del pannello (56px di tasti + 320px di pannello + 10px) su schermo largo, sopra il foglio su telefono.
+    const padding = phone ? { top: 0, left: 0, right: 0, bottom: Math.round(window.innerHeight * 0.4) } : { top: 0, left: 0, bottom: 0, right: 56 + 320 + 10 };
     this.ngZone.runOutsideAngular(() => map.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom(), USER_ZOOM - 1), padding }));
   }
 

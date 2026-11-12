@@ -72,6 +72,7 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - **Stati**: *bloccato* (numero, titolo e la frase «Fuori dal campo di sincronizzazione»), *sbloccato* (titolo, didascalia, Gioca; si gioca da casa), *nascosto* (campo previsto, ⏳).
 - **Sblocco a 50 m** con la precisione del GPS (`distanza − precisione ≤ 50`), calcolato solo sul dispositivo. Il **numero** è collezionabile, stabile e assegnato una volta.
 - Test in sviluppo: due contratti generati rispetto alla posizione (~30 m e ~5 km).
+- **Percorso a piedi** (deciso 2026-11-12): la mappa potrà mostrare il percorso fino al contratto. Per calcolarlo la posizione di partenza esce dal dispositivo verso un servizio di routing; l'utente è avvisato nei termini che accetta all'inizio. Vincolo: costo zero per noi e per l'utente. Lo **sblocco resta locale** (50 m in linea d'aria, nessuna posizione inviata per sbloccare).
 
 ### 2.8 Progresso, Fama, Reputazione
 - **Progresso**: la risorsa condivisa della missione (era «Fama» in REGOLE-v2 §9, e «Conquista»; nel codice resta `progress`). A **0 la missione è fallita**. Cambiano solo i testi.

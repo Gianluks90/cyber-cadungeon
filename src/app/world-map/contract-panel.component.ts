@@ -12,7 +12,7 @@ export const contractNumber = (n: number): string => `#${String(n).padStart(3, '
 const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`);
 
 /**
- * Il pannello con le info di un contratto: su schermo largo è un pannello laterale che scivola da destra, su telefono (fino a 640px) un foglio che sale dal basso. Si apre quando
+ * Il pannello con le info di un contratto: su schermo largo è un pannello laterale a metà altezza che scivola da destra, oltre i tasti di navigazione, su telefono (fino a 640px) un foglio che sale dal basso. Si apre quando
  * `contract` c'è e si chiude quando torna `null` (il contenuto resta finché l'animazione finisce).
  * Bloccato: numero, titolo, stato, distanza e cosa serve per sbloccarlo (niente didascalia né missione). Sbloccato: titolo, didascalia e il tasto Gioca (si gioca da casa).
  * Lo sblocco manuale c'è solo in sviluppo, per vedere i due stati senza GPS.
@@ -47,13 +47,14 @@ const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.roun
   `,
   styles: `
     :host { display: contents; }
-    /* Desktop: pannello a destra, sotto la barra in alto (menu e contatore), che scivola da destra. */
-    .panel { position: absolute; z-index: 2; top: 56px; right: 10px; width: min(340px, calc(100% - 20px)); box-sizing: border-box; display: flex; flex-direction: column; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translateX(calc(100% + 20px)); transition: transform var(--t-base) var(--ease-draw); }
-    .panel.open { transform: none; }
+    /* Desktop: lo specchio dei filtri e della legenda, dall'altra parte. Nasce a metà altezza, oltre i tasti di navigazione (10px dal bordo + 36px di tasto + 10px di respiro = 56px), scivola da destra e cresce dal centro lasciando liberi la barra in alto e l'orologio. Sta sotto i tasti (z-index 0 contro l'1 dei tasti). */
+    .panel { --w: min(320px, 82vw); --rail: 56px; position: absolute; z-index: 0; top: 50%; right: var(--rail); max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translate(calc(var(--w) + var(--rail)), -50%); transition: transform var(--t-base) var(--ease-draw); }
+    .panel.open { transform: translate(0, -50%); }
     .panel:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     /* Telefono: un foglio che sale dal basso a tutta larghezza. */
     @media (max-width: 640px) {
-      .panel { top: auto; right: 0; bottom: 0; left: 0; width: auto; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }
+      .panel { z-index: 2; top: auto; right: 0; bottom: 0; left: 0; width: auto; max-height: 60dvh; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }
+      .panel.open { transform: none; }
     }
     header { flex: none; display: flex; align-items: center; gap: 10px; padding: 10px 10px 10px 14px; color: var(--c-text-dim); }
     .num { font: 600 12px/1 var(--font-mono); letter-spacing: 0.08em; }
