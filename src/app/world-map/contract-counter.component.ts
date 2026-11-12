@@ -19,19 +19,20 @@ import { IconComponent } from '../ui/icon.component';
           @if (full) { <app-icon class="marker" name="contract" [size]="24" /> } @else { <span class="empty"></span> }
         }
       </div>
-      <!-- Aprirà il pannello dei contratti raccolti: per ora non c'è. -->
-      <button type="button" class="key" aria-disabled="true" [attr.aria-label]="'contract.listOpen' | t" [title]="'common.soon' | t">C</button>
+      <!-- La lettera del tasto che aprirà il pannello dei contratti raccolti (per ora non c'è): piccola in basso a destra, come sugli altri tasti. -->
+      <kbd>C</kbd>
     </div>
   `,
   styles: `
     /* A sinistra del tasto del menu (10px dal bordo + 36px di tasto + 10px di spazio). */
     :host { position: absolute; top: 10px; right: 56px; z-index: 2; pointer-events: none; }
-    .bar { box-sizing: border-box; height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 6px 0 10px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); }
+    .bar { position: relative; box-sizing: border-box; height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 18px 0 10px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); }
     /* Vuoto: un quadrato tratteggiato. Occupato: al suo posto il marker del contratto, come sulla mappa. */
     .label { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .slots { display: flex; gap: 4px; }
-    /* La lettera del tasto che aprirà l'elenco dei contratti raccolti: piccola, in un quadratino; spenta finché il pannello non c'è. */
-    .key { pointer-events: auto; width: 20px; height: 20px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); font: 600 11px/1 var(--font-mono); cursor: default; opacity: 0.6; }
+    /* La lettera del tasto, piccola e grigia in basso a destra, solo dove c'è una tastiera (come sui tasti dei filtri e del menu). Il margine a destra della barra le lascia posto accanto all'ultimo spazio. */
+    kbd { display: none; position: absolute; right: 4px; bottom: 2px; font: 600 9px/1 var(--font-mono); text-transform: uppercase; color: var(--c-text-dim); }
+    @media (pointer: fine) { kbd { display: block; } }
     /* Su telefono l'etichetta si toglie: non c'è posto accanto al logo. */
     @media (max-width: 640px) { .label { display: none; } }
     .empty { box-sizing: border-box; width: 24px; height: 24px; border: 1px dashed var(--c-line-strong); border-radius: var(--radius-1); }

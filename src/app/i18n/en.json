@@ -2126,6 +2126,5 @@
   "contract.routeLoading": "Working out the walking route…",
   "contract.routeFailed": "Walking route not available.",
   "c.contrattoDiProva2_04d98": "Test contract 2",
-  "contract.label": "Contracts",
-  "contract.listOpen": "Open collected contracts"
+  "contract.label": "Contracts"
 }

@@ -2126,6 +2126,5 @@
   "contract.routeLoading": "Calcolo del percorso a piedi…",
   "contract.routeFailed": "Percorso a piedi non disponibile.",
   "c.contrattoDiProva2_04d98": "Contratto di prova 2",
-  "contract.label": "Contratti",
-  "contract.listOpen": "Apri i contratti raccolti"
+  "contract.label": "Contratti"
 }
