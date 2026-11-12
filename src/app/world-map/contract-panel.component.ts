@@ -157,18 +157,17 @@ export class ContractPanelComponent {
   /** L'ultimo contratto aperto: resta scritto mentre il pannello scivola via. */
   protected readonly shown = signal<Contract | null>(null);
   /**
-   * L'unica indicazione di distanza, sempre presente se si conosce la posizione: «A 1,2 km dalla tua posizione, circa 15 minuti a piedi» (o «più di 1h a piedi»). Se c'è il percorso a piedi
+   * L'unica indicazione di distanza, sempre presente se si conosce la posizione: «A 1,2 km da te, ~15 m a piedi» (o «più di 1h a piedi»). Se c'è il percorso a piedi
    * si usano la sua lunghezza e il suo tempo, altrimenti la distanza in linea d'aria e il tempo a passo normale.
    */
-  protected readonly distanceLine = computed<{ key: 'contract.distanceMinutes' | 'contract.distanceMinute' | 'contract.distanceHour'; params: Record<string, string | number> } | null>(() => {
+  protected readonly distanceLine = computed<{ key: 'contract.distanceMinutes' | 'contract.distanceHour'; params: Record<string, string | number> } | null>(() => {
     const route = this.route();
     const meters = route ? route.distanceM : this.distance();
     if (meters === null) return null;
     const minutes = Math.max(1, Math.round((route ? route.durationS : meters / WALK_SPEED_MS) / 60));
     const distance = formatDistance(meters);
-    const params = { distance, n: minutes }; // il numero lo usa solo la frase con i minuti
+    const params = { distance, n: minutes }; // il numero lo usa solo la frase con i minuti (per l'ora serve solo la distanza)
     if (minutes >= 60) return { key: 'contract.distanceHour', params };
-    if (minutes === 1) return { key: 'contract.distanceMinute', params };
     return { key: 'contract.distanceMinutes', params };
   });
 
