@@ -2117,5 +2117,9 @@
   "worldMap.legend.close": "Close the legend",
   "worldMap.legend.you": "Your position",
   "worldMap.legend.contract": "Contract",
-  "contract.counter": "Contracts: {n} of {max}"
+  "contract.counter": "Contracts: {n} of {max}",
+  "contract.unlocked": "Unlocked",
+  "contract.lockedState": "Locked",
+  "contract.distance": "{distance} from you",
+  "contract.approach": "Get within {n} m to unlock it."
 }

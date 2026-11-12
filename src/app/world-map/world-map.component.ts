@@ -24,7 +24,8 @@ import type { Contract } from '../game/contracts/contract';
 import { JsonContractStore, type ContractStore } from '../game/contracts/contract-store';
 import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-store';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
-import { ContractCardComponent, contractNumber } from './contract-card.component';
+import { ContractPanelComponent, contractNumber } from './contract-panel.component';
+import { distanceMeters } from '../game/contracts/unlock-rule';
 import { ContractCounterComponent } from './contract-counter.component';
 import { MapLegendPanelComponent } from './map-legend-panel.component';
 
@@ -49,7 +50,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractCardComponent, ContractCounterComponent, MapLegendPanelComponent],
+  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, MapLegendPanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -73,7 +74,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-card [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" (closed)="selectedId.set(null)" (play)="playContract($event)" (devUnlock)="devUnlock($event)" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [distance]="selectedDistance()" (closed)="selectedId.set(null)" (play)="playContract($event)" (devUnlock)="devUnlock($event)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -193,6 +194,12 @@ export class WorldMapComponent {
   /** Quanti contratti ha il giocatore: per ora quelli sbloccati (il contatore ne mostra al massimo CONTRACT_SLOTS). */
   protected readonly heldContracts = computed(() => this.contracts().filter((c) => this.unlockedIds().has(c.id)).length);
   protected readonly selectedContract = computed(() => this.contracts().find((c) => c.id === this.selectedId()) ?? null);
+  /** Quanto dista il giocatore dal contratto aperto, in metri (null senza posizione). */
+  protected readonly selectedDistance = computed(() => {
+    const pos = this.location.position();
+    const c = this.selectedContract();
+    return pos && c ? distanceMeters(c, pos) : null;
+  });
   /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
   private readonly mapCreated = signal(false);
   private contractMarkers: Marker[] = [];
@@ -316,6 +323,7 @@ export class WorldMapComponent {
 
   /** Un pannello dice che si apre o si chiude: aprendosi prende il posto dell'altro, chiudendosi lascia stare quello che c'è. */
   protected setPanel(which: 'filters' | 'legend' | 'menu', open: boolean): void {
+    if (open) this.selectedId.set(null); // aprire un pannello laterale chiude quello del contratto
     this.panel.update((current) => (open ? which : current === which ? null : current));
   }
 
@@ -425,6 +433,7 @@ export class WorldMapComponent {
     this.tileLoading = new TileLoadingView(map, BASEMAP_SOURCE_ID);
     map.once('idle', () => this.ready.set(true)); // 'idle': ha finito di caricare e disegnare (anche se qualche tassello è fallito)
     map.on('rotate', () => this.bearing.set(Math.round(map.getBearing())));
+    map.on('click', () => this.ngZone.run(() => this.selectedId.set(null))); // un tocco sulla mappa chiude il pannello del contratto (i marker fermano il loro tocco)
     map.on('zoom', () => this.sizeHalo(map));
 
     // Se cambia la misura del contenitore senza che cambi la finestra, la mappa si ridisegna.
@@ -444,6 +453,18 @@ export class WorldMapComponent {
     if (!now.length) return;
     for (const c of now) if (!c.id.startsWith(DEV_CONTRACT_PREFIX)) this.unlockStore.unlock(c.id);
     this.unlockedIds.set(new Set([...already, ...now.map((c) => c.id)]));
+  }
+
+  /** Si tocca un contratto: la mappa va alle sue coordinate (spostando il centro fuori dal pannello che si apre) e si apre il pannello con le info. */
+  private selectContract(c: Contract): void {
+    this.panel.set(null);
+    this.selectedId.set(c.id);
+    const map = this.map;
+    if (!map) return;
+    const phone = matchMedia('(max-width: 640px)').matches;
+    // Il contratto resta al centro dello spazio che il pannello lascia libero: a destra su schermo largo, sopra il foglio su telefono.
+    const padding = phone ? { top: 0, left: 0, right: 0, bottom: Math.round(window.innerHeight * 0.4) } : { top: 0, left: 0, bottom: 0, right: 360 };
+    this.ngZone.runOutsideAngular(() => map.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom(), USER_ZOOM - 1), padding }));
   }
 
   /** Il tasto Gioca della scheda: si gioca da casa, la partita parte dal Briefing. */
@@ -479,7 +500,7 @@ export class WorldMapComponent {
       glow.style.cssText = `position:absolute;inset:0;${selected === c.id ? `filter:drop-shadow(0 0 3px ${color}) drop-shadow(0 0 8px ${color})` : ''}`;
       glow.append(glyph);
       el.append(fill, glow);
-      el.addEventListener('click', (e) => { e.stopPropagation(); this.ngZone.run(() => this.selectedId.set(c.id)); });
+      el.addEventListener('click', (e) => { e.stopPropagation(); this.ngZone.run(() => this.selectContract(c)); });
       return new Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(map);
     });
   }
