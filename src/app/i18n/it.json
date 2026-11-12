@@ -2119,11 +2119,7 @@
   "contract.counter": "Contratti: {n} su {max}",
   "contract.unlocked": "Sbloccato",
   "contract.lockedState": "Bloccato",
-  "contract.distance": "A {distance} dalla tua posizione",
   "contract.approach": "Devi essere a circa {n} m per sbloccare il contratto",
-  "contract.walk": "A piedi: {walk}",
-  "contract.routeLoading": "Calcolo del percorso a piedi…",
-  "contract.routeFailed": "Percorso a piedi non disponibile.",
   "c.contrattoDiProva2_04d98": "Contratto di prova 2",
   "contract.label": "Contratti",
   "contract.acceptCount": "Accetta {n}/{max}",
@@ -2137,5 +2133,8 @@
   "contract.encrypted": "Testo cifrato",
   "contract.breach": "Violazione...",
   "contract.decrypt": "Decrittazione...",
-  "contract.devReset": "Azzera i contratti (solo sviluppo)"
+  "contract.devReset": "Azzera i contratti (solo sviluppo)",
+  "contract.distanceMinutes": "A {distance} dalla tua posizione, circa {n} minuti a piedi",
+  "contract.distanceMinute": "A {distance} dalla tua posizione, circa 1 minuto a piedi",
+  "contract.distanceHour": "A {distance} dalla tua posizione, più di 1h a piedi"
 }

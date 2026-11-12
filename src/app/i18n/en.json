@@ -2119,11 +2119,7 @@
   "contract.counter": "Contracts: {n} of {max}",
   "contract.unlocked": "Unlocked",
   "contract.lockedState": "Locked",
-  "contract.distance": "{distance} from your position",
   "contract.approach": "You need to be within about {n} m to unlock the contract",
-  "contract.walk": "On foot: {walk}",
-  "contract.routeLoading": "Working out the walking route…",
-  "contract.routeFailed": "Walking route not available.",
   "c.contrattoDiProva2_04d98": "Test contract 2",
   "contract.label": "Contracts",
   "contract.acceptCount": "Accept {n}/{max}",
@@ -2137,5 +2133,8 @@
   "contract.encrypted": "Encrypted text",
   "contract.breach": "Breaching...",
   "contract.decrypt": "Decrypting...",
-  "contract.devReset": "Reset contracts (dev only)"
+  "contract.devReset": "Reset contracts (dev only)",
+  "contract.distanceMinutes": "{distance} from your position, about {n} minutes on foot",
+  "contract.distanceMinute": "{distance} from your position, about 1 minute on foot",
+  "contract.distanceHour": "{distance} from your position, more than 1h on foot"
 }

@@ -13,11 +13,8 @@ export const contractNumber = (n: number): string => `#${String(n).padStart(3, '
 /** Una distanza leggibile: in metri sotto il chilometro, poi in chilometri con un decimale. */
 const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`);
 
-/** Il tempo a piedi in forma breve: "12 min" o "1 h 5 min" (almeno 1 minuto). */
-const formatDuration = (seconds: number): string => {
-  const min = Math.max(1, Math.round(seconds / 60));
-  return min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${min % 60} min`;
-};
+/** Passo a piedi in metri al secondo (circa 4,5 km/h), per stimare il tempo quando manca il percorso. */
+const WALK_SPEED_MS = 1.25;
 
 /**
  * Il pannello con le info di un contratto, nello stile degli altri pannelli della mappa (stessa intestazione, stesso divisore a tutta larghezza, stesse spaziature):
@@ -47,13 +44,8 @@ const formatDuration = (seconds: number): string => {
           <app-cipher-text class="caption" [text]="c.caption | ct" [unlocked]="unlocked()" [owner]="c.id" [reveal]="reveal()" />
           <!-- Le uniche frasi che spariscono da un contratto sbloccato (o a portata, dove la violazione è in corso): fuori dal campo di sincronizzazione e il raggio per sbloccare. La distanza resta sempre. -->
           @if (!unlocked() && breach() === null) { <p class="muted">{{ 'contract.locked' | t }}</p> }
-          @if (distanceText(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ 'contract.distance' | t: { distance: d } }}</p> }
-          @if (!unlocked()) {
-            @if (walkText(); as w) { <p class="info"><app-icon name="footprint" [size]="16" />{{ 'contract.walk' | t: { walk: w } }}</p> }
-            @else if (routeStatus() === 'loading') { <p class="info">{{ 'contract.routeLoading' | t }}</p> }
-            @else if (routeStatus() === 'failed') { <p class="info">{{ 'contract.routeFailed' | t }}</p> }
-            @if (breach() === null) { <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p> }
-          }
+          @if (distanceLine(); as d) { <p class="info"><app-icon name="navigation" [size]="16" />{{ d.key | t: d.params }}</p> }
+          @if (!unlocked() && breach() === null) { <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p> }
           @if (breach() !== null) {
             <!-- La violazione: restando a portata per qualche secondo la barra si riempie (a riempimento, non a segmenti) e il contratto si sblocca. Prende il posto del tasto. -->
             <div class="breach" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()" [attr.aria-label]="(decrypting() ? 'contract.decrypt' : 'contract.breach') | t">
@@ -117,7 +109,6 @@ export class ContractPanelComponent {
   readonly distanceIn = input<number | null>(null, { alias: 'distance' });
   /** Il percorso a piedi fino al contratto e a che punto è il calcolo. */
   readonly routeIn = input<WalkingRoute | null>(null, { alias: 'route' });
-  readonly routeStatusIn = input<'idle' | 'loading' | 'failed'>('idle', { alias: 'routeStatus' });
   /** La violazione in corso (0-1) mentre si resta a portata, o null se non è in corso. */
   readonly breachIn = input<number | null>(null, { alias: 'breach' });
   /** Il contratto è già fra quelli accettati, quanti ne ha il giocatore e quanti può tenerne al massimo. */
@@ -139,7 +130,6 @@ export class ContractPanelComponent {
   protected readonly unlocked = signal(false);
   protected readonly distance = signal<number | null>(null);
   protected readonly route = signal<WalkingRoute | null>(null);
-  protected readonly routeStatus = signal<'idle' | 'loading' | 'failed'>('idle');
   protected readonly breach = signal<number | null>(null);
   protected readonly accepted = signal(false);
   protected readonly heldCount = signal(0);
@@ -166,13 +156,20 @@ export class ContractPanelComponent {
   protected readonly open = computed(() => !!this.contract());
   /** L'ultimo contratto aperto: resta scritto mentre il pannello scivola via. */
   protected readonly shown = signal<Contract | null>(null);
-  protected readonly distanceText = computed(() => {
-    const d = this.distance();
-    return d === null ? '' : formatDistance(d);
-  });
-  protected readonly walkText = computed(() => {
-    const r = this.route();
-    return r ? `${formatDistance(r.distanceM)} · ${formatDuration(r.durationS)}` : '';
+  /**
+   * L'unica indicazione di distanza, sempre presente se si conosce la posizione: «A 1,2 km dalla tua posizione, circa 15 minuti a piedi» (o «più di 1h a piedi»). Se c'è il percorso a piedi
+   * si usano la sua lunghezza e il suo tempo, altrimenti la distanza in linea d'aria e il tempo a passo normale.
+   */
+  protected readonly distanceLine = computed<{ key: 'contract.distanceMinutes' | 'contract.distanceMinute' | 'contract.distanceHour'; params: Record<string, string | number> } | null>(() => {
+    const route = this.route();
+    const meters = route ? route.distanceM : this.distance();
+    if (meters === null) return null;
+    const minutes = Math.max(1, Math.round((route ? route.durationS : meters / WALK_SPEED_MS) / 60));
+    const distance = formatDistance(meters);
+    const params = { distance, n: minutes }; // il numero lo usa solo la frase con i minuti
+    if (minutes >= 60) return { key: 'contract.distanceHour', params };
+    if (minutes === 1) return { key: 'contract.distanceMinute', params };
+    return { key: 'contract.distanceMinutes', params };
   });
 
   constructor() {
@@ -198,7 +195,6 @@ export class ContractPanelComponent {
         unlocked: this.unlockedIn(),
         distance: this.distanceIn(),
         route: this.routeIn(),
-        routeStatus: this.routeStatusIn(),
         breach: this.breachIn(),
         accepted: this.acceptedIn(),
         heldCount: this.heldCountIn(),
@@ -209,7 +205,6 @@ export class ContractPanelComponent {
       this.unlocked.set(values.unlocked);
       this.distance.set(values.distance);
       this.route.set(values.route);
-      this.routeStatus.set(values.routeStatus);
       this.breach.set(values.breach);
       this.accepted.set(values.accepted);
       this.heldCount.set(values.heldCount);

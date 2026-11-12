@@ -88,7 +88,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
-    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [routeStatus]="routeStatus()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
+    <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -228,7 +228,6 @@ export class WorldMapComponent {
   /** Il percorso a piedi fino al contratto aperto (servizio dietro interfaccia: oggi uno pubblico gratuito), a che punto è il calcolo e per quale contratto e da dove è stato chiesto. */
   private readonly routeService: RouteService = new OsrmFootRouteService();
   protected readonly route = signal<WalkingRoute | null>(null);
-  protected readonly routeStatus = signal<'idle' | 'loading' | 'failed'>('idle');
   private routeAsked: { id: string; from: { lat: number; lng: number } } | null = null;
   private routeToken = 0;
   /** C'è già una linea disegnata (una nuova che compare corre dal punto A al punto B; un aggiornamento dello stesso percorso no) e il fotogramma dell'animazione in corso. */
@@ -551,7 +550,6 @@ export class WorldMapComponent {
       this.routeToken++;
       this.routeAsked = null;
       this.route.set(null);
-      this.routeStatus.set('idle');
       return;
     }
     if (!pos) return;
@@ -559,12 +557,10 @@ export class WorldMapComponent {
     if (this.routeAsked?.id === c.id && distanceMeters(this.routeAsked.from, from) < ROUTE_REFRESH_M) return;
     if (this.routeAsked?.id !== c.id) this.route.set(null); // un altro contratto: via la linea vecchia
     this.routeAsked = { id: c.id, from };
-    this.routeStatus.set('loading');
     const token = ++this.routeToken;
     void this.routeService.walk(from, c).then((r) => {
       if (token !== this.routeToken) return; // nel frattempo si è aperto altro o si è chiuso
       this.route.set(r);
-      this.routeStatus.set(r ? 'idle' : 'failed');
     });
   }
 
