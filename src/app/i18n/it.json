@@ -2105,7 +2105,7 @@
   "c.berserkAccesoDamageDannoIn_2934d": "Berserk acceso: +{damage} danno in mischia, −{loss} Armatura e −{ice} ICE",
   "c.berserkRoundRimastiN_9fb2e": "Berserk: round rimasti {n}",
   "contract.locked": "Fuori dal campo di sincronizzazione",
-  "contract.devUnlock": "Sblocca (solo sviluppo)",
+  "contract.devUnlock": "Simula la violazione (solo sviluppo)",
   "contract.card": "Contratto {n}",
   "contract.marker": "Contratto {n} sulla mappa",
   "c.provaContrattoVicino_0fc17": "Prova: contratto vicino",

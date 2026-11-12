@@ -207,6 +207,8 @@ export class WorldMapComponent {
   protected readonly selectedId = signal<string | null>(null);
   /** La violazione del contratto aperto (0-1) mentre il giocatore resta a portata, o null; il tempo in cui è iniziata e il timer. */
   protected readonly breach = signal<number | null>(null);
+  /** Solo in sviluppo: il contratto per cui il tasto di prova ha fatto partire la violazione come se si fosse a portata. */
+  private readonly devForced = signal<string | null>(null);
   private breachId: string | null = null;
   private breachSince = 0;
   private breachTimer: ReturnType<typeof setInterval> | null = null;
@@ -349,8 +351,12 @@ export class WorldMapComponent {
       const c = this.selectedContract();
       const pos = this.location.position();
       const unlocked = this.unlockedIds();
-      const active = !!c && !!pos && !unlocked.has(c.id) && canUnlock(c, pos);
-      untracked(() => this.setBreach(active ? c : null));
+      const forced = this.devForced();
+      const active = !!c && !unlocked.has(c.id) && ((!!pos && canUnlock(c, pos)) || forced === c.id);
+      untracked(() => {
+        if (forced && c?.id !== forced) this.devForced.set(null); // il contratto di prova è stato chiuso o cambiato
+        this.setBreach(active ? c : null);
+      });
     });
 
     this.location.start();
@@ -519,6 +525,7 @@ export class WorldMapComponent {
       if (progress < 1) return;
       const done = this.contracts().find((x) => x.id === this.breachId);
       this.stopBreach();
+      this.devForced.set(null);
       if (done) this.unlockContract(done);
     }, 100);
   }
@@ -659,9 +666,9 @@ export class WorldMapComponent {
     void this.router.navigate(['/party', c.mapId]);
   }
 
-  /** Solo in sviluppo: sblocca a mano il contratto, per vedere la scheda aperta senza GPS (la regola vera dei 50 m è il passo 4). */
+  /** Solo in sviluppo: fa partire la violazione come se si fosse a portata (5 secondi, poi si sblocca), per vedere la procedura senza GPS. */
   protected devUnlock(c: Contract): void {
-    this.unlockContract(c);
+    this.devForced.set(c.id);
   }
 
   /** Un segnaposto per contratto: il numero, in verde se sbloccato, spento se bloccato, in risalto se è quello aperto. Il tocco apre la scheda (fuori da NgZone, quindi rientra con un). */

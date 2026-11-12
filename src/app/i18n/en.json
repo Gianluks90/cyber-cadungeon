@@ -2105,7 +2105,7 @@
   "c.berserkAccesoDamageDannoIn_2934d": "Berserk on: +{damage} melee damage, −{loss} Armor and −{ice} ICE",
   "c.berserkRoundRimastiN_9fb2e": "Berserk: {n} rounds left",
   "contract.locked": "Out of sync range",
-  "contract.devUnlock": "Unlock (dev only)",
+  "contract.devUnlock": "Simulate the breach (dev only)",
   "contract.card": "Contract {n}",
   "contract.marker": "Contract {n} on the map",
   "c.provaContrattoVicino_0fc17": "Test: nearby contract",
