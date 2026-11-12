@@ -79,16 +79,16 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
   `,
   styles: `
     :host { display: contents; }
-    .wrap { --w: min(320px, 82vw); --rail: 56px; position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+    .wrap { --w: min(320px, 82vw); --rail: 56px; position: absolute; inset: 0; pointer-events: none; }
     /* Il container verticale lungo il lato sinistro: ospita i tasti quadrati. */
-    .rail { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .rail { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .item { position: relative; }
     .tab, .close { display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .tab { position: relative; pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* Il pannello si apre accanto al container, scivolando da sinistra. */
-    .sheet { position: absolute; left: var(--rail); top: 50%; max-height: calc(100% - 112px); /* parte da metà altezza, vicino ai tasti, e cresce dal centro fino a lasciare libero il logo (10+36px dall'alto) e l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translate(calc(-1 * (var(--w) + var(--rail))), -50%); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet { position: absolute; z-index: 2; left: var(--rail); top: 50%; max-height: calc(100% - 112px); /* parte da metà altezza, vicino ai tasti, e cresce dal centro fino a lasciare libero il logo (10+36px dall'alto) e l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translate(calc(-1 * (var(--w) + var(--rail))), -50%); transition: transform var(--t-base) var(--ease-draw); }
     .wrap.open .sheet { transform: translate(0, -50%); }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
