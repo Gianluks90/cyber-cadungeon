@@ -88,8 +88,8 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* Il pannello si apre accanto al container, scivolando da sinistra. */
-    .sheet { position: absolute; left: var(--rail); top: 56px; bottom: 56px; /* tra il logo (10+36px dall'alto) e l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
-    .wrap.open .sheet { transform: none; }
+    .sheet { position: absolute; left: var(--rail); top: 50%; max-height: calc(100% - 112px); /* parte da metà altezza, vicino ai tasti, e cresce dal centro fino a lasciare libero il logo (10+36px dall'alto) e l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translate(calc(-1 * (var(--w) + var(--rail))), -50%); transition: transform var(--t-base) var(--ease-draw); }
+    .wrap.open .sheet { transform: translate(0, -50%); }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }

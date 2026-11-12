@@ -470,7 +470,7 @@ export class WorldMapComponent {
       // Un quadrato con un punto esclamativo al centro (l'icona `contract`, come nella legenda): sfondo scuro sotto, icona colorata sopra; in risalto se è quello aperto.
       const color = open ? 'var(--c-interact)' : 'var(--c-text-dim)';
       const iconUrl = new URL('icons/contract.svg', document.baseURI).href;
-      el.style.cssText = 'position:relative;width:32px;height:32px;padding:0;border:0;background:none;cursor:pointer';
+      el.style.cssText = 'width:32px;height:32px;padding:0;border:0;background:none;cursor:pointer'; // niente `position`: la classe `.maplibregl-marker` lo vuole absolute, così il marker segue le coordinate
       const fill = document.createElement('span');
       fill.style.cssText = 'position:absolute;inset:4px;background:var(--c-surface)';
       const glyph = document.createElement('span');
@@ -505,7 +505,7 @@ export class WorldMapComponent {
     if (!this.userMarker) {
       const iconUrl = new URL('icons/navigation.svg', document.baseURI).href;
       const el = document.createElement('div');
-      el.style.cssText = 'position:relative;width:28px;height:28px;pointer-events:none';
+      el.style.cssText = 'width:28px;height:28px;pointer-events:none'; // niente `position`: vedi i marker dei contratti
       const halo = document.createElement('div');
       halo.style.cssText = 'position:absolute;left:50%;top:50%;border-radius:50%;box-sizing:border-box;border:1px solid color-mix(in srgb, var(--c-you) 70%, transparent);background:color-mix(in srgb, var(--c-you) 12%, transparent);transform:translate(-50%,-50%)';
       const arrow = document.createElement('div');

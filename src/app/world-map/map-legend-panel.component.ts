@@ -56,9 +56,9 @@ const ENTRIES: { icon: string; color: string; label: MessageKey }[] = [
     .tab { pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
-    /* Il pannello scivola da sinistra come quello dei filtri (stessa animazione), ma è alto quanto basta. */
-    .sheet { position: absolute; left: var(--rail); top: 56px; width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
-    .wrap.open .sheet { transform: none; }
+    /* Il pannello scivola da sinistra come quello dei filtri (stessa animazione e stessa origine, a metà altezza) ed è alto quanto basta. */
+    .sheet { position: absolute; left: var(--rail); top: 50%; max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translate(calc(-1 * (var(--w) + var(--rail))), -50%); transition: transform var(--t-base) var(--ease-draw); }
+    .wrap.open .sheet { transform: translate(0, -50%); }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
