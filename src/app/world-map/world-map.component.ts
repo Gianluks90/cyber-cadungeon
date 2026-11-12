@@ -308,7 +308,8 @@ export class WorldMapComponent {
     effect(() => {
       const c = this.selectedContract();
       const pos = this.location.position();
-      untracked(() => this.updateRoute(c, pos));
+      const unlocked = this.unlockedIds();
+      untracked(() => this.updateRoute(c && !unlocked.has(c.id) && !(pos && canUnlock(c, pos)) ? c : null, pos)); // a portata o già sbloccato: niente da raggiungere, niente percorso
     });
     // La linea sulla mappa segue il percorso.
     effect(() => {
@@ -534,9 +535,20 @@ export class WorldMapComponent {
     const map = this.map;
     if (!map) return;
     const phone = matchMedia('(max-width: 640px)').matches;
-    // Il contratto resta al centro dello spazio che il pannello lascia libero: a sinistra del pannello (56px di tasti + 320px di pannello + 10px) su schermo largo, sopra il foglio su telefono.
-    const padding = phone ? { top: 0, left: 0, right: 0, bottom: Math.round(window.innerHeight * 0.4) } : { top: 0, left: 0, bottom: 0, right: 56 + 320 + 10 };
-    this.ngZone.runOutsideAngular(() => map.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom(), USER_ZOOM - 1), padding }));
+    const pos = this.location.position();
+    const near = this.unlockedIds().has(c.id) || (!!pos && canUnlock(c, pos));
+    this.ngZone.runOutsideAngular(() => {
+      if (!near && pos) {
+        // Fuori portata: una vista che include sia il giocatore sia il contratto, nello spazio che il pannello lascia libero (con un po' di margine; la barra in alto e l'orologio non coprono i punti).
+        const margin = 60;
+        const padding = phone ? { top: 80, left: margin, right: margin, bottom: Math.round(window.innerHeight * 0.4) + margin } : { top: 80, left: margin + 56, bottom: 80, right: 56 + 320 + 10 + margin };
+        map.fitBounds([[Math.min(pos.lng, c.lng), Math.min(pos.lat, c.lat)], [Math.max(pos.lng, c.lng), Math.max(pos.lat, c.lat)]], { padding, maxZoom: USER_ZOOM, duration: 900 });
+        return;
+      }
+      // A portata: il contratto resta al centro dello spazio che il pannello lascia libero: a sinistra del pannello (56px di tasti + 320px di pannello + 10px) su schermo largo, sopra il foglio su telefono.
+      const padding = phone ? { top: 0, left: 0, right: 0, bottom: Math.round(window.innerHeight * 0.4) } : { top: 0, left: 0, bottom: 0, right: 56 + 320 + 10 };
+      map.flyTo({ center: [c.lng, c.lat], zoom: Math.max(map.getZoom(), USER_ZOOM - 1), padding });
+    });
   }
 
   /** Il tasto Gioca della scheda: si gioca da casa, la partita parte dal Briefing. */
