@@ -2134,7 +2134,7 @@
   "contract.breach": "Violazione...",
   "contract.decrypt": "Decrittazione...",
   "contract.devReset": "Azzera i contratti (solo sviluppo)",
-  "contract.distanceMinutes": "A {distance} dalla tua posizione, circa {n} minuti a piedi",
-  "contract.distanceMinute": "A {distance} dalla tua posizione, circa 1 minuto a piedi",
+  "contract.distanceMinutes": "A {distance} dalla tua posizione, ~{n} minuti a piedi",
+  "contract.distanceMinute": "A {distance} dalla tua posizione, ~1 minuto a piedi",
   "contract.distanceHour": "A {distance} dalla tua posizione, più di 1h a piedi"
 }

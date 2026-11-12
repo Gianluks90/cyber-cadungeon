@@ -2134,7 +2134,7 @@
   "contract.breach": "Breaching...",
   "contract.decrypt": "Decrypting...",
   "contract.devReset": "Reset contracts (dev only)",
-  "contract.distanceMinutes": "{distance} from your position, about {n} minutes on foot",
-  "contract.distanceMinute": "{distance} from your position, about 1 minute on foot",
+  "contract.distanceMinutes": "{distance} from your position, ~{n} minutes on foot",
+  "contract.distanceMinute": "{distance} from your position, ~1 minute on foot",
   "contract.distanceHour": "{distance} from your position, more than 1h on foot"
 }
