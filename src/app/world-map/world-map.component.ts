@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, DestroyRef, ElementRef, NgZone, afterNextRender, effect, inject, input, isDevMode, signal, untracked, viewChild } from '@angular/core';
 import { Router } from '@angular/router';
 import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
@@ -20,6 +20,11 @@ import { MapLocatingComponent } from './map-locating.component';
 import { MapFilterPanelComponent } from './map-filter-panel.component';
 import { FILTER_GROUPS, applyMapFilters, enabledFor, loadCustomFilters, loadPreset, saveCustomFilters, savePreset, type FilterPreset } from './map-filters';
 import { createCyberpunkTheme, type MapTheme } from './map-theme';
+import type { Contract } from '../game/contracts/contract';
+import { JsonContractStore, type ContractStore } from '../game/contracts/contract-store';
+import { LocalUnlockStore, type UnlockStore } from '../game/contracts/unlock-store';
+import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
+import { ContractCardComponent, contractNumber } from './contract-card.component';
 
 /** Inclinazione fissa della vista 3D, in gradi: non si regola a mano. */
 const PITCH_3D = 60;
@@ -42,7 +47,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent],
+  imports: [IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -64,6 +69,7 @@ const USER_ZOOM = 16;
       {{ time() }}
     </p>
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
+    <app-contract-card [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" (closed)="selectedId.set(null)" (play)="playContract($event)" (devUnlock)="devUnlock($event)" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -171,6 +177,19 @@ export class WorldMapComponent {
   protected readonly view3d = signal(readFlag(VIEW3D_KEY));
   /** Di quanto è ruotata la mappa, in gradi interi. */
   protected readonly bearing = signal(0);
+  /** I contratti sulla mappa (intestazioni leggere), lo stato di sblocco del giocatore e quello toccato (la scheda aperta). Due archivi dietro interfaccia: oggi file e localStorage. */
+  private readonly contractStore: ContractStore = new JsonContractStore();
+  private readonly unlockStore: UnlockStore = new LocalUnlockStore();
+  private readonly realContracts = signal<Contract[]>([]);
+  /** Solo in sviluppo: due contratti di prova generati rispetto alla prima posizione (non si salvano e non stanno in index.json). */
+  private readonly devList = signal<Contract[]>([]);
+  private readonly contracts = computed(() => [...this.realContracts(), ...this.devList()]);
+  protected readonly unlockedIds = signal<ReadonlySet<string>>(this.unlockStore.unlocked());
+  protected readonly selectedId = signal<string | null>(null);
+  protected readonly selectedContract = computed(() => this.contracts().find((c) => c.id === this.selectedId()) ?? null);
+  /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
+  private readonly mapCreated = signal(false);
+  private contractMarkers: Marker[] = [];
   private userMarker: Marker | null = null;
   private userArrow: HTMLElement | null = null;
   private userHalo: HTMLElement | null = null;
@@ -250,12 +269,32 @@ export class WorldMapComponent {
       });
     });
 
+    // I contratti: letti una volta; i segnaposto si ridisegnano quando cambiano i contratti, gli sblocchi o la scheda aperta.
+    void this.contractStore.list().then((list) => this.realContracts.set(list));
+    effect(() => {
+      const list = this.contracts();
+      const unlocked = this.unlockedIds();
+      const selected = this.selectedId();
+      if (!this.mapCreated()) return;
+      this.ngZone.runOutsideAngular(() => untracked(() => this.showContracts(list, unlocked, selected)));
+    });
+
+    // Lo sblocco: a ogni posizione nuova, i contratti da cui distanza - precisione <= 50 m si sbloccano (e restano sbloccati). Il calcolo è solo sul dispositivo.
+    effect(() => {
+      const pos = this.location.position();
+      const list = this.contracts();
+      if (!pos) return;
+      untracked(() => this.unlockNear(pos, list));
+    });
+
     this.location.start();
 
     this.destroyRef.onDestroy(() => {
       this.location.stop();
       this.userMarker?.remove();
       this.userMarker = null;
+      this.contractMarkers.forEach((m) => m.remove());
+      this.contractMarkers = [];
       this.resizeObserver?.disconnect();
       this.resizeObserver = null;
       this.tileLoading?.destroy();
@@ -385,6 +424,49 @@ export class WorldMapComponent {
     // Se cambia la misura del contenitore senza che cambi la finestra, la mappa si ridisegna.
     this.resizeObserver = new ResizeObserver(() => map.resize());
     this.resizeObserver.observe(this.container().nativeElement);
+    this.mapCreated.set(true);
+  }
+
+  /** Sblocca i contratti vicini a pos. In sviluppo, alla prima posizione nascono anche i due contratti di prova. Quelli di prova si sbloccano solo in memoria. */
+  private unlockNear(pos: UserPosition, list: readonly Contract[]): void {
+    if (isDevMode() && !this.devList().length) {
+      this.devList.set(devContracts(pos));
+      return; // l'effetto riparte con l'elenco completo
+    }
+    const already = this.unlockedIds();
+    const now = list.filter((c) => !already.has(c.id) && canUnlock(c, pos));
+    if (!now.length) return;
+    for (const c of now) if (!c.id.startsWith(DEV_CONTRACT_PREFIX)) this.unlockStore.unlock(c.id);
+    this.unlockedIds.set(new Set([...already, ...now.map((c) => c.id)]));
+  }
+
+  /** Il tasto Gioca della scheda: si gioca da casa, la partita parte dal Briefing. */
+  protected playContract(c: Contract): void {
+    void this.router.navigate(['/party', c.mapId]);
+  }
+
+  /** Solo in sviluppo: sblocca a mano il contratto, per vedere la scheda aperta senza GPS (la regola vera dei 50 m è il passo 4). */
+  protected devUnlock(c: Contract): void {
+    if (c.id.startsWith(DEV_CONTRACT_PREFIX)) this.unlockedIds.set(new Set([...this.unlockedIds(), c.id]));
+    else if (this.unlockStore.unlock(c.id)) this.unlockedIds.set(new Set([...this.unlockedIds(), c.id]));
+  }
+
+  /** Un segnaposto per contratto: il numero, in verde se sbloccato, spento se bloccato, in risalto se è quello aperto. Il tocco apre la scheda (fuori da NgZone, quindi rientra con un). */
+  private showContracts(list: readonly Contract[], unlocked: ReadonlySet<string>, selected: string | null): void {
+    const map = this.map;
+    if (!map) return;
+    this.contractMarkers.forEach((m) => m.remove());
+    this.contractMarkers = list.map((c) => {
+      const open = unlocked.has(c.id);
+      const el = document.createElement('button');
+      el.type = 'button';
+      el.textContent = contractNumber(c.number);
+      el.setAttribute('aria-label', translate('contract.marker', { n: contractNumber(c.number) }));
+      const color = open ? 'var(--c-interact)' : 'var(--c-text-dim)';
+      el.style.cssText = `box-sizing:border-box;min-width:44px;height:28px;padding:0 6px;cursor:pointer;border:1px solid ${color};border-radius:var(--radius-1);background:var(--c-surface);color:${color};font:600 12px/1 var(--font-mono);letter-spacing:0.06em;${selected === c.id ? `box-shadow:0 0 0 1px ${color},0 0 10px ${color};` : ''}`;
+      el.addEventListener('click', (e) => { e.stopPropagation(); this.ngZone.run(() => this.selectedId.set(c.id)); });
+      return new Marker({ element: el }).setLngLat([c.lng, c.lat]).addTo(map);
+    });
   }
 
   /** Accende o spegne ogni modo di muovere la mappa (trascinare, zoom, tastiera, tocco). */

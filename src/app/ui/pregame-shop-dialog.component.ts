@@ -12,6 +12,8 @@ import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { SkillDef } from '../game/skills/skill';
+import { BASE_KIT, MOD_SLOTS, ModSlot, modFits, modsCost } from '../game/mods/mod';
+import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
@@ -28,7 +30,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, TranslatePipe],
+  imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dialog [kicker]="'shop.kicker' | t" [title]="mercenary().name" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
@@ -46,6 +48,29 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         <span class="cap">{{ 'detail.dice' | t }}</span>
         <app-attack-dice [dice]="mercenary().dice" />
       </div>
+
+      <!-- Il Briefing: le mod negli slot dell'arma, dell'armatura e del deck, pagate con gli eurodollari. -->
+      <h3>{{ 'briefing.title' | t }} <small>{{ 'briefing.hint' | t }}</small></h3>
+      @for (g of modGroups(); track g.slot) {
+        <div class="list">
+          <div class="gear">
+            <b>{{ g.label }}</b><span>{{ g.base.name }}</span>
+            <small>{{ 'briefing.slotsUsed' | t: { used: g.used, max: g.max } }}</small>
+          </div>
+          @for (o of g.options; track o.mod.id) {
+            <div class="row mod" [class.on]="o.on">
+              <div class="what">
+                <b>{{ o.mod.name }}</b>
+                <small>{{ o.mod.text | ct }}</small>
+                @for (r of o.mod.passive?.rules ?? []; track r) { <small>{{ 'briefing.passive' | t }}: {{ r | ct }}</small> }
+                @for (a of o.mod.active ?? []; track a.effect) { <small>{{ 'briefing.active' | t: { n: a.sparks } }}: {{ a.effect | ct }}</small> }
+              </div>
+              <span class="price">€{{ o.mod.cost }}</span>
+              <button type="button" class="act" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [title]="o.reason" (click)="toggleMod(g.slot, o.mod.id)">{{ (o.on ? 'briefing.remove' : 'briefing.install') | t }}</button>
+            </div>
+          }
+        </div>
+      }
 
       <h3>{{ 'shop.potions' | t }} <small>{{ 'shop.potionsHint' | t: { n: potionLimit } }}</small></h3>
       <div class="list">
@@ -108,6 +133,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
       </div>
       <!-- Le monete a sinistra del piede, con le due mani (una specchiata): si accendono in base alle mani occupate dalle armi scelte. -->
       <div dialogFooterStart class="coins" [title]="'shop.coins' | t"><app-icon name="tokens/gold_pile" [size]="20" /><b>{{ coinsLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: mercenary().coins } }}</small></div>
+      <div dialogFooterStart class="budget" [title]="'briefing.budget' | t"><b>€{{ budgetLeft() }}</b><small>{{ 'shop.coinsOf' | t: { n: shop().budget } }}</small></div>
       <div dialogFooterStart class="hands" [title]="'shop.hands' | t: { used: handsUsed(), max: handsMax }">
         <span class="hand left" [class.on]="handsUsed() >= 1"><app-icon name="back_hand" [size]="22" /></span>
         <span class="hand right" [class.on]="handsUsed() >= 2"><app-icon name="back_hand" [size]="22" /></span>
@@ -137,6 +163,14 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
     .hand.on { opacity: 1; }
     .coins { display: inline-flex; align-items: center; gap: 8px; color: var(--cad-coin); font-variant-numeric: tabular-nums; }
     .coins b { font-size: 18px; }
+    .budget { display: inline-flex; align-items: baseline; gap: 6px; color: var(--c-interact); font-variant-numeric: tabular-nums; }
+    .budget b { font-size: 18px; }
+    .gear { display: flex; align-items: baseline; gap: 10px; }
+    .gear b { font: 600 13px/1.2 var(--font-ui); }
+    .gear span { flex: 1; color: var(--c-text-dim); font-size: 12px; }
+    .row.mod.on { border-color: var(--c-interact); }
+    .what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .what b { flex: none; }
     .list, .cards { display: flex; flex-direction: column; gap: 6px; }
     .row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
     .row b { flex: 1; min-width: 0; font-weight: 600; }
@@ -175,6 +209,27 @@ export class PregameShopDialogComponent {
   /** I tipi di tesoro che questa avventura vende già in preparazione. */
   protected readonly treasureTiers = computed(() => this.shop().treasureTiers);
   protected readonly coinsLeft = computed(() => this.mercenary().coins - loadoutCost(this.loadout(), this.shop()));
+  /** Gli eurodollari del Briefing che restano, tolte le mod scelte. */
+  protected readonly budgetLeft = computed(() => this.shop().budget - modsCost(this.loadout().mods, this.shop().mods));
+  /** Per arma, armatura e deck: l'oggetto base, gli slot usati e le mod che ci stanno (con il motivo se non si può installare). */
+  protected readonly modGroups = computed(() => {
+    const shop = this.shop();
+    const mods = this.loadout().mods;
+    const labels: Record<ModSlot, string> = { weapon: this.i18n.t('briefing.weapon'), armor: this.i18n.t('briefing.armor'), deck: this.i18n.t('briefing.deck') };
+    return MOD_SLOTS.flatMap((slot) => {
+      const base = shop.items.get(BASE_KIT[slot]);
+      if (!base?.slots) return [];
+      const installed = mods?.[slot] ?? [];
+      const options = [...shop.mods.values()]
+        .filter((m) => modFits(m, base, slot))
+        .map((mod) => {
+          const on = installed.includes(mod.id);
+          const reason = on ? '' : installed.length >= base.slots! ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
+          return { mod, on, reason };
+        });
+      return [{ slot, label: labels[slot], base, max: base.slots, used: installed.length, options }];
+    });
+  });
   private readonly left = computed(() => stockLeft(this.shop(), [...this.others(), this.loadout()]));
 
   protected readonly offers = computed(() => {
@@ -228,7 +283,16 @@ export class PregameShopDialogComponent {
     });
   }
 
-  protected potionName = (k: PotionKind) => POTION_NAMES[k];
+  /** Mette o toglie una mod: si installa solo se c'è uno slot libero e restano abbastanza eurodollari. */
+  protected toggleMod(slot: ModSlot, id: string) {
+    const g = this.modGroups().find((x) => x.slot === slot);
+    const o = g?.options.find((x) => x.mod.id === id);
+    if (!g || !o || o.reason) return;
+    const current = this.loadout().mods?.[slot] ?? [];
+    this.changed.emit({ ...this.loadout(), mods: { ...this.loadout().mods, [slot]: o.on ? current.filter((m) => m !== id) : [...current, id] } });
+  }
+
+  protected potionName =(k: PotionKind) => POTION_NAMES[k];
   protected potionPrice = (k: PotionKind) => POTION_PRICES[k];
   protected itemName = (id: string) => this.shop().items.get(id)?.name ?? id;
   protected itemPrice = (id: string) => this.shop().items.get(id)?.price ?? 0;

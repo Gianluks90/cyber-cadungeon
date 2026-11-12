@@ -1,0 +1,59 @@
+{
+  "mods": [
+    {
+      "id": "vibro-edge",
+      "name": "Filo vibrante",
+      "slot": "weapon",
+      "compatible": ["mono-blade"],
+      "cost": 60,
+      "text": "La lama vibra e taglia le armature.",
+      "passive": { "rules": ["Perforare 1"], "effects": [{ "kind": "attack", "on": ["melee"], "pierce": 1 }] },
+      "active": [{ "sparks": 2, "effect": "Perforare 1" }]
+    },
+    {
+      "id": "sweep",
+      "name": "Spazzata",
+      "slot": "weapon",
+      "compatible": ["mono-blade"],
+      "cost": 80,
+      "text": "Colpi ampi che raggiungono più bersagli.",
+      "active": [{ "sparks": 2, "effect": "Spazzata" }]
+    },
+    {
+      "id": "overcharge",
+      "name": "Sovraccarico",
+      "slot": "weapon",
+      "compatible": ["mono-blade"],
+      "cost": 50,
+      "text": "Più energia nel colpo: +1 danno in mischia.",
+      "passive": { "effects": [{ "kind": "attack", "on": ["melee"], "damage": 1 }] }
+    },
+    {
+      "id": "reactive-plates",
+      "name": "Placche reattive",
+      "slot": "armor",
+      "compatible": ["ballistic-vest"],
+      "cost": 70,
+      "text": "Placche che si induriscono all'impatto: +1 Armatura.",
+      "passive": { "effects": [{ "kind": "stat", "stat": "armor", "amount": 1 }] }
+    },
+    {
+      "id": "firewall",
+      "name": "Firewall",
+      "slot": "deck",
+      "compatible": ["street-deck"],
+      "cost": 40,
+      "text": "Un muro digitale contro le intrusioni: +1 ICE.",
+      "passive": { "ice": 1 }
+    },
+    {
+      "id": "berserk-driver",
+      "name": "Driver Berserk",
+      "slot": "deck",
+      "compatible": ["street-deck"],
+      "cost": 60,
+      "text": "Tiene acceso più a lungo il Berserk.",
+      "passive": { "rules": ["Il Berserk dura un turno in più"], "effects": [{ "kind": "rule", "rule": "berserkDuration", "amount": 1 }] }
+    }
+  ]
+}

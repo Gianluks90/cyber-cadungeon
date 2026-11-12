@@ -73,6 +73,8 @@ export interface ItemDef {
   range?: number;
   /** Armatura digitale che l'oggetto dà contro l'Intrusione (cyberdeck e "firewall"). Per ora solo dato. */
   ice?: number;
+  /** Quanti slot per le mod ha questo oggetto base (arma, armatura o deck; prototipo: 2). Senza, non accetta mod. Vedi `game/mods/mod.ts`. */
+  slots?: number;
   /** Il nome di un'icona (public/icons/). */
   icon?: string;
   /** Etichette di categoria, per esempio `rune` (un oggetto "Runa": certe armature non permettono di equipaggiarlo). */

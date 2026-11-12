@@ -140,6 +140,8 @@ import { composeRules } from './state/setup-text';
 import { DEFAULT_PARTY, MercenarySheet, loadAllMercenarySheets, loadMercenarySheets } from './mercenaries/mercenary-sheet';
 import { loadItemCatalog, loadShopStock } from './items/item';
 import { loadSkillCatalog } from './skills/skill';
+import { activeSparks, loadModCatalog, passiveEffects } from './mods/mod';
+import { berserkCard, berserkOn, hasBerserk } from './state/berserk';
 import { EnemyDef, loadEnemyCatalog } from './enemies/enemy';
 import { loadAdversaryCatalog } from './adversary/card';
 import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, adversaryUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnEnemy, summonCells, summonQueue, alarmPerTurn } from './state/adversary-deck';
@@ -611,7 +613,8 @@ export class GameSceneComponent implements OnDestroy {
       const partyIds = chosen.length ? chosen : this.adversaryMode ? ['bastion', 'vesper', 'halo'] : DEFAULT_PARTY; // `/adversary/<map>`: quattro eroi, il Maligno li fa passare da uno all'altro
       // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
       const setup = partySetupStore.take();
-      const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards } : {}) }));
+      const modCatalog = await loadModCatalog();
+      const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards, modEffects: passiveEffects(setup[mercenary].mods, modCatalog), modSparks: activeSparks(setup[mercenary].mods, modCatalog) } : {}) }));
       const mapData = party.length ? { ...data, pieces: [...party, ...(data.pieces ?? [])] } : data;
       const sheets = await loadMercenarySheets((mapData.pieces ?? []).map((p) => p.mercenary));
       const [items, shopStock, skills, enemies, adversaryCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadEnemyCatalog(), loadAdversaryCatalog(), loadFamiliarCatalog()]);
@@ -1201,7 +1204,7 @@ export class GameSceneComponent implements OnDestroy {
         skillsReady: !this.adversaryMode && p.id === s.activeId && skillActions(s, p).some((a) => a.enabled),
         details: {
           name: p.name, mercenaryClass: p.mercenaryClass, portrait: p.portrait, portraitFull: p.portraitFull, wounds: p.wounds, maxWounds: p.maxWounds, overclock: p.overclock,
-          armor: armorOf(s, p), speed: speedOf(s, p), value: p.value, potions: [...p.potions], coins: p.coins, inventory: this.inventoryWithUses(s, p), inCity: !!p.city, cityPanel: !!p.city && !cityRules.cityView(s, p)?.mustReturn, city: cityRules.cityView(s, p), dice: p.dice, skillActions: skillActions(s, p), states: [...describeStatus(p.status), ...(p.toad ? [tr('Rospo ×{n}', { n: p.toad.tokens })] : [])], poison: p.status.poison, skills: p.skills, skillCards: p.skillCards.flatMap((id) => { const c = s.skills.get(id); return c ? [c] : []; }), ability: p.ability, abilityName: p.abilityName, familiars: [...[...s.familiarDefs.values()].filter((d) => d.item && p.equipped.includes(d.item)), ...familiarsOf(s, p.id).flatMap((f) => s.familiarDefs.get(f.id) ?? [])],
+          armor: armorOf(s, p), speed: speedOf(s, p), value: p.value, potions: [...p.potions], coins: p.coins, inventory: this.inventoryWithUses(s, p), inCity: !!p.city, cityPanel: !!p.city && !cityRules.cityView(s, p)?.mustReturn, city: cityRules.cityView(s, p), dice: p.dice, skillActions: skillActions(s, p), states: [...describeStatus(p.status), ...(berserkOn(p) ? [tr('Berserk: round rimasti {n}', { n: p.berserk })] : []), ...(p.toad ? [tr('Rospo ×{n}', { n: p.toad.tokens })] : [])], poison: p.status.poison, skills: p.skills, skillCards: [...(hasBerserk(p) ? [berserkCard()] : []), ...p.skillCards.flatMap((id) => { const c = s.skills.get(id); return c ? [c] : []; })], ability: p.ability, abilityName: p.abilityName, familiars: [...[...s.familiarDefs.values()].filter((d) => d.item && p.equipped.includes(d.item)), ...familiarsOf(s, p.id).flatMap((f) => s.familiarDefs.get(f.id) ?? [])],
         } satisfies MercenaryDetails,
       }));
     this.members.set(mercenaries);

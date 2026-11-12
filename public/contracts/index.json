@@ -1,0 +1,15 @@
+{
+  "contracts": [
+    {
+      "id": "test",
+      "number": 1,
+      "title": "Contratto di prova",
+      "caption": "Un lavoro di collaudo: serve solo a provare il Briefing e la mappa.",
+      "mapId": "test",
+      "lng": 12.4964,
+      "lat": 41.9028,
+      "visibility": "visible",
+      "fixer": "app"
+    }
+  ]
+}

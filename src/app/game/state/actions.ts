@@ -9,7 +9,7 @@ import { doorAction } from '../board/door-rules';
 import { CHEST_TIER_NAMES, Chest, ChestTier, Encounter, Marker, PotionKind } from '../board/marker';
 import { Reach, reachable } from '../board/movement';
 import {
-  ADVANCE_ATTACKS, BACKPACK_LIMIT, CHEST_OPEN_COST, INTERACT_COST, ITEM_GIVE_COST, REEQUIP_COST, TREASURE_SELL_COINS, FIGHT_ATTACKS, PIT_FALL_WOUNDS, POTION_DRINK_COST, POTION_GIVE_COST, POTION_HEAL, POTION_LIMIT, RUN_SPEED_MULTIPLIER,
+  ADVANCE_ATTACKS, BACKPACK_LIMIT, BERSERK_ARMOR_LOSS, BERSERK_ICE_LOSS, CHEST_OPEN_COST, INTERACT_COST, ITEM_GIVE_COST, REEQUIP_COST, TREASURE_SELL_COINS, FIGHT_ATTACKS, PIT_FALL_WOUNDS, POTION_DRINK_COST, POTION_GIVE_COST, POTION_HEAL, POTION_LIMIT, RUN_SPEED_MULTIPLIER,
   STAIRS_MOVE_COST, TOAD_SPEED, TOAD_TOKENS,
 } from '../constants';
 import { Reveal } from '../exploration';
@@ -374,7 +374,9 @@ export function speedOf(state: GameState, piece: Piece): number {
 /** L'armatura effettiva: quella dell'eroe più quella degli oggetti equipaggiati e dei bonus delle abilità; `vs` aggiunge quelli che valgono contro un tipo di attacco. */
 export function armorOf(state: GameState, piece: Piece, vs?: AttackType): number {
   if (piece.toad) return 0; // il rospo non ha armatura
-  const base = totalArmor(piece.armor, equippedDefs(state, piece)) + statBonus(state, piece, 'armor', { vs }) + (piece.tempArmor ?? 0);
+  // Il Berserk acceso toglie Armatura (sempre) e ICE (contro l'Intrusione): il prezzo della sua forza. Mai sotto 0.
+  const berserkLoss = (piece.berserk ?? 0) > 0 ? BERSERK_ARMOR_LOSS + (vs === 'intrusion' ? BERSERK_ICE_LOSS : 0) : 0;
+  const base = Math.max(0, totalArmor(piece.armor, equippedDefs(state, piece)) + statBonus(state, piece, 'armor', { vs }) + (vs === 'intrusion' ? statBonus(state, piece, 'ice') : 0) + (piece.tempArmor ?? 0) - berserkLoss); // l'ICE (cyberdeck e mod) conta solo contro l'Intrusione
   // I nemici vicini a un famiglio con `weaken` (Nero il Corvo) hanno meno armatura, mai meno di 0.
   return piece.team === 'enemy' ? Math.max(0, base - weakening(state, piece).armor) : base;
 }
@@ -627,6 +629,7 @@ export function startRound(state: GameState): void {
     p.killedWith = [];
     p.lockedWeapon = null;
     p.tempArmor = 0;
+    if ((p.berserk ?? 0) > 0) p.berserk! -= 1; // un round in meno di Berserk
   }
   state.round++;
   state.phase = 'mercenaries';

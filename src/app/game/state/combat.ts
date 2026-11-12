@@ -54,6 +54,8 @@ export interface SparkEffect {
   web: number;
   /** Esplosione: i raggi in più (spazi dal bersaglio) quando si paga questa scintilla. */
   blast: number;
+  /** Spazzata: pagando questa scintilla l'attacco in mischia colpisce anche tutti i nemici adiacenti a chi attacca (la mod Spazzata). */
+  sweep: boolean;
   /** Uccide il bersaglio all'istante, anche se è Immortale (Tocco della morte). */
   kill: boolean;
   /** Quante volte raddoppia il danno inflitto (Divoratrice di anime). */
@@ -219,8 +221,9 @@ function equippedWeapons(state: GameState, piece: Piece): ItemDef[] {
 }
 
 /** Interpreta il testo di un effetto delle scintille o di una regola: danno, gittata e Perforare in più. */
-export function parseEffect(text: string): { damage: number; range: number; pierce: number; stun: number; burn: number; web: number; blast: number; kill: boolean; double: number; alarm: number; supported: boolean } {
+export function parseEffect(text: string): { damage: number; range: number; pierce: number; stun: number; burn: number; web: number; blast: number; sweep: boolean; kill: boolean; double: number; alarm: number; supported: boolean } {
   let blast = 0;
+  let sweep = false;
   let kill = false;
   let double = 0;
   let alarm = 0;
@@ -240,7 +243,8 @@ export function parseEffect(text: string): { damage: number; range: number; pier
     const k = /^Uccide il bersaglio all'istante/i.test(part);
     const dbl = /^Raddoppia il danno/i.test(part);
     const th = part.match(/^Il Maligno perde (?:(\d+) segnalin[oi] (?:minaccia|odio)|\{alarm:(\d+)\})$/i); // "1 segnalino minaccia" o il segnaposto {alarm:1} dei dati
-    if (k) { kill = true; known++; }
+    if (/^Spazzata$/i.test(part)) { sweep = true; known++; }
+    else if (k) { kill = true; known++; }
     else if (dbl) { double += 1; known++; }
     else if (th) { alarm += +(th[1] ?? th[2]); known++; }
     else if (d) { damage += +d[1]; known++; }
@@ -255,7 +259,7 @@ export function parseEffect(text: string): { damage: number; range: number; pier
       known++;
     }
   }
-  return { damage, range, pierce, stun, burn, web, blast, kill, double, alarm, supported: known > 0 && known === text.split(/\s+e\s+/i).length };
+  return { damage, range, pierce, stun, burn, web, blast, sweep, kill, double, alarm, supported: known > 0 && known === text.split(/\s+e\s+/i).length };
 }
 
 /** Uno stato che l'attacco può piazzare sul bersaglio e quando: `before` = se ha inflitto almeno 1 danno prima dell'armatura, `after` = dopo l'armatura. */
@@ -509,11 +513,16 @@ export function breathDirTo(state: GameState, board: Board, attacker: Piece, tar
   return best?.b ?? null;
 }
 
+/** La Spazzata è in funzione: l'arma l'ha già, oppure è stata pagata una scintilla che la dà. */
+function sweepOn(plan: AttackPlan, spent: readonly number[]): boolean {
+  return plan.option.attack === 'melee' && (plan.area.sweep || spent.some((i) => plan.effects.some((e) => e.index === i && e.supported && e.sweep)));
+}
+
 /** Le caselle che un attacco ad area colpisce (da far lampeggiare prima dell'applicazione): il cono del Soffio, quelle attorno a chi attacca per la Spazzata, quelle attorno al bersaglio per l'Esplosione. */
 export function areaCells(board: Board, attacker: Piece, target: Piece, plan: AttackPlan, spent: readonly number[], breath?: Breath | null): Cell[] {
   const out = new Map<string, Cell>();
   const none = new Set<string>();
-  if (plan.area.sweep && plan.option.attack === 'melee') {
+  if (sweepOn(plan, spent)) {
     for (const f of footprint(attacker)) for (let dx = -1; dx <= 1; dx++) for (let dy = -1; dy <= 1; dy++) {
       const c = { x: f.x + dx, y: f.y + dy };
       if (board.isWalkable(c) && !footprint(attacker).some((a) => a.x === c.x && a.y === c.y)) out.set(cellKey(c), c);
@@ -543,7 +552,7 @@ export function areaVictims(state: GameState, board: Board, attacker: Piece, tar
   };
   const near = (a: Piece, b: Piece, n: number) => footprint(a).some((c) => footprint(b).some((d) => Math.max(Math.abs(c.x - d.x), Math.abs(c.y - d.y)) <= n));
   const none = new Set<string>();
-  if (plan.area.sweep && plan.option.attack === 'melee') {
+  if (sweepOn(plan, spent)) {
     for (const p of live) if (p.team !== attacker.team && near(attacker, p, 1)) add(p);
   }
   const blast = plan.area.blast + spent.reduce((n, i) => n + (plan.effects.find((e) => e.index === i)?.blast ?? 0), 0);
@@ -596,7 +605,9 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
   }
   const weapon = option.itemId ? state.items.get(option.itemId) : undefined;
   const shield = option.itemId ? protectionFrom(state, target, option.itemId) : null;
-  const effects: SparkEffect[] = (weapon?.spark ?? []).map((s, index) => {
+  // Le scintille dell'arma e, negli attacchi in mischia, quelle attive delle mod dell'arma (sotto-passo 4 del Briefing): stesso elenco, gli indici continuano.
+  const sparkList = [...(weapon?.spark ?? []), ...(option.attack === 'melee' ? attacker.modSparks ?? [] : [])];
+  const effects: SparkEffect[] = sparkList.map((s, index) => {
     const parsed = parseEffect(s.effect);
     // Chi ha un oggetto che protegge da quest'arma (la Corazza runica contro il Tocco della morte) non ne subisce le scintille: non si possono pagare.
     return { index, cost: s.cost, text: s.effect, ...parsed, ...(shield ? { supported: false, blockedBy: shield } : {}) };
@@ -615,7 +626,7 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
   const support = weapon ? supportBonus(state, attacker, weapon) : 0;
   return {
     option, distance: option.distance ?? distanceTo(attacker, target), needsRange: option.attack !== 'melee',
-    effects, bonusSparks: bonusSparks + bonus.sparks, pierce, supportDamage: support + bonus.damage + cmd, bonusRange: bonus.range + cmd,
+    effects, bonusSparks: bonusSparks + bonus.sparks, pierce: pierce + bonus.pierce, supportDamage: support + bonus.damage + cmd, bonusRange: bonus.range + cmd,
     sources: [...bonus.sources, ...(support ? [{ source: tr('Bonus di supporto'), text: `+${support} danno` }] : []), ...(cmd ? [commandSource(cmd)] : [])],
     inflictions: inflictionsFrom(weapon?.rules ?? []), fearless: immuneTo(state, attacker, 'fear'), area: areaFrom(weapon?.rules ?? []), knockback: (weapon?.rules ?? []).some((t) => /^Contraccolpo$/i.test(t)), sorcery: keywordLevel(state, attacker, 'Stregoneria'),
   };

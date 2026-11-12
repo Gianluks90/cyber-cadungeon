@@ -114,6 +114,10 @@ export interface Piece {
   killedWith?: string[];
   lockedWeapon?: string | null;
   tempArmor?: number;
+  /** La funzione base del cyberdeck dell'eroe (per ora solo il Berserk del Picchiatore, deciso dall'archetipo della scheda). */
+  deck?: 'berserk';
+  /** Round che restano al Berserk acceso (0 o assente: spento). Un round se ne va a ogni `startRound`. */
+  berserk?: number;
   /** Un nemico con un nome: non si stordisce e Giustizia divina non lo uccide. */
   unique?: boolean;
   /** Il bottino che lascia quando esce dalla mappa (vedi `removeEnemy`). */
@@ -160,6 +164,8 @@ export interface Piece {
   abilityName?: string;
   /** Gli effetti dell'abilità dell'eroe (dalla sua scheda): si leggono insieme a quelli delle carte e degli oggetti. */
   mercenaryEffects?: SkillEffect[];
+  /** Le scintille attive delle mod dell'arma scelte nel Briefing: si pagano negli attacchi in mischia, dopo quelle dell'arma. */
+  modSparks?: { cost: number; effect: string }[];
 }
 
 /** Tutte le caselle occupate da un pezzo (una per i normali, di più per i nemici grandi). */
@@ -234,6 +240,10 @@ export interface PieceData {
   size?: { w: number; h: number };
   /** Solo per gli eroi: le carte abilità già assegnate prima di partire (id del catalogo); quelle assegnate non si ripescano. */
   skillCards?: string[];
+  /** Solo per gli eroi: gli effetti passivi delle mod scelte nel Briefing, già risolti (`passiveEffects`); si aggiungono a quelli della scheda. */
+  modEffects?: SkillEffect[];
+  /** Solo per gli eroi: le scintille attive delle mod dell'arma, già risolte (`activeSparks`). */
+  modSparks?: { cost: number; effect: string }[];
 }
 
 export function createPieces(
@@ -313,7 +323,9 @@ export function createPieces(
       dice: sheet ? { ...sheet.dice } : { melee: 0, ranged: 0, intrusion: 0 },
       ability: sheet?.ability ?? '',
       abilityName: sheet?.abilityName ?? '',
-      mercenaryEffects: sheet?.effects ? JSON.parse(JSON.stringify(sheet.effects)) : undefined,
+      ...(d.team === 'mercenary' && sheet?.archetype === 'brawler' ? { deck: 'berserk' as const } : {}),
+      ...(d.modSparks?.length ? { modSparks: d.modSparks.map((s) => ({ ...s })) } : {}),
+      mercenaryEffects: sheet?.effects || d.modEffects?.length ? JSON.parse(JSON.stringify([...(sheet?.effects ?? []), ...(d.modEffects ?? [])])) : undefined,
     };
   });
 }

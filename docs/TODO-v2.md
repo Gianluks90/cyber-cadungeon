@@ -39,6 +39,25 @@ Vedi `docs/DESIGN-MOD-CONTRATTI.md`.
 
 ---
 
+## Aggiornamento 2026-11-12 (prototipo mod e contratti: passi 1-4 fatti)
+
+Piano dei passi in `docs/PIANO-PROTOTIPO.md`. **Fatto** (build e `i18n:check` verdi; non provato a schermo, la verifica la fa l'utente):
+
+- **Passo 1, dato contratto**: `Contract` + `ContractStore` (`game/contracts/`), `public/contracts/index.json` (una voce, `maps/test`, coordinate segnaposto su Roma). **Chiude in parte L4.5** (elenco dei contratti, collegamento alla mappa); restano fuori tentativi, scadenza e verifica di giocabilità (Q31).
+- **Passo 2, mod e Briefing** (sotto-passi 1-5): `public/mods/catalog.json` (6 mod) + `game/mods/mod.ts`; `ItemDef.slots`; sezione Briefing nel dialog di preparazione con budget in eurodollari (`BRIEFING_BUDGET = 300`, `AdventureSetup.budget`); effetti passivi (danno, Armatura, ICE, Perforare, durata Berserk) risolti a inizio partita in `Piece.mercenaryEffects`; scintille attive delle mod dell'arma (`Piece.modSparks`: Perforare 1, Spazzata); **Berserk** del Picchiatore (`state/berserk.ts`, costanti `BERSERK_*`, carta nella scheda). **Sostituisce L0.5** (oggetti base con slot + mod invece di nuovi oggetti) **e L2.4** per la parte "il Briefing sceglie mod"; ICE sui deck/mod chiude in parte L2.1 per i non Incursori (Q13: via mod `firewall`).
+- **Passo 3, contratti sulla mappa**: marker per contratto in `WorldMapComponent`, scheda `contract-card` (bloccato: numero, titolo, «Fuori dal campo di sincronizzazione»; sbloccato: titolo, didascalia, Gioca → `/party/<mapId>`), `UnlockStore` (localStorage). **Risolve Q32**: i contratti sono legati alla mappa del mondo, non a `ADVENTURES`.
+- **Passo 4, sblocco**: `canUnlock` (`distanza − precisione ≤ UNLOCK_RADIUS_M = 50`, `game/contracts/unlock-rule.ts`), calcolato solo sul dispositivo; in sviluppo due contratti di prova (~30 m e ~5 km, non salvati) e un tasto «Sblocca (solo sviluppo)».
+
+**Ancora da fare del prototipo (Passo 5 e code del Passo 2)** — non sono fatte, anche se sembrano vicine:
+- tasto **intel** a livelli e **profili dei nemici** nei dati del contratto (§2.6);
+- **abilità cyberware** scelte da lista corta (sostituiscono L0.7) e rimozione del pescaggio casuale `drawSkillCards` (chiude davvero L1.6);
+- **oggetti base automatici** per archetipo (oggi `BASE_KIT` in `mods/mod.ts` è provvisorio e le mod valgono anche senza l'oggetto equipaggiato) e **fine del vecchio negozio a monete** (nel dialog convivono monete ed eurodollari; `coins`/`items` restano nella scheda, L0.3);
+- anteprima dei parametri del Briefing che conti anche le mod; mod attive del deck (oggi il Driver Berserk è passivo);
+- budget che avanza → terminali (§2.6) e il resto di L3.10;
+- validatore del contratto (budget alto/basso) e formula di minaccia (§3 del design).
+
+---
+
 ## Livello 0 · Solo dati e testi
 
 Si può fare senza toccare il codice (ciò che il motore non legge ancora resta inerte, ma si scrive già).
@@ -73,6 +92,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Decisione**: sì → **Q6** (mappatura delle 4 voci esistenti, numeri), **Q7** (nomi).
 
 ### L0.5 — Oggetti v2: cyberdeck, armi con gittata, silenziate
+- **Superata (2026-11-12)**: il layer oggetti viene sostituito da oggetti base con slot + catalogo di mod (`public/mods/`, vedi aggiornamento in alto). Non estendere questo catalogo con oggetti nuovi.
 - **Fatto (valori provvisori, scelti da me per Q9)**: campi opzionali `range` e `ice` in `Item`; gittata scritta su `pulse-pistol` (5), `rail-rifle` (8), `plasma-cannon` (6). Tre cyberdeck: `street-deck` (1 dado bianco, raggio 3, ICE 0, 75), `hack-deck` (bianco+giallo, raggio 4, ICE 1, 150), `military-deck` (bianco+verde+giallo, raggio 5, ICE 2, 300). Nuova `silenced-pistol` (tag `silenced`, 200). Traduzioni `item.*`. Tutto inerte finché non ci sono L1.1/L2.1.
 - **Fatto anche L0.6**: scorte del negozio a 99 per tutti gli oggetti in `public/shops/city.json`.
 - **Serve**: 2–3 cyberdeck (`kind: weapon`, `attack: magic`, dadi bianchi), armi a distanza con gittata scritta, tag per armi silenziate. Il catalogo oggi ha 8 oggetti.
@@ -86,6 +106,7 @@ Si può fare senza toccare il codice (ciò che il motore non legge ancora resta 
 - **Decisione**: no (la bozza è chiara), ma vedi A16 sui fondi avanzati.
 
 ### L0.7 — Abilità di hacking e carte abilità v2 (solo testi)
+- **Cambiata (2026-11-11/12)**: diventano cyberware scelti da lista corta (design §2.4); non ancora fatti (Passo 5).
 - **Serve**: abilità del ramo hacking (raggio +N, firewall/ICE, ecc.). Oggi il catalogo ha 9 carte nei tre rami `combat`, `cunning`, `magic`.
 - **Tocca**: `public/skills/catalog.json`; `i18n` `skill.<id>`. Per funzionare servono effetti `stat` nuovi (`ice`, `range`): vedi L2.1.
 - **Decisione**: sì → **Q10**.
@@ -172,6 +193,7 @@ Budget fisso: `check()` in `heroes/hero-sheet.ts:58` avvisa già se dadi o punti
 - **Dipende da**: Q15 (regole di Folgorazione "da bilanciare" nella bozza).
 
 ### L2.4 — Briefing: cyberdeck, squadra valida, abilità
+- **Stato (2026-11-12)**: scelta delle mod e budget in eurodollari **fatti** (dialog `pregame-shop-dialog`); restano squadra valida (L1.8), intel, cyberware e la fine del negozio a monete (vedi aggiornamento in alto). Il pescaggio abilità (L1.6) non va fatto: cade.
 - **Serve**: nella schermata di preparazione, scelta del cyberdeck per l'Incursore, messaggio di squadra non valida, pescaggio abilità (L1.6).
 - **Tocca**: `adventures/` (`/party/:map`), `lobby/lobby.component.ts`, `heroes/party-setup.ts` (`Loadout`, `validLoadout`: oggi già controlla scorte, pozioni, posto, monete); `ui/` per il pannello. **Quasi tutto il Briefing esiste già** come "negozio di preparazione" con 300 monete.
 - **Dipende da**: L0.5, L1.6, L1.8.
@@ -293,6 +315,7 @@ Budget fisso: `check()` in `heroes/hero-sheet.ts:58` avvisa già se dadi o punti
 - **Dipende da**: L4.1, L4.3 e dal gioco in rete.
 
 ### L4.5 — Contratti
+- **Stato (2026-11-12)**: elenco, mappa del mondo, sblocco a 50 m e scheda **fatti** (Passi 1-4); `ADVENTURES` resta vuoto e `/adventures` non è il punto d'ingresso dei contratti. Restano tentativi, scadenza e verifica di giocabilità («vinto dal suo fixer», §2.7).
 - **Serve**: una missione = `MapData` + metadati (Fama iniziale, tentativi, durata in tasca…); elenco dei contratti; verifica di giocabilità.
 - **Tocca**: `map/map-data.ts` (oggi ha `title`, `intro`, `progress`, `setup`, `rules`, `objective`: non ha tentativi né scadenza); `adventures/adventures.ts` (`ADVENTURES = []`: **vuoto**); avventure di prova in `public/maps/` (c'è solo `test.json` e `catalog.json`); `validator.ts`.
 - **Decisione**: Q31, Q32 (e A18 sulla geolocalizzazione).
@@ -434,4 +457,4 @@ Budget fisso: `check()` in `heroes/hero-sheet.ts:58` avvisa già se dadi o punti
 - **Q29.** Come e quando si sblocca un pin? (Dopo N missioni giocate con quell'eroe? Una per missione vinta?) Da dove viene l'elenco delle abilità "già viste"?
 - **Q30.** Senza account (Auth fuori scope), la progressione degli eroi sta in localStorage dietro un'interfaccia pronta per Firestore?
 - **Q31.** Tentativi e scadenza di un contratto: partiamo senza (solo campi vuoti nei dati) o li implementiamo?
-- **Q32.** I contratti "si raccolgono fisicamente": nella prima versione sono una lista di mappe in `ADVENTURES` (nessuna geolocalizzazione) o dobbiamo legarli alla mappa del mondo che già c'è?
+- **Q32 ✔ (2026-11-12).** Risposta: i contratti sono legati alla mappa del mondo (marker, sblocco a 50 m), non a `ADVENTURES`. Domanda originale: I contratti "si raccolgono fisicamente": nella prima versione sono una lista di mappe in `ADVENTURES` (nessuna geolocalizzazione) o dobbiamo legarli alla mappa del mondo che già c'è?

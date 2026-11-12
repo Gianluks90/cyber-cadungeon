@@ -238,6 +238,16 @@ export const COIN_CIRCLE_SEGMENTS = 12;
 // --- Pozioni ---
 /** Quante pozioni porta un eroe, quante ferite ridà la curativa, e quanti punti movimento costano bere e dare una pozione (raccoglierla non costa niente). */
 export const POTION_LIMIT = 3;
+/** Il budget in eurodollari del Briefing (per mod e intel): sempre 300, salvo `AdventureSetup.budget` (docs/DESIGN-MOD-CONTRATTI.md, §2.6). */
+export const BRIEFING_BUDGET = 300;
+/** A che distanza (in metri, tolta la precisione del GPS) si sblocca un contratto. */
+export const UNLOCK_RADIUS_M = 50;
+/** Il Berserk del cyberdeck del Picchiatore (valori da provare): costo in Overclock, round che dura, danno in mischia in più, Armatura e ICE che si perdono. */
+export const BERSERK_COST = 2;
+export const BERSERK_ROUNDS = 2;
+export const BERSERK_DAMAGE = 2;
+export const BERSERK_ARMOR_LOSS = 1;
+export const BERSERK_ICE_LOSS = 1;
 export const POTION_HEAL = 4;
 export const POTION_DRINK_COST = 1;
 export const POTION_GIVE_COST = 1;

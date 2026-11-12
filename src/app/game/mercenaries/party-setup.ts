@@ -1,5 +1,6 @@
 import { ChestTier, PotionKind } from '../board/marker';
-import { BACKPACK_LIMIT, POTION_LIMIT, POTION_PRICES, TREASURE_PRICES } from '../constants';
+import { ModDef, ModLoadout, loadModCatalog, validMods } from '../mods/mod';
+import { BACKPACK_LIMIT, BRIEFING_BUDGET, POTION_LIMIT, POTION_PRICES, TREASURE_PRICES } from '../constants';
 import type { AdventureSetup } from '../map/map-data';
 import { SKILL_SCHOOLS, SkillSchool } from '../skills/skill';
 import { StartingSkills } from './mercenary-sheet';
@@ -11,6 +12,8 @@ export interface Loadout {
   potions: PotionKind[];
   /** I tesori comprati (uno per carta, del tipo del mazzo): la carta si pesca dal mazzo vero quando la partita comincia. Solo se l'avventura li vende in preparazione. */
   treasures?: ChestTier[];
+  /** Le mod del Briefing negli slot di arma, armatura e deck. Si pagano con il budget del Briefing, non con le monete. */
+  mods?: ModLoadout;
 }
 
 /** Le chiavi di traduzione dei nomi dei tesori comprabili in preparazione. */
@@ -24,11 +27,19 @@ export interface ShopData {
   stock: Readonly<Record<string, number>>;
   /** I tipi di tesoro in vendita in preparazione (variante dell'avventura, `AdventureSetup.pregameTreasures`). */
   treasureTiers: readonly ChestTier[];
+  /** Il catalogo delle mod e il budget in eurodollari del Briefing. */
+  mods: ReadonlyMap<string, ModDef>;
+  budget: number;
 }
 
 export async function loadPregameShop(setup?: AdventureSetup): Promise<ShopData> {
-  const [items, stock] = await Promise.all([loadItemCatalog(), loadShopStock('city')]);
-  return { items, stock, treasureTiers: setup?.pregameTreasures ?? [] };
+  const [items, stock, mods] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadModCatalog()]);
+  return { items, stock, treasureTiers: setup?.pregameTreasures ?? [], mods, budget: briefingBudget(setup) };
+}
+
+/** Il budget del Briefing: quello dell'avventura, o `BRIEFING_BUDGET`. */
+export function briefingBudget(setup?: AdventureSetup): number {
+  return Math.max(0, setup?.budget ?? BRIEFING_BUDGET);
 }
 
 /** La variante di preparazione di un'avventura, letta dal file della mappa (vuota se manca o non si legge). */
@@ -96,6 +107,7 @@ export function validLoadout(l: Loadout, coins: number, shop: ShopData, others: 
     if (!(id in left) || !shop.items.has(id) || left[id] <= 0) return false;
     left[id] -= 1;
   }
+  if (!validMods(l.mods, shop.mods, shop.items, shop.budget)) return false;
   return !!placeItems(l.items, shop) && loadoutCost(l, shop) <= coins;
 }
 

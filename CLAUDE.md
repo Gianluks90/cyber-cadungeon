@@ -56,7 +56,8 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 - **Eventi dell'avventura**: `game/state/events.ts` (+ tipi in `game/map/map-data.ts`); l'Avversario in `game/state/adversary.ts`, `adversary-deck.ts`, `game/adversary/`.
 - **Editor**: `src/app/editor/` (`editor.component.ts`, `tile-editor.ts` senza interfaccia, `validator.ts` per la Verifica, `map-camera.ts`). Esiste un editor completo con strumenti per tessere, porte, ostacoli, oggetti, nemici, aree, glifi ed eventi; i dettagli sono nel legacy.
 - **Cataloghi**: `public/{mercenaries,enemies,items,skills,adversary,shops}/`, caricati da `game/{mercenaries,enemies,items,skills,adversary}/`. Squadra predefinita in `game/mercenaries/mercenary-sheet.ts` (`DEFAULT_PARTY`).
-- **Contratti** (da creare, passo 1 di `docs/PIANO-PROTOTIPO.md`): intestazioni in `public/contracts/index.json` + `game/contracts/`; la missione resta un `MapData` in `public/maps/`. Titolo della missione = fonte, quello del contratto è una copia.
+- **Contratti** (passi 1-4 di `docs/PIANO-PROTOTIPO.md` fatti): intestazioni in `public/contracts/index.json` + `game/contracts/` (`ContractStore`, `UnlockStore`, regola di sblocco); la missione resta un `MapData` in `public/maps/`. Titolo della missione = fonte, quello del contratto è una copia. Marker e scheda in `world-map/`.
+- **Mod e Briefing**: catalogo in `public/mods/` + `game/mods/mod.ts`; scelta nel dialog `ui/pregame-shop-dialog.component.ts`; Berserk in `game/state/berserk.ts`. Cosa resta è in `docs/TODO-v2.md` («Aggiornamento 2026-11-12»).
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
 - **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/adventures`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 

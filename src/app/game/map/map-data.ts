@@ -201,6 +201,8 @@ export interface AdventureEvent {
  * Valgono solo a inizio partita, quindi non stanno nello snapshot.
  */
 export interface AdventureSetup {
+  /** Gli eurodollari del Briefing, per mod e intel (se manca, `BRIEFING_BUDGET`). Si cambia solo per ragioni narrative. */
+  budget?: number;
   /** Monete in più a ogni eroe durante la preparazione, a passi di 25 (anche negative; il totale non scende sotto 0). */
   extraCoins?: number;
   /** I tipi di tesoro che il negozio di preparazione già vende (di base nessuno: servono gli scrigni aperti). */

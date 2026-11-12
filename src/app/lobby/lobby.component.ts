@@ -4,7 +4,7 @@ import { ADVENTURES } from '../adventures/adventures';
 import { objectiveText } from '../game/state/objective-text';
 import { MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
 import type { AdventureSetup } from '../game/map/map-data';
-import { Loadout, ShopData, coinsWithSetup, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, briefingBudget, coinsWithSetup, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -225,7 +225,7 @@ export class LobbyComponent {
   protected readonly mercenaries = computed(() => this.rawMercenaries().map((h) => ({ ...h, coins: coinsWithSetup(h.coins, this.adventureSetup()) })));
   protected readonly shop = computed<ShopData | null>(() => {
     const s = this.rawShop();
-    return s ? { ...s, treasureTiers: this.adventureSetup().pregameTreasures ?? [] } : null;
+    return s ? { ...s, treasureTiers: this.adventureSetup().pregameTreasures ?? [], budget: briefingBudget(this.adventureSetup()) } : null;
   });
   private readonly familiarDefs = signal<ReadonlyMap<string, FamiliarDef>>(new Map());
   protected familiarsOf(h: MercenarySheet): FamiliarDef[] {

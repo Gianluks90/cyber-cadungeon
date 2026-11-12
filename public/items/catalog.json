@@ -2,6 +2,7 @@
   "items": [
     {
       "id": "mono-blade",
+      "slots": 2,
       "name": "Lama monomolecolare",
       "kind": "weapon",
       "attack": "melee",
@@ -71,6 +72,7 @@
     },
     {
       "id": "ballistic-vest",
+      "slots": 2,
       "name": "Giubbotto balistico",
       "kind": "armor",
       "hands": 0,
@@ -191,6 +193,7 @@
     },
     {
       "id": "street-deck",
+      "slots": 2,
       "name": "Deck da strada",
       "kind": "weapon",
       "attack": "intrusion",

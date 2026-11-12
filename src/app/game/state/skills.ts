@@ -1,6 +1,7 @@
 import { tr } from '../../i18n/catalog-text';
 import { Piece, footprint } from '../pieces/piece';
 import { canActOnMap, speedOf } from './actions';
+import { BERSERK_ID, activateBerserk, berserkAction } from './berserk';
 import { Effect } from './effects';
 import type { GameState } from './game-state';
 
@@ -69,7 +70,8 @@ export function skillActions(state: GameState, piece: Piece): SkillAction[] {
     else if (piece.overclock < overclock) reason = tr('Non hai abbastanza overclock');
     return { id, cardId, kind: 'active' as const, cost: overclock ? `{overclock:${overclock}}` : '', enabled: !reason, reason };
   });
-  return [...actives, ...triggersOf(state, piece).map(({ id, cardId, effect: t }) => {
+  const berserk = berserkAction(state, piece);
+  return [...(berserk ? [berserk] : []), ...actives, ...triggersOf(state, piece).map(({ id, cardId, effect: t }) => {
     const overclock = t.cost?.overclock ?? 0;
     const cost = [overclock ? `{overclock:${overclock}}` : '', t.cost?.exhaust ? tr('esaurisci la carta') : ''].filter(Boolean).join(' · ');
     let reason: string | undefined;
@@ -95,6 +97,7 @@ export type SkillResult = { ok: true; notice: string } | { ok: false; reason: st
 
 /** Usa l'abilità: paga il costo e fa i suoi effetti. */
 export function useSkill(state: GameState, piece: Piece, id: string): SkillResult {
+  if (id === BERSERK_ID) return activateBerserk(state, piece); // la funzione del cyberdeck, non una carta
   const found = triggersOf(state, piece).find((x) => x.id === id);
   const action = skillActions(state, piece).find((x) => x.id === id);
   if (action?.kind === 'active') return { ok: false, reason: tr('Questa abilità si avvia dal bottone e chiede altro') };

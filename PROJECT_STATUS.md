@@ -2,6 +2,8 @@
 
 > **Nota 2026-11-11**: questa fotografia è precedente alle rinomine (TODO L1.9, `monster`→`enemy`, `hero`→`mercenary`, `evil`→`adversary`) e a parte della pulizia; i nomi di cartelle, i 9 nemici e i cataloghi qui sotto possono essere indietro. Per i nomi vale `CLAUDE.md` (glossario) e per il design in corso `docs/DESIGN-MOD-CONTRATTI.md`.
 
+> **Nota 2026-11-12**: dopo questa fotografia sono stati fatti i passi 1-4 di `docs/PIANO-PROTOTIPO.md` (contratti sulla mappa del mondo con sblocco a 50 m, mod e Briefing, Berserk). Le sezioni 2, 4, 5, 6 e 7 sotto sono aggiornate a quel punto; il dettaglio di cosa resta è in `docs/TODO-v2.md` («Aggiornamento 2026-11-12»). Build e `i18n:check` erano verdi a fine passo 4; nessuna prova a schermo da parte dell'assistente.
+
 Documento di contesto per chi non vede il codice. Fotografia presa leggendo il repository (non ho eseguito build né test: non so se `npm run build` passa adesso).
 
 ## 1. Obiettivo e relazione con CADungeon
@@ -31,11 +33,11 @@ Documento di contesto per chi non vede il codice. Fotografia presa leggendo il r
 - ~36k righe di TypeScript in `src/`.
 
 **Cartelle**
-- `src/app/game/` — motore: `board/`, `state/`, `map/`, `pieces/`, `markers/`, `doors/`, `obstacles/`, `adversary/`, `mercenaries/`, `items/`, `monsters/`, `skills/`, `dice/`, `torches/`, `familiars/` (residuo), più `game-scene.component.ts` (scena Pixi + HUD).
+- `src/app/game/` — motore: `board/`, `state/`, `map/`, `pieces/`, `markers/`, `doors/`, `obstacles/`, `adversary/`, `mercenaries/`, `items/`, `enemies/`, `skills/`, `dice/`, `torches/`, `familiars/` (residuo), più `game-scene.component.ts` (scena Pixi + HUD). Nuove: `contracts/` (`Contract`, `ContractStore`, `UnlockStore`, regola di sblocco), `mods/` (catalogo mod, effetti passivi e attivi), `state/berserk.ts`.
 - `src/app/editor/` — editor completo (tessere, porte, ostacoli, oggetti, nemici, aree, zone, eventi, verifica).
 - `src/app/lobby/` — lobby PeerJS. `src/app/auth/` — login finto. `src/app/world-map/` — mappa del mondo. `src/app/adventures/` — scelta avventura e squadra.
 - `src/app/ui/` — componenti HTML sopra il canvas. `src/app/i18n/` — traduzioni (`it.json`, `en.json`, pipe `t`, `tr`, `ct`).
-- `public/` — dati: `tiles/`, `maps/`, `mercenaries/`, `monsters/`, `items/`, `skills/`, `adversary/`, `shops/`, `icons/` (SVG), `characters/`, `mobs/`, `dice/`.
+- `public/` — dati: `contracts/` (intestazioni), `mods/`, `tiles/`, `maps/`, `mercenaries/`, `enemies/`, `items/`, `skills/`, `adversary/`, `shops/`, `icons/` (SVG), `characters/`, `mobs/`, `dice/`.
 - `docs/` — `style-guide.md`, `PIANO-DESIGN.md`, `PIANO-CHIAVI-I18N.md`, `legacy/`.
 - `scripts/i18n-check.mjs` — controlla che ogni testo `tr()` abbia la riga in entrambe le lingue (`npm run i18n:check`).
 
@@ -71,7 +73,8 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 - **Tile** (`public/tiles/*.json`, tipo `TileDef`): dimensione in celle, forma (`size` o `rects`), aperture (lato, posizione, larghezza 2). Rotazione a scatti di 90°; due tile si agganciano se le aperture si guardano. Pavimento/muri disegnati da codice. 11 tile oggi (corridoi, croce, T, gomito, vicolo cieco, stanze 4x4…8x8).
 - **Unità**: la cella, 64 px (`CELL_SIZE`).
 - **Cataloghi** (JSON in `public/`, testi in italiano perché li legge anche il motore, tradotti solo in visualizzazione): eroi (`bastion`, `vesper`, `halo`), mostri (`corp-guard`, `rogue-netrunner`, `sentry-drone`, `war-mech`), oggetti, abilità, Carte della Megacorp, negozio.
-- **Persistenza** (dietro interfaccia): `SaveStore` → `GameSave {version, map, savedAt, auto, snapshot}` (`LocalSaveStore`, localStorage `cad-save:<map>`); `DraftStore` per l'editor; `LobbyStore` (`LocalLobbyStore`); `AuthBackend` (`FakeAuthBackend`).
+- **Contratti e mod** (2026-11-12): il contratto è solo un'intestazione (`Contract`: id, numero, titolo, didascalia, `mapId`, coordinate, `visibility`, fixer segnaposto) in `public/contracts/index.json`; la missione resta un `MapData`. `MapData.setup.budget` (opzionale) = eurodollari del Briefing (default 300). Una mod (`ModDef`) ha slot (`weapon|armor|deck`), costo, parte passiva (`effects`, `rules`, `ice`) e/o attiva (scintille); le scelte stanno in `Loadout.mods` e a inizio partita diventano `Piece.mercenaryEffects` e `Piece.modSparks`. `Piece.deck`/`Piece.berserk` = Berserk del Picchiatore (da archetipo `brawler`).
+- **Persistenza** (dietro interfaccia): `ContractStore` (`JsonContractStore`, legge il file), `UnlockStore` (`LocalUnlockStore`, localStorage `cad-contracts-unlocked`), `SaveStore` → `GameSave {version, map, savedAt, auto, snapshot}` (`LocalSaveStore`, localStorage `cad-save:<map>`); `DraftStore` per l'editor; `LobbyStore` (`LocalLobbyStore`); `AuthBackend` (`FakeAuthBackend`).
 
 ## 5. Cosa è implementato e cosa è abbozzato
 
@@ -86,11 +89,16 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 
 **Mappa del mondo** (`world-map/`, home `/`) — *c'è, nonostante CLAUDE.md la metta "fuori scope"*
 - MapLibre su file PMTiles pubblico, tema cyberpunk (`map-theme.ts`), filtri a gruppi, vista 3D con rilievo, bussola/zoom, posizione utente con consenso (`LocationService`: GPS + bussola, nessuna cronologia né invio).
-- Vista iniziale fissa su Genova (`START_VIEW`). **Nessun collegamento ancora tra posizione e missioni/avventure.**
+- Vista iniziale fissa su Genova (`START_VIEW`), poi centrata sul giocatore.
+- **Contratti sulla mappa** (2026-11-12): un segnaposto (#001…) per contratto; tocco → scheda (`contract-card`): bloccato = numero, titolo e «Fuori dal campo di sincronizzazione», sbloccato = titolo, didascalia e Gioca (→ `/party/<mapId>`, il Briefing). **Sblocco a 50 m** (`UNLOCK_RADIUS_M`, `distanza − precisione GPS ≤ 50`), calcolato solo sul dispositivo. Solo in sviluppo: due contratti di prova a ~30 m e ~5 km e un tasto di sblocco manuale; **non verificato sul telefono**. Il contratto di prova reale ha coordinate segnaposto (Roma): da spostare per vederlo dove si è.
 
 **Lobby** (`lobby/`)
 - Codice partita (4–8 caratteri), `LobbyHost`/`LobbyClient` su PeerJS, `claimCode`, scelta eroi (1 giocatore → 2 eroi; da 3 persone → 1 a testa), acquisti pre-partita, "pronto". Il tasto "Unisciti" nella dialog è ancora spento.
 - **Il gioco in rete vero e proprio non esiste**: la partita gira in locale.
+
+**Prototipo mod e Briefing** (2026-11-12, `docs/DESIGN-MOD-CONTRATTI.md` §8)
+- Nel dialog di preparazione (`/party/:map`) c'è la sezione **Briefing**: arma, armatura e cyberdeck con 2 slot ciascuno, 6 mod, budget in eurodollari. In partita le mod passive cambiano danno, Armatura, ICE e Perforare; le attive spendono scintille (Filo vibrante, Spazzata); il Picchiatore ha il **Berserk** (2 Overclock, 2 round, +2 danno in mischia, −1 Armatura/ICE).
+- **Provvisorio / incompleto**: gli oggetti base sono fissi per tutti (`BASE_KIT`) e le mod valgono anche senza l'oggetto equipaggiato; nel dialog convivono ancora il vecchio negozio a monete e gli eurodollari; manca l'intel a pagamento, il cyberware, la rimozione del pescaggio casuale delle abilità; l'anteprima dei parametri non conta le mod. Valori tutti «da bilanciare».
 
 **Abbozzato / vuoto**
 - `ADVENTURES` in `adventures/adventures.ts` è **vuoto**: l'unica mappa giocabile è `public/maps/test.json` (`/play/test`). Le avventure fantasy originali sono in `docs/legacy/maps/` e non sono adattate.
@@ -120,9 +128,9 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 
 ## 7. Punti di estensione previsti
 
-- **Missioni geolocalizzate**: la mappa del mondo ha già posizione utente, consenso e stile; manca tutto il resto. Probabile strada: luoghi/missioni come dati (con coordinate) mostrati come marker su `WorldMapComponent`, che aprono `/party/:map` → `/play/:map`, e `AdventureCard` (oggi vuoto) come ponte. Serve una decisione di architettura (dove vivono i dati: Firestore dietro interfaccia).
+- **Missioni geolocalizzate**: **fatte nella forma minima** (vedi «Contratti sulla mappa»): marker su `WorldMapComponent` → scheda → `/party/:map` → `/play/:map`, con i dati dietro `ContractStore`/`UnlockStore`. `ADVENTURES` resta vuoto e non serve a questo. Restano: Firestore al posto di file e localStorage, tentativi e scadenza, strumento «Posiziona» nell'editor, contratti nascosti, Fixer-giocatori (tutti rimandati).
 - **Eroi**: schede JSON in `public/mercenaries/` (`index.json` + una per eroe) caricate da `mercenaries/`; la squadra predefinita è `DEFAULT_PARTY`. Eroi persistenti/collezionabili sono fuori scope per ora; l'interfaccia `SaveStore` è il punto dove agganciare eroi salvati.
-- **Fixer**: **non c'è ancora nulla nel codice** (nessun riferimento trovato). Da definire cosa sia (PNG/ruolo/negozio/mediatore di missioni?). Candidati naturali: il ruolo "città/negozio" (`state/city.ts`, `shops/`, `ui/city-panel`) o un nuovo tipo di segnalino/evento (`encounter`, `zone`, `interact`).
+- **Fixer**: definito nel design (`docs/DESIGN-MOD-CONTRATTI.md` §2.7: chi crea e pubblica contratti, diritto che si guadagna con la Fama), ma **nel codice c'è solo il campo segnaposto `Contract.fixer`**; Fixer-giocatori, Fama e Reputazione sono rimandati e non esistono.
 - **Rete**: completare gioco in rete su `LobbyHost` (stato autoritativo) / `LobbyClient` (intenzioni), con filtro delle parti non scoperte.
 - **Backend**: Firebase Auth al posto di `FakeAuthBackend`; Firestore al posto di `LocalSaveStore`/`LocalLobbyStore`/`DraftStore` (avventure, mappe, eroi, checkpoint).
 - **Contenuti**: nuove avventure con l'editor → `public/maps/` + voce in `ADVENTURES`; nuove voci nei cataloghi richiedono traduzione (`item.<id>`, `skill.<id>`, `monster.<id>`, `adversary.<id>`).
