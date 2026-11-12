@@ -1,14 +1,23 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, ElementRef, afterNextRender, afterRenderEffect, effect, inject, input, signal, viewChild } from '@angular/core';
 import { TranslatePipe } from '../i18n/translate.pipe';
 
-/** I caratteri con cui si "cifra" un testo: blocchi, simboli e cifre esadecimali. */
-const GLYPHS = Array.from('█▓▒░#@%&*+=<>/\\|[]{}$§¤¦≈∑∆Ω∞¿?!~^0123456789ABCDEF');
-const randomGlyph = () => GLYPHS[Math.floor(Math.random() * GLYPHS.length)];
+/**
+ * I caratteri con cui si "cifra" un testo: simboli, cifre e lettere maiuscole e minuscole, tutti ASCII o Latin-1, cioè presenti in qualunque carattere tipografico dell'interfaccia
+ * (simboli rari finiscono in un altro font e fanno crescere o spostare la riga, e il testo ballerebbe). Si estrae prima il genere (più simboli che altro), poi il carattere.
+ */
+const SYMBOLS = Array.from('!#$%&*+-/:;<=>?@[\\]^_{|}~§¤¦¿¬±¶×÷');
+const DIGITS = Array.from('0123456789');
+const LETTERS = Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz');
+const pick = (list: readonly string[]) => list[Math.floor(Math.random() * list.length)];
+const randomGlyph = () => {
+  const kind = Math.random();
+  return kind < 0.45 ? pick(SYMBOLS) : kind < 0.65 ? pick(DIGITS) : pick(LETTERS);
+};
 /** Ogni quanto cambia il testo cifrato (ms) e quanta parte dei caratteri cambia a ogni giro. */
-const TICK_MS = 90;
+const TICK_MS = 130;
 const REVOLVE = 0.15;
-/** Durante la decifratura il ritmo è più serrato. */
-const REVEAL_TICK_MS = 60;
+/** Durante la decifratura il ritmo è un po' più serrato. */
+const REVEAL_TICK_MS = 85;
 
 /**
  * Un testo che non si può ancora leggere: al suo posto una serie di caratteri e simboli casuali, come se fosse cifrato, con qualche carattere che cambia di continuo

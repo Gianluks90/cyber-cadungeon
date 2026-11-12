@@ -72,7 +72,8 @@ const formatDuration = (seconds: number): string => {
     }
     /* Intestazione, divisore e tasto di chiusura: gli stessi dei filtri. */
     header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px 10px 14px; }
-    h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
+    /* flex: 1: il titolo ha sempre la larghezza che resta accanto al tasto di chiusura, anche cifrato (altrimenti la larghezza seguirebbe i simboli e il testo andrebbe a capo in punti diversi). */
+    h2 { flex: 1; min-width: 0; margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-line-strong); }
     .close { flex: none; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
