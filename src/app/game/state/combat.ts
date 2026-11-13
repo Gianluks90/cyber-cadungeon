@@ -605,8 +605,8 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
   }
   const weapon = option.itemId ? state.items.get(option.itemId) : undefined;
   const shield = option.itemId ? protectionFrom(state, target, option.itemId) : null;
-  // Le scintille dell'arma e, negli attacchi in mischia, quelle attive delle mod dell'arma (sotto-passo 4 del Briefing): stesso elenco, gli indici continuano.
-  const sparkList = [...(weapon?.spark ?? []), ...(option.attack === 'melee' ? attacker.modSparks ?? [] : [])];
+  // Le scintille dell'arma, che comprendono quelle attive delle sue mod (`moddedItem`, in coda).
+  const sparkList = weapon?.spark ?? [];
   const effects: SparkEffect[] = sparkList.map((s, index) => {
     const parsed = parseEffect(s.effect);
     // Chi ha un oggetto che protegge da quest'arma (la Corazza runica contro il Tocco della morte) non ne subisce le scintille: non si possono pagare.
@@ -621,7 +621,7 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
     if (p) pierce += +p[1];
   }
   // I bonus delle carte abilità e degli oggetti equipaggiati per questo tipo di attacco, e di Comando.
-  const bonus = attackBonus(state, attacker, option.attack, target);
+  const bonus = attackBonus(state, attacker, option.attack, target, option.itemId);
   const cmd = commandBonus(state, attacker);
   const support = weapon ? supportBonus(state, attacker, weapon) : 0;
   return {

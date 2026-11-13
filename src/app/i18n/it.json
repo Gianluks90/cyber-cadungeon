@@ -2192,5 +2192,11 @@
   "shop.gearHint": "Puoi venderla: ricevi metà del suo valore",
   "shop.sell": "Vendi",
   "shop.undoSale": "Annulla la vendita",
-  "briefing.kitSold": "Fornitura venduta"
+  "briefing.kitSold": "Fornitura venduta",
+  "briefing.tabMods": "Mod",
+  "briefing.tabItems": "Oggetti",
+  "briefing.equipped": "Equipaggiato",
+  "briefing.backpack": "Zaino",
+  "briefing.noModSlots": "Nessuno slot per le mod",
+  "briefing.noMods": "Nessuna mod compatibile"
 }

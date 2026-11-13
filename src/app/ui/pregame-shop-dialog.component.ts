@@ -1,19 +1,20 @@
-import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, viewChild } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
+import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { POTION_HEAL, POTION_LIMIT, POTION_PRICES } from '../game/constants';
 import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
-import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, equippedDefs, gearSalePrice, loadoutCost, modStockLeft, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, carriedItems, equippedDefs, gearSalePrice, loadoutCost, modStockLeft, placeItems, pruneMods, startingKit, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
 import { ChestTier } from '../game/board/marker';
 import { TREASURE_PRICES } from '../game/constants';
 import { translate } from '../i18n/i18n.service';
-import { ITEM_GROUPS, ItemGroup, itemDetail, itemGroup } from '../game/items/item';
+import { ITEM_GROUPS, ItemGroup, itemDetail, itemGroup, placeGear } from '../game/items/item';
 import { POTION_NAMES } from '../game/markers/marker-rules';
 import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { SkillDef } from '../game/skills/skill';
-import { BASE_KIT, MOD_SLOTS, ModSlot, isBriefingMod, modFits, modsCost } from '../game/mods/mod';
+import { isBriefingMod, modFits, modSlotOf } from '../game/mods/mod';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
@@ -32,7 +33,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
+  imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
@@ -51,7 +52,57 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
         <app-attack-dice [dice]="mercenary().dice" />
       </div>
 
-      <!-- Le sezioni si rimettono una alla volta: per ora ci sono solo i consumabili (al massimo POTION_LIMIT per mercenario). -->
+      <!-- Due tab: si parte dalle mod (un solo budget con gli oggetti) e si passa agli oggetti quando si vuole cambiare la fornitura. -->
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'mods'" [class.on]="tab() === 'mods'" (click)="tab.set('mods')">{{ 'briefing.tabMods' | t }}</button>
+        <button type="button" role="tab" [attr.aria-selected]="tab() === 'items'" [class.on]="tab() === 'items'" (click)="tab.set('items')">{{ 'briefing.tabItems' | t }}</button>
+      </div>
+
+      @if (tab() === 'mods') {
+        <!-- Una carta per ogni oggetto che si porta: un <details> che si comprime per occupare meno spazio. Senza slot per le mod la carta c'è lo stesso, ma spenta. -->
+        @for (c of modCards(); track c.key) {
+          @if (c.max) {
+            <details class="gearcard" [open]="c.open" (toggle)="setCardOpen(c.key, $any($event.target).open)">
+              <summary>
+                <span class="chev" aria-hidden="true"></span>
+                <span class="what"><b>{{ c.def.name }}</b><small>{{ c.detail }}</small></span>
+                <span class="tag">{{ (c.equipped ? 'briefing.equipped' : 'briefing.backpack') | t }}</span>
+                <span class="slotsused">{{ 'briefing.slotsUsed' | t: { used: c.used, max: c.max } }}</span>
+              </summary>
+              <div class="list">
+                @for (o of c.options; track o.mod.id) {
+                  <div class="row mod" [class.on]="o.on">
+                    <div class="what">
+                      <b>{{ o.mod.name }}</b>
+                      <small class="fx">{{ o.mod.text | ct }}</small>
+                      <small class="fx">
+                        @if (o.mod.passive) { <span>{{ 'briefing.passive' | t }}</span> }
+                        @for (a of o.mod.active ?? []; track $index) { <span>{{ 'briefing.active' | t: { n: a.sparks } }}: {{ a.effect | ct }}</span> }
+                      </small>
+                    </div>
+                    @if (o.left !== undefined) { <span class="stock" [title]="'shop.stock' | t">×{{ o.left }}</span> }
+                    <span class="price">{{ money(o.mod.cost) }}</span>
+                    <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.on ? 'briefing.remove' : 'briefing.install') | t" [title]="o.reason || ((o.on ? 'briefing.remove' : 'briefing.install') | t)" (click)="toggleMod(c.key, o.mod.id)"><app-icon [name]="o.on ? 'remove_shopping_cart' : 'add_shopping_cart'" [size]="20" /></button>
+                  </div>
+                } @empty {
+                  <p class="none">{{ 'briefing.noMods' | t }}</p>
+                }
+              </div>
+            </details>
+          } @else {
+            <div class="gearcard off">
+              <div class="head">
+                <span class="what"><b>{{ c.def.name }}</b><small>{{ c.detail }}</small></span>
+                <span class="tag">{{ (c.equipped ? 'briefing.equipped' : 'briefing.backpack') | t }}</span>
+                <span class="slotsused">{{ 'briefing.noModSlots' | t }}</span>
+              </div>
+            </div>
+          }
+        }
+      }
+
+      @if (tab() === 'items') {
+      <!-- Consumabili (al massimo POTION_LIMIT per mercenario), oggetti in vendita e fornitura iniziale. -->
       <h3>{{ 'shop.potions' | t }} <small>{{ 'shop.potionsHint' | t: { n: potionLimit } }}</small></h3>
       <div class="list">
         @for (k of potionKinds; track k) {
@@ -89,6 +140,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
           }
         </div>
       }
+      }
 
       <!-- A sinistra del piede, una sola volta, il denaro che resta (un solo budget per mod e oggetti). -->
       <div dialogFooterStart class="budget" [title]="'briefing.budget' | t"><b><app-money-counter [value]="budgetLeft()" /></b></div>
@@ -118,6 +170,22 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .gear b { font: 600 13px/1.2 var(--font-ui); }
     .gear span { flex: 1; color: var(--c-text-dim); font-size: 12px; }
     .row.mod.on { border-color: var(--c-interact); }
+    /* La carta di un oggetto nella tab Mod: un <details> (si comprime), spenta se l'oggetto non ha slot per le mod. */
+    .gearcard { border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-bg); }
+    .gearcard > summary, .gearcard .head { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+    .gearcard > summary { cursor: pointer; list-style: none; }
+    .gearcard > summary::-webkit-details-marker { display: none; }
+    .gearcard > summary:hover, .gearcard > summary:focus-visible { outline: none; background: var(--c-tile); }
+    .gearcard > .list { padding: 0 10px 10px; }
+    .gearcard .chev { flex: none; width: 0; height: 0; border-inline: 4px solid transparent; border-top: 5px solid var(--c-text-dim); transition: transform 0.15s; }
+    .gearcard:not([open]) .chev { transform: rotate(-90deg); }
+    .gearcard .tag { font: 600 10px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    .gearcard .slotsused { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--c-text-dim); }
+    .gearcard.off { opacity: 0.45; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--c-line-strong); margin: 0 0 4px; }
+    .tabs button { flex: 1; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--c-text-dim); cursor: pointer; font: 600 13px/1.2 var(--font-ui); transition: color 0.15s, border-color 0.15s; }
+    .tabs button:hover, .tabs button:focus-visible { color: var(--c-text); outline: none; }
+    .tabs button.on { color: var(--c-interact); border-bottom-color: var(--c-interact); }
     .what { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
     .what b { flex: none; }
     .list, .cards { display: flex; flex-direction: column; gap: 6px; }
@@ -151,6 +219,8 @@ export class PregameShopDialogComponent {
   readonly closed = output<void>();
 
   private readonly i18n = inject(I18nService);
+  /** La tab aperta: si parte dalle mod. */
+  protected readonly tab = signal<'mods' | 'items'>('mods');
   protected readonly potionKinds = POTIONS;
   /** I parametri che avrà, con le abilità assegnate e gli oggetti comprati (per la carta a sinistra). */
   protected readonly stats = computed(() => mercenaryStats(this.mercenary(), this.skills(), equippedDefs(this.loadout(), this.shop(), this.gear())));
@@ -171,26 +241,44 @@ export class PregameShopDialogComponent {
   );
   protected readonly budgetLeft = computed(() => budgetLeft(this.gear(), this.loadout(), this.shop()));
   protected readonly money = money;
-  /** Per arma, armatura e deck: l'oggetto base, gli slot usati e le mod che ci stanno (con il motivo se non si può installare). */
-  protected readonly modGroups = computed(() => {
-    const shop = this.shop();
-    const mods = this.loadout().mods;
-    const modsLeft = modStockLeft(shop, [...this.others(), this.loadout()]);
-    const labels: Record<ModSlot, string> = { weapon: this.i18n.t('briefing.weapon'), armor: this.i18n.t('briefing.armor'), deck: this.i18n.t('briefing.deck') };
-    return MOD_SLOTS.flatMap((slot) => {
-      const base = shop.items.get(BASE_KIT[slot]);
-      if (!base?.slots) return [];
-      const installed = mods?.[slot] ?? [];
-      const options = [...shop.mods.values()]
-        .filter((m) => isBriefingMod(m) && modFits(m, base, slot))
-        .map((mod) => {
-          const on = installed.includes(mod.id);
-          const left = modsLeft[mod.id];
-          const reason = on ? '' : left !== undefined && left <= 0 ? this.i18n.t('shop.soldOut') : installed.length >= base.slots! ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
-          return { mod, on, reason, left };
-        });
-      return [{ slot, label: labels[slot], base, max: base.slots, used: installed.length, options }];
+  /** Le carte chiuse nella tab Mod (di default sono tutte aperte): chi non serve si comprime per occupare meno spazio. */
+  private readonly closedCards = signal<ReadonlySet<string>>(new Set());
+  protected setCardOpen(key: string, open: boolean) {
+    if (open !== this.closedCards().has(key)) return;
+    this.closedCards.update((s) => {
+      const next = new Set(s);
+      if (open) next.delete(key);
+      else next.add(key);
+      return next;
     });
+  }
+  /**
+   * Una carta per ogni arma, armatura o cyberdeck che il mercenario porta (equipaggiato o nello zaino): gli slot usati e le mod che ci stanno, con il motivo se non si può installare.
+   * Un oggetto senza slot compare lo stesso, ma spento.
+   */
+  protected readonly modCards = computed(() => {
+    const shop = this.shop();
+    const l = this.loadout();
+    const all = carriedItems(this.gear(), l, shop);
+    const equippedKeys = new Set(placeGear(all).equipped.map((e) => e.key));
+    const modsLeft = modStockLeft(shop, [...this.others(), l]);
+    return all
+      .filter((c) => modSlotOf(c.def))
+      .map(({ key, def }) => {
+        const installed = l.mods?.[key] ?? [];
+        const max = def.slots ?? 0;
+        const options = max
+          ? [...shop.mods.values()]
+              .filter((m) => isBriefingMod(m) && modFits(m, def))
+              .map((mod) => {
+                const on = installed.includes(mod.id);
+                const left = modsLeft[mod.id];
+                const reason = on ? '' : left !== undefined && left <= 0 ? this.i18n.t('shop.soldOut') : installed.length >= max ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
+                return { mod, on, reason, left };
+              })
+          : [];
+        return { key, def, detail: itemDetail(def), equipped: equippedKeys.has(key), max, used: installed.length, options, open: !this.closedCards().has(key) };
+      });
   });
   private readonly left = computed(() => stockLeft(this.shop(), [...this.others(), this.loadout()]));
 
@@ -201,7 +289,7 @@ export class PregameShopDialogComponent {
       .filter((i) => i.id in shop.stock)
       .map((def) => {
         const left = this.left()[def.id];
-        const reason = left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.budgetLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop) ? '' : this.i18n.t('shop.noRoom');
+        const reason = left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.budgetLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop, startingKit(this.gear(), l, shop)) ? '' : this.i18n.t('shop.noRoom');
         return { id: def.id, def, left, reason, detail: itemDetail(def), count: l.items.filter((id) => id === def.id).length, group: itemGroup(def) };
       })
       .sort((a, b) => a.def.name.localeCompare(b.def.name, 'it'));
@@ -247,13 +335,19 @@ export class PregameShopDialogComponent {
     });
   }
 
-  /** Mette o toglie una mod: si installa solo se c'è uno slot libero e restano abbastanza eurodollari. */
-  protected toggleMod(slot: ModSlot, id: string) {
-    const g = this.modGroups().find((x) => x.slot === slot);
-    const o = g?.options.find((x) => x.mod.id === id);
-    if (!g || !o || o.reason) return;
-    const current = this.loadout().mods?.[slot] ?? [];
-    this.changed.emit({ ...this.loadout(), mods: { ...this.loadout().mods, [slot]: o.on ? current.filter((m) => m !== id) : [...current, id] } });
+  /** Mette o toglie una mod all'oggetto `key`: si installa solo se c'è uno slot libero, c'è ancora la copia e restano abbastanza eurodollari. */
+  protected toggleMod(key: string, id: string) {
+    const o = this.modCards().find((x) => x.key === key)?.options.find((x) => x.mod.id === id);
+    if (!o || o.reason) return;
+    const current = this.loadout().mods?.[key] ?? [];
+    const next = o.on ? current.filter((m) => m !== id) : [...current, id];
+    const { [key]: _old, ...rest } = this.loadout().mods ?? {};
+    this.changed.emit({ ...this.loadout(), mods: next.length ? { ...rest, [key]: next } : rest });
+  }
+
+  /** Ogni cambio di oggetti (acquisto, rimborso, vendita) toglie le mod che non stanno più sull'oggetto: il loro prezzo torna al budget. */
+  private emitItems(l: Loadout) {
+    this.changed.emit(pruneMods(l, this.gear(), this.shop()));
   }
 
   protected readonly healAmount = POTION_HEAL;
@@ -273,7 +367,7 @@ export class PregameShopDialogComponent {
 
   protected treasureReason(k: ChestTier): string {
     if (TREASURE_PRICES[k] > this.budgetLeft()) return this.i18n.t('shop.noCoins');
-    return treasureRoom(this.loadout(), this.shop()) ? '' : this.i18n.t('shop.noRoom');
+    return treasureRoom(this.loadout(), this.shop(), this.gear()) ? '' : this.i18n.t('shop.noRoom');
   }
 
   protected buyTreasure(k: ChestTier) {
@@ -295,7 +389,7 @@ export class PregameShopDialogComponent {
 
   protected buyItem(id: string) {
     const o = this.offers().find((x) => x.id === id);
-    if (o && !o.reason) this.changed.emit({ ...this.loadout(), items: [...this.loadout().items, id] });
+    if (o && !o.reason) this.emitItems({ ...this.loadout(), items: [...this.loadout().items, id] });
   }
 
   /** Rimborsa una copia di questo oggetto (l'ultima comprata). */
@@ -304,7 +398,7 @@ export class PregameShopDialogComponent {
     const o = this.gearOffers().find((x) => x.id === id);
     if (!o || o.reason) return;
     const sold = this.loadout().soldGear ?? [];
-    this.changed.emit({ ...this.loadout(), soldGear: o.sold ? sold.filter((x) => x !== id) : [...sold, id] });
+    this.emitItems({ ...this.loadout(), soldGear: o.sold ? sold.filter((x) => x !== id) : [...sold, id] });
   }
 
   protected refundItem(id: string) {
@@ -313,7 +407,7 @@ export class PregameShopDialogComponent {
   }
 
   protected removeItem(i: number) {
-    this.changed.emit({ ...this.loadout(), items: this.loadout().items.filter((_, j) => j !== i) });
+    this.emitItems({ ...this.loadout(), items: this.loadout().items.filter((_, j) => j !== i) });
   }
 
   protected removePotion(i: number) {

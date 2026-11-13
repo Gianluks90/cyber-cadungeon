@@ -139,9 +139,12 @@ export function buyItem(state: GameState, piece: Piece, id: string): CityResult 
   return { code: 'ok', notice: `${item.name} comprato` };
 }
 
-/** Quanto si ricava vendendo un oggetto: metà del prezzo, arrotondata per difetto a un multiplo di SELL_STEP_COINS (25), ma mai meno di 25. */
+/**
+ * Quanto si ricava vendendo un oggetto: metà del prezzo, arrotondata per difetto a un multiplo di SELL_STEP_COINS (25), ma mai meno di 25. Ogni mod montata aggiunge metà del suo
+ * costo, arrotondata a 25 (`modsSaleValue`).
+ */
 export function sellPrice(item: ItemDef): number {
-  return Math.max(SELL_STEP_COINS, Math.floor(item.price / 2 / SELL_STEP_COINS) * SELL_STEP_COINS);
+  return Math.max(SELL_STEP_COINS, Math.floor(item.price / 2 / SELL_STEP_COINS) * SELL_STEP_COINS) + (item.modsSaleValue ?? 0);
 }
 
 /** Negozio: vende un oggetto (equipaggiato o nello zaino) a metà prezzo; se è in vendita, torna sullo scaffale. */

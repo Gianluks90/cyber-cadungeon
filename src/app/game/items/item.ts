@@ -73,6 +73,11 @@ export interface ItemDef {
   range?: number;
   /** Quanti slot per le mod ha questo oggetto base (arma, armatura o deck; prototipo: 2). Senza, non accetta mod. Vedi `game/mods/mod.ts`. */
   slots?: number;
+  /** Solo per un oggetto con mod (`moddedItem`): l'id dell'oggetto di partenza e gli id delle mod montate. */
+  moddedFrom?: string;
+  mods?: string[];
+  /** Solo per un oggetto con mod: quanto si aggiunge al prezzo di vendita in città per le mod montate (ognuna, metà del suo costo arrotondata a 25). */
+  modsSaleValue?: number;
   /** Se c'è, l'oggetto accetta solo mod con almeno una di queste categorie (`ModDef.tags`): il Kitsune-9 solo `hacking`. */
   modTags?: string[];
   /** Il nome di un'icona (public/icons/). */
@@ -161,6 +166,17 @@ export function fitsEquipment(equipped: readonly ItemDef[], item: ItemDef): bool
   if (item.kind === 'deck' && equipped.filter((i) => i.kind === 'deck').length + 1 > EQUIP_DECK_LIMIT) return false;
   if (item.kind === 'other' && !item.slotless && equipped.filter((i) => i.kind === 'other' && !i.slotless).length + 1 > EQUIP_OTHER_LIMIT) return false;
   return true;
+}
+
+/**
+ * Come si sistemano degli oggetti nell'ordine dato: ognuno si equipaggia se ci sta (mani, armatura, deck, oggetti vari), altrimenti va nello zaino.
+ * Lo usano uguale il Briefing e l'inizio della partita: prima la fornitura iniziale, poi ciò che si è comprato.
+ */
+export function placeGear<T extends { def: ItemDef }>(entries: readonly T[]): { equipped: T[]; backpack: T[] } {
+  const equipped: T[] = [];
+  const backpack: T[] = [];
+  for (const e of entries) (fitsEquipment(equipped.map((x) => x.def), e.def) ? equipped : backpack).push(e);
+  return { equipped, backpack };
 }
 
 /**

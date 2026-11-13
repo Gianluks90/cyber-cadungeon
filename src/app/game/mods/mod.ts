@@ -1,4 +1,6 @@
 import { localizeName } from '../../i18n/catalog-text';
+import { SELL_STEP_COINS } from '../constants';
+import type { AttackType, ItemDef } from '../items/item';
 import type { SkillEffect } from '../skills/skill';
 /** In che tipo di oggetto va la mod: arma, armatura-cromo o cyberdeck (docs/DESIGN-MOD-CONTRATTI.md, §2.1). */
 export type ModSlot = 'weapon' | 'armor' | 'deck';
@@ -28,7 +30,9 @@ export interface ModDef {
   slot: ModSlot;
   /** Le categorie della mod (es. `hacking`): un oggetto con `modTags` accetta solo le mod che ne hanno una. */
   tags?: string[];
-  /** Gli id degli oggetti base che la accettano; se manca va bene ogni oggetto di quel tipo. */
+  /** I tipi di attacco dell'oggetto che la accettano (es. `melee`): se manca va bene ogni oggetto di quel tipo (arma, armatura o deck), così cambiando oggetto la mod resta valida. */
+  attack?: AttackType[];
+  /** Gli id degli oggetti che la accettano, solo per i casi rari: di norma si usa `attack`. */
   compatible?: string[];
   /**
    * La fascia di rarità (docs/DESIGN-MOD-CONTRATTI.md, §2.8). Senza, è `base`: l'unica che si compra al Briefing. Rame, argento e oro (legacy: tesori da 250/500/750) si vendono solo
@@ -64,32 +68,39 @@ export async function loadModCatalog(): Promise<Map<string, ModDef>> {
   return mods;
 }
 
-/** Le mod scelte nel Briefing, per tipo di oggetto: gli id, al massimo `slots` per oggetto. */
-export type ModLoadout = Partial<Record<ModSlot, string[]>>;
-
 /**
- * Gli oggetti base di ogni mercenario, provvisori: nel prototipo (un Picchiatore) sono uguali per tutti. Quando i mercenari avranno l'equipaggiamento di base
- * per archetipo (§2.1) questo passa nella scheda.
+ * Le mod scelte nel Briefing, per oggetto portato: la chiave è quella dell'oggetto (`itemKeys`), il valore gli id delle mod, al massimo `slots` per oggetto.
+ * Le mod stanno sull'oggetto, non sulla categoria: un'arma nello zaino si può moddare ed equipaggiare dopo.
  */
-export const BASE_KIT: Readonly<Record<ModSlot, string>> = { weapon: 'mono-blade', armor: 'ballistic-vest', deck: 'street-deck' };
+export type ModLoadout = Record<string, string[]>;
+
+/** Una chiave per ogni oggetto portato, nell'ordine dato: l'id la prima volta e `id#2`, `id#3`… per le copie (due oggetti uguali hanno mod diverse). */
+export function itemKeys(ids: readonly string[]): string[] {
+  const seen = new Map<string, number>();
+  return ids.map((id) => {
+    const n = (seen.get(id) ?? 0) + 1;
+    seen.set(id, n);
+    return n === 1 ? id : `${id}#${n}`;
+  });
+}
 
 /** Quanto costano in tutto le mod scelte (quelle sconosciute non contano). */
 export function modsCost(mods: ModLoadout | undefined, catalog: ReadonlyMap<string, ModDef>): number {
   return Object.values(mods ?? {}).flat().reduce((n, id) => n + (catalog.get(id)?.cost ?? 0), 0);
 }
 
-/** Le mod scelte sono valide? Oggetto base con abbastanza slot, mod compatibili e senza doppioni, costo entro il budget. */
-export function validMods(mods: ModLoadout | undefined, catalog: ReadonlyMap<string, ModDef>, items: ReadonlyMap<string, { id: string; slots?: number; modTags?: string[] }>, budget: number): boolean {
+/** Le mod scelte sono valide? `carried` sono gli oggetti portati per chiave (`itemKeys`): ognuno con abbastanza slot, mod compatibili e senza doppioni, costo entro il budget. */
+export function validMods(mods: ModLoadout | undefined, catalog: ReadonlyMap<string, ModDef>, carried: ReadonlyMap<string, ModItem>, budget: number): boolean {
   if (mods === undefined) return true;
   if (typeof mods !== 'object' || mods === null) return false;
   let cost = 0;
-  for (const [slot, ids] of Object.entries(mods)) {
-    if (!MOD_SLOTS.includes(slot as ModSlot) || !Array.isArray(ids)) return false;
-    const base = items.get(BASE_KIT[slot as ModSlot]);
+  for (const [key, ids] of Object.entries(mods)) {
+    if (!Array.isArray(ids)) return false;
+    const base = carried.get(key);
     if (!base || ids.length > (base.slots ?? 0) || new Set(ids).size !== ids.length) return false;
     for (const id of ids) {
       const mod = catalog.get(id);
-      if (!mod || !isBriefingMod(mod) || !modFits(mod, base, slot as ModSlot)) return false;
+      if (!mod || !isBriefingMod(mod) || !modFits(mod, base)) return false;
       cost += mod.cost;
     }
   }
@@ -113,13 +124,72 @@ export function passiveEffects(mods: ModLoadout | undefined, catalog: ReadonlyMa
 }
 
 /**
- * Le scintille attive delle mod dell'arma, come le scintille di un'arma (costo ed effetto a parole). Le mod del deck non hanno scintille: il Driver Berserk è passivo (erserkDuration).
+ * Le scintille attive di queste mod, come le scintille di un'arma (costo ed effetto a parole): si pagano negli attacchi con l'oggetto su cui stanno. Le mod del deck non hanno scintille: il Driver Berserk è passivo (erserkDuration).
  */
 export function activeSparks(mods: ModLoadout | undefined, catalog: ReadonlyMap<string, ModDef>): { cost: number; effect: string }[] {
-  return (mods?.weapon ?? []).flatMap((id) => (catalog.get(id)?.active ?? []).map((a) => ({ cost: a.sparks, effect: a.effect })));
+  return Object.values(mods ?? {}).flat().flatMap((id) => (catalog.get(id)?.active ?? []).map((a) => ({ cost: a.sparks, effect: a.effect })));
 }
 
-/** La mod `mod` si può montare su `item` (un oggetto base con gli slot)? Serve che il tipo corrisponda, che l'oggetto ci sia se la mod ha un elenco e che la categoria sia ammessa se l'oggetto ne chiede una. */
-export function modFits(mod: ModDef, item: { id: string; modTags?: string[] }, itemSlot: ModSlot): boolean {
-  return mod.slot === itemSlot && (!mod.compatible || mod.compatible.includes(item.id)) && (!item.modTags || item.modTags.some((t) => mod.tags?.includes(t)));
+/** Quanto una mod aggiunge al prezzo di vendita in città dell'oggetto su cui sta: metà del suo costo, arrotondata al multiplo di `SELL_STEP_COINS` più vicino. */
+export function modSalePrice(cost: number): number {
+  return Math.round(cost / 2 / SELL_STEP_COINS) * SELL_STEP_COINS;
+}
+
+/**
+ * Il riferimento a un oggetto con le sue mod: l'id e gli id delle mod, per esempio `voss-sr90+vibro-edge`. Senza mod è l'id dell'oggetto. È l'id con cui l'oggetto moddato sta
+ * nel catalogo della partita (`registerModdedItems`), quindi nell'equipaggiamento, nello zaino, a terra e nei salvataggi: le mod seguono l'oggetto ovunque vada.
+ */
+export function moddedRef(itemId: string, modIds: readonly string[]): string {
+  return modIds.length ? [itemId, ...modIds].join('+') : itemId;
+}
+
+/** Per ogni oggetto portato con mod (chiave di `itemKeys`), il riferimento dell'oggetto moddato. */
+export function moddedRefs(mods: ModLoadout | undefined): Record<string, string> {
+  return Object.fromEntries(Object.entries(mods ?? {}).filter(([, ids]) => ids.length).map(([key, ids]) => [key, moddedRef(key.split('#')[0], ids)]));
+}
+
+/**
+ * L'oggetto `base` con le mod `modIds` montate, come oggetto a sé (`id` = `moddedRef`): gli effetti passivi delle mod entrano negli effetti dell'oggetto (i bonus d'attacco sono
+ * `itemBound`: valgono solo attaccando con lui) e le scintille attive si aggiungono in coda alle sue. Il testo delle regole non cambia (altrimenti "Perforare" si conterebbe due volte).
+ */
+export function moddedItem(base: ItemDef, modIds: readonly string[], catalog: ReadonlyMap<string, ModDef>): ItemDef {
+  const known = modIds.filter((id) => catalog.has(id));
+  const modsSaleValue = known.reduce((n, id) => n + modSalePrice(catalog.get(id)!.cost), 0);
+  const effects = [...(base.effects ?? []), ...passiveEffects({ [base.id]: known }, catalog).map((e) => ({ ...e, itemBound: true }))];
+  const spark = [...(base.spark ?? []), ...activeSparks({ [base.id]: known }, catalog)];
+  return { ...base, id: moddedRef(base.id, known), moddedFrom: base.id, mods: known, modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
+}
+
+/** Mette nel catalogo `items` gli oggetti moddati di questi riferimenti (`id+mod+mod`), se non ci sono già. Un riferimento che non si capisce (oggetto o mod sconosciuti) si salta. */
+export function registerModdedItems(items: Map<string, ItemDef>, catalog: ReadonlyMap<string, ModDef>, refs: Iterable<string>): void {
+  for (const ref of refs) {
+    if (items.has(ref)) continue;
+    const [itemId, ...modIds] = ref.split('+');
+    const base = items.get(itemId);
+    if (base && modIds.length && modIds.every((id) => catalog.has(id))) items.set(ref, moddedItem(base, modIds, catalog));
+  }
+}
+
+/** I riferimenti a oggetti moddati che compaiono in un testo (per esempio un salvataggio in JSON): così si ricostruiscono prima di riprendere la partita. */
+export function moddedRefsIn(text: string): string[] {
+  return [...new Set([...text.matchAll(/"([a-z0-9-]+(?:\+[a-z0-9-]+)+)"/g)].map((m) => m[1]))];
+}
+
+/** Un oggetto come lo vedono le mod: l'id, il tipo (arma, armatura, deck), il tipo di attacco, gli slot e le categorie di mod che accetta. */
+export type ModItem = Pick<ItemDef, 'id' | 'kind' | 'attack' | 'slots' | 'modTags'>;
+
+/** In che slot di mod va l'oggetto: le armi in `weapon`, le armature in `armor`, i cyberdeck in `deck`; scudi e altro non hanno mod. */
+export function modSlotOf(item: Pick<ItemDef, 'kind'>): ModSlot | null {
+  return item.kind === 'weapon' ? 'weapon' : item.kind === 'armor' ? 'armor' : item.kind === 'deck' ? 'deck' : null;
+}
+
+/**
+ * La mod `mod` si può montare su `item`? Serve che il tipo corrisponda (arma, armatura, deck), che il tipo di attacco sia ammesso se la mod lo elenca (`attack`),
+ * che l'oggetto ci sia se la mod ha un elenco di id e che la categoria sia ammessa se l'oggetto ne chiede una (`modTags`).
+ */
+export function modFits(mod: ModDef, item: ModItem): boolean {
+  if (mod.slot !== modSlotOf(item)) return false;
+  if (mod.attack && !(item.attack && mod.attack.includes(item.attack))) return false;
+  if (mod.compatible && !mod.compatible.includes(item.id)) return false;
+  return !item.modTags || item.modTags.some((t) => mod.tags?.includes(t));
 }

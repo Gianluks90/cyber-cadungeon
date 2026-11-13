@@ -5,7 +5,8 @@ import { ADVANCE_ATTACKS, DEFAULT_MERCENARY_WOUNDS, DEFAULT_MONSTER_WOUNDS, PAWN
 import { Cell } from '../board/board';
 import { ChestTier, Loot, PotionKind } from '../board/marker';
 import { AttackDice, MercenarySheet, StartingSkills } from '../mercenaries/mercenary-sheet';
-import { DieColor, ItemDef, AttackType, fitsEquipment } from '../items/item';
+import { DieColor, ItemDef, AttackType, placeGear } from '../items/item';
+import { itemKeys } from '../mods/mod';
 import type { SkillEffect } from '../skills/skill';
 import { EnemyDef, playersKey } from '../enemies/enemy';
 
@@ -164,8 +165,6 @@ export interface Piece {
   abilityName?: string;
   /** Gli effetti dell'abilità dell'eroe (dalla sua scheda): si leggono insieme a quelli delle carte e degli oggetti. */
   mercenaryEffects?: SkillEffect[];
-  /** Le scintille attive delle mod dell'arma scelte nel Briefing: si pagano negli attacchi in mischia, dopo quelle dell'arma. */
-  modSparks?: { cost: number; effect: string }[];
 }
 
 /** Tutte le caselle occupate da un pezzo (una per i normali, di più per i nemici grandi). */
@@ -242,10 +241,11 @@ export interface PieceData {
   size?: { w: number; h: number };
   /** Solo per gli eroi: le carte abilità già assegnate prima di partire (id del catalogo); quelle assegnate non si ripescano. */
   skillCards?: string[];
-  /** Solo per gli eroi: gli effetti passivi delle mod scelte nel Briefing, già risolti (`passiveEffects`); si aggiungono a quelli della scheda. */
-  modEffects?: SkillEffect[];
-  /** Solo per gli eroi: le scintille attive delle mod dell'arma, già risolte (`activeSparks`). */
-  modSparks?: { cost: number; effect: string }[];
+  /**
+   * Solo per gli eroi: gli oggetti con le mod scelte nel Briefing, per chiave dell'oggetto portato (`itemKeys`) → riferimento dell'oggetto con le mod (`moddedRef`, per esempio
+   * `voss-sr90+vibro-edge`, già nel catalogo degli oggetti della partita). L'oggetto moddato è un oggetto a sé: le mod lo seguono quando si cede, si posa o si mette nello zaino.
+   */
+  modded?: Record<string, string>;
 }
 
 export function createPieces(
@@ -265,18 +265,15 @@ export function createPieces(
     const bonus = d.bonus;
     const speed = Math.max(1, (d.speed ?? sheet?.speed ?? tier?.speed ?? PAWN_SPEED) + (bonus?.speed ?? 0));
     const wounds = Math.max(1, (d.wounds ?? sheet?.wounds ?? tier?.wounds[playersKey(mercenaryCount)] ?? (d.team === 'mercenary' ? DEFAULT_MERCENARY_WOUNDS : DEFAULT_MONSTER_WOUNDS)) + (bonus?.wounds ?? 0));
-    // La fornitura iniziale (quella non venduta) parte equipaggiata finché ci sta; ciò che si è comprato prima di partire va nello zaino. Il prezzo dei comprati si toglie dalle monete.
+    // La fornitura iniziale (quella non venduta) e poi ciò che si è comprato prima di partire: ognuno parte equipaggiato se ci sta (mani, armatura, deck…), altrimenti va nello zaino
+    // (stessa regola del Briefing, `placeGear`). Il prezzo dei comprati si toglie dalle monete.
     const sold = new Set(d.soldGear ?? []);
-    const equipped: string[] = [];
-    const backpack: string[] = [];
-    for (const id of (sheet?.startingGear ?? []).filter((g) => !sold.has(g))) {
-      const def = items.get(id);
-      if (!def) continue;
-      if (fitsEquipment(equipped.map((e) => items.get(e)!), def)) equipped.push(id);
-      else backpack.push(id);
-    }
     const bought = d.items ?? sheet?.items ?? [];
-    backpack.push(...bought.filter((id) => items.has(id)));
+    const carried = [...(sheet?.startingGear ?? []).filter((g) => !sold.has(g)), ...bought].filter((id) => items.has(id));
+    const keys = itemKeys(carried); // le stesse chiavi del Briefing: ogni copia ha le sue mod
+    const placed = placeGear(carried.map((id, i) => { const ref = d.modded?.[keys[i]]; const use = ref && items.has(ref) ? ref : id; return { id: use, def: items.get(use)! }; }));
+    const equipped = placed.equipped.map((e) => e.id);
+    const backpack = placed.backpack.map((e) => e.id);
     const spent = bought.reduce((n, id) => n + (items.get(id)?.price ?? 0), 0);
     return {
       id: d.id,
@@ -329,8 +326,7 @@ export function createPieces(
       ability: sheet?.ability ?? '',
       abilityName: sheet?.abilityName ?? '',
       ...(d.team === 'mercenary' && sheet?.archetype === 'brawler' ? { deck: 'berserk' as const } : {}),
-      ...(d.modSparks?.length ? { modSparks: d.modSparks.map((s) => ({ ...s })) } : {}),
-      mercenaryEffects: sheet?.effects || d.modEffects?.length ? JSON.parse(JSON.stringify([...(sheet?.effects ?? []), ...(d.modEffects ?? [])])) : undefined,
+      mercenaryEffects: sheet?.effects ? JSON.parse(JSON.stringify(sheet.effects)) : undefined,
     };
   });
 }

@@ -34,6 +34,8 @@ export interface Effect extends SkillEffect {
 export interface SourcedEffect {
   source: string;
   effect: Effect;
+  /** Se è l'effetto di una mod: l'oggetto su cui sta. Un bonus d'attacco di una mod vale solo quando si attacca con quell'oggetto. */
+  item?: string;
 }
 
 function equippedDefs(state: GameState, piece: Piece): ItemDef[] {
@@ -50,7 +52,8 @@ export function effectsOf(state: GameState, piece: Piece): SourcedEffect[] {
     const card = state.skills.get(id);
     for (const effect of card?.effects ?? []) out.push({ source: card!.name, effect });
   }
-  for (const d of equippedDefs(state, piece)) for (const effect of d.effects ?? []) out.push({ source: d.name, effect });
+  // Le mod di un oggetto sono già dentro i suoi effetti (`moddedItem`): valgono finché è equipaggiato; i bonus d'attacco `itemBound` solo attaccando con quell'oggetto.
+  for (const d of equippedDefs(state, piece)) for (const effect of d.effects ?? []) out.push({ source: String(effect['itemBound'] ? effect['name'] ?? d.name : d.name), effect, ...(effect['itemBound'] ? { item: d.id } : {}) });
   for (const effect of piece.mercenaryEffects ?? []) out.push({ source: String(effect['name'] ?? (piece.abilityName || piece.name)), effect });
   return out;
 }
@@ -103,11 +106,12 @@ export interface AttackBonus {
   sources: { source: string; text: string }[];
 }
 
-/** I bonus agli attacchi di questo tipo: danno, gittata e scintille bonus. */
-export function attackBonus(state: GameState, piece: Piece, type: AttackType, target?: Piece): AttackBonus {
+/** I bonus agli attacchi di questo tipo: danno, gittata e scintille bonus. `itemId` è l'oggetto con cui si attacca: i bonus delle mod di un altro oggetto non valgono. */
+export function attackBonus(state: GameState, piece: Piece, type: AttackType, target?: Piece, itemId?: string): AttackBonus {
   const out: AttackBonus = { damage: 0, range: 0, sparks: 0, pierce: 0, sources: [] };
-  for (const { source, effect: e } of effectsOf(state, piece)) {
+  for (const { source, effect: e, item } of effectsOf(state, piece)) {
     if (e.kind !== 'attack' || !((e.on as AttackType[] | undefined) ?? []).includes(type)) continue;
+    if (item && item !== itemId) continue;
     // Colpo a tradimento: serve il bersaglio, e che non fosse fra i nemici visti a inizio round (senza il ricordo di quel momento non vale).
     if (e.ifUnseenAtStart && (!target || !piece.seenAtStart || piece.seenAtStart.includes(target.id))) continue;
     const parts: string[] = [];

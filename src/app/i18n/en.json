@@ -2192,5 +2192,11 @@
   "shop.gearHint": "You can sell it: you get half of its value",
   "shop.sell": "Sell",
   "shop.undoSale": "Undo sale",
-  "briefing.kitSold": "Starting kit sold"
+  "briefing.kitSold": "Starting kit sold",
+  "briefing.tabMods": "Mods",
+  "briefing.tabItems": "Items",
+  "briefing.equipped": "Equipped",
+  "briefing.backpack": "Backpack",
+  "briefing.noModSlots": "No mod slots",
+  "briefing.noMods": "No compatible mods"
 }

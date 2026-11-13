@@ -26,7 +26,10 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
   | Incursore | 0-1 | 1 | 2-3 (è la sua arma di rete) |
 
   Per l'Incursore il deck è il loadout: ha due armi (quella fisica e quella di rete) e sceglie in base al bersaglio.
-- **Cambiare oggetto cambia gli slot**: le mod valgono solo sull'oggetto equipaggiato e compatibile. Se il giocatore vende l'oggetto, le mod che non ci stanno più **si rimborsano** (niente trappole).
+- **Equipaggiamento e zaino** (deciso 2026-11-13): il mercenario porta ciò che ha equipaggiato (regole di mani, armatura, deck) più **al massimo 3 altri oggetti** nello zaino, di qualsiasi categoria; i consumabili hanno una sezione a parte (massimo 3). Ogni oggetto comprato si equipaggia da solo se ci sta, altrimenti va nello zaino.
+- **Le mod stanno sull'oggetto, non sulla categoria**: un'arma nello zaino si può moddare ed equipaggiare dopo. In partita le mod passive valgono solo finché l'oggetto è equipaggiato; i bonus d'attacco e le scintille attive di una mod valgono solo attaccando con quell'oggetto. Le mod sono compatibili per **tipo di attacco** (mischia, distanza, intrusione), non per id. **Le mod seguono l'oggetto**: se lo cedi, lo posi o lo metti nello zaino, le sue mod vanno con lui; due copie dello stesso oggetto hanno mod diverse. Nel codice un oggetto moddato è un oggetto a sé (`voss-sr90+vibro-edge`, vedi `moddedItem` in `game/mods/mod.ts`). **Vendita in città**: il prezzo dell'oggetto base più, per ogni mod montata, metà del suo costo arrotondata a 25 E$. Da fare: la carta in partita non elenca ancora le mod montate.
+- **Cambiare oggetto cambia gli slot**: se il giocatore vende o rimborsa l'oggetto, le mod che non ci stanno più **si rimborsano** (niente trappole). Un oggetto senza slot compare lo stesso nel Briefing, ma spento.
+- **Carte comprimibili**: nella tab Mod ogni oggetto è una carta comprimibile (`<details>`), per occupare meno spazio.
 - Si parte con pochi mercenari ben fatti e si lavora soprattutto sul **sistema di mod** (il Descent base ne aveva 20; non serve arrivarci).
 - L'equip **trovato** in missione **si perde a fine partita**: nessun bilanciamento a lungo termine. (Un item level con nemici scalati resta un'idea futura, ⏳.)
 

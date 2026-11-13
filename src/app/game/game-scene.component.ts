@@ -140,7 +140,7 @@ import { composeRules } from './state/setup-text';
 import { DEFAULT_PARTY, MercenarySheet, loadAllMercenarySheets, loadMercenarySheets, validParty } from './mercenaries/mercenary-sheet';
 import { loadItemCatalog, loadShopStock } from './items/item';
 import { loadSkillCatalog } from './skills/skill';
-import { activeSparks, loadModCatalog, passiveEffects } from './mods/mod';
+import { ModDef, loadModCatalog, moddedRefs, moddedRefsIn, registerModdedItems } from './mods/mod';
 import { berserkCard, berserkOn, hasBerserk } from './state/berserk';
 import { EnemyDef, loadEnemyCatalog } from './enemies/enemy';
 import { loadAdversaryCatalog } from './adversary/card';
@@ -613,11 +613,13 @@ export class GameSceneComponent implements OnDestroy {
       // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
       const setup = partySetupStore.take();
       const modCatalog = await loadModCatalog();
-      const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, soldGear: setup[mercenary].soldGear, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards, modEffects: passiveEffects(setup[mercenary].mods, modCatalog), modSparks: activeSparks(setup[mercenary].mods, modCatalog) } : {}) }));
+      const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, soldGear: setup[mercenary].soldGear, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards, modded: moddedRefs(setup[mercenary].mods) } : {}) }));
       const mapData = party.length ? { ...data, pieces: [...party, ...(data.pieces ?? [])] } : data;
       const sheets = await loadMercenarySheets((mapData.pieces ?? []).map((p) => p.mercenary));
       const [items, shopStock, skills, enemies, adversaryCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadEnemyCatalog(), loadAdversaryCatalog(), loadFamiliarCatalog()]);
       this.enemyDefs = enemies;
+      // Gli oggetti con le mod scelte nel Briefing sono oggetti a sé (`voss-sr90+vibro-edge`): entrano nel catalogo della partita, così le mod seguono l'oggetto ovunque vada.
+      registerModdedItems(items, modCatalog, party.flatMap((p) => Object.values(p.modded ?? {})));
       const names = areaNames(data.areas ?? []);
       this.areaInfo = new Map((data.areas ?? []).map((a) => [a.id, { ...a, name: names.get(a.id) }]));
       this.areaOrder = (data.areas ?? []).map((a) => ({ id: a.id, start: !!a.start }));
@@ -626,7 +628,7 @@ export class GameSceneComponent implements OnDestroy {
         this.saves.clear(mapName);
         void this.router.navigate([], { relativeTo: this.route, queryParams: {}, replaceUrl: true }); // così un refresh riprende l'autosalvataggio
       }
-      const resumed = this.adversaryMode ? null : this.resumeGame(data, items, skills, enemies, adversaryCards);
+      const resumed = this.adversaryMode ? null : this.resumeGame(data, items, skills, enemies, adversaryCards, modCatalog);
       this.resumedGame = !!resumed;
       this.state = resumed ?? GameState.fromMap(mapData, [{ id: 'h1', name: tr('Mercenario 1'), team: 'mercenary', x: start.x, y: start.y }], sheets, items, shopStock, skills, enemies, adversaryCards);
       this.state.familiarDefs = familiarDefs;
@@ -1957,10 +1959,11 @@ export class GameSceneComponent implements OnDestroy {
   }
 
   /** La partita salvata di questa avventura, ricostruita; `null` se non c'è o è di una versione che non si legge (allora si comincia da capo). I testi dell'avventura tornano dalla mappa. */
-  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, enemies: Map<string, EnemyDef>, cards: Map<string, AdversaryCardDef>): GameState | null {
+  private resumeGame(data: MapData, items: Map<string, ItemDef>, skills: Map<string, SkillDef>, enemies: Map<string, EnemyDef>, cards: Map<string, AdversaryCardDef>, modCatalog: ReadonlyMap<string, ModDef>): GameState | null {
     const save = this.saves.load(this.mapName);
     if (!save) return null;
     try {
+      registerModdedItems(items, modCatalog, moddedRefsIn(JSON.stringify(save.snapshot))); // gli oggetti con mod del salvataggio si ricostruiscono prima di riprendere
       const state = GameState.restore(save.snapshot, items, skills, enemies, cards);
       state.title = data.title;
       state.intro = data.intro;
