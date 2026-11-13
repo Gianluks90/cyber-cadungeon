@@ -28,7 +28,7 @@ export interface Toast {
 export function noticeTitle(icon: string): string {
   const titles: Record<string, string> = {
     warning: tr('Attenzione'), skull: tr('Pericolo'), lock: tr('Serratura'), lock_open: tr('Serratura'), inventory_2: tr('Inventario'), castle: tr('Città'),
-    'tokens/potion': tr('Pozioni'), deployed_code: tr('Dadi'), autorenew: tr('Round'), info: tr('Informazione'), brightness_empty: tr('Terminale'), stairs: tr('Scale'),
+    'tokens/potion': tr('Consumabili'), deployed_code: tr('Dadi'), autorenew: tr('Round'), info: tr('Informazione'), brightness_empty: tr('Terminale'), stairs: tr('Scale'),
     pets: tr('Famiglio'), 'tokens/gold_pile': tr('Denaro'), 'tokens/little_key': tr('Chiavi'), 'tokens/rune_key': tr('Chiavi'),
   };
   return titles[icon] ?? (icon.startsWith('tokens/items/') ? tr('Equipaggiamento') : tr('Notizia'));

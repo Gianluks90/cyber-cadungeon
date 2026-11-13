@@ -266,6 +266,8 @@ export const INTERACT_COST = 1;
 export const EQUIP_HANDS = 2;
 export const EQUIP_ARMOR_LIMIT = 1;
 export const EQUIP_OTHER_LIMIT = 2;
+/** Un solo cyberdeck equipaggiato: non è un'arma e non occupa mani né posti degli oggetti vari. */
+export const EQUIP_DECK_LIMIT = 1;
 export const BACKPACK_LIMIT = 3;
 export const REEQUIP_COST = 2;
 export const ITEM_GIVE_COST = 1;

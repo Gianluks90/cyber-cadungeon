@@ -216,7 +216,7 @@ export function canSeeTarget(state: GameState, board: Board, attacker: Piece, ta
 function equippedWeapons(state: GameState, piece: Piece): ItemDef[] {
   return piece.equipped.flatMap((id) => {
     const d = state.items.get(id);
-    return d?.kind === 'weapon' && d.attack ? [d] : [];
+    return (d?.kind === 'weapon' || d?.kind === 'deck') && d.attack ? [d] : [];
   });
 }
 

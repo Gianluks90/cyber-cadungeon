@@ -37,6 +37,7 @@
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
   --c-loot:          #c9b88c;  /* chiavi e tesori (sabbia spenta, NON oro); il denaro è --c-money */
   --c-hacking:       #ff3d9a;  /* slot (e mod) solo hacking: hot pink, in prova */
+  --c-ice:           var(--px-cyan-2);  /* ICE: l'armatura digitale contro le Intrusioni (icona snowflake) */
   --c-money:         #ffe033;  /* denaro (Eurodollari, monete, scrigno d'oro): giallo pieno, NON oro */
   --c-danger:         var(--px-red);  /* angoli pericolosi, minacce (solo overlay/avvisi) */
   --c-you:           #2bff88;  /* SOLO: la posizione del giocatore sulla mappa del mondo (verde neon, con glow) */

@@ -57,7 +57,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
             <div class="grid">
               @for (e of entries(); track e.id) {
                 @if (e.kind === 'item') {
-                  <app-item-card [def]="e.def" [icon]="e.icon" [detail]="e.detail" [plain]="true">
+                  <app-item-card [def]="e.def" [detail]="e.detail" [plain]="true">
                     @if (e.count !== null) { <span class="copies" [title]="'Copie' | tr">×{{ e.count }}</span> }
                   </app-item-card>
                 } @else if (e.kind === 'skill') {

@@ -2,10 +2,10 @@ import { tr } from '../../i18n/catalog-text';
 import { localizeName } from '../../i18n/catalog-text';
 import { ChestTier } from '../board/marker';
 import type { SkillEffect } from '../skills/skill';
-import { BACKPACK_LIMIT, EQUIP_ARMOR_LIMIT, EQUIP_HANDS, EQUIP_OTHER_LIMIT, ITEM_GIVE_COST } from '../constants';
+import { BACKPACK_LIMIT, EQUIP_ARMOR_LIMIT, EQUIP_DECK_LIMIT, EQUIP_HANDS, EQUIP_OTHER_LIMIT, ITEM_GIVE_COST } from '../constants';
 
 /** Il tipo di un oggetto: arma o scudo (usano le mani), armatura, oppure altro (né mani né armatura); `event` è una carta del mazzo che non si tiene (vedi `instant`). Le pozioni non sono oggetti: hanno il loro set. */
-export type ItemKind = 'weapon' | 'shield' | 'armor' | 'other' | 'event';
+export type ItemKind = 'weapon' | 'shield' | 'armor' | 'deck' | 'other' | 'event';
 
 /** I colori dei dadi delle armi. */
 export type DieColor = 'red' | 'green' | 'blue' | 'yellow' | 'white' | 'black';
@@ -158,6 +158,7 @@ export function fitsEquipment(equipped: readonly ItemDef[], item: ItemDef): bool
   const hands = equipped.reduce((n, i) => n + i.hands, 0) + item.hands;
   if (hands > EQUIP_HANDS) return false;
   if (item.kind === 'armor' && equipped.filter((i) => i.kind === 'armor').length + 1 > EQUIP_ARMOR_LIMIT) return false;
+  if (item.kind === 'deck' && equipped.filter((i) => i.kind === 'deck').length + 1 > EQUIP_DECK_LIMIT) return false;
   if (item.kind === 'other' && !item.slotless && equipped.filter((i) => i.kind === 'other' && !i.slotless).length + 1 > EQUIP_OTHER_LIMIT) return false;
   return true;
 }
@@ -171,7 +172,7 @@ export function itemsToDisplace(equipped: readonly ItemDef[], item: ItemDef): It
   const out: ItemDef[] = [];
   while (!fitsEquipment(keep, item)) {
     const needsHands = keep.reduce((n, i) => n + i.hands, 0) + item.hands > EQUIP_HANDS;
-    const victim = keep.find((i) => (needsHands && i.hands > 0) || (item.kind === 'armor' && i.kind === 'armor') || (item.kind === 'other' && i.kind === 'other'));
+    const victim = keep.find((i) => (needsHands && i.hands > 0) || (item.kind === 'armor' && i.kind === 'armor') || (item.kind === 'deck' && i.kind === 'deck') || (item.kind === 'other' && i.kind === 'other'));
     if (!victim) return null;
     keep.splice(keep.indexOf(victim), 1);
     out.push(victim);
@@ -180,14 +181,26 @@ export function itemsToDisplace(equipped: readonly ItemDef[], item: ItemDef): It
 }
 
 /** Una riga che descrive l'oggetto: il tipo e le mani, per esempio "Arma · mischia · 1 mano". */
+/** La categoria con cui si raggruppano gli oggetti (negozio, Briefing): arma da mischia, arma a distanza, armatura o cyberdeck (`kind: 'deck'`, e le vecchie armi a intrusione). */
+export type ItemGroup = 'melee' | 'ranged' | 'armor' | 'deck';
+export const ITEM_GROUPS: readonly ItemGroup[] = ['melee', 'ranged', 'armor', 'deck'];
+export function itemGroup(item: ItemDef): ItemGroup {
+  if (item.kind === 'armor' || item.kind === 'shield') return 'armor';
+  if (item.attack === 'melee') return 'melee';
+  if (item.kind === 'deck') return 'deck';
+  if (item.attack === 'ranged') return 'ranged';
+  return 'deck';
+}
+
 export function itemDetail(item: ItemDef): string {
-  const kind = { weapon: tr('Arma'), shield: tr('Scudo'), armor: tr('Armatura'), other: tr('Oggetto'), event: tr('Evento') }[item.kind];
-  const attack = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
+  const kind = item.kind === 'armor' ? null : { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: '' }[item.kind];
+  const attackName = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
+  // La gittata delle armi a distanza sta tra parentesi accanto al tipo: "distanza (3)".
+  const attack = attackName && item.attack === 'ranged' && item.range ? `${attackName} (${item.range})` : attackName;
   const hands = item.hands ? (item.hands === 1 ? tr('1 mano') : tr('{n} mani', { n: item.hands })) : null;
-  const armor = item.armor ? tr('armatura +{n}', { n: item.armor }) : null;
   const relic = item.tags?.includes('relic') ? tr('Reliquia') : null;
   const rune = item.tags?.includes('rune') ? tr('Runa') : null;
-  return [kind, relic, rune, attack, hands, armor].filter(Boolean).join(' · ');
+  return [kind, relic, rune, attack, hands].filter(Boolean).join(' · ');
 }
 
 export { BACKPACK_LIMIT };

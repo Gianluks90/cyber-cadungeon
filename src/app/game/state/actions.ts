@@ -191,7 +191,7 @@ export function drawTreasureFor(state: GameState, mercenary: Piece, tier: ChestT
       mercenary.coins += item.instant.coins ?? 0;
       const potion = item.instant.potion;
       const gotPotion = !!potion && mercenary.potions.length < POTION_LIMIT && (mercenary.potions.push(potion), true);
-      const gains = [item.instant.coins ? `+${item.instant.coins} E$` : '', gotPotion ? (potion === 'heal' ? tr('+1 pozione di cura') : tr('+1 pozione dell\'Overclock')) : ''].filter(Boolean);
+      const gains = [item.instant.coins ? `+${item.instant.coins} E$` : '', gotPotion ? (potion === 'heal' ? tr('+1 Medi-stim') : tr('+1 Ricarica-OC')) : ''].filter(Boolean);
       lines.push(`${mercenary.name}: ${item.name}${gains.length ? ` (${gains.join(', ')})` : ''}`);
       toDraw += item.instant.draw ?? 0;
       continue;
@@ -758,7 +758,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
     for (const other of adjacentMercenaries(state, board, piece)) {
       for (const kind of POTION_KINDS) {
         if (!piece.potions.includes(kind)) continue;
-        const reason = !canCarryPotion(other) ? tr('{name} porta già {potionLimit} pozioni', { name: other.name, potionLimit: POTION_LIMIT }) : costReason(POTION_GIVE_COST);
+        const reason = !canCarryPotion(other) ? tr('{name} porta già {potionLimit} consumabili', { name: other.name, potionLimit: POTION_LIMIT }) : costReason(POTION_GIVE_COST);
         out.push({ id: `give:${other.id}:${kind}`, kind: 'potion', icon: 'tokens/potion', label: tr('Dai a {name}: {kind}', { name: other.name, kind: POTION_NAMES[kind].toLowerCase() }), cost: POTION_GIVE_COST, enabled: !reason, reason });
       }
       for (const id of [...piece.equipped, ...piece.backpack]) {
@@ -1085,6 +1085,7 @@ export interface InventoryView {
   hands: number;
   armors: number;
   others: number;
+  decks: number;
 }
 
 const ITEM_REASON: Record<ItemResult['code'], string> = {
@@ -1112,6 +1113,7 @@ export function inventoryOf(state: GameState, piece: Piece): InventoryView {
     hands: eq.reduce((n, i) => n + i.hands, 0),
     armors: eq.filter((i) => i.kind === 'armor').length,
     others: eq.filter((i) => i.kind === 'other').length,
+    decks: eq.filter((i) => i.kind === 'deck').length,
   };
 }
 

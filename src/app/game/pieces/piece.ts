@@ -195,6 +195,8 @@ export interface PieceData {
   portrait?: string;
   /** Le pozioni, le monete e gli oggetti con cui parte (se mancano, quelli della scheda). */
   potions?: PotionKind[];
+  /** Gli id della fornitura iniziale del mercenario venduti in preparazione: non partono equipaggiati. */
+  soldGear?: string[];
   coins?: number;
   items?: string[];
   /** Un nemico del catalogo (id in public/enemies/): da lì vengono nome, immagine, dimensione, ferite, velocità, armatura, dadi e abilità, secondo il numero di eroi e se è potenziato. I campi scritti qui li sostituiscono. */
@@ -263,15 +265,18 @@ export function createPieces(
     const bonus = d.bonus;
     const speed = Math.max(1, (d.speed ?? sheet?.speed ?? tier?.speed ?? PAWN_SPEED) + (bonus?.speed ?? 0));
     const wounds = Math.max(1, (d.wounds ?? sheet?.wounds ?? tier?.wounds[playersKey(mercenaryCount)] ?? (d.team === 'mercenary' ? DEFAULT_MERCENARY_WOUNDS : DEFAULT_MONSTER_WOUNDS)) + (bonus?.wounds ?? 0));
-    // Gli oggetti comprati prima di partire: si equipaggiano finché ci stanno, il resto va nello zaino; il prezzo si toglie dalle monete.
-    const bought = d.items ?? sheet?.items ?? [];
+    // La fornitura iniziale (quella non venduta) parte equipaggiata finché ci sta; ciò che si è comprato prima di partire va nello zaino. Il prezzo dei comprati si toglie dalle monete.
+    const sold = new Set(d.soldGear ?? []);
     const equipped: string[] = [];
     const backpack: string[] = [];
-    for (const id of bought) {
+    for (const id of (sheet?.startingGear ?? []).filter((g) => !sold.has(g))) {
       const def = items.get(id);
-      if (def && fitsEquipment(equipped.map((e) => items.get(e)!), def)) equipped.push(id);
+      if (!def) continue;
+      if (fitsEquipment(equipped.map((e) => items.get(e)!), def)) equipped.push(id);
       else backpack.push(id);
     }
+    const bought = d.items ?? sheet?.items ?? [];
+    backpack.push(...bought.filter((id) => items.has(id)));
     const spent = bought.reduce((n, id) => n + (items.get(id)?.price ?? 0), 0);
     return {
       id: d.id,

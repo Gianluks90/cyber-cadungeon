@@ -12,7 +12,7 @@ function inline(text: string): string {
     .replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\*)|(^|[^_\w])_([^_\s][^_]*?)_(?![_\w])/g, (_, p1: string, a: string, p2: string, b: string) => `${p1 ?? p2}<em>${a ?? b}</em>`)
     .replace(/~~([^~]+)~~/g, '<del>$1</del>')
     // `{overclock:3}`, `{mov:2}`, `{alarm:1}`: il valore seguito dall'icona (o la sola icona se manca il numero: `{overclock}`), nel colore del parametro (l'icona la disegna lo stile `.tok`).
-    .replace(/\{(mov|overclock|alarm)(?::(\d+))?\}/g, (_, kind: string, n: string | undefined) => `<span class="tok tok-${kind}">${n ?? ''}<i></i></span>`);
+    .replace(/\{(mov|overclock|alarm|armor|ice|range|health)(?::(\+?)(\d+))?(?:\|([^}]+))?\}/g, (_, kind: string, plus: string | undefined, n: string | undefined, label: string | undefined) => `<span class="tok tok-${kind}">${plus ?? ''}${n ?? ''}<i></i>${label ? ` ${label}` : ''}</span>`);
   return t.replace(/\u0000(\d+)\u0000/g, (_, i: string) => codes[Number(i)]);
 }
 

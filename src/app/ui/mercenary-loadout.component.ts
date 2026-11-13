@@ -3,7 +3,7 @@ import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { SkillDef } from '../game/skills/skill';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
-import { Loadout, ShopData, TREASURE_KEYS, equippedDefs, loadoutCost } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, equippedDefs } from '../game/mercenaries/party-setup';
 import { translate } from '../i18n/i18n.service';
 import { POTION_NAMES } from '../game/markers/marker-rules';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
@@ -79,11 +79,11 @@ export class MercenaryLoadoutComponent {
   /** I parametri che avrà, con le abilità assegnate e gli oggetti comprati. */
   protected readonly stats = computed(() => {
     const shop = this.shop();
-    return mercenaryStats(this.mercenary(), this.skills(), shop ? equippedDefs(this.loadout(), shop) : []);
+    return mercenaryStats(this.mercenary(), this.skills(), shop ? equippedDefs(this.loadout(), shop, this.mercenary().startingGear ?? []) : []);
   });
   protected readonly coinsLeft = computed(() => {
     const s = this.shop();
-    return this.mercenary().coins - (s ? loadoutCost(this.loadout(), s) : 0);
+    return s ? budgetLeft(this.mercenary().startingGear ?? [], this.loadout(), s) : 0;
   });
   /** I nomi di ciò che ha comprato (con le copie raggruppate: "Spada ×2" non serve, di solito è una per tipo). */
   protected readonly names = computed(() => {

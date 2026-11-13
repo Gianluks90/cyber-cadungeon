@@ -24,10 +24,10 @@ import { ItemCardComponent } from './item-card.component';
       <section>
         <div class="row"><span class="coins" [title]="'Denaro del mercenario' | tr">{{ money(h.coins) }}<small>{{ 'Denaro' | tr }}</small></span></div>
 
-        <h3>{{ 'Pozioni' | tr }}</h3>
+        <h3>{{ 'Consumabili' | tr }}</h3>
         <div class="row">
           @for (slot of slots(h.potions); track $index) {
-            <span class="potion" [class.empty]="!slot" [style.color]="slot ? 'var(--cad-potion-' + slot + ')' : null" [title]="(slot === 'heal' ? 'Pozione curativa' : slot === 'overclock' ? 'Pozione dell\\'Overclock' : 'Posto libero') | tr">
+            <span class="potion" [class.empty]="!slot" [style.color]="slot ? 'var(--cad-potion-' + slot + ')' : null" [title]="(slot === 'heal' ? 'Medi-stim' : slot === 'overclock' ? 'Ricarica-OC' : 'Posto libero') | tr">
               <app-icon name="tokens/potion" [size]="26" />
             </span>
           }
@@ -48,7 +48,7 @@ import { ItemCardComponent } from './item-card.component';
     }
 
     <ng-template #card let-e>
-      <app-item-card [def]="e.def" [icon]="e.icon" [detail]="e.detail">
+      <app-item-card [def]="e.def" [detail]="e.detail">
         @if (e.use; as u) {
           <!-- Un oggetto che si usa: il costo (overclock, punti movimento) viene prima del testo, e se consuma l'oggetto lo dice dopo. -->
           <button type="button" class="act" [class.overclock]="u.cost.includes('{overclock:')" [class.mov]="!u.cost.includes('{overclock:') && u.cost.includes('{mov:')" [class.off]="!u.enabled" [attr.aria-disabled]="!u.enabled" [title]="u.enabled ? ('Usa {name}' | tr: { name: e.name }) : plain(u.reason ?? '')"

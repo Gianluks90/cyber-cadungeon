@@ -1,28 +1,29 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, viewChild } from '@angular/core';
-import { POTION_LIMIT, POTION_PRICES } from '../game/constants';
+import { POTION_HEAL, POTION_LIMIT, POTION_PRICES } from '../game/constants';
 import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
-import { Loadout, ShopData, TREASURE_KEYS, equippedDefs, loadoutCost, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, equippedDefs, gearSalePrice, loadoutCost, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
 import { ChestTier } from '../game/board/marker';
 import { TREASURE_PRICES } from '../game/constants';
 import { translate } from '../i18n/i18n.service';
-import { itemDetail } from '../game/items/item';
+import { ITEM_GROUPS, ItemGroup, itemDetail, itemGroup } from '../game/items/item';
 import { POTION_NAMES } from '../game/markers/marker-rules';
 import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { SkillDef } from '../game/skills/skill';
 import { BASE_KIT, MOD_SLOTS, ModSlot, modFits, modsCost } from '../game/mods/mod';
-import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
 import { DialogComponent } from './dialog.component';
+import { IconComponent } from './icon.component';
 import { ItemCardComponent } from './item-card.component';
 import { MoneyCounterComponent } from './money-counter.component';
 
 const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
+const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | 'shop.groupArmor' | 'shop.groupDeck'> = { melee: 'shop.groupMelee', ranged: 'shop.groupRanged', armor: 'shop.groupArmor', deck: 'shop.groupDeck' };
 
 /**
  * Il negozio di prima della partita, per un eroe: con le sue monete (300) compra pozioni e oggetti, e può rimettere a posto ciò che ha comprato riavendo tutti i soldi (prima di partire non
@@ -31,7 +32,7 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
+  imports: [AttackDiceComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
@@ -50,90 +51,48 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
         <app-attack-dice [dice]="mercenary().dice" />
       </div>
 
-      <!-- Le mod negli slot dell'arma, dell'armatura e del deck, pagate con gli eurodollari. -->
-      @for (g of modGroups(); track g.slot) {
-        <div class="list">
-          <div class="gear">
-            <b>{{ g.label }}</b><span>{{ g.base.name }}</span>
-            <small>{{ 'briefing.slotsUsed' | t: { used: g.used, max: g.max } }}</small>
-          </div>
-          @for (o of g.options; track o.mod.id) {
-            <div class="row mod" [class.on]="o.on">
-              <div class="what">
-                <b>{{ o.mod.name }}</b>
-                <small>{{ o.mod.text | ct }}</small>
-                @for (r of o.mod.passive?.rules ?? []; track r) { <small>{{ 'briefing.passive' | t }}: {{ r | ct }}</small> }
-                @for (a of o.mod.active ?? []; track a.effect) { <small>{{ 'briefing.active' | t: { n: a.sparks } }}: {{ a.effect | ct }}</small> }
-              </div>
-              <span class="price">{{ money(o.mod.cost) }}</span>
-              <button type="button" class="act" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [title]="o.reason" (click)="toggleMod(g.slot, o.mod.id)">{{ (o.on ? 'briefing.remove' : 'briefing.install') | t }}</button>
-            </div>
-          }
-        </div>
-      }
-
+      <!-- Le sezioni si rimettono una alla volta: per ora ci sono solo i consumabili (al massimo POTION_LIMIT per mercenario). -->
       <h3>{{ 'shop.potions' | t }} <small>{{ 'shop.potionsHint' | t: { n: potionLimit } }}</small></h3>
       <div class="list">
         @for (k of potionKinds; track k) {
           <div class="row">
-            <b>{{ potionName(k) }}</b>
+            <div class="what"><b>{{ potionName(k) }}@if (potionCount(k)) { <span class="count">({{ potionCount(k) }})</span> }</b><small class="fx">
+                @if (k === 'heal') { {{ 'shop.restore' | t }} <span class="life">{{ healAmount }} <app-icon name="favorite" [size]="14" /> {{ 'stats.health' | t }}</span> }
+                @else { {{ 'shop.maxBefore' | t }} <span class="oc"><app-icon name="speed" [size]="18" /> {{ 'stats.overclock' | t }}</span> {{ 'shop.maxAfter' | t }} }
+              </small></div>
             <span class="price">{{ money(potionPrice(k)) }}</span>
-            <button type="button" class="act" [class.off]="!!potionReason(k)" [attr.aria-disabled]="!!potionReason(k)" [title]="potionReason(k)" (click)="buyPotion(k)">{{ 'shop.buy' | t }}</button>
+            <button type="button" class="act cart" [class.off]="!potionCount(k)" [attr.aria-disabled]="!potionCount(k)" [attr.aria-label]="'shop.refund' | t" [title]="'shop.refund' | t" (click)="refundPotion(k)"><app-icon name="remove_shopping_cart" [size]="20" /></button>
+            <button type="button" class="act cart" [class.off]="!!potionReason(k)" [attr.aria-disabled]="!!potionReason(k)" [attr.aria-label]="'shop.buy' | t" [title]="potionReason(k) || ('shop.buy' | t)" (click)="buyPotion(k)"><app-icon name="add_shopping_cart" [size]="20" /></button>
           </div>
         }
       </div>
 
-      @if (treasureTiers().length) {
-        <h3>{{ 'shop.treasures' | t }} <small>{{ 'shop.treasuresHint' | t }}</small></h3>
-        <div class="list">
-          @for (k of treasureTiers(); track k) {
-            <div class="row">
-              <b>{{ treasureName(k) }}</b>
-              <span class="price">{{ money(treasurePrice(k)) }}</span>
-              <button type="button" class="act" [class.off]="!!treasureReason(k)" [attr.aria-disabled]="!!treasureReason(k)" [title]="treasureReason(k)" (click)="buyTreasure(k)">{{ 'shop.buy' | t }}</button>
-            </div>
+      @for (g of itemGroups(); track g.key) {
+        <h3>{{ g.titleKey | t }}</h3>
+        <div class="cards">
+          @for (o of g.offers; track o.id) {
+            <app-item-card [def]="o.def" [detail]="o.detail" [count]="o.count">
+              <button type="button" class="act cart" [class.off]="!o.count" [attr.aria-disabled]="!o.count" [attr.aria-label]="'shop.refund' | t" [title]="'shop.refund' | t" (click)="refundItem(o.id)"><app-icon name="remove_shopping_cart" [size]="20" /></button>
+              <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="'shop.buy' | t" [title]="o.reason || ('shop.buy' | t)" (click)="buyItem(o.id)"><app-icon name="add_shopping_cart" [size]="20" /></button>
+            </app-item-card>
           }
         </div>
       }
 
-      <h3>{{ 'shop.items' | t }}</h3>
-      <div class="cards">
-        @for (o of offers(); track o.id) {
-          <app-item-card [def]="o.def" [icon]="o.def.icon ?? 'inventory_2'" [detail]="o.detail">
-            <span class="stock" [title]="'shop.stock' | t">×{{ o.left }}</span>
-            <button type="button" class="act" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [title]="o.reason" (click)="buyItem(o.id)">{{ 'shop.buy' | t }} · {{ money(o.def.price) }}</button>
-          </app-item-card>
-        }
-      </div>
+      @if (gearOffers().length) {
+        <h3>{{ 'shop.gear' | t }} <small>{{ 'shop.gearHint' | t }}</small></h3>
+        <div class="cards">
+          @for (o of gearOffers(); track o.id) {
+            <app-item-card [class.sold]="o.sold" [def]="o.def" [detail]="o.detail" [price]="o.sale">
+              <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.sold ? 'shop.undoSale' : 'shop.sell') | t" [title]="o.reason || ((o.sold ? 'shop.undoSale' : 'shop.sell') | t)" (click)="toggleSale(o.id)"><app-icon [name]="o.sold ? 'undo' : 'sell'" [size]="20" /></button>
+            </app-item-card>
+          }
+        </div>
+      }
 
-      <h3>{{ 'shop.bought' | t }}</h3>
-      <div class="list">
-        @for (id of loadout().items; track $index) {
-          <div class="row">
-            <b>{{ itemName(id) }}</b>
-            <span class="price">{{ money(itemPrice(id)) }}</span>
-            <button type="button" class="act" (click)="removeItem($index)">{{ 'shop.refund' | t }}</button>
-          </div>
-        }
-        @for (k of loadout().potions; track $index) {
-          <div class="row">
-            <b>{{ potionName(k) }}</b>
-            <span class="price">{{ money(potionPrice(k)) }}</span>
-            <button type="button" class="act" (click)="removePotion($index)">{{ 'shop.refund' | t }}</button>
-          </div>
-        }
-        @for (k of loadout().treasures ?? []; track $index) {
-          <div class="row">
-            <b>{{ treasureName(k) }}</b>
-            <span class="price">{{ money(treasurePrice(k)) }}</span>
-            <button type="button" class="act" (click)="removeTreasure($index)">{{ 'shop.refund' | t }}</button>
-          </div>
-        }
-        @if (!loadout().items.length && !loadout().potions.length && !loadout().treasures?.length) { <p class="none">{{ 'shop.nothing' | t }}</p> }
-      </div>
       <!-- A sinistra del piede, una sola volta, il denaro che resta (un solo budget per mod e oggetti). -->
       <div dialogFooterStart class="budget" [title]="'briefing.budget' | t"><b><app-money-counter [value]="budgetLeft()" /></b></div>
-      <ng-container dialogFooter><button type="button" class="dlg-btn primary" (click)="closed.emit()">{{ 'shop.done' | t }}</button></ng-container>
+      <ng-container dialogFooter><button type="button" class="dlg-btn primary" (click)="closed.emit()">{{ 'shop.confirm' | t }}</button></ng-container>
     </app-dialog>
   `,
   styles: `
@@ -165,6 +124,13 @@ const POTIONS: readonly PotionKind[] = ['heal', 'overclock'];
     .row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
     .row b { flex: 1; min-width: 0; font-weight: 600; }
     .price { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--cad-coin); }
+    .fx { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--c-text-dim); }
+    .fx .life, .fx .oc { display: inline-flex; align-items: center; gap: 4px; }
+    .fx .life { color: var(--c-life); }
+    .fx .oc { color: var(--c-overclock); }
+    .act.cart { display: inline-flex; align-items: center; padding: 4px 8px; }
+    .cards app-item-card.sold { opacity: 0.5; }
+    .count { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
     .stock { margin-right: auto; font-size: 12px; color: var(--c-text-dim); font-variant-numeric: tabular-nums; }
     .none { margin: 0; color: var(--c-text-dim); font-size: 12px; }
     .act { padding: 4px 10px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; white-space: nowrap; border: 1px solid var(--c-line-strong); font: 12px/1.2 var(--font-ui); transition: border-color 0.15s, color 0.15s; }
@@ -187,12 +153,23 @@ export class PregameShopDialogComponent {
   private readonly i18n = inject(I18nService);
   protected readonly potionKinds = POTIONS;
   /** I parametri che avrà, con le abilità assegnate e gli oggetti comprati (per la carta a sinistra). */
-  protected readonly stats = computed(() => mercenaryStats(this.mercenary(), this.skills(), equippedDefs(this.loadout(), this.shop())));
+  protected readonly stats = computed(() => mercenaryStats(this.mercenary(), this.skills(), equippedDefs(this.loadout(), this.shop(), this.gear())));
   protected readonly potionLimit = POTION_LIMIT;
   /** I tipi di tesoro che questa avventura vende già in preparazione. */
   protected readonly treasureTiers = computed(() => this.shop().treasureTiers);
   /** Gli eurodollari che restano: un solo budget per mod, oggetti, pozioni e tesori. */
-  protected readonly budgetLeft = computed(() => this.shop().budget - modsCost(this.loadout().mods, this.shop().mods) - loadoutCost(this.loadout(), this.shop()));
+  /** La fornitura iniziale del mercenario (gli id) e quella che si può vendere: ognuna vale metà del prezzo, arrotondata a 25 (minimo 25). */
+  protected readonly gear = computed(() => this.mercenary().startingGear ?? []);
+  protected readonly gearOffers = computed(() =>
+    this.gear().flatMap((id) => {
+      const def = this.shop().items.get(id);
+      if (!def) return [];
+      const sold = (this.loadout().soldGear ?? []).includes(id);
+      const sale = gearSalePrice(def.price);
+      return [{ id, def, sold, sale, detail: itemDetail(def), reason: sold && sale > this.budgetLeft() ? this.i18n.t('shop.noCoins') : '' }];
+    }),
+  );
+  protected readonly budgetLeft = computed(() => budgetLeft(this.gear(), this.loadout(), this.shop()));
   protected readonly money = money;
   /** Per arma, armatura e deck: l'oggetto base, gli slot usati e le mod che ci stanno (con il motivo se non si può installare). */
   protected readonly modGroups = computed(() => {
@@ -223,10 +200,12 @@ export class PregameShopDialogComponent {
       .map((def) => {
         const left = this.left()[def.id];
         const reason = left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.budgetLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop) ? '' : this.i18n.t('shop.noRoom');
-        return { id: def.id, def, left, reason, detail: itemDetail(def) };
+        return { id: def.id, def, left, reason, detail: itemDetail(def), count: l.items.filter((id) => id === def.id).length, group: itemGroup(def) };
       })
       .sort((a, b) => a.def.name.localeCompare(b.def.name, 'it'));
   });
+  /** Gli oggetti in vendita divisi per categoria (nell'ordine di `ITEM_GROUPS`), senza le categorie vuote. */
+  protected readonly itemGroups = computed(() => ITEM_GROUPS.map((g) => ({ key: g, titleKey: GROUP_TITLES[g], offers: this.offers().filter((o) => o.group === g) })).filter((g) => g.offers.length));
 
   constructor() {
     // La carta delle abilità scorre da sola, su e giù, e si ferma sotto il puntatore (e con la riduzione del movimento sta ferma: si scorre a mano).
@@ -275,6 +254,13 @@ export class PregameShopDialogComponent {
     this.changed.emit({ ...this.loadout(), mods: { ...this.loadout().mods, [slot]: o.on ? current.filter((m) => m !== id) : [...current, id] } });
   }
 
+  protected readonly healAmount = POTION_HEAL;
+  protected potionCount = (k: PotionKind) => this.loadout().potions.filter((p) => p === k).length;
+  /** Rimborsa un consumabile di questo tipo (l'ultimo comprato): si riavanno tutti i soldi. */
+  protected refundPotion(k: PotionKind) {
+    const i = this.loadout().potions.lastIndexOf(k);
+    if (i >= 0) this.removePotion(i);
+  }
   protected potionName =(k: PotionKind) => POTION_NAMES[k];
   protected potionPrice = (k: PotionKind) => POTION_PRICES[k];
   protected itemName = (id: string) => this.shop().items.get(id)?.name ?? id;
@@ -308,6 +294,20 @@ export class PregameShopDialogComponent {
   protected buyItem(id: string) {
     const o = this.offers().find((x) => x.id === id);
     if (o && !o.reason) this.changed.emit({ ...this.loadout(), items: [...this.loadout().items, id] });
+  }
+
+  /** Rimborsa una copia di questo oggetto (l'ultima comprata). */
+  /** Vende un oggetto della fornitura iniziale (o annulla la vendita, se serve il budget per riprenderlo). */
+  protected toggleSale(id: string) {
+    const o = this.gearOffers().find((x) => x.id === id);
+    if (!o || o.reason) return;
+    const sold = this.loadout().soldGear ?? [];
+    this.changed.emit({ ...this.loadout(), soldGear: o.sold ? sold.filter((x) => x !== id) : [...sold, id] });
+  }
+
+  protected refundItem(id: string) {
+    const i = this.loadout().items.lastIndexOf(id);
+    if (i >= 0) this.removeItem(i);
   }
 
   protected removeItem(i: number) {

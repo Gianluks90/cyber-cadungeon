@@ -267,7 +267,7 @@
       "kind": "weapon",
       "attack": "melee",
       "hands": 2,
-      "price": 0,
+      "price": 150,
       "slots": 2,
       "dice": [
         "red",
@@ -287,24 +287,18 @@
       "kind": "armor",
       "hands": 0,
       "armor": 2,
-      "price": 0,
+      "price": 120,
       "slots": 2,
       "icon": "frame_person",
-      "speedCap": 4,
-      "rules": [
-        "Velocità massima 4"
-      ]
+      "speedCap": 4
     },
     {
       "id": "berserker-mk1",
       "name": "Berserker MK-I",
-      "kind": "other",
+      "kind": "deck",
       "hands": 0,
-      "price": 0,
+      "price": 100,
       "slots": 0,
-      "tags": [
-        "deck"
-      ],
       "icon": "deployed_code",
       "effects": [
         {
@@ -314,8 +308,7 @@
         }
       ],
       "rules": [
-        "ICE 1",
-        "2 Overclock per entrare in Berserk"
+        "Attiva **Berserk** al costo di {overclock:2}"
       ]
     },
     {
@@ -324,7 +317,7 @@
       "kind": "weapon",
       "attack": "melee",
       "hands": 1,
-      "price": 0,
+      "price": 50,
       "slots": 1,
       "dice": [
         "red"
@@ -343,7 +336,7 @@
       "kind": "armor",
       "hands": 0,
       "armor": 0,
-      "price": 0,
+      "price": 40,
       "slots": 2,
       "icon": "frame_person",
       "effects": [
@@ -352,18 +345,15 @@
           "stat": "ice",
           "amount": 1
         }
-      ],
-      "rules": [
-        "ICE +1"
       ]
     },
     {
       "id": "kitsune-9",
       "name": "Kitsune-9",
-      "kind": "weapon",
+      "kind": "deck",
       "attack": "intrusion",
       "hands": 0,
-      "price": 0,
+      "price": 120,
       "slots": 3,
       "dice": [
         "white",
@@ -380,9 +370,6 @@
           "stat": "ice",
           "amount": 2
         }
-      ],
-      "rules": [
-        "ICE 2"
       ]
     },
     {
@@ -391,7 +378,7 @@
       "kind": "weapon",
       "attack": "ranged",
       "hands": 2,
-      "price": 0,
+      "price": 200,
       "slots": 1,
       "dice": [
         "blue",
@@ -419,20 +406,17 @@
       "kind": "armor",
       "hands": 0,
       "armor": 1,
-      "price": 0,
+      "price": 80,
       "slots": 2,
       "icon": "frame_person"
     },
     {
       "id": "headshot-beta",
       "name": "Headshot Beta",
-      "kind": "other",
+      "kind": "deck",
       "hands": 0,
-      "price": 0,
+      "price": 100,
       "slots": 1,
-      "tags": [
-        "deck"
-      ],
       "icon": "deployed_code",
       "effects": [
         {
@@ -449,9 +433,33 @@
         }
       ],
       "rules": [
-        "ICE 2",
-        "+1 gittata alle armi a distanza"
+        "+{range:1|Gittata}"
       ]
+    },
+    {
+      "id": "light-pistol",
+      "name": "Mako-3",
+      "kind": "weapon",
+      "attack": "ranged",
+      "hands": 1,
+      "price": 150,
+      "slots": 2,
+      "dice": [
+        "blue",
+        "green"
+      ],
+      "range": 3,
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        },
+        {
+          "cost": 3,
+          "effect": "+1 gittata"
+        }
+      ],
+      "icon": "target"
     }
   ]
 }

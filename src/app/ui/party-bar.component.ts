@@ -113,7 +113,7 @@ const ACTION_LABEL: Record<MercenaryAction, string> = { advance: '', get run() {
               @if (m.kind === 'mercenary') {
                 <span class="head-btns">
                   @if (m.cityPanel && !publicView()) { <button type="button" class="info-btn" data-sheet-toggle [attr.aria-label]="'Città di {name}' | tr: { name: m.name }" [title]="'Città' | tr" (click)="city.emit(m.id)"><app-icon name="castle" [size]="18" /></button> }
-                  <span class="potion-count" [title]="'Pozioni' | tr"><app-icon name="tokens/potion" [size]="20" />{{ m.potions }}</span>
+                  <span class="potion-count" [title]="'Consumabili' | tr"><app-icon name="tokens/potion" [size]="20" />{{ m.potions }}</span>
                   @if (!publicView()) { <button type="button" class="info-btn" data-sheet-toggle [attr.aria-label]="'Inventario di {name}' | tr: { name: m.name }" [title]="'Inventario (I)' | tr" (click)="inventory.emit(m.id)"><app-icon name="tokens/items/backpack" [size]="20" /></button> }
                 </span>
               }

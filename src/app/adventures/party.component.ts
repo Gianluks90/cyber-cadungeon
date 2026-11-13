@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PARTY_SIZE } from '../game/constants';
 import type { AdventureSetup } from '../game/map/map-data';
 import { Archetype, MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
-import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
+import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, budgetLeft, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -191,7 +191,7 @@ export class PartyComponent {
   /** Prima si scelgono gli eroi, poi (confermata la scelta) si comprano gli oggetti. */
   protected readonly step = signal<'pick' | 'gear'>('pick');
   protected readonly loadouts = signal<Record<string, Loadout>>({});
-  protected readonly startCoins = computed(() => this.squad()[0]?.coins ?? 300);
+  protected readonly startCoins = computed(() => this.shop()?.budget ?? 300);
   protected readonly full = computed(() => this.chosen().length >= PARTY_SIZE);
 
   constructor() {
@@ -283,7 +283,7 @@ export class PartyComponent {
   /** Gli eroi che non hanno speso niente (hanno ancora tutte le monete): prima di partire si chiede conferma. */
   protected readonly unspentNames = computed(() => {
     const shop = this.shop();
-    return this.squad().filter((h) => !shop || loadoutCost(this.loadoutOf(h.id), shop) === 0).map((h) => h.name).join(', ');
+    return this.squad().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop) === shop.budget).map((h) => h.name).join(', ');
   });
   protected readonly askUnspent = signal(false);
   /** Entrando nell'Equipaggiamento una dialog avvisa che le abilità secondarie sono state assegnate a caso. */
@@ -303,7 +303,7 @@ export class PartyComponent {
     const setup: PartySetup = {};
     for (const h of this.squad()) {
       const l = this.loadoutOf(h.id);
-      setup[h.id] = { ...l, coins: h.coins - (shop ? loadoutCost(l, shop) : 0), skillCards: this.skillCards()[h.id] ?? [] };
+      setup[h.id] = { ...l, coins: shop ? Math.max(0, budgetLeft(h.startingGear ?? [], l, shop)) : 0, skillCards: this.skillCards()[h.id] ?? [] };
     }
     partySetupStore.save(setup);
     void this.router.navigate(['/play', this.map], { queryParams: { new: 1, party: this.chosen().join(',') } });

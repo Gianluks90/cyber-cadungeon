@@ -51,7 +51,7 @@ export type CityEvent =
         }
 
         @if (c.shop; as shop) {
-          <h3>{{ 'Pozioni' | tr }}</h3>
+          <h3>{{ 'Consumabili' | tr }}</h3>
           <div class="list">
             @for (o of shop.potions; track o.id) { <ng-container [ngTemplateOutlet]="offer" [ngTemplateOutletContext]="{ $implicit: o, event: { kind: 'potion', id: o.id }, label: ('Compra' | tr) }" /> }
           </div>
@@ -62,7 +62,7 @@ export type CityEvent =
           <h3>{{ 'Oggetti' | tr }}</h3>
           <div class="cards">
             @for (o of shop.items; track o.id) {
-              <app-item-card [def]="o.def" [icon]="o.def.icon ?? 'inventory_2'" [detail]="o.detail">
+              <app-item-card [def]="o.def" [detail]="o.detail">
                 <span class="stock" [title]="'Copie rimaste in negozio' | tr">×{{ o.stock }}</span>
                 <button type="button" class="act" [class.off]="!o.enabled" [attr.aria-disabled]="!o.enabled" [title]="o.reason ?? ''" (click)="o.enabled ? cityAction.emit({ kind: 'item', id: o.id }) : denied.emit(o.reason ?? notPossible())">{{ 'Compra' | tr }} · {{ o.price }}</button>
               </app-item-card>

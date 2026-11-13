@@ -613,7 +613,7 @@ export class GameSceneComponent implements OnDestroy {
       // Gli acquisti fatti prima di partire (scelta degli eroi o sala d'attesa): dotazione e monete rimaste; senza, valgono i dati della scheda.
       const setup = partySetupStore.take();
       const modCatalog = await loadModCatalog();
-      const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards, modEffects: passiveEffects(setup[mercenary].mods, modCatalog), modSparks: activeSparks(setup[mercenary].mods, modCatalog) } : {}) }));
+      const party: PieceData[] = hasMercenaries ? [] : partyIds.map((mercenary, i) => ({ id: `h${i + 1}`, team: 'mercenary', mercenary, x: start.x, y: start.y, ...(setup[mercenary] ? { items: setup[mercenary].items, potions: setup[mercenary].potions, soldGear: setup[mercenary].soldGear, coins: setup[mercenary].coins, skillCards: setup[mercenary].skillCards, modEffects: passiveEffects(setup[mercenary].mods, modCatalog), modSparks: activeSparks(setup[mercenary].mods, modCatalog) } : {}) }));
       const mapData = party.length ? { ...data, pieces: [...party, ...(data.pieces ?? [])] } : data;
       const sheets = await loadMercenarySheets((mapData.pieces ?? []).map((p) => p.mercenary));
       const [items, shopStock, skills, enemies, adversaryCards, familiarDefs] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadSkillCatalog(), loadEnemyCatalog(), loadAdversaryCatalog(), loadFamiliarCatalog()]);
@@ -2844,11 +2844,11 @@ export class GameSceneComponent implements OnDestroy {
     // Le pozioni non sono oggetti del catalogo (ogni eroe ne porta fino a 3 nel suo set) e altri consumabili potranno aggiungersi: hanno la loro categoria, con il prezzo del negozio.
     const potion = (id: string, name: string, kind: PotionKind, rules: string[]): CatalogEntry => {
       const def: ItemDef = { id, name, kind: 'other', hands: 0, price: POTION_PRICES[kind], rules };
-      return { kind: 'item', id, name, def, icon: 'tokens/potion', detail: tr('Pozione'), count: null, search: [name, tr('pozione'), ...rules].join(' ') };
+      return { kind: 'item', id, name, def, icon: 'tokens/potion', detail: tr('Consumabile'), count: null, search: [name, tr('consumabile'), ...rules].join(' ') };
     };
     const potionEntries: CatalogEntry[] = [
-      potion('potion-heal', tr('Pozione curativa'), 'heal', [tr('Recupera {potionHeal} ferite. Berla costa {potionDrinkCos} punto movimento.', { potionHeal: POTION_HEAL, potionDrinkCos: POTION_DRINK_COST }), tr('Si porta fino a 3 pozioni.')]),
-      potion('potion-overclock', tr('Pozione dell\'Overclock'), 'overclock', [tr('Riporta l\'overclock {overclock} al massimo. Berla costa {mov:1}.'), tr('Si porta fino a 3 pozioni.')]),
+      potion('potion-heal', tr('Medi-stim'), 'heal', [tr('Recupera {potionHeal} ferite. Berla costa {potionDrinkCos} punto movimento.', { potionHeal: POTION_HEAL, potionDrinkCos: POTION_DRINK_COST }), tr('Si portano fino a 3 consumabili.')]),
+      potion('potion-overclock', tr('Ricarica-OC'), 'overclock', [tr('Riporta l\'overclock {overclock} al massimo. Berla costa {mov:1}.'), tr('Si portano fino a 3 consumabili.')]),
     ];
     const mercenaryEntries = mercenaries.map((h): CatalogEntry => ({
       kind: 'mercenary', id: h.id, name: h.name, sheet: h, search: [h.name, h.class].join(' '),
@@ -2862,7 +2862,7 @@ export class GameSceneComponent implements OnDestroy {
       { id: 'familiars', group: tr('Personaggi'), name: tr('Famigli'), entries: familiarEntries },
       { id: 'enemies', group: tr('Personaggi'), name: tr('Nemici'), entries: enemyEntries },
       { id: 'shop', group: tr('Oggetti'), name: tr('Negozio'), entries: itemsOf((d) => d.id in s.shop, (d) => s.shop[d.id] ?? 0) },
-      { id: 'potions', group: tr('Consumabili'), name: tr('Pozioni'), entries: potionEntries },
+      { id: 'potions', group: tr('Consumabili'), name: tr('Consumabili'), entries: potionEntries },
       { id: 'copper', group: tr('Tesori'), name: tr('Rame'), entries: itemsOf((d) => d.deck === 'copper', (d) => d.copies ?? 1) },
       { id: 'silver', group: tr('Tesori'), name: tr('Argento'), entries: itemsOf((d) => d.deck === 'silver', (d) => d.copies ?? 1) },
       { id: 'gold', group: tr('Tesori'), name: tr('Oro'), entries: itemsOf((d) => d.deck === 'gold', (d) => d.copies ?? 1) },
@@ -4459,7 +4459,7 @@ export class GameSceneComponent implements OnDestroy {
     if (!r) return;
     const to = this.state.pieces.find((p) => p.id === receiverId)?.name ?? '';
     if (r.code === 'given') this.showNotice(tr('{item} data a {to}', { item: POTION_NAMES[kind], to }), 'tokens/potion');
-    else if (r.code === 'full') this.showNotice(tr('{to} porta già troppe pozioni', { to }), 'warning');
+    else if (r.code === 'full') this.showNotice(tr('{to} porta già troppi consumabili', { to }), 'warning');
     else if (r.code === 'cost') this.showNotice(tr('Serve {mov:1}'), 'warning');
     else if (r.code === 'far') this.showNotice(tr('{to} non è abbastanza vicino', { to }), 'warning');
   }

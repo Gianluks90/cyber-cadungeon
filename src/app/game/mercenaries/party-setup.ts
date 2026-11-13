@@ -1,5 +1,5 @@
 import { ChestTier, PotionKind } from '../board/marker';
-import { ModDef, ModLoadout, loadModCatalog, validMods } from '../mods/mod';
+import { ModDef, ModLoadout, loadModCatalog, modsCost, validMods } from '../mods/mod';
 import { BACKPACK_LIMIT, BRIEFING_BUDGET, POTION_LIMIT, POTION_PRICES, TREASURE_PRICES } from '../constants';
 import type { AdventureSetup } from '../map/map-data';
 import { SKILL_SCHOOLS, SkillSchool } from '../skills/skill';
@@ -14,6 +14,8 @@ export interface Loadout {
   treasures?: ChestTier[];
   /** Le mod del Briefing negli slot di arma, armatura e deck. Si pagano con il budget del Briefing, non con le monete. */
   mods?: ModLoadout;
+  /** Gli id della fornitura iniziale (`MercenarySheet.startingGear`) venduti in preparazione: non partono equipaggiati e il loro valore di vendita torna al budget. */
+  soldGear?: string[];
 }
 
 /** Le chiavi di traduzione dei nomi dei tesori comprabili in preparazione. */
@@ -33,7 +35,7 @@ export interface ShopData {
 }
 
 export async function loadPregameShop(setup?: AdventureSetup): Promise<ShopData> {
-  const [items, stock, mods] = await Promise.all([loadItemCatalog(), loadShopStock('city'), loadModCatalog()]);
+  const [items, stock, mods] = await Promise.all([loadItemCatalog(), loadShopStock('briefing'), loadModCatalog()]);
   return { items, stock, treasureTiers: setup?.pregameTreasures ?? [], mods, budget: briefingBudget(setup) };
 }
 
@@ -76,28 +78,50 @@ export function stockLeft(shop: ShopData, loadouts: readonly Loadout[]): Record<
   return left;
 }
 
-/** Le schede degli oggetti che l'eroe riesce a equipaggiare con questo `loadout`. */
-export function equippedDefs(l: Loadout, shop: ShopData): ItemDef[] {
-  return (placeItems(l.items, shop)?.equipped ?? []).flatMap((id) => shop.items.get(id) ?? []);
+/** Quanto vale in E$ vendere un oggetto della fornitura iniziale: metà del suo prezzo, arrotondata al multiplo di 25 più vicino, almeno 25. */
+export function gearSalePrice(price: number): number {
+  return Math.max(25, Math.round(price / 2 / 25) * 25);
 }
 
-/** Dove va ogni oggetto: come in partita, si equipaggia finché ci sta, il resto va nello zaino (se c'è posto). Null se qualcosa non ha posto. */
+/** Gli oggetti della fornitura iniziale che l'eroe ha ancora (non venduti), come schede; quelli che non sono nel catalogo si saltano. */
+export function startingKit(startingGear: readonly string[], l: Loadout, shop: ShopData): ItemDef[] {
+  const sold = new Set(l.soldGear ?? []);
+  return startingGear.filter((id) => !sold.has(id)).flatMap((id) => shop.items.get(id) ?? []);
+}
+
+/** Quanti E$ ha ricavato vendendo parte della fornitura iniziale. */
+export function gearSales(startingGear: readonly string[], l: Loadout, shop: ShopData): number {
+  return startingGear.filter((id) => (l.soldGear ?? []).includes(id)).reduce((n, id) => n + gearSalePrice(shop.items.get(id)?.price ?? 0), 0);
+}
+
+/** Il budget che resta: un solo conto per mod, oggetti, consumabili e tesori, più quanto si è ricavato vendendo la fornitura iniziale. */
+export function budgetLeft(startingGear: readonly string[], l: Loadout, shop: ShopData): number {
+  return shop.budget - modsCost(l.mods, shop.mods) - loadoutCost(l, shop) + gearSales(startingGear, l, shop);
+}
+
+/** Le schede degli oggetti equipaggiati in partenza: la fornitura iniziale non venduta, che si equipaggia finché ci sta (ciò che si compra va nello zaino). */
+export function equippedDefs(l: Loadout, shop: ShopData, startingGear: readonly string[]): ItemDef[] {
+  const equipped: ItemDef[] = [];
+  for (const def of startingKit(startingGear, l, shop)) if (fitsEquipment(equipped, def)) equipped.push(def);
+  return equipped;
+}
+
+/** Dove va ciò che si compra: sempre nello zaino (BACKPACK_LIMIT posti). Null se qualcosa non è nel catalogo, non si può portare o non c'è posto. */
 export function placeItems(ids: readonly string[], shop: ShopData): { equipped: string[]; backpack: string[] } | null {
-  const equipped: string[] = [];
   const backpack: string[] = [];
   for (const id of ids) {
     const def = shop.items.get(id);
-    if (!def) return null;
-    if (fitsEquipment(equipped.map((e) => shop.items.get(e)!), def)) equipped.push(id);
-    else if (!def.carried && backpack.length < BACKPACK_LIMIT) backpack.push(id);
-    else return null;
+    if (!def || def.carried || backpack.length >= BACKPACK_LIMIT) return null;
+    backpack.push(id);
   }
-  return { equipped, backpack };
+  return { equipped: [], backpack };
 }
 
-/** Il `loadout` è valido? Oggetti in vendita, copie sufficienti (`others`: ciò che hanno già comprato gli altri eroi), pozioni nei limiti, posto per tutto e monete bastanti. */
-export function validLoadout(l: Loadout, coins: number, shop: ShopData, others: readonly Loadout[]): boolean {
+/** Il `loadout` è valido? Oggetti in vendita, copie sufficienti (`others`: ciò che hanno già comprato gli altri eroi), pozioni nei limiti, posto per tutto e budget sufficiente (contando le vendite). */
+export function validLoadout(l: Loadout, startingGear: readonly string[], shop: ShopData, others: readonly Loadout[]): boolean {
   if (!Array.isArray(l?.items) || !Array.isArray(l?.potions)) return false;
+  const sold = l.soldGear ?? [];
+  if (!Array.isArray(sold) || new Set(sold).size !== sold.length || sold.some((id) => !startingGear.includes(id))) return false;
   if (l.potions.length > POTION_LIMIT || l.potions.some((k) => !(k in POTION_PRICES))) return false;
   const treasures = l.treasures ?? [];
   if (!Array.isArray(treasures) || treasures.some((t) => !shop.treasureTiers.includes(t))) return false;
@@ -108,7 +132,7 @@ export function validLoadout(l: Loadout, coins: number, shop: ShopData, others: 
     left[id] -= 1;
   }
   if (!validMods(l.mods, shop.mods, shop.items, shop.budget)) return false;
-  return !!placeItems(l.items, shop) && loadoutCost(l, shop) <= coins;
+  return !!placeItems(l.items, shop) && budgetLeft(startingGear, l, shop) >= 0;
 }
 
 /** I dati passati dalla scelta degli eroi alla partita: per ogni eroe ciò che ha comprato e le monete che gli restano. */

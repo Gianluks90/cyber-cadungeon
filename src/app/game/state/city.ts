@@ -236,7 +236,7 @@ export function cityView(state: GameState, piece: Piece): CityView | null {
     service: stay.service,
     visited: stay.visited,
     services: [
-      { id: 'shop', name: SERVICE_NAMES.shop, blurb: tr('Pozioni, tesori e vendita degli oggetti'), enabled: choosing, reason: lock(choosing, reasonLocked) },
+      { id: 'shop', name: SERVICE_NAMES.shop, blurb: tr('Consumabili, tesori e vendita degli oggetti'), enabled: choosing, reason: lock(choosing, reasonLocked) },
       { id: 'camp', name: SERVICE_NAMES.camp, blurb: tr('Nuove abilità e dadi d\'attacco'), enabled: choosing, reason: lock(choosing, reasonLocked) },
       { id: 'temple', name: SERVICE_NAMES.temple, blurb: tr('Ripristino della salute'), enabled: choosing, reason: lock(choosing, reasonLocked) },
     ],
@@ -249,7 +249,7 @@ export function cityView(state: GameState, piece: Piece): CityView | null {
       potions: (['heal', 'overclock'] as PotionKind[]).map((k) => ({
         id: k, name: POTION_NAMES[k], price: POTION_PRICES[k],
         enabled: piece.potions.length < POTION_LIMIT && piece.coins >= POTION_PRICES[k],
-        reason: piece.potions.length >= POTION_LIMIT ? tr('Porti già {potionLimit} pozioni', { potionLimit: POTION_LIMIT }) : coins(POTION_PRICES[k]),
+        reason: piece.potions.length >= POTION_LIMIT ? tr('Porti già {potionLimit} consumabili', { potionLimit: POTION_LIMIT }) : coins(POTION_PRICES[k]),
       })),
       treasures: (['copper', 'silver', 'gold'] as ChestTier[]).map((t) => ({
         id: t, name: TIER_NAMES[t], price: TREASURE_PRICES[t],

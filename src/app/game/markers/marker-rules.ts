@@ -20,7 +20,7 @@ export interface MarkerEvent {
 const RUNE_NAMES: Record<RuneColor, string> = { get red() { return tr('rossa'); }, get blue() { return tr('blu'); }, get green() { return tr('verde'); } };
 
 /** Il nome di una pozione. */
-export const POTION_NAMES = { get heal() { return tr('Pozione curativa'); }, get overclock() { return tr('Pozione dell\'Overclock'); } } as const;
+export const POTION_NAMES = { get heal() { return tr('Medi-stim'); }, get overclock() { return tr('Ricarica-OC'); } } as const;
 
 /**
  * La pedina `piece` è appena entrata nella sua casella (un passo, non per forza l'ultimo): ci sono segnalini che reagiscono?
@@ -56,7 +56,7 @@ export function pickupAt(board: Board, piece: Pick<Piece, 'cell'>): PickupMarker
   return m && (m.type === 'potion' || m.type === 'coins' || m.type === 'key' || m.type === 'rune' || m.type === 'item') && !m.collected ? m : null;
 }
 
-/** Il nome con cui l'oggetto compare nel menu ("Pozione curativa", "Denaro"…). */
+/** Il nome con cui l'oggetto compare nel menu ("Medi-stim", "Denaro"…). */
 export function pickupName(state: GameState, m: PickupMarker): string {
   if (m.type === 'potion') return POTION_NAMES[m.kind];
   if (m.type === 'coins') return tr('Denaro');
@@ -67,7 +67,7 @@ export function pickupName(state: GameState, m: PickupMarker): string {
 
 /** Perché `piece` non può raccogliere l'oggetto (null se può). */
 export function pickupBlocked(state: GameState, piece: Piece, m: PickupMarker): string | null {
-  if (m.type === 'potion' && piece.potions.length >= POTION_LIMIT) return tr('Porti già {potionLimit} pozioni', { potionLimit: POTION_LIMIT });
+  if (m.type === 'potion' && piece.potions.length >= POTION_LIMIT) return tr('Porti già {potionLimit} consumabili', { potionLimit: POTION_LIMIT });
   if (m.type === 'item' && !canReceiveItem(state, piece, m.itemId)) return tr('{name} non ha posto', { name: piece.name });
   return null;
 }

@@ -326,6 +326,38 @@ app-dialog ::placeholder {
   --tok-icon: var(--ico-skull);
 }
 
+.tok-armor {
+  color: var(--c-armor);
+}
+
+.tok-armor i {
+  --tok-icon: var(--ico-shield);
+}
+
+.tok-ice {
+  color: var(--c-ice);
+}
+
+.tok-ice i {
+  --tok-icon: var(--ico-ac_unit);
+}
+
+.tok-range {
+  color: var(--c-die-ranged);
+}
+
+.tok-range i {
+  display: none; /* la gittata non ha icona: solo numero e nome */
+}
+
+.tok-health {
+  color: var(--c-life);
+}
+
+.tok-health i {
+  --tok-icon: var(--ico-favorite);
+}
+
 /* Mappa del mondo (MapLibre): il suo CSS e l'attribuzione di Protomaps/OpenStreetMap, obbligatoria per licenza, leggibile su fondo scuro con i token del progetto. */
 .maplibregl-ctrl-attrib {
   margin: 0 10px 10px 0 !important; /* stessa distanza dai bordi di tasti e orologio */

@@ -1,8 +1,8 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
-import { ItemDef } from '../game/items/item';
-import { Loadout, ShopData, loadoutCost } from '../game/mercenaries/party-setup';
+import { ItemDef, itemGroup } from '../game/items/item';
+import { Loadout, ShopData, budgetLeft } from '../game/mercenaries/party-setup';
 import { modsCost } from '../game/mods/mod';
 import { SkillDef } from '../game/skills/skill';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
@@ -43,7 +43,11 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     </ng-template>
 
     <section class="kit" [attr.aria-label]="'briefing.kit' | t">
-      @if (kit().length) {
+      @if (kitSold()) {
+        <h3>{{ 'briefing.kit' | t }}</h3>
+        <hr />
+        <p class="empty">{{ 'briefing.kitSold' | t }}</p>
+      } @else if (kit().length) {
         <h3>{{ 'briefing.kit' | t }}</h3>
         <hr />
         <ul>
@@ -104,6 +108,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .hand:last-child:not(:first-child) { transform: scaleX(-1); }
     .inventory { padding: 10px 12px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
     .inventory h3 { margin: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    .kit .empty { margin: 0; color: var(--c-text-dim); font-size: 13px; }
     .inventory p { margin: 0; color: var(--c-text-dim); font-size: 13px; }
     .kit:has(.error) { padding: 0; border-color: var(--c-error); background: color-mix(in srgb, var(--c-error) 14%, var(--c-bg)); }
     .error { display: flex; align-items: center; gap: 8px; margin: 0; padding: 10px 12px; color: var(--c-error); font-size: 13px; font-weight: 600; }
@@ -140,7 +145,7 @@ export class BriefingColumnComponent {
   /** Gli eurodollari che restano: un solo budget per mod, oggetti, pozioni e tesori. */
   protected readonly budgetLeft = computed(() => {
     const s = this.shop();
-    return s ? s.budget - modsCost(this.loadout().mods, s.mods) - loadoutCost(this.loadout(), s) : 0;
+    return s ? budgetLeft(this.mercenary().startingGear ?? [], this.loadout(), s) : 0;
   });
   /** Il budget mostrato dal badge: segue quello vero solo a negozio chiuso, così il conto scorre quando si preme «Fatto» e non durante gli acquisti. */
   protected readonly badgeBudget = signal(0);
@@ -149,18 +154,19 @@ export class BriefingColumnComponent {
     if (!this.open()) this.badgeBudget.set(left);
   });
   /** Gli oggetti della fornitura iniziale; vuoto se il mercenario non ce l'ha nel json (o non è nel catalogo): la colonna mostra l'errore. */
-  protected readonly kit = computed<ItemDef[]>(() => {
+  /** La fornitura iniziale completa; vuota se il mercenario non ce l'ha nel json o qualcosa non è nel catalogo: la colonna mostra l'errore. */
+  private readonly allGear = computed<ItemDef[]>(() => {
     const s = this.shop();
     const ids = this.mercenary().startingGear ?? [];
     const defs = ids.flatMap((id) => s?.items.get(id) ?? []);
     return defs.length === ids.length ? defs : [];
   });
+  /** Ciò che resta della fornitura: gli oggetti non venduti nel negozio. */
+  protected readonly kit = computed<ItemDef[]>(() => this.allGear().filter((d) => !(this.loadout().soldGear ?? []).includes(d.id)));
+  protected readonly kitSold = computed(() => this.allGear().length > 0 && this.kit().length === 0);
   /** La categoria dell'oggetto, come sottotitolo: arma da mischia, arma a distanza, armatura o cyberdeck (i deck sono le armi a intrusione e gli oggetti con l'etichetta `deck`). */
   protected categoryKey(i: ItemDef): 'briefing.catMelee' | 'briefing.catRanged' | 'briefing.armor' | 'briefing.deck' {
-    if (i.kind === 'armor') return 'briefing.armor';
-    if (i.attack === 'melee') return 'briefing.catMelee';
-    if (i.attack === 'ranged') return 'briefing.catRanged';
-    return 'briefing.deck';
+    return { melee: 'briefing.catMelee', ranged: 'briefing.catRanged', armor: 'briefing.armor', deck: 'briefing.deck' }[itemGroup(i)] as 'briefing.catMelee' | 'briefing.catRanged' | 'briefing.armor' | 'briefing.deck';
   }
   /** Gli oggetti comprati nel Briefing (id del loadout risolti nel catalogo; gli id sconosciuti si saltano). */
   protected readonly inventory = computed<ItemDef[]>(() => {

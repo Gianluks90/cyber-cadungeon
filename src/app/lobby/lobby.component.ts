@@ -4,7 +4,7 @@ import { ADVENTURES } from '../adventures/adventures';
 import { objectiveText } from '../game/state/objective-text';
 import { MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
 import type { AdventureSetup } from '../game/map/map-data';
-import { Loadout, ShopData, briefingBudget, coinsWithSetup, emptyLoadout, loadAdventureSetup, loadPregameShop, loadoutCost, partySetupStore } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, briefingBudget, coinsWithSetup, budgetLeft, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -222,7 +222,7 @@ export class LobbyComponent {
   }
   private readonly skillCatalog = signal<ReadonlyMap<string, SkillDef>>(new Map());
   protected readonly host: LobbyHost | undefined = this.isHost
-    ? new LobbyHost(this.code, this.lobby!.mercenaries, () => ({ mercenaryIds: this.mercenaries().map((h) => h.id), coins: (id) => this.mercenaries().find((h) => h.id === id)?.coins ?? 0, shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), mercenarySkills: (id) => this.mercenaries().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
+    ? new LobbyHost(this.code, this.lobby!.mercenaries, () => ({ mercenaryIds: this.mercenaries().map((h) => h.id), startingGear: (id) => this.mercenaries().find((h) => h.id === id)?.startingGear ?? [], shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), mercenarySkills: (id) => this.mercenaries().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
     : undefined;
   private readonly client: LobbyClient | undefined = this.isHost ? undefined : new LobbyClient(this.code);
 
@@ -258,7 +258,7 @@ export class LobbyComponent {
   /** I miei eroi che non hanno speso niente (hanno ancora tutte le monete). */
   protected readonly unspentNames = computed(() => {
     const shop = this.shop();
-    return this.myMercenaries().filter((h) => !shop || loadoutCost(this.loadoutOf(h.id), shop) === 0).map((h) => h.name).join(', ');
+    return this.myMercenaries().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop) === shop.budget).map((h) => h.name).join(', ');
   });
   /** Eroi confermati: si passa alla schermata degli acquisti (finché il gruppo è completo). */
   protected readonly gearStep = signal(false);
@@ -332,7 +332,7 @@ export class LobbyComponent {
     const shop = this.shop();
     if (!h || !shop) return '';
     const l = slot.player?.loadouts[h.id] ?? emptyLoadout();
-    return this.i18n.t('lobby.gear', { coins: h.coins - loadoutCost(l, shop), n: l.items.length + l.potions.length });
+    return this.i18n.t('lobby.gear', { coins: budgetLeft(h.startingGear ?? [], l, shop), n: l.items.length + l.potions.length });
   }
 
   /** Eroi confermati: si passa agli acquisti e una dialog avvisa delle abilità assegnate. */
