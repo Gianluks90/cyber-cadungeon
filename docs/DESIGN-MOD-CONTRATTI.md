@@ -69,6 +69,7 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 
 ### 2.6 Briefing, budget, intel
 - **Budget unico di 300 eurodollari** per tutto: mod e intel. Sempre 300; il creatore di un contratto può cambiarlo solo per ragioni narrative (come in una missione di Descent in cui gli eroi erano pagati in anticipo).
+- **Ogni prezzo è un multiplo di 25 E$** (oggetti, mod, consumabili, tesori, vendite): vale per tutto ciò che si aggiunge in futuro.
 - Il **negozio resta**, in **due tab**: «Mod» (si parte da qui) e «Oggetti». I **consumabili** (cure, ricariche) si comprano solo lì. Il giocatore può **vendere l'equip di partenza e comprarne un altro** (ama l'abilità di un mercenario ma vuole un'altra dotazione): se i dadi competenza o le abilità non combaciano, è una sua scelta. Un solo budget da 300€ per tutto. Al Briefing il catalogo è solo **base**: mod **generiche** e **in scorta limitata (1-2 unità al massimo)**. Le mod e gli oggetti dei tesori (rame, argento, oro del legacy) **non entrano mai nel Briefing**: si trovano o si comprano solo in partita (§2.8). *(Più avanti, scorte più ampie per chi gioca di più, ad esempio con potenziamenti dell'utente: ⏳, molto nel futuro.)*
 - Il **validatore** del contratto avvisa e **blocca** se il budget è troppo alto o troppo basso.
 - **Intel a pagamento**: un tasto che spende il budget per un'informazione sul contratto. A livelli: tipo di nemici → una debolezza → profilo completo.

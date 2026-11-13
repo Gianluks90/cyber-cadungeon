@@ -5,7 +5,7 @@
       "name": "Filo vibrante",
       "slot": "weapon",
       "attack": ["melee"],
-      "cost": 60,
+      "cost": 50,
       "stock": 2,
       "text": "La lama vibra e taglia le armature.",
       "passive": { "rules": ["Perforare 1"], "effects": [{ "kind": "attack", "on": ["melee"], "pierce": 1 }] },
@@ -15,7 +15,7 @@
       "id": "calibration",
       "name": "Calibrazione",
       "slot": "weapon",
-      "cost": 70,
+      "cost": 75,
       "stock": 2,
       "text": "Taratura fine: +1 danno con una sola scintilla.",
       "active": [{ "sparks": 1, "effect": "+1 danno" }]
@@ -25,7 +25,7 @@
       "name": "Spazzata",
       "slot": "weapon",
       "attack": ["melee"],
-      "cost": 80,
+      "cost": 100,
       "stock": 1,
       "text": "Colpi ampi che raggiungono più bersagli.",
       "active": [{ "sparks": 2, "effect": "Spazzata" }]
@@ -34,7 +34,7 @@
       "id": "reactive-plates",
       "name": "Placche reattive",
       "slot": "armor",
-      "cost": 70,
+      "cost": 75,
       "stock": 2,
       "text": "Placche che si induriscono all'impatto: +1 Armatura.",
       "passive": { "effects": [{ "kind": "stat", "stat": "armor", "amount": 1 }] }
@@ -43,7 +43,7 @@
       "id": "firewall",
       "name": "Firewall",
       "slot": "deck",
-      "cost": 40,
+      "cost": 50,
       "stock": 2,
       "text": "Un muro digitale contro le intrusioni: +1 ICE.",
       "passive": { "ice": 1 }
