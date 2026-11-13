@@ -284,10 +284,10 @@ export function inflictionsFrom(texts: readonly string[]): Infliction[] {
   return out;
 }
 
-/** Quanto danno dà il bonus di supporto dell'altra arma: solo con due armi da mischia a una mano. */
+/** Quanto danno dà il bonus di supporto dell'altra arma: solo con due armi a una mano dello stesso tipo, due da mischia o due a distanza (due pistole). */
 function supportBonus(state: GameState, attacker: Piece, weapon: ItemDef): number {
-  if (weapon.attack !== 'melee' || weapon.hands !== 1) return 0;
-  const other = equippedWeapons(state, attacker).find((w) => w.id !== weapon.id && w.attack === 'melee' && w.hands === 1 && w.offHand);
+  if ((weapon.attack !== 'melee' && weapon.attack !== 'ranged') || weapon.hands !== 1) return 0;
+  const other = equippedWeapons(state, attacker).find((w) => w.id !== weapon.id && w.attack === weapon.attack && w.hands === 1 && w.offHand);
   const base = other?.offHand ? parseEffect(other.offHand).damage : 0;
   return base > 0 ? base + ruleAmount(state, attacker, 'supportDamage') : 0; // Ambidestro: +1 danno quando si riceve un bonus di supporto
 }

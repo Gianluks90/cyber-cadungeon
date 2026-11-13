@@ -157,7 +157,7 @@ export function moddedItem(base: ItemDef, modIds: readonly string[], catalog: Re
   const modsSaleValue = known.reduce((n, id) => n + modSalePrice(catalog.get(id)!.cost), 0);
   const effects = [...(base.effects ?? []), ...passiveEffects({ [base.id]: known }, catalog).map((e) => ({ ...e, itemBound: true }))];
   const spark = [...(base.spark ?? []), ...activeSparks({ [base.id]: known }, catalog)];
-  return { ...base, id: moddedRef(base.id, known), moddedFrom: base.id, mods: known, modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
+  return { ...base, id: moddedRef(base.id, known), moddedFrom: base.id, mods: known.map((id) => ({ id, name: catalog.get(id)!.name, text: catalog.get(id)!.text })), modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
 }
 
 /** Mette nel catalogo `items` gli oggetti moddati di questi riferimenti (`id+mod+mod`), se non ci sono già. Un riferimento che non si capisce (oggetto o mod sconosciuti) si salta. */

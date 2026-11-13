@@ -22,30 +22,6 @@
       "icon": "swords"
     },
     {
-      "id": "pulse-pistol",
-      "name": "Pistola a impulsi",
-      "kind": "weapon",
-      "attack": "ranged",
-      "hands": 1,
-      "price": 150,
-      "dice": [
-        "blue",
-        "green"
-      ],
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        },
-        {
-          "cost": 3,
-          "effect": "+1 gittata"
-        }
-      ],
-      "icon": "target",
-      "range": 5
-    },
-    {
       "id": "hack-deck",
       "name": "Deck di intrusione",
       "kind": "deck",
@@ -449,12 +425,9 @@
         {
           "cost": 2,
           "effect": "+1 danno"
-        },
-        {
-          "cost": 3,
-          "effect": "+1 gittata"
         }
       ],
+      "offHand": "+1 danno",
       "icon": "target"
     }
   ]

@@ -73,9 +73,9 @@ export interface ItemDef {
   range?: number;
   /** Quanti slot per le mod ha questo oggetto base (arma, armatura o deck; prototipo: 2). Senza, non accetta mod. Vedi `game/mods/mod.ts`. */
   slots?: number;
-  /** Solo per un oggetto con mod (`moddedItem`): l'id dell'oggetto di partenza e gli id delle mod montate. */
+  /** Solo per un oggetto con mod (`moddedItem`): l'id dell'oggetto di partenza e le mod montate (nome già nella lingua di adesso, testo in italiano come nel catalogo: la carta lo mostra con `ct`). */
   moddedFrom?: string;
-  mods?: string[];
+  mods?: { id: string; name: string; text: string }[];
   /** Solo per un oggetto con mod: quanto si aggiunge al prezzo di vendita in città per le mod montate (ognuna, metà del suo costo arrotondata a 25). */
   modsSaleValue?: number;
   /** Se c'è, l'oggetto accetta solo mod con almeno una di queste categorie (`ModDef.tags`): il Kitsune-9 solo `hacking`. */

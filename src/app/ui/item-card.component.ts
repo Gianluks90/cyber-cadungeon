@@ -61,6 +61,16 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
         </section>
       }
 
+      <!-- Le mod montate sull'oggetto (solo se ne ha), con ciò che fanno. -->
+      @if (def().mods?.length) {
+        <section class="skills">
+          <h5>{{ 'Mod' | tr }}</h5>
+          @for (m of def().mods ?? []; track m.id) {
+            <div class="line"><span class="what"><b>{{ m.name }}</b> · {{ m.text | ct }}</span></div>
+          }
+        </section>
+      }
+
       <footer class="foot">
         @if ((price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr">{{ money(price() ?? def().price) }}</span> }
         <div class="actions"><ng-content /></div>

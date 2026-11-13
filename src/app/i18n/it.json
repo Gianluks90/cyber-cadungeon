@@ -1935,7 +1935,6 @@
   "enemyDialog.modeAlternateHint": "Round dispari (1, 3, 5…) attacca con l'oggetto, round pari con il suo attacco normale.",
   "enemyDialog.modeRandomHint": "Ogni round, una volta su due, usa l'oggetto; altrimenti il suo attacco normale. La scelta vale per tutto il round. Se il nemico non ha un attacco suo, usa sempre l'oggetto.",
   "item.mono-blade": "Lama monomolecolare",
-  "item.pulse-pistol": "Pistola a impulsi",
   "item.hack-deck": "Deck di intrusione",
   "item.ballistic-vest": "Giubbotto balistico",
   "item.shield": "Scudo cinetico",
@@ -2198,5 +2197,6 @@
   "briefing.equipped": "Equipaggiato",
   "briefing.backpack": "Zaino",
   "briefing.noModSlots": "Nessuno slot per le mod",
-  "briefing.noMods": "Nessuna mod compatibile"
+  "briefing.noMods": "Nessuna mod compatibile",
+  "c.mod_37323": "Mod"
 }

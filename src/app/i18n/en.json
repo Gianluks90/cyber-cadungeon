@@ -1935,7 +1935,6 @@
   "enemyDialog.modeAlternateHint": "Odd rounds (1, 3, 5…) it attacks with the item, even rounds with its normal attack.",
   "enemyDialog.modeRandomHint": "Each round, half the time, it uses the item; otherwise its normal attack. The choice holds for the whole round. If the enemy has no attack of its own, it always uses the item.",
   "item.mono-blade": "Monomolecular blade",
-  "item.pulse-pistol": "Pulse pistol",
   "item.hack-deck": "Intrusion deck",
   "item.ballistic-vest": "Ballistic vest",
   "item.shield": "Kinetic shield",
@@ -2198,5 +2197,6 @@
   "briefing.equipped": "Equipped",
   "briefing.backpack": "Backpack",
   "briefing.noModSlots": "No mod slots",
-  "briefing.noMods": "No compatible mods"
+  "briefing.noMods": "No compatible mods",
+  "c.mod_37323": "Mods"
 }
