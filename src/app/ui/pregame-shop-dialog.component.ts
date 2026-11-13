@@ -3,7 +3,7 @@ import { POTION_HEAL, POTION_LIMIT, POTION_PRICES } from '../game/constants';
 import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
-import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, equippedDefs, gearSalePrice, loadoutCost, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, equippedDefs, gearSalePrice, loadoutCost, modStockLeft, placeItems, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
 import { ChestTier } from '../game/board/marker';
 import { TREASURE_PRICES } from '../game/constants';
 import { translate } from '../i18n/i18n.service';
@@ -175,6 +175,7 @@ export class PregameShopDialogComponent {
   protected readonly modGroups = computed(() => {
     const shop = this.shop();
     const mods = this.loadout().mods;
+    const modsLeft = modStockLeft(shop, [...this.others(), this.loadout()]);
     const labels: Record<ModSlot, string> = { weapon: this.i18n.t('briefing.weapon'), armor: this.i18n.t('briefing.armor'), deck: this.i18n.t('briefing.deck') };
     return MOD_SLOTS.flatMap((slot) => {
       const base = shop.items.get(BASE_KIT[slot]);
@@ -184,8 +185,9 @@ export class PregameShopDialogComponent {
         .filter((m) => isBriefingMod(m) && modFits(m, base, slot))
         .map((mod) => {
           const on = installed.includes(mod.id);
-          const reason = on ? '' : installed.length >= base.slots! ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
-          return { mod, on, reason };
+          const left = modsLeft[mod.id];
+          const reason = on ? '' : left !== undefined && left <= 0 ? this.i18n.t('shop.soldOut') : installed.length >= base.slots! ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
+          return { mod, on, reason, left };
         });
       return [{ slot, label: labels[slot], base, max: base.slots, used: installed.length, options }];
     });

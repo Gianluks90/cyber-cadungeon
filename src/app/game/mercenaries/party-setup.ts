@@ -78,6 +78,14 @@ export function stockLeft(shop: ShopData, loadouts: readonly Loadout[]): Record<
   return left;
 }
 
+/** Le copie ancora in vendita delle mod con una scorta (`ModDef.stock`), tolte quelle già montate da tutti gli `loadouts`. Le mod senza scorta non compaiono: non hanno limite. */
+export function modStockLeft(shop: ShopData, loadouts: readonly Loadout[]): Record<string, number> {
+  const left: Record<string, number> = {};
+  for (const m of shop.mods.values()) if (m.stock !== undefined) left[m.id] = m.stock;
+  for (const l of loadouts) for (const id of Object.values(l.mods ?? {}).flat()) if (id in left) left[id] -= 1;
+  return left;
+}
+
 /** Quanto vale in E$ vendere un oggetto della fornitura iniziale: metà del suo prezzo, arrotondata al multiplo di 25 più vicino, almeno 25. */
 export function gearSalePrice(price: number): number {
   return Math.max(25, Math.round(price / 2 / 25) * 25);
@@ -132,6 +140,7 @@ export function validLoadout(l: Loadout, startingGear: readonly string[], shop: 
     left[id] -= 1;
   }
   if (!validMods(l.mods, shop.mods, shop.items, shop.budget)) return false;
+  if (Object.values(modStockLeft(shop, [...others, l])).some((n) => n < 0)) return false;
   return !!placeItems(l.items, shop) && budgetLeft(startingGear, l, shop) >= 0;
 }
 

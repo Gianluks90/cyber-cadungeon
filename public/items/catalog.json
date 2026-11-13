@@ -72,7 +72,7 @@
     },
     {
       "id": "ballistic-vest",
-      "slots": 2,
+      "slots": 1,
       "name": "Giubbotto balistico",
       "kind": "armor",
       "hands": 0,
@@ -193,7 +193,7 @@
     },
     {
       "id": "street-deck",
-      "slots": 2,
+      "slots": 1,
       "name": "Deck da strada",
       "kind": "weapon",
       "attack": "intrusion",
@@ -288,7 +288,7 @@
       "hands": 0,
       "armor": 2,
       "price": 120,
-      "slots": 2,
+      "slots": 1,
       "icon": "frame_person",
       "speedCap": 4
     },
@@ -337,7 +337,7 @@
       "hands": 0,
       "armor": 0,
       "price": 40,
-      "slots": 2,
+      "slots": 1,
       "icon": "frame_person",
       "effects": [
         {
@@ -393,10 +393,6 @@
         {
           "cost": 2,
           "effect": "+1 danno"
-        },
-        {
-          "cost": 3,
-          "effect": "+1 gittata"
         }
       ]
     },
@@ -407,7 +403,7 @@
       "hands": 0,
       "armor": 1,
       "price": 80,
-      "slots": 2,
+      "slots": 1,
       "icon": "frame_person"
     },
     {
@@ -422,7 +418,7 @@
         {
           "kind": "stat",
           "stat": "ice",
-          "amount": 2
+          "amount": 1
         },
         {
           "kind": "attack",

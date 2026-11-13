@@ -2,15 +2,15 @@
   "id": "briefing",
   "name": "Briefing",
   "stock": {
-    "iron-fists": 99,
-    "wire-knife": 99,
-    "light-pistol": 99,
-    "voss-sr90": 99,
-    "adonis-skin": 99,
-    "wetsuit": 99,
-    "standard-camo": 99,
-    "berserker-mk1": 99,
-    "kitsune-9": 99,
-    "headshot-beta": 99
+    "iron-fists": 2,
+    "wire-knife": 2,
+    "light-pistol": 2,
+    "voss-sr90": 2,
+    "adonis-skin": 2,
+    "wetsuit": 2,
+    "standard-camo": 3,
+    "berserker-mk1": 1,
+    "kitsune-9": 1,
+    "headshot-beta": 2
   }
 }
