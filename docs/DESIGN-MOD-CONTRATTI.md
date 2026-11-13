@@ -17,7 +17,16 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 
 ### 2.1 Mercenario = piattaforma
 - Ogni archetipo ha un **equipaggiamento di base** fisso: un'**arma** (a una o due mani), un'**armatura-cromo** (cyberware della pelle, non un giubbotto) e un **cyberdeck**. Niente fase di «progettazione» del personaggio prima del Briefing: la differenza tra eroi sta nell'equip di base per archetipo.
-- Ogni oggetto base ha **slot** per le mod. Prototipo: **2 per l'arma, 2 per l'armatura, 2 per il deck**.
+- Ogni oggetto base ha **slot** per le mod, e **gli slot seguono dove sta la potenza dell'archetipo** *(da bilanciare)*:
+
+  | Archetipo | Arma | Armatura | Deck |
+  |---|---|---|---|
+  | Picchiatore | 2 | 1 | 1 (supporto, Berserk) |
+  | Artigliere | 2 | 1 | 1 (supporto, Aggancio) |
+  | Incursore | 0-1 | 1 | 2-3 (è la sua arma di rete) |
+
+  Per l'Incursore il deck è il loadout: ha due armi (quella fisica e quella di rete) e sceglie in base al bersaglio.
+- **Cambiare oggetto cambia gli slot**: le mod valgono solo sull'oggetto equipaggiato e compatibile. Se il giocatore vende l'oggetto, le mod che non ci stanno più **si rimborsano** (niente trappole).
 - Si parte con pochi mercenari ben fatti e si lavora soprattutto sul **sistema di mod** (il Descent base ne aveva 20; non serve arrivarci).
 - L'equip **trovato** in missione **si perde a fine partita**: nessun bilanciamento a lungo termine. (Un item level con nemici scalati resta un'idea futura, ⏳.)
 
@@ -26,19 +35,22 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - **Passivo**: basta avere l'oggetto equipaggiato.
 - **Attivo**: si spendono **scintille** (le saette dei **dadi neri**, i dadi competenza).
 - Esempio: una mod che dà passivamente *Perforare 1* e, spendendo 2 scintille, *Perforare +1*.
+- **Oggetto base spoglio**: tipo, dadi, gittata e una sola riga di scintille. In più al massimo **una firma narrativa**, quella che spiega perché l'oggetto esiste (es. *Perforare 1* sul fucile Voss SR-90: un calibro così fa questo). Tutto il resto è mod: ciò che si può aggiungere o togliere senza cambiare cos'è l'oggetto. Una mod non ripete la firma tale e quale (può però farla salire di livello). I livelli di rarità del legacy (rame/argento/oro) non esistono più come statistiche: sono oggetti base con mod già inserite e più slot.
+- Una mod fa **una cosa sola** (es. «2 scintille: +1 danno»); quelle che cambiano il comportamento sono rare e più care.
 - Le mod cambiano il **comportamento**, non solo i numeri (es. «Spazzata» per una mazza, «Perforare 2» per una lama): ogni arma base ha un proprio elenco di mod compatibili.
 - Le mod si comprano al Briefing (e ai terminali, §2.8); le **casse** danno mod diverse o armi con più slot e mod già inserite a caso.
 
 ### 2.3 Overclock e scintille (non confonderli)
 - **Overclock** (OC) = la vecchia Fatica. Si spende per **forzare il movimento** (1 OC = 1 movimento) e per le **abilità** (2 OC per usarne una, primaria compresa). Mai per le mod.
 - **Scintille** = le saette sui dadi neri. Attivano gli effetti **attivi** degli oggetti (e altro). Mai per il movimento.
+- **Dado competenza in più** (regola che resta, REGOLE-v2 §6): in un attacco si tirano i dadi competenza del tipo di attacco (anche zero). **Dopo il tiro** il giocatore può spendere **1 OC per aggiungere un dado competenza nero**, anche partendo da competenza 0, fino a **5 dadi competenza** per attacco. Vale per mischia, distanza e **violazione** (che funziona come un attacco; come si tira esattamente va ancora definito, anche con più dadi di tipi diversi). Già nel codice: `addProficiencyDie`. È questo che rende raggiungibili le scintille delle mod attive anche senza dadi competenza di quel ramo: costa OC, e l'OC serve anche al movimento.
 - Facce dei dadi: restano **cuori, scintille, Mancato**. La gittata non sta più sui dadi (conferma di REGOLE-v2 §7).
 
 ### 2.4 Abilità = cyberware del corpo
 - Le abilità sono **modifiche del corpo**: braccia (lama estraibile), gambe (passi silenziosi o rapidi), vista (ottiche speciali), pelle, ecc.
 - Per ogni mercenario c'è una **lista corta di abilità, tutte visibili**; il giocatore **sceglie** quelle del suo mercenario (non c'è pescaggio casuale).
 - Possono essere **attive** (costano OC) o **passive**.
-- **Bilanciamento**: un'abilità forte costa uno **slot di mod dell'arma principale** (−1 mod). Un solo tipo di prezzo, niente valute nuove.
+- **Bilanciamento** *(ipotesi, 🧪 da verificare dopo che le mod funzionano)*: un'abilità forte costa uno **slot di mod dell'arma principale** (−1 mod). Un solo tipo di prezzo, niente valute nuove. È il secondo livello di bilanciamento: prima si mette a punto il sistema mod.
 - Regola di pulizia: **mod = oggetto, usa scintille; abilità = corpo, usa Overclock.**
 - **Cadono** i *pin* e il pescaggio casuale delle abilità secondarie (REGOLE-v2 §3 e §4; TODO L1.6 e L4.3).
 
@@ -47,11 +59,14 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - **Incursore**: carica i **Demoni** e viola sistemi e cyberware nemici (tutta la rete di `docs/NEMICI.md` §5).
 - **Picchiatore — Berserk**: si potenzia, ma **riduce Armatura e ICE** finché dura. Ha un prezzo, così non è sempre acceso.
 - **Artigliere — Aggancio** (armi smart che agganciano il bersaglio): è lo specchio del Tracciato (l'Incursore marchia con la rete, l'Artigliere con il deck). Effetto di partenza: sul bersaglio agganciato si ignora la copertura *(da bilanciare)*.
+- **Il deck dell'Incursore tira dadi** (violazione = combattimento contro l'ICE). Le sue mod sono di due famiglie: di **potenziamento** (ICE, gittata, valgono per tutti) e di **hacking** (azioni da usare all'occorrenza, a scintille, es. «Ping: vedi i nemici della stanza adiacente» *(esempio a caso, non deciso)*). Il tag `modTags: ["hacking"]` è un **filtro di compatibilità**: tiene dentro quegli slot solo mod di rete.
+- **Mod di hacking = azioni a scintille; cyberware = utilità a OC** (es. «attiva i terminali a distanza X»). Stessa regola di pulizia di §2.4.
 - Effetto collaterale utile: **tutti hanno un deck, quindi tutti hanno un po' di ICE**; gli slot del deck possono dare ICE («firewall»). Questo chiude la questione Q13 dell'ICE per i non Incursori.
 - Costo della funzione base: proposta **Overclock** (coerente con «Overclock = forzare»). 🧪
 
 ### 2.6 Briefing, budget, intel
 - **Budget unico di 300 eurodollari** per tutto: mod e intel. Sempre 300; il creatore di un contratto può cambiarlo solo per ragioni narrative (come in una missione di Descent in cui gli eroi erano pagati in anticipo).
+- Il **negozio resta**, in **due tab**: «Mod» (si parte da qui) e «Oggetti». I **consumabili** (cure, ricariche) si comprano solo lì. Il giocatore può **vendere l'equip di partenza e comprarne un altro** (ama l'abilità di un mercenario ma vuole un'altra dotazione): se i dadi competenza o le abilità non combaciano, è una sua scelta. Un solo budget da 300€ per tutto. Al Briefing il catalogo è solo **base**: mod **generiche** e **in scorta limitata (1-2 unità al massimo)**. Le mod e gli oggetti dei tesori (rame, argento, oro del legacy) **non entrano mai nel Briefing**: si trovano o si comprano solo in partita (§2.8). *(Più avanti, scorte più ampie per chi gioca di più, ad esempio con potenziamenti dell'utente: ⏳, molto nel futuro.)*
 - Il **validatore** del contratto avvisa e **blocca** se il budget è troppo alto o troppo basso.
 - **Intel a pagamento**: un tasto che spende il budget per un'informazione sul contratto. A livelli: tipo di nemici → una debolezza → profilo completo.
 - **Debolezze e resistenze non sono fisse**: lo stesso nemico, in contratti diversi, ha profili diversi (il nemico è un *template*, il contratto gli applica un profilo). I profili stanno nei dati del contratto, non nel catalogo dei nemici.
@@ -80,6 +95,8 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - **Reputazione**: la risorsa dello stesso giocatore **come fixer**. È separata dalla Fama e non è collegata al profilo mercenario.
 - Fama e Reputazione danno **status e accessi, mai potere in partita**.
 - **Terminali in missione**: spendono i soldi rimasti e quelli trovati. Vendono anche cose che al Briefing non ci sono (cure, ricariche, mod monouso) a prezzi più alti: il Briefing è prevedibile ed economico, il terminale è flessibile e caro.
+- **Tesori e terminali** *(valori di partenza, 🧪)*: i mazzi **rame / argento / oro** del legacy restano le tre fasce di rarità, ma vivono solo in partita. Quando in mappa si trova una cassa di una fascia, **da quel momento i terminali della missione vendono** le mod/oggetti di quella fascia al prezzo della fascia (legacy: **250 / 500 / 750**). I soldi vengono dal budget avanzato e dagli **E$ trovati in mappa**, anche sconfiggendo i **nemici più potenti**. Con questi prezzi, le fasce alte si comprano solo a partita avanzata e questo è voluto. Niente salvataggio tra una partita e l'altra: coerente con «l'equip trovato si perde» (§2.1).
+- Ricordare quali tesori un giocatore ha già visto in partite precedenti è un'altra questione, **da riprendere più avanti** (non si implementa).
 
 ## 3. 🧪 Da provare (solo nel prototipo)
 
@@ -118,6 +135,10 @@ I mercenari non sono persone armate: **sono armi loro stessi**. Il mercenario è
 - **§13**: Fixer e Corp restano fuori dal primo prototipo.
 
 ## 7. Punti aperti
+- **Mod di hacking su armi e armature**, non solo sul deck. **Deciso (2026-11-13)**: possono montarle anche i mercenari con competenza hacking 0; l'Incursore però deve essere più bravo. **Aperto il «come»**: alcune mod di hacking potranno chiedere di tirare comunque *n* dadi competenza per verificare che la mod funzioni; altre soglie o requisiti si decidono col tempo. Idea non decisa: solo su oggetti «smart» (`modTags: hacking`). Si lasciano volutamente più meccaniche possibili, da provare in gioco.
+- **Violazione**: come si tira esattamente (dadi di tipi diversi come un attacco?).
+- Slot del Briefing: valori 2/1/1 e Incursore 0-1/1/2-3 sono di partenza. Budget da tarare perché con 300€ non si riempiano tutti gli slot.
+- Mod legate a un oggetto venduto: rimborso (deciso) ma da implementare insieme alla fine di `BASE_KIT`.
 - Abilità: c'è una **primaria fissa sulla scheda** del mercenario oltre alle scelte, o ogni abilità è nella lista corta?
 - Quanti **slot del corpo** per il cyberware (braccia, gambe, vista, pelle)? Il prototipo ne usa uno o due.
 - Se il pool di profili è casuale, **come si prova la «battibilità»** di un contratto (un estratto? tutti?).

@@ -13,7 +13,7 @@ import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { SkillDef } from '../game/skills/skill';
-import { BASE_KIT, MOD_SLOTS, ModSlot, modFits, modsCost } from '../game/mods/mod';
+import { BASE_KIT, MOD_SLOTS, ModSlot, isBriefingMod, modFits, modsCost } from '../game/mods/mod';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
@@ -181,7 +181,7 @@ export class PregameShopDialogComponent {
       if (!base?.slots) return [];
       const installed = mods?.[slot] ?? [];
       const options = [...shop.mods.values()]
-        .filter((m) => modFits(m, base, slot))
+        .filter((m) => isBriefingMod(m) && modFits(m, base, slot))
         .map((mod) => {
           const on = installed.includes(mod.id);
           const reason = on ? '' : installed.length >= base.slots! ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';

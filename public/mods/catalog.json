@@ -6,9 +6,19 @@
       "slot": "weapon",
       "compatible": ["mono-blade"],
       "cost": 60,
+      "stock": 2,
       "text": "La lama vibra e taglia le armature.",
       "passive": { "rules": ["Perforare 1"], "effects": [{ "kind": "attack", "on": ["melee"], "pierce": 1 }] },
       "active": [{ "sparks": 2, "effect": "Perforare 1" }]
+    },
+    {
+      "id": "calibration",
+      "name": "Calibrazione",
+      "slot": "weapon",
+      "cost": 70,
+      "stock": 2,
+      "text": "Taratura fine: +1 danno con una sola scintilla.",
+      "active": [{ "sparks": 1, "effect": "+1 danno" }]
     },
     {
       "id": "sweep",
@@ -16,17 +26,9 @@
       "slot": "weapon",
       "compatible": ["mono-blade"],
       "cost": 80,
+      "stock": 1,
       "text": "Colpi ampi che raggiungono più bersagli.",
       "active": [{ "sparks": 2, "effect": "Spazzata" }]
-    },
-    {
-      "id": "overcharge",
-      "name": "Sovraccarico",
-      "slot": "weapon",
-      "compatible": ["mono-blade"],
-      "cost": 50,
-      "text": "Più energia nel colpo: +1 danno in mischia.",
-      "passive": { "effects": [{ "kind": "attack", "on": ["melee"], "damage": 1 }] }
     },
     {
       "id": "reactive-plates",
@@ -34,6 +36,7 @@
       "slot": "armor",
       "compatible": ["ballistic-vest"],
       "cost": 70,
+      "stock": 2,
       "text": "Placche che si induriscono all'impatto: +1 Armatura.",
       "passive": { "effects": [{ "kind": "stat", "stat": "armor", "amount": 1 }] }
     },
@@ -43,8 +46,83 @@
       "slot": "deck",
       "compatible": ["street-deck"],
       "cost": 40,
+      "stock": 2,
       "text": "Un muro digitale contro le intrusioni: +1 ICE.",
       "passive": { "ice": 1 }
+    },
+    {
+      "id": "overcharge",
+      "name": "Sovraccarico",
+      "slot": "weapon",
+      "tier": "copper",
+      "compatible": ["mono-blade"],
+      "cost": 250,
+      "text": "Più energia nel colpo: +1 danno in mischia.",
+      "passive": { "effects": [{ "kind": "attack", "on": ["melee"], "damage": 1 }] }
+    },
+    {
+      "id": "amplifier",
+      "name": "Amplificatore",
+      "slot": "weapon",
+      "tier": "copper",
+      "cost": 250,
+      "text": "Più scintille dai dadi: +1 scintilla bonus in ogni attacco.",
+      "passive": { "effects": [{ "kind": "attack", "on": ["melee", "ranged"], "sparks": 1 }] }
+    },
+    {
+      "id": "fragmentation",
+      "name": "Frammentazione",
+      "slot": "weapon",
+      "tier": "copper",
+      "cost": 250,
+      "text": "Il colpo si spacca: danneggia anche i nemici vicini al bersaglio.",
+      "active": [{ "sparks": 2, "effect": "Esplosione 1" }]
+    },
+    {
+      "id": "stunner",
+      "name": "Stordente",
+      "slot": "weapon",
+      "tier": "copper",
+      "cost": 250,
+      "text": "Un impulso che blocca il bersaglio ferito.",
+      "active": [{ "sparks": 2, "effect": "+1 segnalino stordito" }]
+    },
+    {
+      "id": "long-optics",
+      "name": "Ottica estesa",
+      "slot": "weapon",
+      "tier": "silver",
+      "compatible": ["pulse-pistol", "silenced-pistol", "light-pistol", "voss-sr90", "rail-rifle", "plasma-cannon"],
+      "cost": 500,
+      "text": "Ottiche di precisione: +2 gittata.",
+      "passive": { "effects": [{ "kind": "attack", "on": ["ranged"], "range": 2 }] }
+    },
+    {
+      "id": "piercing-tip",
+      "name": "Punta perforante",
+      "slot": "weapon",
+      "tier": "silver",
+      "cost": 500,
+      "text": "Una punta che fora le corazze: Perforare 2 con una scintilla.",
+      "active": [{ "sparks": 1, "effect": "Perforare 2" }]
+    },
+    {
+      "id": "dissipator",
+      "name": "Dissipatore",
+      "slot": "armor",
+      "tier": "silver",
+      "cost": 500,
+      "text": "Un campo che disperde l'impatto: per ogni ferita tiri un dado e annulli 1 ferita per ogni scintilla.",
+      "passive": { "effects": [{ "kind": "react", "on": "wounds", "auto": true, "dice": "perWound", "cancel": "spark" }] }
+    },
+    {
+      "id": "overheat",
+      "name": "Surriscaldante",
+      "slot": "weapon",
+      "tier": "gold",
+      "cost": 750,
+      "text": "Sovraccarica il bersaglio e lo fa surriscaldare.",
+      "active": [{ "sparks": 2, "effect": "+1 segnalino surriscaldamento" }]
     }
   ]
 }

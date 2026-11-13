@@ -5,6 +5,14 @@ export type ModSlot = 'weapon' | 'armor' | 'deck';
 
 export const MOD_SLOTS: readonly ModSlot[] = ['weapon', 'armor', 'deck'];
 
+/** Le fasce delle mod: la base del Briefing e le tre dei tesori in partita. */
+export type ModTier = 'base' | 'copper' | 'silver' | 'gold';
+
+/** Si compra al Briefing? Solo le mod base. */
+export function isBriefingMod(mod: { tier?: ModTier }): boolean {
+  return (mod.tier ?? 'base') === 'base';
+}
+
 /** Un effetto attivo di una mod: si paga in scintille (le saette dei dadi neri), mai in Overclock. */
 export interface ModActive {
   sparks: number;
@@ -22,7 +30,14 @@ export interface ModDef {
   tags?: string[];
   /** Gli id degli oggetti base che la accettano; se manca va bene ogni oggetto di quel tipo. */
   compatible?: string[];
-  /** Il prezzo in eurodollari (il budget del Briefing). */
+  /**
+   * La fascia di rarità (docs/DESIGN-MOD-CONTRATTI.md, §2.8). Senza, è `base`: l'unica che si compra al Briefing. Rame, argento e oro (legacy: tesori da 250/500/750) si vendono solo
+   * ai terminali in partita, dopo aver trovato in mappa una cassa di quella fascia.
+   */
+  tier?: ModTier;
+  /** Quante unità ha il negozio per squadra; senza, nessun limite. Solo per le mod base (1-2). Non ancora applicato dal Briefing. */
+  stock?: number;
+  /** Il prezzo in eurodollari: al Briefing per le mod base, ai terminali per le altre fasce. */
   cost: number;
   /** Cosa fa, in breve. */
   text: string;
@@ -74,7 +89,7 @@ export function validMods(mods: ModLoadout | undefined, catalog: ReadonlyMap<str
     if (!base || ids.length > (base.slots ?? 0) || new Set(ids).size !== ids.length) return false;
     for (const id of ids) {
       const mod = catalog.get(id);
-      if (!mod || !modFits(mod, base, slot as ModSlot)) return false;
+      if (!mod || !isBriefingMod(mod) || !modFits(mod, base, slot as ModSlot)) return false;
       cost += mod.cost;
     }
   }
