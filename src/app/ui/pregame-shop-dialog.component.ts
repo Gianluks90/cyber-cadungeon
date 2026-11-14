@@ -8,7 +8,7 @@ import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, carriedItems, equippedDef
 import { ChestTier } from '../game/board/marker';
 import { TREASURE_PRICES } from '../game/constants';
 import { translate } from '../i18n/i18n.service';
-import { ITEM_GROUPS, ItemGroup, itemDetail, itemGroup, placeGear } from '../game/items/item';
+import { ITEM_GROUPS, ItemDef, ItemGroup, itemDetail, itemGroup, placeGear } from '../game/items/item';
 import { POTION_NAMES } from '../game/markers/marker-rules';
 import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
@@ -36,7 +36,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
   imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="min(520px, calc(100dvh - 24px))" (closed)="closed.emit()">
+    <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="var(--shop-h)" [subFlush]="true" [accent]="mercenary().name" (closed)="closed.emit()">
       <!-- A sinistra la carta dell'eroe con i suoi parametri, a destra le sue abilità secondarie (già assegnate) in una carta che scorre da sola. Sono inclinate e infilate sotto il pannello. -->
       <figure dialogSide class="card left"><app-mercenary-face [mercenary]="mercenary()" [stats]="stats()" /></figure>
       <figure dialogSide class="card right">
@@ -46,30 +46,43 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
           @empty { <p class="none">{{ 'shop.noSkills' | t }}</p> }
         </div>
       </figure>
-      <!-- Seconda intestazione fissa: i dadi competenza dell'eroe, per sapere che armi conviene comprare. -->
-      <div dialogSub class="dice">
-        <span class="cap">{{ 'detail.dice' | t }}</span>
-        <app-attack-dice [dice]="mercenary().dice" />
+      <!-- Due riquadri apribili (chiusi all'inizio) a tutta larghezza, attaccati all'intestazione e uno all'altro: i dadi competenza dell'eroe, per sapere che armi conviene comprare, e (dove le carte laterali non ci stanno) le sue abilità secondarie. -->
+      <div dialogSub>
+      <div class="folds">
+        <details class="fold">
+          <summary><span>{{ 'detail.dice' | t }}</span><app-icon class="more" name="expand_more" [size]="22" /></summary>
+          <div class="foldbody"><app-attack-dice [dice]="mercenary().dice" /></div>
+        </details>
+        <details class="fold skills">
+          <summary><span>{{ 'detail.secondary' | t }}</span><app-icon class="more" name="expand_more" [size]="22" /></summary>
+          <div class="foldbody skilllist">
+            @for (s of skills(); track s.id) { <app-skill-card [skill]="s" [stacked]="true" /> }
+            @empty { <p class="none">{{ 'shop.noSkills' | t }}</p> }
+          </div>
+        </details>
       </div>
-
       <!-- Due tab: si parte dalle mod (un solo budget con gli oggetti) e si passa agli oggetti quando si vuole cambiare la fornitura. -->
       <div class="tabs" role="tablist">
         <button type="button" role="tab" [attr.aria-selected]="tab() === 'mods'" [class.on]="tab() === 'mods'" (click)="tab.set('mods')">{{ 'briefing.tabMods' | t }}</button>
         <button type="button" role="tab" [attr.aria-selected]="tab() === 'items'" [class.on]="tab() === 'items'" (click)="tab.set('items')">{{ 'briefing.tabItems' | t }}</button>
       </div>
+      </div>
 
       @if (tab() === 'mods') {
         <!-- Una carta per ogni oggetto che si porta: un <details> che si comprime per occupare meno spazio. Senza slot per le mod la carta c'è lo stesso, ma spenta. -->
-        @for (c of modCards(); track c.key) {
+        @for (c of modCards(); track c.key; let i = $index) {
+          <!-- Prima gli oggetti equipaggiati (con la E), poi un separatore e quelli nello zaino. -->
+          @if (!c.equipped && i > 0 && modCards()[i - 1].equipped) { <div class="bagsep"><span>{{ 'briefing.backpack' | t }}</span></div> }
           @if (c.max) {
             <details class="gearcard" [open]="c.open" (toggle)="setCardOpen(c.key, $any($event.target).open)">
               <summary>
                 <span class="chev" aria-hidden="true"></span>
-                <span class="what"><b>{{ c.def.name }}</b><small>{{ c.detail }}</small></span>
-                <span class="tag">{{ (c.equipped ? 'briefing.equipped' : 'briefing.backpack') | t }}</span>
-                <span class="slotsused">{{ 'briefing.slotsUsed' | t: { used: c.used, max: c.max } }}</span>
+                <span class="what"><b>{{ c.def.name }}@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
+                <!-- Gli slot per le mod: un pallino ciascuno, pieno se c'è una mod montata. -->
+                <span class="slotdots" [title]="'briefing.slotsUsed' | t: { used: c.used, max: c.max }">@for (n of dots(c.max); track $index) { <i [class.full]="$index < c.used" [class.hack]="c.def.modTags?.includes('hacking')"></i> }</span>
               </summary>
               <div class="list">
+                <small class="gdetail">{{ c.detail }}</small>
                 @for (o of c.options; track o.mod.id) {
                   <div class="row mod" [class.on]="o.on">
                     <div class="what">
@@ -79,10 +92,13 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
                         @if (o.mod.passive) { <span>{{ 'briefing.passive' | t }}</span> }
                         @for (a of o.mod.active ?? []; track $index) { <span>{{ 'briefing.active' | t: { n: a.sparks } }}: {{ a.effect | ct }}</span> }
                       </small>
+                      @if (o.left !== undefined) { <small class="stock">{{ (o.left === 1 ? 'shop.stockOne' : 'shop.stockMany') | t: { n: o.left } }}</small> }
                     </div>
-                    @if (o.left !== undefined) { <span class="stock" [title]="'shop.stock' | t">×{{ o.left }}</span> }
-                    <span class="price">{{ money(o.mod.cost) }}</span>
-                    <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.on ? 'briefing.remove' : 'briefing.install') | t" [title]="o.reason || ((o.on ? 'briefing.remove' : 'briefing.install') | t)" (click)="toggleMod(c.key, o.mod.id)"><app-icon [name]="o.on ? 'remove_shopping_cart' : 'add_shopping_cart'" [size]="20" /></button>
+                    <!-- Il piede come quello delle card oggetto: il prezzo a sinistra e il tasto a destra. -->
+                    <footer class="mfoot">
+                      <span class="price">{{ money(o.mod.cost) }}</span>
+                      <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.on ? 'briefing.remove' : 'briefing.install') | t" [title]="o.reason || ((o.on ? 'briefing.remove' : 'briefing.install') | t)" (click)="toggleMod(c.key, o.mod.id)"><app-icon [name]="o.on ? 'remove_shopping_cart' : 'add_shopping_cart'" [size]="20" /></button>
+                    </footer>
                   </div>
                 } @empty {
                   <p class="none">{{ 'briefing.noMods' | t }}</p>
@@ -92,8 +108,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
           } @else {
             <div class="gearcard off">
               <div class="head">
-                <span class="what"><b>{{ c.def.name }}</b><small>{{ c.detail }}</small></span>
-                <span class="tag">{{ (c.equipped ? 'briefing.equipped' : 'briefing.backpack') | t }}</span>
+                <span class="what"><b>{{ c.def.name }}@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
                 <span class="slotsused">{{ 'briefing.noModSlots' | t }}</span>
               </div>
             </div>
@@ -104,17 +119,19 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
       @if (tab() === 'items') {
       <!-- Consumabili (al massimo POTION_LIMIT per mercenario), oggetti in vendita e fornitura iniziale. -->
       <h3>{{ 'shop.potions' | t }} <small>{{ 'shop.potionsHint' | t: { n: potionLimit } }}</small></h3>
-      <div class="list">
+      <div class="cards">
         @for (k of potionKinds; track k) {
-          <div class="row">
-            <div class="what"><b>{{ potionName(k) }}@if (potionCount(k)) { <span class="count">({{ potionCount(k) }})</span> }</b><small class="fx">
+          <app-item-card [def]="potionDef(k)" [count]="potionCount(k)">
+            <div cardBody class="pbody">
+              <h5>{{ 'shop.abilities' | t }}</h5>
+              <small class="fx">
                 @if (k === 'heal') { {{ 'shop.restore' | t }} <span class="life">{{ healAmount }} <app-icon name="favorite" [size]="14" /> {{ 'stats.health' | t }}</span> }
                 @else { {{ 'shop.maxBefore' | t }} <span class="oc"><app-icon name="speed" [size]="18" /> {{ 'stats.overclock' | t }}</span> {{ 'shop.maxAfter' | t }} }
-              </small></div>
-            <span class="price">{{ money(potionPrice(k)) }}</span>
+              </small>
+            </div>
             <button type="button" class="act cart" [class.off]="!potionCount(k)" [attr.aria-disabled]="!potionCount(k)" [attr.aria-label]="'shop.refund' | t" [title]="'shop.refund' | t" (click)="refundPotion(k)"><app-icon name="remove_shopping_cart" [size]="20" /></button>
             <button type="button" class="act cart" [class.off]="!!potionReason(k)" [attr.aria-disabled]="!!potionReason(k)" [attr.aria-label]="'shop.buy' | t" [title]="potionReason(k) || ('shop.buy' | t)" (click)="buyPotion(k)"><app-icon name="add_shopping_cart" [size]="20" /></button>
-          </div>
+          </app-item-card>
         }
       </div>
 
@@ -148,7 +165,9 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     </app-dialog>
   `,
   styles: `
-    :host { display: contents; }
+    /* Alta 520px su desktop; su mobile (fino a 900px) tutto lo spazio disponibile, meno il margine della dialog. */
+    :host { display: contents; --shop-h: min(520px, calc(100dvh - 24px)); }
+    @media (max-width: 900px) { :host { --shop-h: calc(100dvh - 24px); } }
     h3 { margin: 10px 0 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     h3 small { margin-left: 6px; font-weight: 400; letter-spacing: 0; text-transform: none; font-size: 12px; }
     small { color: var(--c-text-dim); }
@@ -161,15 +180,30 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .card .head { flex: none; padding: 10px 10px 8px 14px; border-bottom: 1px solid var(--c-line-strong); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .scroller { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 10px 10px 10px 14px; scrollbar-width: none; }
     .scroller::-webkit-scrollbar { display: none; }
-    @media (max-width: 1000px) { .card { display: none; } }
-    .dice { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-    .dice .cap { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    /* Sotto i 1000px le carte laterali non ci stanno (\`.card.right\` ha \`display: flex\` e vince su \`.card\`: vanno nominate tutte e due) e le abilità passano nel riquadro. */
+    /* I riquadri apribili: a tutta larghezza, attaccati all'intestazione e uno all'altro, con il filetto sotto. Stanno nella seconda intestazione fissa della dialog (senza margini): il negozio scorre sotto; aperti, scorrono da soli oltre il 40% dell'altezza. */
+    .folds { display: flex; flex-direction: column; }
+    .fold { border-bottom: 1px solid var(--c-line-strong); background: var(--c-bg); }
+    .fold > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 20px; cursor: pointer; list-style: none; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    .fold > summary::-webkit-details-marker { display: none; }
+    .fold > summary:hover, .fold > summary:focus-visible { outline: none; color: var(--c-interact); }
+    .fold .more { transition: transform 0.15s; }
+    .fold[open] .more { transform: rotate(180deg); }
+    .foldbody { max-height: 40dvh; overflow-y: auto; padding: 0 20px 14px; }
+    .skilllist { display: flex; flex-direction: column; gap: 8px; }
+    /* Sotto i 1000px le carte laterali non ci stanno (\`.card.right\` ha \`display: flex\` e vince su \`.card\`: vanno nominate tutte e due) e le abilità passano nel riquadro. */
+    .skills { display: none; }
+    @media (max-width: 1000px) { .card, .card.left, .card.right { display: none; } .skills { display: block; } }
     .budget { display: inline-flex; align-items: baseline; gap: 6px; color: var(--c-money); font-variant-numeric: tabular-nums; }
     .budget b { font-size: 18px; }
     .gear { display: flex; align-items: baseline; gap: 10px; }
     .gear b { font: 600 13px/1.2 var(--font-ui); }
     .gear span { flex: 1; color: var(--c-text-dim); font-size: 12px; }
     .row.mod.on { border-color: var(--c-interact); }
+    /* La mod è una card come gli oggetti: il corpo sopra, in basso una fascia con il filetto fino ai bordi. */
+    .row.mod { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px 0; overflow: hidden; }
+    .mfoot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 -16px; padding: 10px 16px; border-top: 1px solid var(--c-line); }
+    .mfoot .price { margin-right: auto; font: 15px var(--font-mono); }
     /* La carta di un oggetto nella tab Mod: un <details> (si comprime), spenta se l'oggetto non ha slot per le mod. */
     .gearcard { border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-bg); }
     .gearcard > summary, .gearcard .head { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
@@ -180,9 +214,21 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .gearcard .chev { flex: none; width: 0; height: 0; border-inline: 4px solid transparent; border-top: 5px solid var(--c-text-dim); transition: transform 0.15s; }
     .gearcard:not([open]) .chev { transform: rotate(-90deg); }
     .gearcard .tag { font: 600 10px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    /* La E accanto al nome: l'oggetto è equipaggiato. Verde (--c-ok, come «Pronto» e «Scelto»): è uno stato attivo; il giallo è del denaro e degli avvisi. */
+    .eq { margin-left: 8px; color: var(--c-ok); font: 700 12px/1 var(--font-mono); }
+    /* Il separatore dello zaino: una linea a metà altezza con la parola a destra, su uno sfondo come quello della dialog così la linea non la attraversa. */
+    .bagsep { position: relative; display: flex; justify-content: flex-end; margin: 6px 0; }
+    .bagsep::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--c-line-strong); }
+    .bagsep span { position: relative; padding: 0 8px; background: var(--c-surface); font: 600 10px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    .gdetail { padding: 2px 0 4px; }
+    .slotdots { display: inline-flex; gap: 5px; }
+    .slotdots i { width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--c-text-dim); }
+    .slotdots i.hack { border-color: var(--c-hacking); }
+    .slotdots i.full { background: var(--c-text-dim); }
+    .slotdots i.hack.full { background: var(--c-hacking); }
     .gearcard .slotsused { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--c-text-dim); }
     .gearcard.off { opacity: 0.45; }
-    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--c-line-strong); margin: 0 0 4px; }
+    .tabs { display: flex; gap: 0; border-bottom: 1px solid var(--c-line-strong); margin: 0; }
     .tabs button { flex: 1; padding: 10px 12px; border: 0; border-bottom: 2px solid transparent; background: none; color: var(--c-text-dim); cursor: pointer; font: 600 13px/1.2 var(--font-ui); transition: color 0.15s, border-color 0.15s; }
     .tabs button:hover, .tabs button:focus-visible { color: var(--c-text); outline: none; }
     .tabs button.on { color: var(--c-interact); border-bottom-color: var(--c-interact); }
@@ -193,13 +239,15 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .row b { flex: 1; min-width: 0; font-weight: 600; }
     .price { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--cad-coin); }
     .fx { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--c-text-dim); }
+    .pbody { display: flex; flex-direction: column; gap: 4px; }
+    .pbody h5 { margin: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .fx .life, .fx .oc { display: inline-flex; align-items: center; gap: 4px; }
     .fx .life { color: var(--c-life); }
     .fx .oc { color: var(--c-overclock); }
     .act.cart { display: inline-flex; align-items: center; padding: 4px 8px; }
     .cards app-item-card.sold { opacity: 0.5; }
     .count { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
-    .stock { margin-right: auto; font-size: 12px; color: var(--c-text-dim); font-variant-numeric: tabular-nums; }
+    .stock { font-size: 12px; color: var(--c-interact); font-variant-numeric: tabular-nums; }
     .none { margin: 0; color: var(--c-text-dim); font-size: 12px; }
     .act { padding: 4px 10px; border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; white-space: nowrap; border: 1px solid var(--c-line-strong); font: 12px/1.2 var(--font-ui); transition: border-color 0.15s, color 0.15s; }
     .act:hover:not(.off), .act:focus-visible:not(.off) { border-color: var(--c-interact); color: var(--c-interact); outline: none; }
@@ -278,7 +326,9 @@ export class PregameShopDialogComponent {
               })
           : [];
         return { key, def, detail: itemDetail(def), equipped: equippedKeys.has(key), max, used: installed.length, options, open: !this.closedCards().has(key) };
-      });
+      })
+      // Prima quelli equipaggiati (l'ordine resta com'è dentro ogni gruppo).
+      .sort((a, b) => Number(b.equipped) - Number(a.equipped));
   });
   private readonly left = computed(() => stockLeft(this.shop(), [...this.others(), this.loadout()]));
 
@@ -357,7 +407,10 @@ export class PregameShopDialogComponent {
     const i = this.loadout().potions.lastIndexOf(k);
     if (i >= 0) this.removePotion(i);
   }
+  protected dots = (n: number) => Array.from({ length: Math.max(0, n) }, (_, i) => i);
   protected potionName =(k: PotionKind) => POTION_NAMES[k];
+  /** La carta di un consumabile, nella stessa forma degli altri oggetti (nome e valore; l'effetto lo scrive il negozio nel corpo). */
+  protected potionDef = (k: PotionKind): ItemDef => ({ id: `potion-${k}`, name: POTION_NAMES[k], kind: 'other', hands: 0, price: POTION_PRICES[k] });
   protected potionPrice = (k: PotionKind) => POTION_PRICES[k];
   protected itemName = (id: string) => this.shop().items.get(id)?.name ?? id;
   protected itemPrice = (id: string) => this.shop().items.get(id)?.price ?? 0;

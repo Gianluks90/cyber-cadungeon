@@ -61,6 +61,9 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
         </section>
       }
 
+      <!-- Facoltativo: un blocco di testo proprio (per esempio l'effetto di un consumabile), che chi usa la card scrive e stila. -->
+      <ng-content select="[cardBody]" />
+
       <!-- Le mod montate sull'oggetto (solo se ne ha), con ciò che fanno. -->
       @if (def().mods?.length) {
         <section class="skills">
@@ -96,10 +99,10 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
     .cubes { display: inline-flex; align-items: center; gap: 1px; }
     h5 { margin: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .dice { flex: none; gap: 2px; padding: 0; border: 0; background: none; cursor: pointer; }
-    /* Il piede è una fascia: il filetto arriva ai bordi laterali e il contenuto sta a destra, prima il prezzo e poi i tasti. */
+    /* Il piede è una fascia: il filetto arriva ai bordi laterali e il prezzo sta a sinistra e i tasti a destra. */
     .foot { margin: auto -16px -14px; /* sempre sul fondo della card, anche quando la riga la allunga */ display: flex; align-items: center; justify-content: flex-end; gap: 12px; padding: 10px 16px; border-top: 1px solid var(--c-line); }
     .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-    .price { display: inline-flex; align-items: center; gap: 4px; font: 12px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--cad-coin); }
+    .price { margin-right: auto; display: inline-flex; align-items: center; gap: 4px; font: 15px var(--font-mono); font-variant-numeric: tabular-nums; color: var(--cad-coin); }
   `,
 })
 export class ItemCardComponent {

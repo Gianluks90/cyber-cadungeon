@@ -10,7 +10,7 @@ import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { AdventureDialogComponent, AdventureView } from '../ui/adventure-dialog.component';
 import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
-import { MercenaryDetailDialogComponent } from '../ui/mercenary-detail-dialog.component';
+import { MercenaryDetailDialogComponent, scrollIfPartial } from '../ui/mercenary-detail-dialog.component';
 import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
@@ -93,7 +93,7 @@ import { composeRules } from '../game/state/setup-text';
           <div class="row" role="group" [attr.aria-label]="'lobby.chooseMercenary' | t">
             @for (h of mercenaries(); track h.id) {
               <div class="card mercenary" role="button" tabindex="0" [attr.aria-pressed]="!!mine()?.mercenaries?.includes(h.id)" [class.mine]="mine()?.mercenaries?.includes(h.id)" [class.taken]="takenBy(h.id)"
-                [attr.aria-disabled]="takenBy(h.id) ? 'true' : null" (click)="pick(h.id)" (keydown.enter)="pick(h.id)" (keydown.space)="pick(h.id); $event.preventDefault()">
+                [attr.aria-disabled]="takenBy(h.id) ? 'true' : null" (click)="tap($event, h.id)" (keydown.enter)="pick(h.id)" (keydown.space)="pick(h.id); $event.preventDefault()">
                 <img [src]="h.portraitFull" [alt]="h.name" />
                 <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
                 <app-value-star class="value" [value]="h.value" />
@@ -131,7 +131,7 @@ import { composeRules } from '../game/state/setup-text';
       }
     </footer>
     <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
-    <app-mercenary-detail-dialog [mercenary]="detail()" (closed)="detail.set(null)" />
+    <app-mercenary-detail-dialog [mercenary]="detail()" [chosen]="!!detail() && !!mine()?.mercenaries?.includes(detail()!.id)" [canChoose]="!detail() || !takenBy(detail()!.id)" (choose)="chooseFromDetail($event)" (closed)="detail.set(null)" />
     <app-adventure-dialog [view]="goal()" (confirm)="goal.set(null)" />
     <app-confirm-dialog [open]="askUnspent()" [danger]="false" [title]="'party.unspentTitle' | t" [text]="'party.unspentText' | t: { names: unspentNames() }" [confirmLabel]="'lobby.readyAnyway' | t" (confirmed)="askUnspent.set(false); client?.setReady(true)" (cancel)="askUnspent.set(false)" />
   `,
@@ -352,9 +352,20 @@ export class LobbyComponent {
     return !!this.state()?.players.some((p) => p.mercenaries.includes(id) && p.pid !== this.client?.pid);
   }
 
+  /** Un tocco sulla card: se è seminascosta fa solo scorrere l'elenco fin lì, altrimenti la sceglie. */
+  protected tap(e: Event, id: string) {
+    if (!scrollIfPartial(e.currentTarget as HTMLElement)) this.pick(id);
+  }
+
   protected pick(id: string) {
     if (this.takenBy(id)) return;
     this.client?.pick(id);
+  }
+
+  /** Il tasto della scheda: sceglie il mercenario o, se è già tuo, lo toglie; poi chiude la scheda. */
+  protected chooseFromDetail(h: MercenarySheet) {
+    this.pick(h.id);
+    this.detail.set(null);
   }
 
   protected toggleReady() {

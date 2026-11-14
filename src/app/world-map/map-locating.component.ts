@@ -39,7 +39,7 @@ const format = (v: number, int: number): string => `${v < 0 ? '−' : '+'}${Math
   `,
   styles: `
     :host { display: contents; }
-    .scrim { position: absolute; inset: 0; z-index: 3; display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; background: color-mix(in srgb, var(--c-bg) 70%, transparent); }
+    .scrim { position: absolute; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box; background: color-mix(in srgb, var(--c-bg) 70%, transparent); }
     .box { width: min(340px, 100%); display: flex; flex-direction: column; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); }
     header { padding: 12px 14px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }

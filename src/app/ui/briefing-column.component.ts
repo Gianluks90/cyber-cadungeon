@@ -1,8 +1,9 @@
 import { NgTemplateOutlet } from '@angular/common';
-import { ChangeDetectionStrategy, Component, computed, effect, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal } from '@angular/core';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { ItemDef, itemGroup } from '../game/items/item';
-import { Loadout, ShopData, budgetLeft } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, budgetLeft, carriedItems } from '../game/mercenaries/party-setup';
+import { POTION_NAMES } from '../game/markers/marker-rules';
 import { modsCost } from '../game/mods/mod';
 import { SkillDef } from '../game/skills/skill';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
@@ -20,6 +21,15 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
   imports: [CatalogTextPipe, IconComponent, MoneyCounterComponent, NgTemplateOutlet, PregameShopDialogComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
+    <!-- I badge (budget e «Pronto») stanno fuori dal token: su schermo largo restano fissi mentre la colonna scorre; su telefono stanno sopra la card. -->
+    <div class="badges">
+    <!-- Il budget è un badge a cavallo del bordo in alto a destra (fuori dal token, che ritaglia). -->
+    <span class="budget" [title]="'briefing.budget' | t"><app-money-counter [value]="badgeBudget()" /></span>
+    <!-- «Pronto»: un badge con la spunta in alto a sinistra, specchio del budget. Diventa verde quando è premuto. -->
+    <!-- Su telefono, finché il negozio non è stato aperto il tasto è un carrello (e lo apre); poi diventa la spunta «Pronto». Su schermo largo resta la spunta spenta. -->
+    <button type="button" class="ready" [class.on]="ready()" [class.off]="!visited() && !phone()" [attr.aria-disabled]="visited() || phone() ? null : 'true'" [attr.aria-pressed]="visited() || !phone() ? ready() : null" [attr.aria-label]="(shopFirst() ? 'briefing.openShop' : 'briefing.ready') | t: { name: mercenary().name }" [title]="(shopFirst() ? 'briefing.openShop' : visited() ? 'briefing.ready' : 'briefing.readyLocked') | t: { name: mercenary().name }" (click)="tapReady()">@if (shopFirst()) { <app-icon name="add_shopping_cart" [size]="18" /> } @else { <app-icon name="check" [size]="18" /> }</button>
+    </div>
+    <div class="scroll">
     <div class="frame">
     <button type="button" class="token" [disabled]="!shop()" [attr.aria-label]="'briefing.openShop' | t: { name: mercenary().name }" [title]="'briefing.openShop' | t: { name: mercenary().name }" (click)="openShop()">
       <img [src]="mercenary().portrait" [alt]="mercenary().name" />
@@ -27,15 +37,11 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
         <b>{{ mercenary().name }}</b><span class="role">{{ mercenary().class | ct }}</span>
       </span>
     </button>
-    <!-- Il budget è un badge a cavallo del bordo in alto a destra (fuori dal token, che ritaglia). -->
-    <span class="budget" [title]="'briefing.budget' | t"><app-money-counter [value]="badgeBudget()" /></span>
-    <!-- «Pronto»: un badge con la spunta in alto a sinistra, specchio del budget. Diventa verde quando è premuto. -->
-    <button type="button" class="ready" [class.on]="ready()" [class.off]="!visited()" [attr.aria-disabled]="visited() ? null : 'true'" [attr.aria-pressed]="ready()" [attr.aria-label]="'briefing.ready' | t" [title]="(visited() ? 'briefing.ready' : 'briefing.readyLocked') | t: { name: mercenary().name }" (click)="toggleReady()"><app-icon name="check" [size]="18" /></button>
     </div>
 
     <!-- Il contenuto di una card oggetto: la usano la fornitura iniziale e l'inventario. -->
-    <ng-template #gearCard let-i let-hands="hands">
-      <span class="slots" [title]="'briefing.slotsOf' | t: { n: i.slots ?? 0 }">@for (n of dots(i.slots); track $index) { <i [class.hack]="i.modTags?.includes('hacking')"></i> }</span>
+    <ng-template #gearCard let-i let-hands="hands" let-used="used">
+      <span class="slots" [title]="'briefing.slotsOf' | t: { n: i.slots ?? 0 }">@for (n of dots(i.slots); track $index) { <i [class.full]="$index < used" [class.hack]="i.modTags?.includes('hacking')"></i> }</span>
       <span class="what"><b>{{ i.name }}</b><small>{{ categoryKey(i) | t }}</small></span>
       @if (hands && i.hands > 0) {
         <span class="hands" [title]="'briefing.handsOf' | t: { n: i.hands }">@for (n of dots(i.hands); track $index) { <app-icon class="hand" [name]="'back_hand'" [size]="14" /> }</span>
@@ -51,8 +57,8 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
         <h3>{{ 'briefing.kit' | t }}</h3>
         <hr />
         <ul>
-          @for (i of kit(); track i.id) {
-            <li class="gear"><ng-container [ngTemplateOutlet]="gearCard" [ngTemplateOutletContext]="{ $implicit: i, hands: false }" /></li>
+          @for (i of kit(); track i.id; let n = $index) {
+            <li class="gear"><ng-container [ngTemplateOutlet]="gearCard" [ngTemplateOutletContext]="{ $implicit: i, hands: false, used: usedAt(n) }" /></li>
           }
         </ul>
       } @else {
@@ -64,21 +70,39 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     <section class="inventory" [attr.aria-label]="'briefing.inventory' | t">
       <h3>{{ 'briefing.inventory' | t }}</h3>
       <hr />
-      @if (inventory().length) {
+      @if (inventory().length || potions().length) {
         <ul>
-          @for (i of inventory(); track $index) { <li class="gear"><ng-container [ngTemplateOutlet]="gearCard" [ngTemplateOutletContext]="{ $implicit: i, hands: true }" /></li> }
+          @for (i of inventory(); track $index; let n = $index) { <li class="gear"><ng-container [ngTemplateOutlet]="gearCard" [ngTemplateOutletContext]="{ $implicit: i, hands: true, used: usedAt(kit().length + n) }" /></li> }
+          <!-- I consumabili comprati, uno per tipo con quanti ne ha. -->
+          @for (p of potions(); track p.kind) {
+            <li class="gear"><span class="what"><b>{{ p.name }}<span class="qty">×{{ p.count }}</span></b><small>{{ 'briefing.consumable' | t }}</small></span></li>
+          }
         </ul>
       } @else {
         <p>{{ 'briefing.inventoryEmpty' | t }}</p>
       }
     </section>
 
+    </div>
+
     @if (open() && shop(); as s) {
       <app-pregame-shop-dialog [mercenary]="mercenary()" [loadout]="loadout()" [shop]="s" [others]="others()" [skills]="skills()" (changed)="changed.emit($event)" (closed)="open.set(false)" />
     }
   `,
   styles: `
-    :host { display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; text-align: left; }
+    :host { position: relative; display: flex; flex-direction: column; gap: 12px; width: 100%; min-width: 0; text-align: left; }
+    /* Desktop: la colonna ha 18px di margine sopra (per i badge, che sporgono) e sotto una zona interna (.scroll) che scorre da sola; i badge stanno fuori da quella zona, quindi restano fermi senza altri accorgimenti. Su mobile .scroll non c'è (display: contents) e scorre tutta la pagina. */
+    .scroll { display: contents; }
+    @media (min-width: 901px) {
+      :host { min-height: 0; padding-top: 18px; }
+      .scroll { display: flex; flex-direction: column; gap: 12px; flex: 1; min-height: 0; overflow-y: auto; scrollbar-width: thin; container-type: inline-size; padding-bottom: 4px; }
+      :host .kit { flex: 1 0 auto; min-height: auto; overflow: visible; }
+      .badges { position: absolute; top: 18px; left: 0; right: 0; height: 0; z-index: 4; }
+      /* Il token (un quadrato alto quanto la colonna è larga) scorre finché resta in vista solo la sua fascia con nome e ruolo (56px), che si ferma in cima e fa da intestazione. Il token ha 1px di bordo sotto la fascia, per questo 57: così si vede anche il filetto in alto. */
+      :host .frame { position: sticky; top: calc(57px - 100cqw); z-index: 2; }
+      .badges .budget, .badges .ready { transform: translateY(calc(-50% - 4px)); }
+      :host .cap { height: 56px; box-sizing: border-box; justify-content: center; }
+    }
     /* Il token: un quadrato dritto (non una carta), con il ritratto ritagliato in alto e i parametri stampati sopra. */
     .token { position: relative; display: block; width: 100%; aspect-ratio: 1; padding: 0; overflow: hidden; cursor: pointer; border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit; transition: border-color 0.15s; }
     .token:disabled { cursor: default; }
@@ -88,6 +112,19 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .cap b { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.04em; }
     .role { color: var(--c-text-dim); font-size: 11px; font-weight: 600; letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .frame { position: relative; }
+    /* Su telefono il token è una riga: il ritratto a sinistra (40%) e nome e ruolo a destra (60%). */
+    @media (max-width: 900px) {
+      .token { display: flex; align-items: stretch; aspect-ratio: 5 / 2; }
+      img { position: static; flex: 0 0 40%; width: 40%; height: 100%; }
+      .cap { position: static; flex: 0 0 60%; width: 60%; box-sizing: border-box; justify-content: center; padding: 8px 14px; border-top: 0; border-left: 1px solid var(--c-line-strong); }
+      /* I badge sopra la card (la riga del token ha proporzione 5/2): il budget a cavallo del bordo in alto a sinistra, «Pronto» dentro la card in basso a destra. */
+      .badges { position: absolute; top: 0; left: 0; right: 0; aspect-ratio: 5 / 2; pointer-events: none; z-index: 1; }
+      .badges > * { pointer-events: auto; }
+      .badges .budget { right: auto; left: 14px; }
+      /* «Pronto» più grande e dentro la card, in basso a destra (il budget resta a cavallo del bordo). */
+      .badges .ready { top: auto; left: auto; right: 12px; bottom: 12px; transform: none; width: 48px; height: 48px; }
+      .badges .ready app-icon { width: 28px !important; height: 28px !important; }
+    }
     /* Angoli arrotondati solo in alto a destra e in basso a sinistra, come la pillola dei parametri. */
     .budget { position: absolute; top: 0; right: 14px; transform: translateY(-50%); padding: 5px 10px; border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-bg); color: var(--cad-coin); font: 700 14px/1 var(--font-mono); font-variant-numeric: tabular-nums; }
     .kit { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
@@ -99,11 +136,14 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .gear { position: relative; display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 10px 56px 10px 10px; box-sizing: border-box; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-surface); }
     .gear b { font-weight: 600; min-width: 0; }
     .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .qty { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
     .what small { color: var(--c-text-dim); font: 600 11px/1.2 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .slots { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
     .slots i { width: 10px; height: 10px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--c-text-dim); }
     /* Gli slot che accettano solo mod hacking hanno un altro colore (prova: il rosa). */
+    .slots i.full { background: var(--c-text-dim); }
     .slots i.hack { border-color: var(--c-hacking); }
+    .slots i.hack.full { background: var(--c-hacking); }
     .hands { position: absolute; right: 8px; bottom: 6px; display: flex; gap: 2px; color: var(--c-text); opacity: 0.6; }
     .hand:last-child:not(:first-child) { transform: scaleX(-1); }
     .inventory { padding: 10px 12px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
@@ -136,6 +176,23 @@ export class BriefingColumnComponent {
   protected openShop() {
     this.open.set(true);
     this.shopOpened.emit();
+  }
+
+  /** Mobile (fino a 900px): lì il tasto «Pronto» fa anche da scorciatoia al negozio. */
+  protected readonly phone = signal(false);
+  /** Telefono e negozio mai aperto: il tasto è il carrello. */
+  protected readonly shopFirst = computed(() => this.phone() && !this.visited());
+  constructor() {
+    const mq = matchMedia('(max-width: 900px)');
+    const update = () => this.phone.set(mq.matches);
+    update();
+    mq.addEventListener('change', update);
+    inject(DestroyRef).onDestroy(() => mq.removeEventListener('change', update));
+  }
+
+  protected tapReady() {
+    if (this.shopFirst()) this.openShop();
+    else this.toggleReady();
   }
 
   protected toggleReady() {
@@ -172,6 +229,22 @@ export class BriefingColumnComponent {
   protected readonly inventory = computed<ItemDef[]>(() => {
     const s = this.shop();
     return this.loadout().items.flatMap((id) => s?.items.get(id) ?? []);
+  });
+  /** Gli slot occupati dalle mod montate su ogni oggetto che il mercenario porta, nell'ordine: prima l'equipaggiamento iniziale e poi ciò che ha comprato. */
+  private readonly modsUsed = computed<number[]>(() => {
+    const s = this.shop();
+    if (!s) return [];
+    const l = this.loadout();
+    return carriedItems(this.mercenary().startingGear ?? [], l, s).map((c) => (l.mods?.[c.key] ?? []).length);
+  });
+  protected usedAt = (n: number) => this.modsUsed()[n] ?? 0;
+  /** I consumabili comprati nel Briefing, raggruppati per tipo. */
+  protected readonly potions = computed(() => {
+    const l = this.loadout().potions;
+    return (['heal', 'overclock'] as const).flatMap((kind) => {
+      const count = l.filter((k) => k === kind).length;
+      return count ? [{ kind, name: POTION_NAMES[kind], count }] : [];
+    });
   });
   protected dots = (n: number | undefined) => Array.from({ length: n ?? 0 });
 }

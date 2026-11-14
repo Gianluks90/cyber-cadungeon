@@ -9,6 +9,18 @@ import { MarkdownPipe } from './markdown.pipe';
 import { IconComponent } from './icon.component';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 
+/** Se la card è solo in parte dentro l'elenco la porta in vista (e dice di sì), ma solo su mobile (fino a 900px): un tocco sulla card seminascosta fa scorrere l'elenco fin lì, senza scegliere. */
+export const scrollIfPartial = (card: HTMLElement): boolean => {
+  if (!matchMedia('(max-width: 900px)').matches) return false; // solo mobile: su desktop un click sceglie sempre
+  const row = card.parentElement;
+  if (!row) return false;
+  const c = card.getBoundingClientRect();
+  const r = row.getBoundingClientRect();
+  if (c.left >= r.left && c.right <= r.right) return false;
+  card.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  return true;
+};
+
 /**
  * La scheda di un eroe nella scelta della squadra: solo ciò che è fisso, cioè i parametri, i dadi competenza, l'abilità primaria e gli attributi (i punti nei tre rami) che decidono le
  * 3 abilità secondarie: a inizio partita l'eroe pesca a caso una carta per ogni punto, dal mazzo di quel ramo. Le carte vere non si vedono qui perché non sono ancora state pescate.
@@ -48,15 +60,22 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
             <div class="slot" [attr.data-school]="s.school"><b>{{ s.name }}</b></div>
           }
         </div>
-        <ng-container dialogFooter><button type="button" class="dlg-btn primary" (click)="closed.emit()">{{ 'common.close' | t }}</button></ng-container>
+        <!-- Dove le carte laterali non ci stanno (telefono e schermi stretti) la storia segue le abilità secondarie. -->
+        <section class="story-inline">
+          <h3>{{ 'detail.story' | t }}</h3>
+          <p>{{ h.story || ('detail.storyPlaceholder' | t) }}</p>
+        </section>
+        <!-- «Scegli» al posto di «Chiudi»: chiude la scheda e sceglie il mercenario in un solo tocco (la X resta per chiudere e basta). -->
+        <ng-container dialogFooter><button type="button" class="dlg-btn primary" [class.on]="chosen()" [attr.aria-pressed]="chosen()" [attr.aria-disabled]="canChoose() ? null : 'true'" (click)="canChoose() && choose.emit(h)">{{ (chosen() ? 'detail.chosen' : 'detail.choose') | t }}</button></ng-container>
       </app-dialog>
     }
   `,
   styles: `
     h3 { margin: 6px 0 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     h3:first-of-type { margin-top: 0; }
-    .stats { display: flex; flex-wrap: wrap; gap: 8px 18px; }
-    .stat { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    /* I quattro parametri in una griglia 2x2, ognuno nel suo riquadro. */
+    .stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .stat { display: inline-flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: var(--c-bg); font-weight: 600; font-variant-numeric: tabular-nums; }
     /* Numero ed etichetta sulla stessa linea di base, con un po' di spazio; l'icona resta centrata sul riquadro. */
     .stat .v { display: inline-flex; align-items: baseline; gap: 6px; }
     .stat.life { color: var(--c-life); }
@@ -74,15 +93,28 @@ import { MercenaryFaceComponent } from './mercenary-face.component';
     .card { position: absolute; z-index: 0; top: 0; bottom: 0; margin-block: auto; margin-inline: 0; height: min(484px, calc(100% - 16px)); width: 220px; overflow: hidden; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-tile); box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); }
     .card.left { --face-inset: 14px; right: calc(100% - 14px); transform: rotate(-4deg); transform-origin: 70% 100%; }
     .card.right { left: calc(100% - 14px); transform: rotate(4deg); transform-origin: 30% 100%; display: flex; flex-direction: column; background: var(--c-surface); }
+    /* Già scelto: il tasto è «Scelto», acceso come le carte selezionate; un tocco toglie la scelta. */
+    .dlg-btn.on { border-color: var(--c-ok); color: var(--c-ok); }
+    .story-inline { display: none; flex-direction: column; gap: 8px; }
+    .story-inline p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-text-dim); }
     .card .head { flex: none; padding: 10px 10px 8px 14px; border-bottom: 1px solid var(--c-line-strong); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .story { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px 12px 14px; scrollbar-width: none; }
     .story::-webkit-scrollbar { display: none; }
     .story p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-text-dim); }
-    @media (max-width: 1000px) { .card { display: none; } }
+    /* Sotto i 1000px le carte laterali non ci stanno: attenzione, \`.card.right\` ha \`display: flex\` e vince su \`.card\`, quindi vanno nominate tutte e due. */
+    @media (max-width: 1000px) { .card, .card.left, .card.right { display: none; } .story-inline { display: flex; } }
+    /* Su telefono i tre slot delle abilità secondarie stanno uno sotto l'altro. */
+    @media (max-width: 900px) { .slots { flex-direction: column; } }
   `,
 })
 export class MercenaryDetailDialogComponent {
   readonly mercenary = input<MercenarySheet | null>(null);
+  /** Il tasto «Scegli»: chi apre la scheda sceglie il mercenario e la chiude. */
+  readonly choose = output<MercenarySheet>();
+  /** Se si può ancora scegliere (per esempio non se la squadra è piena o il mercenario è di un altro). */
+  readonly canChoose = input(true);
+  /** Il mercenario è già scelto: il tasto diventa «Scelto» e un tocco lo toglie. */
+  readonly chosen = input(false);
   readonly closed = output<void>();
 
   protected readonly total = computed(() => SKILL_SCHOOLS.reduce((n, s) => n + (this.mercenary()?.skills[s] ?? 0), 0));

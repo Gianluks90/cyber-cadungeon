@@ -52,6 +52,11 @@ const WEATHER_NOTE_FROM_M = 500;
             @if (far()) { <p class="info warn" [class.blink]="open()" [attr.data-level]="level" role="status"><app-icon name="warning" [size]="16" />{{ 'contract.weatherAlert' | t }}</p> }
           }
           @if (!unlocked() && breach() === null) { <p class="info">{{ 'contract.approach' | t: { n: radius } }}</p> }
+          @if (dev && !unlocked() && breach() === null) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
+          @if (dev) { <button type="button" class="dlg-btn" (click)="devReset.emit()">{{ 'contract.devReset' | t }}</button> }
+        </div>
+        <!-- Il tasto principale sta fuori dal testo che scorre: si vede sempre. -->
+        <footer>
           @if (breach() !== null) {
             <!-- La violazione: restando a portata per qualche secondo la barra si riempie (a riempimento, non a segmenti) e il contratto si sblocca. Prende il posto del tasto. -->
             <div class="breach" role="progressbar" aria-valuemin="0" aria-valuemax="100" [attr.aria-valuenow]="percent()" [attr.aria-label]="(decrypting() ? 'contract.decrypt' : 'contract.breach') | t">
@@ -60,10 +65,8 @@ const WEATHER_NOTE_FROM_M = 500;
             </div>
           } @else {
             <button type="button" class="dlg-btn primary" [attr.aria-disabled]="canAccept() ? null : 'true'" (click)="canAccept() && accept.emit(c)">{{ (accepted() ? 'contract.accepted' : 'contract.acceptCount') | t: { n: heldCount(), max: maxHeld() } }}</button>
-            @if (dev && !unlocked()) { <button type="button" class="dlg-btn" (click)="devUnlock.emit(c)">{{ 'contract.devUnlock' | t }}</button> }
           }
-          @if (dev) { <button type="button" class="dlg-btn" (click)="devReset.emit()">{{ 'contract.devReset' | t }}</button> }
-        </div>
+        </footer>
       }
     </aside>
   `,
@@ -73,10 +76,12 @@ const WEATHER_NOTE_FROM_M = 500;
     .sheet { --w: min(320px, 82vw); --rail: 56px; position: absolute; z-index: 0; top: 50%; right: var(--rail); max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translate(calc(var(--w) + var(--rail)), -50%); transition: transform var(--t-base) var(--ease-draw); }
     .sheet.open { transform: translate(0, -50%); }
     .sheet:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
-    /* Telefono: un foglio che sale dal basso a tutta larghezza. */
+    /* Telefono: un foglio alto metà schermo che sale dal basso a tutta larghezza, sopra i tasti della mappa. */
     @media (max-width: 640px) {
-      .sheet { z-index: 2; top: auto; right: 0; bottom: 0; left: 0; width: auto; max-height: 60dvh; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }
+      .sheet { z-index: 4; top: auto; right: 0; bottom: 0; left: 0; width: auto; height: 50%; max-height: none; overflow: hidden; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }
       .sheet.open { transform: none; }
+      /* Metà schermo al contratto, metà alla mappa: l'intestazione resta ferma e scorre solo il testo. */
+      .body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     }
     /* Intestazione, divisore e tasto di chiusura: gli stessi dei filtri. */
     header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px 10px 14px; }
@@ -85,6 +90,8 @@ const WEATHER_NOTE_FROM_M = 500;
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-line-strong); }
     .close { flex: none; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    /* Il piè di pagina col tasto (o la barra di violazione): non scorre. Su schermo largo, dove scorre tutto il foglio, resta incollato in fondo. */
+    footer { flex: none; position: sticky; bottom: 0; display: flex; flex-direction: column; padding: 10px 14px 14px; background: var(--c-surface); border-top: 1px solid var(--c-line); }
     /* Il contenuto con le spaziature dell'elenco dei filtri. */
     .body { display: flex; flex-direction: column; align-items: stretch; gap: 10px; padding: 12px 14px 14px; }
     p { margin: 0; }

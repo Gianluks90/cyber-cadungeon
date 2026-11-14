@@ -24,7 +24,7 @@ import { IconComponent } from './icon.component';
         <header [class.tall]="!!subtitle()">
           <div class="heading">
             @if (kicker()) { <span class="kicker">{{ kicker() }}</span> }
-            <h2>{{ title() }}</h2>
+            <h2>{{ title() }}@if (accent()) { <span class="accent"> • {{ accent() }}</span> }</h2>
             @if (subtitle()) { <p class="subtitle">{{ subtitle() }}</p> }
           </div>
           @if (closable()) {
@@ -32,7 +32,7 @@ import { IconComponent } from './icon.component';
           }
         </header>
         <!-- Facoltativo: una seconda intestazione fissa sotto la prima (dialogSub), che non scorre con il contenuto. -->
-        <div class="sub"><ng-content select="[dialogSub]" /></div>
+        <div class="sub" [class.flush]="subFlush()"><ng-content select="[dialogSub]" /></div>
         <div class="body" [class.flush]="flush()" #body><ng-content /></div>
         <!-- Il piede: a sinistra (dialogFooterStart, facoltativo) e a destra i bottoni di azione (dialogFooter). -->
         <footer><div class="fstart"><ng-content select="[dialogFooterStart]" /></div><ng-content select="[dialogFooter]" /></footer>
@@ -45,6 +45,8 @@ import { IconComponent } from './icon.component';
     /* Sopra la finestra dell'attacco (900): le scelte che nascono durante un attacco (Schivata, Mira, reazioni alle ferite) si aprono mentre quella è ancora aperta. Sotto gli annunci (950) e le notifiche (1000). */
     .backdrop { position: fixed; inset: 0; z-index: 920; display: grid; place-items: center; padding: 12px; background: rgba(0, 0, 0, 0.6); animation: fade 0.2s ease-out; }
     .frame { position: relative; display: flex; max-width: 100%; max-height: min(680px, calc(100dvh - 24px)); }
+    /* Su mobile (fino a 900px) le dialog possono occupare tutta l'altezza, meno il margine. */
+    @media (max-width: 900px) { .frame { max-height: calc(100dvh - 24px); } }
     .box {
       position: relative; z-index: 1; width: 100%; height: 100%; display: flex; flex-direction: column; box-sizing: border-box; max-height: inherit;
       --dlg-line: var(--c-line-strong);
@@ -58,6 +60,7 @@ import { IconComponent } from './icon.component';
     .heading { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
     .kicker { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .subtitle { margin: 0; max-width: 56ch; color: var(--c-text-dim); font-size: 13px; line-height: 1.4; }
+    .accent { color: var(--c-interact); }
     h2 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color 0.15s; }
     .close:hover, .close:focus-visible { color: var(--c-interact); outline: none; }
@@ -69,6 +72,8 @@ import { IconComponent } from './icon.component';
     .fstart:empty { display: none; }
     .sub { flex: none; border-bottom: 1px solid var(--c-line-strong); padding: 10px 20px; background: var(--c-bg); }
     .sub:empty { display: none; }
+    /* A tutta larghezza, senza margine interno né filetto: ci pensa chi la riempie (per esempio i riquadri apribili del negozio). */
+    .sub.flush { padding: 0; border-bottom: 0; }
     /* Nascosta (per esempio mentre si sceglie qualcosa sulla mappa): resta nella pagina, con tutto ciò che c'è scritto, ma non si vede e non si tocca. */
     .backdrop.away { display: none; }
     @keyframes fade { from { opacity: 0; } }
@@ -77,6 +82,8 @@ import { IconComponent } from './icon.component';
 })
 export class DialogComponent {
   readonly title = input.required<string>();
+  /** Un nome accanto al titolo, in azzurro (per esempio il mercenario di cui si apre il negozio): «Titolo • Nome». */
+  readonly accent = input('');
   /** Una riga piccola sopra il titolo (per esempio "Introduzione"). */
   readonly kicker = input('');
   /** Una frase sotto il titolo, in piccolo (per spiegare a cosa serve la finestra). */
@@ -85,6 +92,8 @@ export class DialogComponent {
   readonly width = input('min(560px, 100%)');
   /** Altezza fissa della finestra (un valore CSS); senza, si adatta al contenuto. */
   readonly height = input<string | null>(null);
+  /** La seconda intestazione (dialogSub) tocca i bordi e non ha margine interno né filetto sotto. */
+  readonly subFlush = input(false);
   /** Contenuto libero: niente margine interno né scorrimento, lo gestisce chi lo scrive (per esempio il catalogo a due colonne). */
   readonly flush = input(false);
   /** Mostra la X e chiude con Esc o un tocco fuori. */

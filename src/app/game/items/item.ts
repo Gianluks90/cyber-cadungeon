@@ -209,7 +209,7 @@ export function itemGroup(item: ItemDef): ItemGroup {
 }
 
 export function itemDetail(item: ItemDef): string {
-  const kind = item.kind === 'armor' ? null : { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: '' }[item.kind];
+  const kind = { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: tr('Armatura') }[item.kind];
   const attackName = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
   // La gittata delle armi a distanza sta tra parentesi accanto al tipo: "distanza (3)".
   const attack = attackName && item.attack === 'ranged' && item.range ? `${attackName} (${item.range})` : attackName;

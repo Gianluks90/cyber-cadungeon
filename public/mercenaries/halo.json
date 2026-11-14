@@ -15,14 +15,14 @@
   "potions": [],
   "startingGear": ["wire-knife", "wetsuit", "kitsune-9"],
   "skills": {
-    "combat": 1,
-    "cunning": 1,
-    "hacking": 1
+    "combat": 0,
+    "cunning": 0,
+    "hacking": 3
   },
   "dice": {
-    "melee": 1,
-    "ranged": 1,
-    "intrusion": 1
+    "melee": 0,
+    "ranged": 0,
+    "intrusion": 3
   },
   "abilityName": "Rete tattica",
   "ability": "Guadagni l'abilità **Comando**: quando un mercenario entro 3 spazi da te (te compreso) attacca, ottiene **+1 danno** e **+1 gittata**.",

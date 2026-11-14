@@ -11,7 +11,7 @@ import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { MarkdownPipe } from '../ui/markdown.pipe';
 import { DotTrailComponent } from '../ui/dot-trail.component';
 import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
-import { MercenaryDetailDialogComponent } from '../ui/mercenary-detail-dialog.component';
+import { MercenaryDetailDialogComponent, scrollIfPartial } from '../ui/mercenary-detail-dialog.component';
 import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
 import { FamiliarPillComponent } from '../ui/familiar-pill.component';
@@ -52,7 +52,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
       @if (step() === 'pick') {
         <div class="row" role="group" [attr.aria-label]="'party.title' | t">
           @for (h of mercenaries(); track h.id) {
-            <div class="card" role="button" tabindex="0" [class.on]="order(h.id) > 0" [attr.aria-pressed]="order(h.id) > 0" [attr.aria-disabled]="!order(h.id) && full() ? 'true' : null" (click)="toggle(h.id)" (keydown.enter)="toggle(h.id)" (keydown.space)="toggle(h.id); $event.preventDefault()">
+            <div class="card" role="button" tabindex="0" [class.on]="order(h.id) > 0" [attr.aria-pressed]="order(h.id) > 0" [attr.aria-disabled]="!order(h.id) && full() ? 'true' : null" (click)="tap($event, h.id)" (keydown.enter)="toggle(h.id)" (keydown.space)="toggle(h.id); $event.preventDefault()">
               <img [src]="h.portraitFull" [alt]="h.name" />
               <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
       <app-value-star class="value" [value]="h.value" />
@@ -80,7 +80,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
         </div>
       }
     </main>
-    <footer class="foot">
+    <footer class="foot" [class.pick]="step() === 'pick'">
       @if (step() === 'pick') {
         <button type="button" class="dlg-btn primary confirm" [class.off]="!ready()" [attr.aria-disabled]="ready() ? null : 'true'" (click)="confirm()">{{ 'party.confirm' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
         @if (!ready()) { <p class="warn" role="status"><app-icon name="warning" [size]="18" />{{ warning() }}</p> }
@@ -89,7 +89,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
       }
     </footer>
     <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
-    <app-mercenary-detail-dialog [mercenary]="detail()" (closed)="detail.set(null)" />
+    <app-mercenary-detail-dialog [mercenary]="detail()" [chosen]="!!detail() && order(detail()!.id) > 0" [canChoose]="!detail() || !full() || order(detail()!.id) > 0" (choose)="chooseFromDetail($event)" (closed)="detail.set(null)" />
     <app-confirm-dialog [open]="askUnspent()" [danger]="false" [title]="'party.unspentTitle' | t" [text]="'party.unspentText' | t: { names: unspentNames() }" [confirmLabel]="'party.startAnyway' | t" (confirmed)="askUnspent.set(false); go()" (cancel)="askUnspent.set(false)" />
   `,
   styles: `
@@ -101,21 +101,27 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     app-dot-trail { grid-area: 1 / 1 / -1 / -1; }
     .head { grid-row: 1; grid-column: 1; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: calc(14px + env(safe-area-inset-top)) 120px 8px; text-align: center; }
     .foot { grid-row: 3; grid-column: 1; position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 10px; min-height: 84px; padding: 8px 16px calc(18px + env(safe-area-inset-bottom)); box-sizing: border-box; justify-content: flex-end; }
-    main { grid-row: 2; grid-column: 1; position: relative; min-height: 0; display: flex; align-items: center; justify-content: center; overflow-x: hidden; overflow-y: auto; }
-    @media (max-width: 600px) { .head { padding-inline: 16px; padding-top: calc(66px + env(safe-area-inset-top)); } }
+    main { grid-row: 2; grid-column: 1; position: relative; min-height: 0; display: flex; align-items: flex-start; justify-content: center; overflow-x: hidden; overflow-y: auto; }
+    /* Centrato in verticale con i margini automatici, che si azzerano se il contenuto è più alto: con align-items: center la parte in alto restava tagliata e irraggiungibile. */
+    main > * { margin-block: auto; }
+    @media (max-width: 900px) { .head { padding-inline: 16px; padding-top: calc(66px + env(safe-area-inset-top)); } }
     .kicker { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     h1 { margin: 0; font: 600 var(--fs-lg)/1.2 var(--font-display); letter-spacing: 0.03em; }
     .hint, .count { margin: 0; color: var(--c-text-dim); font-size: 13px; }
     .hint p { margin: 0; }
+    /* In alto 30px: i badge del budget e «Pronto» sporgono a metà sopra la prima card e non devono essere tagliati. */
     /* Un mercenario per colonna: 3 colonne uguali, una sola su schermi stretti. */
-    .squad { display: grid; grid-template-columns: repeat(3, minmax(0, 240px)); gap: 24px; justify-content: center; align-items: stretch; width: 100%; box-sizing: border-box; padding: 12px 24px; }
-    @media (max-width: 900px) { .squad { grid-template-columns: minmax(0, 240px); } }
-    .warn { display: inline-flex; align-items: center; gap: 6px; margin: 0; max-width: calc(100% - 340px); color: var(--c-warn); font-size: 13px; text-align: center; }
+    .squad { display: grid; grid-template-columns: repeat(3, minmax(0, 280px)); gap: 12px; justify-content: center; align-items: stretch; width: 100%; box-sizing: border-box; padding: 30px 24px 12px; }
+    /* Desktop: le tre colonne occupano tutta l'altezza e ognuna scorre da sola (non tutta la pagina insieme). */
+    @media (min-width: 901px) { .squad { height: 100%; grid-template-rows: minmax(0, 1fr); margin-block: 0; padding-top: 12px; } }
+    @media (max-width: 900px) { .squad { grid-template-columns: minmax(0, 1fr); max-width: 520px; padding-inline: 16px; } }
+    /* Fuori dal flusso: quando sparisce l'altezza del piè di pagina non cambia e le card non scattano. */
+    .warn { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: max-content; display: inline-flex; align-items: center; gap: 6px; margin: 0; max-width: calc(100% - 340px); color: var(--c-warn); font-size: 13px; text-align: center; }
     /* «Conferma» in basso a destra, alto quanto la freccia indietro in basso a sinistra (36px, 44px sul tocco), con la freccia a destra della scritta. */
     .confirm { position: fixed; z-index: 3; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; }
     @media (pointer: coarse) { .confirm { height: 44px; } }
-    /* Su telefono i due tasti occupano gli angoli in basso: l'avviso sale sopra, a tutta larghezza. */
-    @media (max-width: 600px) { .foot { padding-bottom: calc(66px + env(safe-area-inset-bottom)); } .warn { max-width: 100%; } }
+    /* Su telefono i due tasti occupano gli angoli in basso: l'avviso sale sopra, a tutta larghezza. Nel Briefing, dove l'avviso non c'è, il piede è alto solo quanto i tasti e il resto va al contenuto. */
+    @media (max-width: 900px) { .foot { min-height: 0; padding: 0 16px calc(60px + env(safe-area-inset-bottom)); } .foot.pick { min-height: calc(144px + env(safe-area-inset-bottom)); padding-bottom: calc(66px + env(safe-area-inset-bottom)); } .warn { bottom: calc(66px + env(safe-area-inset-bottom)); max-width: calc(100% - 32px); flex-direction: column; gap: 2px; } }
     .row { display: flex; gap: 24px; width: 100%; box-sizing: border-box; padding: 18px 28px 22px 56px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 56px 28px; overscroll-behavior-x: contain; }
     /* Con poche carte stanno al centro, con tante partono da sinistra: i margini automatici si azzerano quando non c'è spazio (con il centramento diretto la parte a sinistra restava tagliata e irraggiungibile). */
     .row > :first-child { margin-inline-start: auto; }
@@ -209,10 +215,21 @@ export class PartyComponent {
     return this.chosen().indexOf(id) + 1;
   }
 
+  /** Un tocco sulla card: se è seminascosta fa solo scorrere l'elenco fin lì, altrimenti la sceglie. */
+  protected tap(e: Event, id: string) {
+    if (!scrollIfPartial(e.currentTarget as HTMLElement)) this.toggle(id);
+  }
+
   protected toggle(id: string) {
     this.chosen.update((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < PARTY_SIZE ? [...c, id] : c));
     // Un eroe lasciato a casa rimette in negozio ciò che aveva comprato.
     this.loadouts.update((l) => Object.fromEntries(Object.entries(l).filter(([mercenary]) => this.chosen().includes(mercenary))));
+  }
+
+  /** Il tasto della scheda: sceglie il mercenario o, se è già scelto, lo toglie; poi chiude la scheda. */
+  protected chooseFromDetail(h: MercenarySheet) {
+    this.toggle(h.id);
+    this.detail.set(null);
   }
 
   protected loadoutOf(id: string): Loadout {
