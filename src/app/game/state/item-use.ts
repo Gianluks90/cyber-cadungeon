@@ -14,6 +14,8 @@ import { healWounds } from './status';
  */
 interface UseEffect extends Effect {
   when?: string;
+  /** Parola chiave Prepara: usandolo ora (paga il costo e si scarta) l'effetto scatta all'inizio del prossimo turno dell'eroe, non subito. */
+  prepare?: boolean;
   cost?: { overclock?: number; movement?: number; discard?: boolean; exhaust?: boolean };
   repeatable?: boolean;
   do?: { op: string; amount?: number | 'full'; who?: 'self' | 'selfOrAdjacent' | 'selfAndAdjacent' }[];
@@ -31,6 +33,8 @@ export interface ItemUse {
   reason?: string;
   /** Chi può scegliere un altro eroe come bersaglio (la Cura maggiore). */
   pickTarget: boolean;
+  /** Si «prepara»: il bottone dice Prepara e l'effetto scatta all'inizio del prossimo turno. */
+  prepare: boolean;
 }
 
 function effectOf(def: ItemDef | undefined): UseEffect | null {
@@ -66,8 +70,8 @@ export function itemUse(state: GameState, board: Board | null, piece: Piece, ite
   else if (c.exhaust && piece.exhausted?.includes(itemId)) reason = tr('Già usato in questo turno');
   else if (c.movement && piece.points < c.movement) reason = tr('Servono {mov:{movement}}', { movement: c.movement });
   else if (c.overclock && piece.overclock < c.overclock) reason = tr('Non hai abbastanza overclock');
-  else if (!worthUsing(e, targetsFor(state, board, piece, who))) reason = who === 'self' ? tr('Sei già in piena salute') : tr('Nessuno ha bisogno di cure');
-  return { itemId, cost, extra, enabled: !reason, reason, pickTarget: who === 'selfOrAdjacent' };
+  else if (!e.prepare && !worthUsing(e, targetsFor(state, board, piece, who))) reason = who === 'self' ? tr('Sei già in piena salute') : tr('Nessuno ha bisogno di cure');
+  return { itemId, cost, extra, enabled: !reason, reason, pickTarget: who === 'selfOrAdjacent', prepare: !!e.prepare };
 }
 
 /** Cosa è successo usando un oggetto. */
@@ -83,6 +87,22 @@ export function useItem(state: GameState, board: Board | null, piece: Piece, ite
   const c = e.cost ?? {};
   const notes: string[] = [];
   const touched = new Set<Piece>();
+  if (e.prepare) {
+    // Prepara: si paga adesso (e l'oggetto si scarta), l'effetto scatta all'inizio del prossimo turno (`applyPrepared`).
+    (piece.prepared ??= []).push({ name: def.name, ops: (e.do ?? []).map((op) => ({ op: op.op, amount: op.amount })) });
+    if (c.overclock) piece.overclock -= c.overclock;
+    if (c.movement) spendPoints(piece, c.movement);
+    if (c.discard) {
+      for (const list of [piece.equipped, piece.backpack]) {
+        const i = list.indexOf(itemId);
+        if (i >= 0) {
+          list.splice(i, 1);
+          break;
+        }
+      }
+    }
+    return { ok: true, notice: tr('{name}: preparato, scatta all\'inizio del tuo prossimo turno', { name: def.name }), healed: [] };
+  }
   for (const op of e.do ?? []) {
     const who = op.who ?? 'self';
     let targets: Piece[];
@@ -115,4 +135,25 @@ export function useItem(state: GameState, board: Board | null, piece: Piece, ite
     }
   }
   return { ok: true, notice: `${def.name}: ${notes.join(' · ') || 'nessun effetto'}`, healed: [...touched] };
+}
+
+/** Gli oggetti preparati (Prepara) scattano all'inizio del turno dell'eroe: cura la Salute, riporta l'overclock al massimo. Restituisce i messaggi. */
+export function applyPrepared(piece: Piece): string[] {
+  const notes: string[] = [];
+  for (const p of piece.prepared ?? []) {
+    const parts: string[] = [];
+    for (const op of p.ops) {
+      if (op.op === 'heal') {
+        const r = healWounds(piece, full(op.amount, piece.maxWounds));
+        parts.push(r.healed === 1 ? tr('+1 Salute') : tr('+{n} Salute', { n: r.healed }));
+      } else if (op.op === 'recoverOverclock') {
+        const n = Math.min(piece.maxOverclock - piece.overclock, full(op.amount, piece.maxOverclock));
+        piece.overclock += n;
+        if (n) parts.push(`+{overclock:${n}}`);
+      }
+    }
+    notes.push(`${p.name}: ${parts.join(' · ') || tr('nessun effetto')}`);
+  }
+  piece.prepared = [];
+  return notes;
 }

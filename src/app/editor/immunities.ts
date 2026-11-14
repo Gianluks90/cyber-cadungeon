@@ -7,6 +7,7 @@ export const IMMUNITY_OPTIONS: SelectOption[] = [
   { value: 'burn', get label() { return t('immunity.burn'); } },
   { value: 'web', get label() { return t('immunity.web'); } },
   { value: 'stun', get label() { return t('immunity.stun'); } },
+  { value: 'shock', get label() { return t('immunity.shock'); } },
   { value: 'poison', get label() { return t('immunity.poison'); } },
   { value: 'aura', get label() { return t('immunity.aura'); } },
   { value: 'fear', get label() { return t('immunity.fear'); } },

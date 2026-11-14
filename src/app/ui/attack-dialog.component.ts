@@ -461,7 +461,7 @@ export class AttackDialogComponent {
 
   /** Gli stati che l'attacco piazza, a parole ("Stordimento ×1, Veleno ×2"). */
   protected statusText(o: AttackOutcome): string {
-    const names: Record<string, string> = { burn: tr('Fiamma'), web: tr('Rete'), stun: tr('Stordimento'), poison: tr('Veleno') };
+    const names: Record<string, string> = { burn: tr('Fiamma'), web: tr('Rete'), stun: tr('Stordimento'), shock: tr('Folgorato'), poison: tr('Tossicità') };
     return [...o.statuses.map((s) => `${names[s.kind]} ×${s.n}`), ...(o.poison ? [`${tr('Veleno')} ×${o.poison}`] : [])].join(', ');
   }
 

@@ -4,7 +4,7 @@
       "id": "reinforced-frame",
       "name": "Telaio rinforzato",
       "school": "combat",
-      "text": "La tua Salute massima è aumentata di 4.",
+      "text": "La tua Salute massima è aumentata di {health:4}.",
       "effects": [
         {
           "kind": "stat",
@@ -43,10 +43,10 @@
       ]
     },
     {
-      "id": "reflex-boost",
-      "name": "Riflessi potenziati",
+      "id": "auxiliary-lung",
+      "name": "Polmone ausiliare",
       "school": "cunning",
-      "text": "La tua velocità è aumentata di 2. Qualunque riduzione della tua velocità a causa dell'armatura si applica prima di questo bonus.",
+      "text": "La tua {mov|velocità} è aumentata di 2. Qualunque riduzione della tua {mov|velocità} a causa dell'armatura si applica prima di questo bonus.",
       "effects": [
         {
           "kind": "stat",
@@ -60,7 +60,7 @@
       "id": "extended-battery",
       "name": "Batteria estesa",
       "school": "cunning",
-      "text": "Il tuo valore massimo di overclock {overclock} è aumentato di 2.",
+      "text": "Il tuo valore massimo di {overclock|overclock} è aumentato di 2.",
       "effects": [
         {
           "kind": "stat",
@@ -73,7 +73,7 @@
       "id": "smart-targeting",
       "name": "Mira intelligente",
       "school": "cunning",
-      "text": "Quando esegui attacchi a distanza, guadagni 2 scintille bonus.",
+      "text": "Quando esegui attacchi a distanza, guadagni {spark:2} bonus.",
       "effects": [
         {
           "kind": "attack",
@@ -88,7 +88,7 @@
       "id": "power-spike",
       "name": "Picco di tensione",
       "school": "hacking",
-      "text": "Quando esegui un attacco di Intrusione, guadagni 2 scintille bonus.",
+      "text": "Quando esegui un attacco di Intrusione, guadagni {spark:2} bonus.",
       "effects": [
         {
           "kind": "attack",
@@ -103,13 +103,12 @@
       "id": "firewall",
       "name": "Firewall",
       "school": "hacking",
-      "text": "Ricevi +1 armatura contro gli attacchi di Intrusione.",
+      "text": "Ricevi {ice:+1|ICE}.",
       "effects": [
         {
           "kind": "stat",
-          "stat": "armor",
-          "amount": 1,
-          "vs": "intrusion"
+          "stat": "ice",
+          "amount": 1
         }
       ]
     },
@@ -117,7 +116,84 @@
       "id": "signal-booster",
       "name": "Amplificatore di segnale",
       "school": "hacking",
-      "text": "Quando esegui attacchi a distanza o di Intrusione, guadagni +2 gittata e +1 danno.",
+      "text": "Quando esegui attacchi di Intrusione, guadagni +2 portata e +1 danno.",
+      "effects": [
+        {
+          "kind": "attack",
+          "on": [
+            "intrusion"
+          ],
+          "range": 2,
+          "damage": 1
+        }
+      ]
+    },
+    {
+      "id": "adrenaline",
+      "name": "Adrenalina",
+      "school": "combat",
+      "text": "Quando scegli l'azione Avanzare, recuperi {overclock:1}.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "chooseAction",
+          "action": "advance",
+          "optional": true,
+          "do": [
+            {
+              "op": "recoverOverclock",
+              "amount": 1,
+              "who": "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "combat-synapses",
+      "name": "Sinapsi da combattimento",
+      "school": "combat",
+      "text": "Quando esegui attacchi corpo a corpo, guadagni {spark:2} bonus.",
+      "effects": [
+        {
+          "kind": "attack",
+          "on": [
+            "melee"
+          ],
+          "sparks": 2
+        }
+      ]
+    },
+    {
+      "id": "chain-cuts",
+      "name": "Tagli a catena",
+      "school": "combat",
+      "text": "Ogni volta che uccidi un nemico con un attacco corpo a corpo, puoi spendere subito {overclock:1} per eseguire in questo turno 1 attacco aggiuntivo con la stessa arma. Puoi farlo una sola volta per ogni nemico ucciso.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "kill",
+          "cost": {
+            "overclock": 1
+          },
+          "limit": "trigger",
+          "attack": "melee",
+          "optional": true,
+          "do": [
+            {
+              "op": "extraAttack",
+              "amount": 1,
+              "sameWeapon": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "adler-optics",
+      "name": "Ottiche Adler",
+      "school": "cunning",
+      "text": "Quando esegui attacchi a distanza guadagni +3 gittata, quando esegui attacchi di Intrusione guadagni +3 portata.",
       "effects": [
         {
           "kind": "attack",
@@ -125,8 +201,336 @@
             "ranged",
             "intrusion"
           ],
-          "range": 2,
-          "damage": 1
+          "range": 3
+        }
+      ]
+    },
+    {
+      "id": "reflective-surfaces",
+      "name": "Superfici riflettenti",
+      "school": "cunning",
+      "text": "Quando esegui attacchi a distanza, puoi tracciare la linea di vista partendo da uno spazio libero adiacente a te.",
+      "effects": [
+        {
+          "kind": "rule",
+          "rule": "sightFromAdjacent",
+          "attack": [
+            "ranged"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "burst-fire",
+      "name": "Raffica",
+      "school": "cunning",
+      "text": "Dopo aver eseguito un attacco a distanza, puoi spendere subito {overclock:2} per eseguire in questo turno 1 attacco aggiuntivo con la stessa arma. Puoi usare questa abilità più volte pagandone il costo ogni volta.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "attackDone",
+          "cost": {
+            "overclock": 2
+          },
+          "attack": "ranged",
+          "repeatable": true,
+          "optional": true,
+          "do": [
+            {
+              "op": "extraAttack",
+              "amount": 1,
+              "sameWeapon": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "autopilot",
+      "name": "Pilota automatico",
+      "school": "hacking",
+      "text": "Spendi {overclock:1} durante il tuo turno per muovere di 1 spazio un modello che si trova nella tua linea di vista, seguendo le normali regole del movimento. Puoi usare questa abilità più volte durante il tuo turno pagando il costo ogni volta.",
+      "effects": [
+        {
+          "kind": "active",
+          "cost": {
+            "overclock": 1
+          },
+          "repeatable": true,
+          "do": [
+            {
+              "op": "moveModel",
+              "distance": 1,
+              "needsSight": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "dead-mans-switch",
+      "name": "Dead Man's Switch",
+      "school": "hacking",
+      "text": "Quando vieni ucciso, tutti i nemici senza nome entro 3 spazi da te vengono immediatamente uccisi anch'essi. Questa abilità ignora Immortale.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "death",
+          "do": [
+            {
+              "op": "killNearby",
+              "range": 3,
+              "unnamedOnly": true,
+              "ignoresImmortal": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cold-overclock",
+      "name": "Overclock a freddo",
+      "school": "hacking",
+      "text": "Dopo aver eseguito un attacco di Intrusione, puoi spendere subito {overclock:2} per eseguire in questo turno 1 attacco aggiuntivo con la stessa arma. Puoi farlo una sola volta per turno.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "attackDone",
+          "cost": {
+            "overclock": 2
+          },
+          "attack": "intrusion",
+          "limit": "turn",
+          "optional": true,
+          "do": [
+            {
+              "op": "extraAttack",
+              "amount": 1,
+              "sameWeapon": true
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "carbon-coating",
+      "name": "Rivestimento al carbonio",
+      "school": "combat",
+      "text": "L'armatura non riduce la tua velocità. Inoltre, se non indossi un'armatura, ricevi +1 armatura.",
+      "effects": [
+        {
+          "kind": "rule",
+          "rule": "armorNoSpeedPenalty"
+        },
+        {
+          "kind": "stat",
+          "stat": "armor",
+          "amount": 1,
+          "when": "noArmorWorn"
+        }
+      ]
+    },
+    {
+      "id": "double-strike",
+      "name": "Doppio colpo",
+      "school": "combat",
+      "text": "Quando scegli l'azione Avanzare, puoi spendere subito {overclock:2} per eseguire in questo turno 2 attacchi invece di 1.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "chooseAction",
+          "cost": {
+            "overclock": 2
+          },
+          "action": "advance",
+          "optional": true,
+          "do": [
+            {
+              "op": "extraAttack",
+              "amount": 1
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "unmovable",
+      "name": "Irremovibile",
+      "school": "combat",
+      "text": "Quando scegli l'azione Combattere, puoi assegnare un ordine di Guardia e ricevi +1 armatura fino all'inizio del tuo prossimo turno.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "chooseAction",
+          "action": "fight",
+          "optional": true,
+          "do": [
+            {
+              "op": "guardOrder"
+            },
+            {
+              "op": "tempArmor",
+              "amount": 1,
+              "until": "nextTurn"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "charge",
+      "name": "Alla carica!",
+      "school": "combat",
+      "text": "Quando scegli l'azione Combattere, puoi far recuperare subito {overclock:1} a te stesso e a tutti i mercenari adiacenti.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "chooseAction",
+          "action": "fight",
+          "optional": true,
+          "do": [
+            {
+              "op": "recoverOverclock",
+              "amount": 1,
+              "who": "selfAndAdjacent"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ballistic-reflexes",
+      "name": "Riflessi balistici",
+      "school": "cunning",
+      "text": "Ricevi +1 armatura contro gli attacchi a distanza.",
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "armor",
+          "amount": 1,
+          "vs": "ranged"
+        }
+      ]
+    },
+    {
+      "id": "carpe-diem",
+      "name": "Carpe diem",
+      "school": "cunning",
+      "text": "Quando un nemico entra in uno spazio adiacente a te, puoi spendere {overclock:2} per eseguire subito l'attacco contro quel nemico. Puoi farlo una sola volta per ogni nemico che entra.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "enemyEntersAdjacent",
+          "cost": {
+            "overclock": 2
+          },
+          "limit": "trigger",
+          "optional": true,
+          "do": [
+            {
+              "op": "attackNow",
+              "target": "trigger"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "parkour",
+      "name": "Parkour",
+      "school": "cunning",
+      "text": "Puoi passare attraverso nemici e ostacoli (macerie, acqua e fosse) senza subire conseguenze. Devi terminare il movimento in uno spazio libero e non puoi attaccare mentre ti trovi nello stesso spazio di un ostacolo o di un altro modello.",
+      "effects": [
+        {
+          "kind": "rule",
+          "rule": "passThrough",
+          "through": [
+            "enemy",
+            "rock",
+            "water",
+            "pit"
+          ]
+        },
+        {
+          "kind": "rule",
+          "rule": "noAttackWhileOverlapping"
+        }
+      ]
+    },
+    {
+      "id": "low-profile",
+      "name": "Basso profilo",
+      "school": "cunning",
+      "text": "L'Avversario riceve 1 Allarme in meno a ogni turno. Inoltre, le trappole ti infliggono sempre 1 danno in meno (minimo 0).",
+      "effects": [
+        {
+          "kind": "rule",
+          "rule": "adversaryAlarm",
+          "amount": -1
+        },
+        {
+          "kind": "rule",
+          "rule": "trapWounds",
+          "amount": -1
+        }
+      ]
+    },
+    {
+      "id": "emp-proximity",
+      "name": "EMP di prossimità",
+      "school": "hacking",
+      "text": "Guadagni l'abilità Aura EMP.",
+      "effects": [
+        {
+          "kind": "grant",
+          "keyword": "aura"
+        }
+      ]
+    },
+    {
+      "id": "zero-day",
+      "name": "Zero-Day",
+      "school": "hacking",
+      "text": "Guadagni l'abilità Regolazione 1.",
+      "effects": [
+        {
+          "kind": "grant",
+          "keyword": "sorcery",
+          "level": 1
+        }
+      ]
+    },
+    {
+      "id": "ram-recharge",
+      "name": "Ricarica RAM",
+      "school": "hacking",
+      "text": "Guadagni {overclock:1} ogni volta che infliggi il colpo mortale a un nemico.",
+      "effects": [
+        {
+          "kind": "trigger",
+          "on": "kill",
+          "do": [
+            {
+              "op": "recoverOverclock",
+              "amount": 1,
+              "who": "self"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "backdoor",
+      "name": "Backdoor",
+      "school": "hacking",
+      "text": "Quando esegui un attacco di Intrusione, guadagni Rompighiaccio 1.",
+      "effects": [
+        {
+          "kind": "attack",
+          "on": [
+            "intrusion"
+          ],
+          "pierce": 1
         }
       ]
     }

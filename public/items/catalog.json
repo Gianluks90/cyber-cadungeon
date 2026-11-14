@@ -27,7 +27,7 @@
       "hands": 1,
       "price": 25,
       "rules": [
-        "**Reagisci**: annulla 1 danno appena subito. Puoi usare questa abilità una volta per turno e solo su danni che non ignorano l'armatura."
+        "**Reagisci**, annulla 1 danno appena subito. Puoi usare questa abilità una volta per turno e solo su danni che non ignorano l'armatura."
       ],
       "icon": "shield"
     },
@@ -38,8 +38,9 @@
       "effects": [
         {
           "kind": "use",
-          "when": "turnStart",
+          "prepare": true,
           "cost": {
+            "movement": 1,
             "discard": true
           },
           "do": [
@@ -61,9 +62,10 @@
       "copies": 2,
       "price": 250,
       "rules": [
-        "Se è equipaggiato all'inizio del tuo turno, scartalo per recuperare 6 Salute e i tuoi segnalini overclock {overclock} fino al loro massimo livello."
+        "**Prepara**, all'inizio del prossimo turno recuperi {health:6|Salute} e riporti l'overclock {overclock} al massimo. Uso singolo (costa {mov:1} utilizzarlo)."
       ],
-      "icon": "genetics"
+      "icon": "genetics",
+      "consumable": true
     },
     {
       "id": "rail-rifle",
@@ -180,7 +182,8 @@
       "price": 50,
       "slots": 1,
       "dice": [
-        "red"
+        "red",
+        "yellow"
       ],
       "icon": "swords",
       "spark": [
@@ -307,6 +310,23 @@
       "range": 3,
       "offHand": "+1 danno",
       "icon": "target"
+    },
+    {
+      "id": "light-pistol-glam",
+      "name": "Mako-3 Dorata",
+      "kind": "weapon",
+      "attack": "ranged",
+      "hands": 1,
+      "price": 150,
+      "slots": 2,
+      "dice": [
+        "blue",
+        "green"
+      ],
+      "range": 3,
+      "offHand": "+1 danno",
+      "icon": "target",
+      "glam": true
     },
     {
       "id": "katana",

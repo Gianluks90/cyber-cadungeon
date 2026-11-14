@@ -1,5 +1,4 @@
 import { ChangeDetectionStrategy, Component, ElementRef, computed, effect, inject, input, output, signal, viewChild } from '@angular/core';
-import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { POTION_HEAL, POTION_LIMIT, POTION_PRICES } from '../game/constants';
 import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
@@ -16,7 +15,7 @@ import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { TrPipe } from '../i18n/tr.pipe';
 import { ModCardComponent } from './mod-card.component';
-import { CostTextComponent } from './cost-text.component';
+import { ItemNameComponent } from './item-name.component';
 import { SkillDef } from '../game/skills/skill';
 import { isBriefingMod, modFits, modSlotOf, modTag, reservedSlots } from '../game/mods/mod';
 import { MercenaryFaceComponent } from './mercenary-face.component';
@@ -37,7 +36,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, TrPipe, CostTextComponent, ModCardComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
+  imports: [AttackDiceComponent, TrPipe, ModCardComponent, ItemNameComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="var(--shop-h)" [subFlush]="true" [accent]="mercenary().name" (closed)="closed.emit()">
@@ -46,7 +45,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
       <figure dialogSide class="card right">
         <figcaption class="head">{{ 'detail.secondary' | t }}</figcaption>
         <div class="scroller" #scroller>
-          @for (s of skills(); track s.id) { <app-skill-card [skill]="s" [stacked]="true" /> }
+          @for (s of skills(); track s.id) { <app-skill-card [skill]="s" /> }
           @empty { <p class="none">{{ 'shop.noSkills' | t }}</p> }
         </div>
       </figure>
@@ -60,7 +59,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
         <details class="fold skills">
           <summary><span>{{ 'detail.secondary' | t }}</span><app-icon class="more" name="expand_more" [size]="22" /></summary>
           <div class="foldbody skilllist">
-            @for (s of skills(); track s.id) { <app-skill-card [skill]="s" [stacked]="true" /> }
+            @for (s of skills(); track s.id) { <app-skill-card [skill]="s" /> }
             @empty { <p class="none">{{ 'shop.noSkills' | t }}</p> }
           </div>
         </details>
@@ -81,12 +80,12 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
             <details class="gearcard" [open]="c.open" (toggle)="setCardOpen(c.key, $any($event.target).open)">
               <summary>
                 <span class="chev" aria-hidden="true"></span>
-                <span class="what"><b>{{ c.def.name }}@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
+                <span class="what"><b><app-item-name [def]="c.def" />@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
                 <!-- Gli slot per le mod: un pallino ciascuno, pieno se c'è una mod montata. -->
                 <span class="slotdots" [title]="'briefing.slotsUsed' | t: { used: c.used, max: c.max }">@for (n of dots(c.max); track $index) { <i [class.full]="$index < c.used" [class.hack]="c.def.modTags?.includes('hacking') && $index < reserved(c.def)"></i> }</span>
               </summary>
               <div class="list">
-                <small class="gdetail">{{ c.detail }}@if (c.def.unique) { · <span class="unique">{{ 'unica' | tr }}</span> }</small>
+                <small class="gdetail">{{ c.detail }}@if (c.def.unique) { · <span class="unique">{{ 'unica' | tr }}</span> }@if (c.def.glam) { · <span class="glam">{{ 'Glam' | tr }}</span> }</small>
                 @for (o of c.options; track o.mod.id) {
                   <app-mod-card [mod]="o.mod" [left]="o.left" [on]="o.on">
                     <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.on ? 'briefing.remove' : 'briefing.install') | t" [title]="o.reason || ((o.on ? 'briefing.remove' : 'briefing.install') | t)" (click)="toggleMod(c.key, o.mod.id)"><app-icon [name]="o.on ? 'remove_shopping_cart' : 'add_shopping_cart'" [size]="20" /></button>
@@ -99,7 +98,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
           } @else {
             <div class="gearcard off">
               <div class="head">
-                <span class="what"><b>{{ c.def.name }}@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
+                <span class="what"><b><app-item-name [def]="c.def" />@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
                 <span class="slotsused">{{ 'briefing.noModSlots' | t }}</span>
               </div>
             </div>
@@ -202,6 +201,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     /* Il sottotitolo di una mod: come quello degli oggetti (card oggetto). */
     .meta { color: var(--c-text-dim); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
     .unique { color: var(--c-rare); }
+    .glam { color: var(--c-glam); }
     .gdetail { padding: 2px 0 4px; }
     .slotdots { display: inline-flex; gap: 5px; }
     .slotdots i { width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--c-text-dim); }

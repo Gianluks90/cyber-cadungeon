@@ -13,16 +13,18 @@ import { EnemyDef, playersKey } from '../enemies/enemy';
 export type Team = 'mercenary' | 'enemy';
 
 /** Gli stati che durano (docs/cards/stati.md): fiamma, rete (ragnatela), stordimento e veleno. Ognuno è un conto di segnalini. */
-export type StatusKind = 'burn' | 'web' | 'stun' | 'poison';
+export type StatusKind = 'burn' | 'web' | 'stun' | 'shock' | 'poison';
 
 export interface PieceStatus {
   burn: number;
   web: number;
   stun: number;
+  /** Folgorato: come lo stordimento, ma funziona anche sulle macchine. */
+  shock: number;
   poison: number;
 }
 
-export const emptyStatus = (): PieceStatus => ({ burn: 0, web: 0, stun: 0, poison: 0 });
+export const emptyStatus = (): PieceStatus => ({ burn: 0, web: 0, stun: 0, shock: 0, poison: 0 });
 
 /** I tre servizi della città: il negozio, il campo di addestramento e il tempio (inventato da noi). */
 export type CityService = 'shop' | 'camp' | 'temple';
@@ -80,6 +82,8 @@ export interface Piece {
   sheet?: string;
   /** Armatura fissa, overclock, valore (la Conquista che si perde se muore), abilità iniziali, dadi dei tre attacchi, abilità a parole. */
   armor: number;
+  /** ICE: l'armatura digitale contro l'Intrusione (dai nemici: `ice` della loro carta; per gli eroi conta quella di cyberdeck e mod, calcolata a parte). */
+  ice: number;
   /** I segnalini overclock che restano, e il massimo (quello della scheda più i bonus delle abilità). */
   overclock: number;
   maxOverclock: number;
@@ -99,6 +103,8 @@ export interface Piece {
   /** I segnalini di stato che ha adesso. */
   status: PieceStatus;
   /** Le abilità usate in questo turno e le carte esaurite (si ricaricano a inizio round); l'ultimo attacco fatto e l'ultimo nemico ucciso in mischia (per le abilità "dopo un attacco"); l'arma obbligata per un attacco in più "con la stessa arma"; l'armatura in più fino al turno dopo. */
+  /** Gli oggetti «preparati» (parola chiave Prepara): il loro effetto scatta all'inizio del prossimo turno dell'eroe, poi spariscono. */
+  prepared?: { name: string; ops: { op: string; amount?: number | 'full' }[] }[];
   usedSkills?: string[];
   exhausted?: string[];
   /** L'ordine piazzato con Prepararsi (se c'è): Mira, Schivata o Guardia. */
@@ -314,6 +320,7 @@ export function createPieces(
       backpack,
       city: null,
       armor: Math.max(0, (sheet?.armor ?? tier?.armor ?? 0) + (bonus?.armor ?? 0)),
+      ice: Math.max(0, tier?.ice ?? 0),
       overclock: sheet?.overclock ?? 0,
       maxOverclock: sheet?.overclock ?? 0,
       value: sheet?.value ?? 0,

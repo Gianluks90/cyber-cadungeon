@@ -4,12 +4,12 @@ import { obstacleCells } from '../board/obstacle';
 import { ENHANCED_KILL_COINS, SHOOTER_DISTANCE_CAP } from '../constants';
 import { canSee } from '../board/sight';
 import { FaceRoll } from '../dice/faces';
-import { AttackType, DieColor, ItemDef } from '../items/item';
+import { AttackType, DieColor, ItemDef, ItemProgram } from '../items/item';
 import { StatusKind } from '../pieces/piece';
 import { Piece, footprint } from '../pieces/piece';
 import { armorOf, canActOnMap, killMercenary, loseOrdersOnWounds } from './actions';
 import { usedItem } from './behaviors';
-import { attackBonus, effectsOf, hasRule, onHitStatuses, ruleAmount } from './effects';
+import { attackBonus, effectsOf, hasRule, hasRuleFor, onHitStatuses, ruleAmount, ruleAmountFor } from './effects';
 import { onKillBonuses } from './skills';
 import { RemovalResult, removeEnemy } from './loot';
 import { immuneTo, inflictStatus, keywordLevel } from './status';
@@ -33,6 +33,8 @@ export interface AttackOption {
   enabled: boolean;
   /** Se non è possibile, perché. */
   reason?: string;
+  /** Se è un programma del cyberdeck (non un attacco: costa overclock, non consuma l'attacco del turno e se riesce piazza uno stato invece del danno). */
+  program?: ItemProgram;
   /** La distanza dell'attacco in spazi, se non è quella diretta fra le due pedine (un attacco attraverso una scala: i due capi contano come adiacenti). */
   distance?: number;
   /** Se l'attacco passa per una scala: il capo vicino a chi attacca e quello vicino al bersaglio (serve per mostrarlo). */
@@ -242,6 +244,8 @@ export function parseEffect(text: string): { damage: number; range: number; pier
     const r = part.match(/^\+(\d+)\s+(?:gittata|portata)$/i); // «portata» è la gittata dei deck
     const p = part.match(/^Perforare\s+(\d+)$/i);
     const ib = part.match(/^Rompighiaccio\s+(\d+)$/i);
+    const st = part.match(/^Stordimento\s+(\d+)$/i); // «Stordimento 1»: come «+1 segnalino stordito»
+    const bu = part.match(/^Bruciare\s+(\d+)$/i);
     const bl = part.match(/^Esplosione\s+(\d+)$/i);
     const s = part.match(/^\+(\d+)\s+segnalin[oi]\s+(stordit[oi]|bruciare|rete|ragnatela)$/i);
     const k = /^Uccide il bersaglio all'istante/i.test(part);
@@ -255,6 +259,8 @@ export function parseEffect(text: string): { damage: number; range: number; pier
     else if (r) { range += +r[1]; known++; }
     else if (p) { pierce += +p[1]; known++; }
     else if (ib) { icebreak += +ib[1]; known++; }
+    else if (st) { stun += +st[1]; known++; }
+    else if (bu) { burn += +bu[1]; known++; }
     else if (bl) { blast += +bl[1]; known++; }
     else if (s) {
       const kind = s[2].toLowerCase();
@@ -302,17 +308,21 @@ export function attackOptions(state: GameState, board: Board, attacker: Piece, t
   if (attacker.team === target.team || !canActOnMap(state, attacker) || target.city || attacker.toad) return []; // il rospo non attacca
   // Tiratore scelto e Precisione cambiano come si traccia la linea di vista, ma solo per distanza e Intrusione.
   const directSees = canSeeTarget(state, board, attacker, target);
-  const directSeesAtRange = directSees || canSeeTarget(state, board, attacker, target, { fromAdjacent: hasRule(state, attacker, 'sightFromAdjacent'), ignore: ruleAmount(state, attacker, 'sightIgnore') });
+  // Le regole di linea di vista (Superfici riflettenti, Precisione) valgono per i tipi di attacco che elencano: l'attacco a distanza e l'Intrusione possono vedere in modo diverso.
+  const seesAtRangeFor = (type: AttackType) => directSees || canSeeTarget(state, board, attacker, target, { fromAdjacent: hasRuleFor(state, attacker, 'sightFromAdjacent', type), ignore: ruleAmountFor(state, attacker, 'sightIgnore', type) });
+  const directSeesRanged = seesAtRangeFor('ranged');
+  const directSeesIntrusion = seesAtRangeFor('intrusion');
+  const directSeesAtRange = directSeesRanged || directSeesIntrusion;
   // Se non si vede direttamente ma c'è una scala fra i due, l'attacco passa di lì (la mischia solo fra i due capi).
   const route = directSeesAtRange ? null : stairsRoute(state, board, attacker, target);
   const distance = route ? route.distance : distanceTo(attacker, target);
   const sees = route ? route.distance === 1 : directSees;
-  const seesAtRange = route ? true : directSeesAtRange;
+  const seesAtRangeOf = (type: AttackType) => (route ? true : type === 'intrusion' ? directSeesIntrusion : directSeesRanged);
   const through = route ? { distance: route.distance, via: { from: route.from, to: route.to } } : {};
   const noAttacks = attacker.attacks < 1 ? tr('Non hai più attacchi in questo turno') : undefined;
   // Un attacco a distanza non si fa a una creatura adiacente (tendere un arco a chi è vicinissimo non ha senso); l'Intrusione sì.
   const tooClose = (type: AttackType) => (type === 'ranged' && distance <= 1 ? tr('Troppo vicino per un attacco a distanza') : undefined);
-  const blockedFor = (type: AttackType) => noAttacks ?? tooClose(type) ?? ((type === 'melee' ? sees : seesAtRange) ? undefined : tr('Non hai linea di vista'));
+  const blockedFor = (type: AttackType) => noAttacks ?? tooClose(type) ?? ((type === 'melee' ? sees : seesAtRangeOf(type)) ? undefined : tr('Non hai linea di vista'));
   const extra = (type: AttackType) => Array.from({ length: attacker.dice[type] }, () => 'black' as DieColor);
   const out: AttackOption[] = [];
   for (const w of equippedWeapons(state, attacker)) {
@@ -322,6 +332,14 @@ export function attackOptions(state: GameState, board: Board, attacker: Piece, t
       id: `weapon:${w.id}`, itemId: w.id, name: w.name, icon: w.icon ?? 'inventory_2', attack: w.attack!,
       dice: [...(w.dice ?? []), ...extra(w.attack!)], enabled: !blockedFor(w.attack!), reason: blockedFor(w.attack!), ...through,
     });
+  }
+  // I programmi del cyberdeck: un'opzione per ognuno, sullo stesso bersaglio dell'intrusione. Non consumano l'attacco del turno (si possono ripetere finché c'è overclock) ma serve la linea di vista.
+  for (const w of equippedWeapons(state, attacker)) {
+    if (w.attack !== 'intrusion') continue;
+    for (const p of w.programs ?? []) {
+      const reason = !seesAtRangeOf('intrusion') ? tr('Non hai linea di vista') : attacker.overclock < p.cost ? tr('Non hai abbastanza overclock') : undefined;
+      out.push({ id: `program:${w.id}:${p.id}`, itemId: w.id, name: p.name, icon: w.icon ?? 'memory', attack: 'intrusion', dice: [...(w.dice ?? []), ...extra('intrusion')], enabled: !reason, reason, program: p, ...through });
+    }
   }
   // I pugni (un dado rosso, nessuna abilità) se non c'è un'arma da mischia da usare.
   if (distance <= 1 && !out.some((o) => o.attack === 'melee') && !attacker.lockedWeapon) {
@@ -612,7 +630,7 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
   const weapon = option.itemId ? state.items.get(option.itemId) : undefined;
   const shield = option.itemId ? protectionFrom(state, target, option.itemId) : null;
   // Le scintille dell'arma, che comprendono quelle attive delle sue mod (`moddedItem`, in coda).
-  const sparkList = weapon?.spark ?? [];
+  const sparkList = option.program ? [] : weapon?.spark ?? []; // un programma non usa le scintille dell'arma
   const effects: SparkEffect[] = sparkList.map((s, index) => {
     const parsed = parseEffect(s.effect);
     // Chi ha un oggetto che protegge da quest'arma (la Corazza runica contro il Tocco della morte) non ne subisce le scintille: non si possono pagare.
@@ -703,7 +721,8 @@ export function resolveAttack(
   range += sRange;
   bonusDamage += Math.min(sorcery.damage, points - sRange);
   const inRange = !plan.needsRange || range >= plan.distance;
-  const armor = target.team === 'mercenary' ? armorOf(state, target, plan.option.attack) : target.armor;
+  // Contro l'Intrusione conta l'ICE (dei nemici: `ice` della loro carta; degli eroi: quella di deck e mod), non l'armatura fisica.
+  const armor = target.team === 'mercenary' ? armorOf(state, target, plan.option.attack) : plan.option.attack === 'intrusion' ? target.ice : target.armor;
   const hit = !miss && inRange && !feared;
   const raw = hearts + bonusDamage;
   // Preso o mancato, il danno è sempre 0 se è invincibile o se non lo si colpisce con la sua unica arma (`onlyHurtBy`).

@@ -304,7 +304,7 @@ export class PartyBarComponent {
   protected statusIcons(m: BarMember): { shown: { kind: string; icon: string; color: string; n: number; label: string }[]; more: string[] } {
     const s = m.status;
     if (!s) return { shown: [], more: [] };
-    const all = ([['burn', 'burn', tr('Fiamma')], ['web', 'web', tr('Rete')], ['stun', 'stun', tr('Stordimento')]] as const)
+    const all = ([['burn', 'burn', tr('Fiamma')], ['web', 'web', tr('Rete')], ['stun', 'stun', tr('Stordimento')], ['shock', 'charger', tr('Folgorato')]] as const)
       .filter(([k]) => s[k] > 0)
       .map(([k, icon, name]) => ({ kind: k, icon, color: `var(--c-${k})`, n: s[k], label: `${name} ×${s[k]}` }));
     return { shown: all.slice(0, 3), more: all.slice(3).map((x) => x.label) };

@@ -250,6 +250,10 @@ export const UNLOCK_DECRYPT_MS = 3000;
 /** A che distanza (in metri, tolta la precisione del GPS) si sblocca un contratto. */
 export const UNLOCK_RADIUS_M = 50;
 /** Il Berserk del cyberdeck del Picchiatore (valori da provare): costo in Overclock, round che dura, danno in mischia in più, Armatura e ICE che si perdono. */
+/** Un oggetto Glam vale questi E$ in più di quello normale (il prezzo si somma quando si carica il catalogo). */
+export const GLAM_PRICE_BONUS = 25;
+/** Cambiare una delle abilità secondarie generate nel Briefing costa questi E$ (dal budget del mercenario); il primo cambio di ogni mercenario è gratis. */
+export const SKILL_REROLL_COST = 25;
 export const BERSERK_COST = 2;
 export const BERSERK_ROUNDS = 2;
 export const BERSERK_DAMAGE = 2;

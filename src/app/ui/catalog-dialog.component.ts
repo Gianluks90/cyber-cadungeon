@@ -51,7 +51,7 @@ export class CatalogDialogComponent {
     this.loaded = true;
     const [items, mods, skills, enemies, mercenaries] = await Promise.all([loadItemCatalog(), loadModCatalog(), loadSkillCatalog(), loadEnemyCatalog(), loadAllMercenarySheets()]);
     const all = [...items.values()];
-    const ofGroup = (g: string) => all.filter((d) => itemGroup(d) === g).map(itemEntry).sort(byName);
+    const ofGroup = (g: string) => all.filter((d) => !d.consumable && itemGroup(d) === g).map(itemEntry).sort(byName);
     const skillEntries = (school: string): CatalogEntry[] => [...skills.values()].filter((k) => k.school === school).map((k): CatalogEntry => ({ kind: 'skill', id: k.id, name: k.name, def: k, search: `${k.name} ${k.text}` })).sort(byName);
     const mercenaryEntries = mercenaries.map((h: MercenarySheet): CatalogEntry => ({ kind: 'mercenary', id: h.id, name: h.name, sheet: h, search: [h.name, h.class].join(' ') })).sort(byName);
     const enemyEntries = [...enemies.values()].map((m): CatalogEntry => ({ kind: 'enemy', id: m.id, name: m.name, def: m, search: [m.name, ...m.normal.abilities, ...m.enhanced.abilities].join(' ') })).sort(byName);
@@ -67,7 +67,7 @@ export class CatalogDialogComponent {
       { id: 'armor', group: tr('Equipaggiamento'), name: tr('Armature'), entries: ofGroup('armor') },
       { id: 'deck', group: tr('Equipaggiamento'), name: tr('Cyberdeck'), entries: ofGroup('deck') },
       { id: 'mods', group: tr('Equipaggiamento'), name: tr('Mod'), entries: modEntries },
-      { id: 'potions', group: tr('Consumabili'), name: tr('Consumabili'), entries: potionEntries() },
+      { id: 'potions', group: tr('Consumabili'), name: tr('Consumabili'), entries: [...potionEntries(), ...all.filter((d) => d.consumable).map(itemEntry).sort(byName)] },
       { id: 'combat', group: tr('Abilità'), name: tr('Combattimento'), entries: skillEntries('combat') },
       { id: 'cunning', group: tr('Abilità'), name: tr('Astuzia'), entries: skillEntries('cunning') },
       { id: 'hacking', group: tr('Abilità'), name: tr('Hacking'), entries: skillEntries('hacking') },

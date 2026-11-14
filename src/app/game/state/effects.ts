@@ -63,6 +63,16 @@ export function hasRule(state: GameState, piece: Piece, rule: string): boolean {
   return effectsOf(state, piece).some((x) => x.effect.kind === 'rule' && x.effect.rule === rule);
 }
 
+/** Come `hasRule`, ma per un tipo di attacco: se l'effetto elenca `attack`, vale solo per quelli (Superfici riflettenti: solo l'attacco a distanza, non l'Intrusione). */
+export function hasRuleFor(state: GameState, piece: Piece, rule: string, type: AttackType): boolean {
+  return effectsOf(state, piece).some((x) => x.effect.kind === 'rule' && x.effect.rule === rule && (!Array.isArray(x.effect['attack']) || (x.effect['attack'] as string[]).includes(type)));
+}
+
+/** Come `ruleAmount`, ma per un tipo di attacco (vedi `hasRuleFor`). */
+export function ruleAmountFor(state: GameState, piece: Piece, rule: string, type: AttackType): number {
+  return effectsOf(state, piece).reduce((n, x) => (x.effect.kind === 'rule' && x.effect.rule === rule && (!Array.isArray(x.effect['attack']) || (x.effect['attack'] as string[]).includes(type)) ? n + (Number(x.effect.amount) || 1) : n), 0);
+}
+
 /** Il valore (`amount`) di una regola con un numero, sommato se ci sono più fonti (0 se non c'è). */
 export function ruleAmount(state: GameState, piece: Piece, rule: string): number {
   return effectsOf(state, piece).reduce((n, x) => (x.effect.kind === 'rule' && x.effect.rule === rule ? n + (Number(x.effect.amount) || 1) : n), 0);

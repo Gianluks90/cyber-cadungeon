@@ -8,6 +8,7 @@ import { DiceService } from '../game/dice/dice.service';
 import { ItemDef, itemGroup } from '../game/items/item';
 import { CostTextComponent } from './cost-text.component';
 import { IconComponent } from './icon.component';
+import { ItemNameComponent } from './item-name.component';
 
 /** I nomi dei dadi di un oggetto. */
 const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso'); }, get green() { return tr('dado verde'); }, get blue() { return tr('dado blu'); }, get yellow() { return tr('dado giallo'); }, get white() { return tr('dado bianco'); } };
@@ -18,15 +19,15 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
  */
 @Component({
   selector: 'app-item-card',
-  imports: [TrPipe, CatalogTextPipe, CostTextComponent, IconComponent],
+  imports: [TrPipe, CatalogTextPipe, CostTextComponent, IconComponent, ItemNameComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="card" [class.plain]="plain()">
       <!-- L'intestazione: nome e tipo a sinistra, i dadi (si tirano toccandoli) e l'ICE a destra, nello stesso contenitore e con lo stesso margine interno, su un fondo azzurro appena visibile. -->
       <header class="head">
         <div class="titles">
-          <h4>{{ def().name }}@if (count()) { <span class="count">({{ count() }})</span> }</h4>
-          @if (detail() || def().unique) { <span class="meta">{{ detail() }}@if (def().unique) { @if (detail()) { · } <span class="unique">{{ 'unica' | tr }}</span> }</span> }
+          <h4><app-item-name [def]="def()" />@if (count()) { <span class="count">({{ count() }})</span> }</h4>
+          @if (detail() || def().unique || def().glam) { <span class="meta">{{ detail() }}@if (def().unique) { @if (detail()) { · } <span class="unique">{{ 'unica' | tr }}</span> }@if (def().glam) { @if (detail() || def().unique) { · } <span class="glam">{{ 'Glam' | tr }}</span> }</span> }
         </div>
         @if (def().dice?.length) {
           <button type="button" class="cubes dice" [title]="'Tira i dadi dell\\'oggetto (prova temporanea)' | tr" (click)="rollDice()">
@@ -114,6 +115,7 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
     .meta { color: var(--c-text-dim); font-size: 12px; }
     /* La voce «unica» del sottotitolo: gialla, come i contratti rari. */
     .unique { color: var(--c-rare); }
+    .glam { color: var(--c-glam); }
     .skills { display: flex; flex-direction: column; gap: 4px; }
     .line { display: flex; align-items: center; gap: 6px; font-size: 12px; }
     .line .what { min-width: 0; }

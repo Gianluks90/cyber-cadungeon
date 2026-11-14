@@ -4,17 +4,23 @@ import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
 import { SKILL_SCHOOL_NAMES, SkillDef } from '../game/skills/skill';
 import { CostTextComponent } from './cost-text.component';
+import { IconComponent } from './icon.component';
 
 /** La card di una carta abilità: per ora solo testo (nome, ramo e descrizione), senza grafica. */
 @Component({
   selector: 'app-skill-card',
-  imports: [TrPipe, CatalogTextPipe, CostTextComponent],
+  imports: [TrPipe, CatalogTextPipe, CostTextComponent, IconComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (skill(); as s) {
       <article class="card">
-        <header [class.stacked]="stacked()"><h4>{{ s.name }}</h4><span class="school">{{ schoolName(s) }}</span></header>
-        <p><app-cost-text [text]="s.text | ct" [numberFirst]="true" /></p>
+        <!-- L'intestazione: titolo e sottotitolo (il ramo) su un fondo azzurro appena visibile, e il filetto sotto; poi il testo. -->
+        <header class="head">
+          <h4>{{ s.name }}</h4><span class="meta">{{ schoolName(s) }}</span>
+          <!-- L'icona del ramo, a destra, ruotata e quasi trasparente: nota di stile per riempire l'intestazione. -->
+          <app-icon class="mark" [name]="schoolIcon(s)" [size]="40" aria-hidden="true" />
+        </header>
+        <p class="text"><app-cost-text [text]="s.text | ct" [numberFirst]="true" /></p>
         @if (action(); as a) {
           <!-- Un'abilità da usare: il bottone dice il costo; se non si può, resta spento e dice perché. -->
           <footer>
@@ -27,13 +33,14 @@ import { CostTextComponent } from './cost-text.component';
   `,
   styles: `
     :host { display: block; color: var(--c-text); font: 13px/1.35 var(--font-ui); }
-    .card { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
-    header { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-    /* Con stacked la categoria è il sottotitolo, sotto il nome. */
-    header.stacked { flex-direction: column; align-items: flex-start; gap: 4px; }
+    .card { box-sizing: border-box; height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
+    /* Come l'intestazione delle card oggetto: a tutta larghezza, con il filetto sotto. */
+    .head { position: relative; display: flex; flex-direction: column; gap: 4px; margin: -14px -16px 0; padding: 12px 64px 12px 16px; background: color-mix(in srgb, var(--c-interact) 7%, transparent); border-bottom: 1px solid var(--c-line); border-radius: calc(var(--radius-1) - 1px) calc(var(--radius-1) - 1px) 0 0; }
+    /* 40px: circa l'altezza di titolo e sottotitolo messi insieme. Ruotata di 12° verso destra e opaca al 30%. */
+    .mark { position: absolute; right: 14px; top: 50%; transform: translateY(-50%) rotate(12deg); opacity: 0.3; pointer-events: none; }
     h4 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); }
-    .school { flex: none; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
-    p { margin: 0; font-size: 12px; color: var(--c-text-dim); }
+    .meta { color: var(--c-text-dim); font-size: 12px; }
+    .text { margin: 0; font-size: 12px; line-height: 1.5; color: var(--c-text); }
     footer { margin-top: auto; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     small { color: var(--c-text-dim); font-size: 11px; }
     /* Il testo resta bianco: il colore del costo (verde il movimento, arancione l'overclock) compare nel bordo e in un fondo appena visibile solo al passaggio. */
@@ -47,12 +54,15 @@ export class SkillCardComponent {
   /** Il motivo di riserva quando un'azione spenta non ne dà uno. */
   protected readonly notPossible = () => tr('Non è possibile');
   readonly skill = input<SkillDef | null>(null);
-  /** La categoria sotto il nome, come sottotitolo, invece che a destra. */
-  readonly stacked = input(false);
   /** Se l'abilità si può usare: il costo a parole, se si può adesso e, se no, il motivo. */
   readonly action = input<{ cost: string; enabled: boolean; reason?: string } | null>(null);
   readonly use = output<void>();
   readonly denied = output<string>();
+
+  /** L'icona di ogni ramo: combattimento il guantone, astuzia il bersaglio, hacking il chip. */
+  protected schoolIcon(s: SkillDef): string {
+    return { combat: 'sports_mma', cunning: 'target', hacking: 'memory' }[s.school];
+  }
 
   protected schoolName(s: SkillDef): string {
     return SKILL_SCHOOL_NAMES[s.school];

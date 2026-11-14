@@ -32,6 +32,20 @@ Il motore resta quello: LOS, movimento, azioni contestuali, eventi, validatore. 
 | **Cassa** | scrigno / baule | contenitore di ricompense (in inglese "chest") |
 | **Mazzo Avversario** | Mazzo del Male | le Carte dell'Avversario |
 
+### Parole chiave delle abilità e degli oggetti [nuovo]
+
+| Parola chiave | Cosa fa | Note |
+|---|---|---|
+| **Reagisci** | un'azione che si usa quando si subisce danno, prima che si applichi (per esempio lo Scudo cinetico: annulla 1 danno appena subito) | una volta per turno; non annulla il danno che ignora l'armatura; i dadi della mod Ammortizzatore e Deflettore si tirano da soli, senza bottone |
+| **Prepara** | si usa adesso (paga il costo, e se è un consumabile si scarta) e l'effetto scatta **all'inizio del prossimo turno** | Kit di nanoriparazione; nel codice `prepare` in un effetto `use`; l'effetto sta in `Piece.prepared` |
+| **Perforare N** | ignora N punti di **armatura** del bersaglio | solo attacchi che non sono Intrusione |
+| **Rompighiaccio N** | ignora N punti di **ICE** del bersaglio | solo attacchi di Intrusione; è il Perforare dell'ICE |
+| **Aura EMP** | ogni volta che un nemico entra in uno spazio adiacente subisce 1 danno che l'armatura non riduce | era «Aura»; la dà EMP di prossimità; nel codice resta `aura` |
+| **Regolazione N** | dopo il tiro di un attacco si aggiungono N alla gittata o al danno, ripartibili | era «Stregoneria»; la dà Zero-Day; nel codice resta `sorcery` |
+| **Programma** | un'azione del cyberdeck (una mod hacking): costa overclock, è un attacco a Intrusione che non consuma l'attacco del turno; se il danno dopo l'ICE è almeno 1 piazza lo stato, altrimenti chi lo usa viene tracciato | Combustione, Confusione, Corrosione, Sovraccarico; ICE 0 riesce da solo |
+
+Stati: **Fiamma**, **Stordimento** (solo umanoidi), **Folgorato** (come Stordimento, anche sulle macchine), **Tossicità** (ex Veleno: sui nemici 1 danno per segnalino a turno e se ne scarta 1; sui mercenari ogni segnalino è un danno che si cura prima della salute), **Rete**.
+
 ## 2. Squadra e archetipi [nuovo]
 
 - Una squadra è sempre di **3 eroi**: uno per archetipo. Il giocatore ne controlla uno; gli altri sono **Network** (CPU) o altri giocatori (sezione 12).

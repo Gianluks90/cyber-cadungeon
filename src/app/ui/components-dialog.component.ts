@@ -6,8 +6,6 @@ import { ItemDef } from '../game/items/item';
 import { EnemyDef } from '../game/enemies/enemy';
 import { SkillDef } from '../game/skills/skill';
 import { ModDef } from '../game/mods/mod';
-import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
-import { CostTextComponent } from './cost-text.component';
 import { ModCardComponent } from './mod-card.component';
 import { DialogComponent } from './dialog.component';
 import { FamiliarCardComponent } from './familiar-card.component';
@@ -42,7 +40,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
  */
 @Component({
   selector: 'app-components-dialog',
-  imports: [TrPipe, CatalogTextPipe, CostTextComponent, ModCardComponent, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
+  imports: [TrPipe, ModCardComponent, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {

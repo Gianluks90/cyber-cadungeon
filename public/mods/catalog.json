@@ -16,10 +16,14 @@
       "name": "Calibrazione",
       "slot": "weapon",
       "attack": ["melee", "ranged"],
-      "cost": 150,
+      "cost": 50,
       "stock": 2,
-      "effect": ["{spark:1} +1 danno"],
-      "active": [{ "sparks": 1, "effect": "+1 danno" }]
+      "effect": ["{spark:3} +1 danno"],
+      "active": [{ "sparks": 3, "effect": "+1 danno" }],
+      "grades": [
+        { "cost": 100, "effect": ["{spark:2} +1 danno"], "active": [{ "sparks": 2, "effect": "+1 danno" }] },
+        { "cost": 150, "effect": ["{spark:1} +1 danno"], "active": [{ "sparks": 1, "effect": "+1 danno" }] }
+      ]
     },
     {
       "id": "sweep",
@@ -86,8 +90,8 @@
       "attack": ["melee", "ranged"],
       "tier": "copper",
       "cost": 250,
-      "effect": ["{spark:2} {stun:+1|segnalino stordito}"],
-      "active": [{ "sparks": 2, "effect": "+1 segnalino stordito" }]
+      "effect": ["{spark:2} {stun|Stordimento} 1"],
+      "active": [{ "sparks": 2, "effect": "Stordimento 1" }]
     },
     {
       "id": "long-optics",
@@ -115,7 +119,7 @@
       "slot": "armor",
       "tier": "copper",
       "cost": 250,
-      "effect": ["Reazione: annulla 1 danno per ogni {spark} ottenuta tirando i tuoi dadi competenza di mischia contro un attacco in mischia"],
+      "effect": ["**Reazione**, annulla 1 danno per ogni {spark} ottenuta tirando i tuoi dadi competenza di mischia contro un attacco in mischia."],
       "passive": { "effects": [{ "kind": "react", "on": "wounds", "auto": true, "attack": "melee", "dice": "competence", "cancel": "spark" }] }
     },
     {
@@ -124,7 +128,7 @@
       "slot": "armor",
       "tier": "copper",
       "cost": 250,
-      "effect": ["Reazione: annulla 1 danno per ogni {spark} ottenuta tirando i tuoi dadi competenza di distanza contro un attacco in distanza"],
+      "effect": ["**Reazione**, annulla 1 danno per ogni {spark} ottenuta tirando i tuoi dadi competenza di distanza contro un attacco in distanza."],
       "passive": { "effects": [{ "kind": "react", "on": "wounds", "auto": true, "attack": "ranged", "dice": "competence", "cancel": "spark" }] }
     },
     {
@@ -134,8 +138,8 @@
       "attack": ["melee", "ranged"],
       "tier": "gold",
       "cost": 750,
-      "effect": ["{spark:2} {burn:+1|segnalino surriscaldamento}"],
-      "active": [{ "sparks": 2, "effect": "+1 segnalino surriscaldamento" }]
+      "effect": ["{spark:2} {burn|Bruciare} 1"],
+      "active": [{ "sparks": 2, "effect": "Bruciare 1" }]
     },
     {
       "id": "topaz",
@@ -212,10 +216,14 @@
       "name": "Exploit",
       "slot": "deck",
       "attack": ["intrusion"],
-      "cost": 75,
+      "cost": 25,
       "stock": 2,
-      "effect": ["{spark:2} +1 danno"],
-      "active": [{ "sparks": 2, "effect": "+1 danno" }]
+      "effect": ["{spark:3} +1 danno"],
+      "active": [{ "sparks": 3, "effect": "+1 danno" }],
+      "grades": [
+        { "cost": 75, "effect": ["{spark:2} +1 danno"], "active": [{ "sparks": 2, "effect": "+1 danno" }] },
+        { "cost": 125, "effect": ["{spark:1} +1 danno"], "active": [{ "sparks": 1, "effect": "+1 danno" }] }
+      ]
     },
     {
       "id": "ice-ice-baby",
@@ -227,6 +235,50 @@
       "stock": 2,
       "effect": ["Rompighiaccio 1"],
       "passive": { "rules": ["Rompighiaccio 1"], "effects": [{ "kind": "attack", "on": ["intrusion"], "pierce": 1 }] }
+    },
+    {
+      "id": "combustion",
+      "name": "Combustione",
+      "slot": "deck",
+      "tags": ["hacking"],
+      "attack": ["intrusion"],
+      "cost": 75,
+      "stock": 2,
+      "effect": ["{overclock:2} per {burn|Bruciare} il bersaglio."],
+      "program": { "cost": 2, "status": "burn" }
+    },
+    {
+      "id": "confusion",
+      "name": "Confusione",
+      "slot": "deck",
+      "tags": ["hacking"],
+      "attack": ["intrusion"],
+      "cost": 100,
+      "stock": 2,
+      "effect": ["{overclock:2} per {stun|Stordire} il bersaglio. Non ha effetto sulle macchine."],
+      "program": { "cost": 2, "status": "stun" }
+    },
+    {
+      "id": "corrosion",
+      "name": "Corrosione",
+      "slot": "deck",
+      "tags": ["hacking"],
+      "attack": ["intrusion"],
+      "cost": 75,
+      "stock": 2,
+      "effect": ["{overclock:2} per {poison|Intossicare} il bersaglio. Non ha effetto sulle macchine."],
+      "program": { "cost": 2, "status": "poison" }
+    },
+    {
+      "id": "overload",
+      "name": "Sovraccarico",
+      "slot": "deck",
+      "tags": ["hacking"],
+      "attack": ["intrusion"],
+      "cost": 100,
+      "stock": 2,
+      "effect": ["{overclock:2} per {shock|Folgorare} il bersaglio."],
+      "program": { "cost": 2, "status": "shock" }
     }
   ]
 }

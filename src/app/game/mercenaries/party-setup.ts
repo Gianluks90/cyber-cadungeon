@@ -1,6 +1,6 @@
 import { ChestTier, PotionKind } from '../board/marker';
 import { ModDef, ModLoadout, itemKeys, loadModCatalog, modFits, modsCost, validMods } from '../mods/mod';
-import { BACKPACK_LIMIT, BRIEFING_BUDGET, POTION_LIMIT, POTION_PRICES, TREASURE_PRICES } from '../constants';
+import { BACKPACK_LIMIT, BRIEFING_BUDGET, POTION_LIMIT, POTION_PRICES, SKILL_REROLL_COST, TREASURE_PRICES } from '../constants';
 import type { AdventureSetup } from '../map/map-data';
 import { SKILL_SCHOOLS, SkillSchool } from '../skills/skill';
 import { StartingSkills } from './mercenary-sheet';
@@ -16,6 +16,8 @@ export interface Loadout {
   mods?: ModLoadout;
   /** Gli id della fornitura iniziale (`MercenarySheet.startingGear`) venduti in preparazione: non partono equipaggiati e il loro valore di vendita torna al budget. */
   soldGear?: string[];
+  /** Quante volte ha cambiato un'abilità secondaria nel Briefing. Il primo cambio è gratis e ognuno dopo costa `SKILL_REROLL_COST` in più del precedente (0, 25, 50, 75…), dal budget. */
+  skillRerolls?: number;
 }
 
 /** Le chiavi di traduzione dei nomi dei tesori comprabili in preparazione. */
@@ -68,7 +70,7 @@ export function treasureRoom(l: Loadout, shop: ShopData, startingGear: readonly 
 
 /** Quanto costa tutto ciò che c'è nel `loadout`. */
 export function loadoutCost(l: Loadout, shop: ShopData): number {
-  return l.items.reduce((n, id) => n + (shop.items.get(id)?.price ?? 0), 0) + l.potions.reduce((n, k) => n + POTION_PRICES[k], 0) + (l.treasures ?? []).reduce((n, t) => n + TREASURE_PRICES[t], 0);
+  return l.items.reduce((n, id) => n + (shop.items.get(id)?.price ?? 0), 0) + l.potions.reduce((n, k) => n + POTION_PRICES[k], 0) + (l.treasures ?? []).reduce((n, t) => n + TREASURE_PRICES[t], 0) + skillRerollsCost(l.skillRerolls ?? 0);
 }
 
 /** Le copie ancora in vendita, tolte quelle già comprate da tutti gli `loadouts`. */
@@ -159,6 +161,7 @@ export function pruneMods(l: Loadout, startingGear: readonly string[], shop: Sho
 /** Il `loadout` è valido? Oggetti in vendita, copie sufficienti (`others`: ciò che hanno già comprato gli altri eroi), pozioni nei limiti, posto per tutto e budget sufficiente (contando le vendite). */
 export function validLoadout(l: Loadout, startingGear: readonly string[], shop: ShopData, others: readonly Loadout[], bonus = 0): boolean {
   if (!Array.isArray(l?.items) || !Array.isArray(l?.potions)) return false;
+  if (l.skillRerolls !== undefined && (!Number.isInteger(l.skillRerolls) || l.skillRerolls < 0)) return false;
   const sold = l.soldGear ?? [];
   // Ogni id venduto può comparire al massimo quante volte è nella fornitura iniziale (due Mako-3: se ne possono vendere due).
   if (Array.isArray(sold) && sold.some((id) => { const d = shop.items.get(id); return !!d && !isSellable(d); })) return false; // gli oggetti unici e legati non si vendono
@@ -187,7 +190,7 @@ export interface SkillPoolCard {
   school: SkillSchool;
 }
 
-/** Assegna a un eroe le sue carte abilità secondarie: una a caso per ogni punto di attributo, dal mazzo del ramo, senza carte già date a `taken` (altri eroi della squadra). */
+/** Assegna a un eroe le sue abilità secondarie: una a caso per ogni punto di attributo, dal mazzo del ramo, senza carte già date a `taken` (altri eroi della squadra). */
 export function drawSkillCards(points: StartingSkills, pool: readonly SkillPoolCard[], taken: ReadonlySet<string>): string[] {
   const out: string[] = [];
   for (const school of SKILL_SCHOOLS) {
@@ -199,6 +202,22 @@ export function drawSkillCards(points: StartingSkills, pool: readonly SkillPoolC
     out.push(...avail.slice(0, points[school]).map((c) => c.id));
   }
   return out;
+}
+
+/** Il costo del prossimo cambio di abilità dopo `done` cambi già fatti: il primo è gratis e ognuno dopo costa 25 in più (0, 25, 50…). */
+export function skillRerollCost(done: number): number {
+  return done * SKILL_REROLL_COST;
+}
+
+/** Quanto hanno costato in tutto `n` cambi di abilità: 0 + 25 + 50 + … */
+export function skillRerollsCost(n: number): number {
+  return (SKILL_REROLL_COST * n * (n - 1)) / 2;
+}
+
+/** Un'altra abilità dello stesso ramo al posto di `current`, a caso fra quelle che nessuno ha (`taken`: tutta la squadra); null se non ce ne sono. Si paga `SKILL_REROLL_COST`. */
+export function rerollSkillCard(current: string, school: SkillSchool, pool: readonly SkillPoolCard[], taken: ReadonlySet<string>): string | null {
+  const avail = pool.filter((c) => c.school === school && c.id !== current && !taken.has(c.id));
+  return avail.length ? avail[Math.floor(Math.random() * avail.length)].id : null;
 }
 
 const KEY = 'cad-party-setup';

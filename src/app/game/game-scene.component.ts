@@ -72,6 +72,7 @@ import { loadFamiliarCatalog } from './familiars/familiar';
 import { familiarCost, familiarHas, familiarPath, familiarReach, familiarsOf, spawnFamiliars, weakening } from './state/familiars';
 import { FAMILIAR_CARRY_COST, familiarContextActions, familiarDrop, familiarGive, familiarPickUp } from './state/familiar-carry';
 import { Spot, chooseEnemyTarget, enemyStops, planEnemyMove, settleOverlap } from './state/adversary';
+import { applyPrepared } from './state/item-use';
 import { STATUS_NAMES, applyTurnStart, describeStatus, hasStatus, shedStatus, shedStatusCost } from './state/status';
 import { SkillAction, skillActions, useSkill } from './state/skills';
 import { RemovalResult, removeEnemy } from './state/loot';
@@ -84,7 +85,7 @@ import { EnemyDetails } from '../ui/enemy-sheet.component';
 import { AttackDialogComponent, AttackView, DecisionView } from '../ui/attack-dialog.component';
 import { CatalogCategory, CatalogEntry, ComponentsDialogComponent } from '../ui/components-dialog.component';
 import { MenuItem } from '../ui/logo-button.component';
-import { AttackType, ItemDef, itemDetail } from './items/item';
+import { AttackType, ItemDef, ItemProgram, itemDetail } from './items/item';
 import { potionDef } from './items/potion';
 import { AttackOption, AttackPlan, Breath, applyAttack, areaCells, areaVictims, attackOptions, breathDirTo, controlledAttackOptions, enemyAttackOption, planAttack, scriptSparks, resolveAttack } from './state/combat';
 import { POTION_NAMES } from './markers/marker-rules';
@@ -1278,6 +1279,11 @@ export class GameSceneComponent implements OnDestroy {
     this.attackTarget.set(null);
     this.attackActions.set([]);
     await this.attackIntro(mercenary, target, option);
+    // Un programma contro un bersaglio senza ICE riesce da solo, senza tiro (bypass automatico).
+    if (option.program && target.ice <= 0) {
+      await this.finishProgram(mercenary, target, option.program, null);
+      return;
+    }
     this.attackSession.set({
       attackerId: mercenary.id, targetId: target.id, option, plan: planAttack(this.state, mercenary, target, option),
       step: 'preview', rolls: [], choices: {}, spent: [], sorcery: { range: 0, damage: 0 },
@@ -1437,6 +1443,27 @@ export class GameSceneComponent implements OnDestroy {
     this.attackSession.update((se) => (se ? { ...se, spent: [] } : se));
   }
 
+  /**
+   * L'esito di un programma del cyberdeck (una mod hacking): si paga l'overclock; se l'intrusione supera l'ICE del bersaglio (danno di almeno 1, oppure ICE 0 senza tiro) si piazza lo stato,
+   * altrimenti niente stato e chi l'ha usato viene tracciato (per ora solo a parole). Un mancato sul dado base è un fallimento; fuori portata non traccia.
+   */
+  private async finishProgram(attacker: Piece, target: Piece, p: ItemProgram, outcome: ReturnType<typeof resolveAttack> | null) {
+    attacker.overclock = Math.max(0, attacker.overclock - p.cost);
+    const inRange = !outcome || outcome.inRange;
+    const success = !outcome || (!outcome.miss && outcome.inRange && outcome.damage >= 1);
+    if (success) {
+      const n = inflictStatus(this.state, target, p.status, p.amount);
+      if (n) {
+        this.pieces?.floatTag(target, STATUS_NAMES[p.status], p.status);
+        this.showNotice(tr('{name}: {status} ×{n} su {target}', { name: p.name, status: STATUS_NAMES[p.status], n, target: target.name }), 'memory', 'mercenary');
+      } else this.showNotice(tr('{target} è immune a {status}', { target: target.name, status: STATUS_NAMES[p.status] }), 'shield', 'mercenary');
+    } else if (!inRange) this.showNotice(tr('{name}: {target} è fuori portata', { name: p.name, target: target.name }), 'warning', 'mercenary');
+    else this.showNotice(tr('{name} fallito: sei stato tracciato', { name: p.name }), 'warning', 'mercenary');
+    this.pieces?.redraw(target);
+    this.pieces?.refreshActive();
+    this.refreshContext();
+  }
+
   /** Applica l'attacco: consuma l'attacco, toglie le ferite e, se il nemico è sconfitto, sparisce dalla mappa. */
   protected async applyAttackNow() {
     const se = this.attackSession();
@@ -1449,6 +1476,12 @@ export class GameSceneComponent implements OnDestroy {
       return;
     }
     this.attackSession.set(null); // chiude la finestra subito (e non si applica due volte)
+    if (se.option.program) {
+      // Un programma del cyberdeck: non toglie ferite e non consuma l'attacco del turno; paga overclock e, se supera l'ICE, piazza lo stato.
+      this.dice.scheduleClear(true);
+      await this.finishProgram(attacker, target, se.option.program, outcome);
+      return;
+    }
     this.applyingAttack = true;
     this.dice.scheduleClear(true);
     // Un eroe che sta per subire ferite può reagire (Mantelli, Scudi, Pelle di corteccia): quelle che restano sono quelle che subisce davvero.
@@ -1828,7 +1861,7 @@ export class GameSceneComponent implements OnDestroy {
     this.showNotice(tr('{name} è scaraventato', { name: target.name }), 'swords', 'mercenary');
     if (out.fell) this.showNotice(tr('{name} cade in una buca', { name: target.name }), 'warning');
     out.auraHits.forEach((h, i) => this.pieces?.floatTag(h, tr('Aura'), 'skill', i * 450));
-    for (const h of out.auraHits) this.showNotice(tr('{name} subisce 1 danno per l\'Aura di {name2}', { name: target.name, name2: h.name }), 'warning');
+    for (const h of out.auraHits) this.showNotice(tr('{name} subisce 1 danno per l\'Aura EMP di {name2}', { name: target.name, name2: h.name }), 'warning');
     this.afterDrop(out.drop);
     if (out.died) {
       this.pieces?.afterCombat(target, target, true);
@@ -1867,9 +1900,14 @@ export class GameSceneComponent implements OnDestroy {
    * (ogni scintilla ne toglie uno), le ferite della fiamma rimasta, la rete che toglie il movimento, uno stordimento che si scarta. Restituisce true se muore.
    */
   private async resolveTurnStart(piece: Piece): Promise<boolean> {
+    if (piece.team === 'mercenary' && piece.prepared?.length) {
+      // Gli oggetti preparati nel turno prima (Prepara) scattano per primi.
+      for (const note of applyPrepared(piece)) this.showNotice(note, 'genetics', 'mercenary');
+      this.pieces?.refreshActive();
+    }
     if (piece.team === 'mercenary') await this.offerShedStatus(piece);
     const s = piece.status;
-    if (!s.burn && !s.web && !s.stun) return false;
+    if (!s.burn && !s.web && !s.stun && !s.shock && !(s.poison && piece.team === 'enemy')) return false;
     const sparksOf = async (n: number) => {
       if (n < 1) return 0;
       const rolls = await this.dice.rollFaces(Array<'black'>(Math.min(n, 8)).fill('black'));
@@ -1882,6 +1920,7 @@ export class GameSceneComponent implements OnDestroy {
     const by = piece.team === 'mercenary' ? 'mercenary' : 'adversary';
     if (r.burnBefore) this.showNotice(tr('{burn}: {done} su {total} spente', { burn: STATUS_NAMES.burn, done: r.burnBefore - r.burnLeft, total: r.burnBefore }) + (r.burnDamage ? (r.burnDamage === 1 ? tr(', {name} subisce 1 danno', { name: piece.name }) : tr(', {name} subisce {n} danni', { name: piece.name, n: r.burnDamage })) : ''), 'skull', by);
     if (r.webBefore) this.showNotice(r.webLeft ? tr('{web}: {name} resta impigliato e non può muoversi', { web: STATUS_NAMES.web, name: piece.name }) : tr('{web}: {name} si libera', { web: STATUS_NAMES.web, name: piece.name }), 'warning', by);
+    if (r.poisonDamage) this.showNotice(r.poisonDamage === 1 ? tr('{name} subisce 1 danno per la tossicità', { name: piece.name }) : tr('{name} subisce {n} danni per la tossicità', { name: piece.name, n: r.poisonDamage }), 'warning', by);
     if (r.stunned) this.showNotice((piece.team === 'mercenary' ? tr('{name} è stordito: può solo muoversi o attaccare', { name: piece.name }) : tr('{name} è stordito: perde il turno', { name: piece.name })), 'warning', by);
     if (r.killed) {
       const slain = piece.team === 'mercenary' ? killMercenary(this.state, piece) : [];

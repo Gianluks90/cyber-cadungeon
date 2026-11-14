@@ -12,6 +12,8 @@ import { TrPipe } from '../i18n/tr.pipe';
 import { IconComponent } from './icon.component';
 import { MoneyCounterComponent } from './money-counter.component';
 import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
+import { SkillsDialogComponent } from './skills-dialog.component';
+import { ItemNameComponent } from './item-name.component';
 
 /**
  * Una colonna del Briefing, per un mercenario: il token quadrato (solo nome e classe: i parametri si vedono nel negozio), il budget che resta, la fornitura iniziale (con un errore rosso se il catalogo non la dà) e il badge «Pronto» sul token.
@@ -19,7 +21,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
  */
 @Component({
   selector: 'app-briefing-column',
-  imports: [CatalogTextPipe, IconComponent, MoneyCounterComponent, NgTemplateOutlet, PregameShopDialogComponent, TranslatePipe, TrPipe],
+  imports: [CatalogTextPipe, IconComponent, MoneyCounterComponent, NgTemplateOutlet, PregameShopDialogComponent, SkillsDialogComponent, ItemNameComponent, TranslatePipe, TrPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- I badge (budget e «Pronto») stanno fuori dal token: su schermo largo restano fissi mentre la colonna scorre; su telefono stanno sopra la card. -->
@@ -28,7 +30,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     <span class="budget" [title]="'briefing.budget' | t"><app-money-counter [value]="badgeBudget()" /></span>
     <!-- «Pronto»: un badge con la spunta in alto a sinistra, specchio del budget. Diventa verde quando è premuto. -->
     <!-- Su telefono, finché il negozio non è stato aperto il tasto è un carrello (e lo apre); poi diventa la spunta «Pronto». Su schermo largo resta la spunta spenta. -->
-    <button type="button" class="ready" [class.on]="ready()" [class.off]="!visited() && !phone()" [attr.aria-disabled]="visited() || phone() ? null : 'true'" [attr.aria-pressed]="visited() || !phone() ? ready() : null" [attr.aria-label]="(shopFirst() ? 'briefing.openShop' : 'briefing.ready') | t: { name: mercenary().name }" [title]="(shopFirst() ? 'briefing.openShop' : visited() ? 'briefing.ready' : 'briefing.readyLocked') | t: { name: mercenary().name }" (click)="tapReady()">@if (shopFirst()) { <app-icon name="add_shopping_cart" [size]="18" /> } @else { <app-icon name="check" [size]="18" /> }</button>
+    <button type="button" class="ready" [class.on]="ready()" [class.off]="!canReady() && !shopFirst()" [attr.aria-disabled]="canReady() || shopFirst() ? null : 'true'" [attr.aria-pressed]="canReady() ? ready() : null" [attr.aria-label]="(shopFirst() ? 'briefing.openShop' : 'briefing.ready') | t: { name: mercenary().name }" [title]="(shopFirst() ? 'briefing.openShop' : canReady() ? 'briefing.ready' : visited() ? 'briefing.readyNeedsSkills' : 'briefing.readyLocked') | t: { name: mercenary().name }" (click)="tapReady()">@if (shopFirst()) { <app-icon name="add_shopping_cart" [size]="18" /> } @else { <app-icon name="check" [size]="18" /> }</button>
     </div>
     <div class="scroll">
     <div class="frame">
@@ -43,12 +45,14 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     <!-- Il contenuto di una card oggetto: la usano la fornitura iniziale e l'inventario. -->
     <ng-template #gearCard let-i let-hands="hands" let-used="used">
       <span class="slots" [title]="'briefing.slotsOf' | t: { n: i.slots ?? 0 }">@for (n of dots(i.slots); track $index) { <i [class.full]="$index < used" [class.hack]="i.modTags?.includes('hacking') && $index < reserved(i)"></i> }</span>
-      <span class="what"><b>{{ i.name }}</b><small>{{ categoryKey(i) | t }}@if (i.unique) { · <span class="unique">{{ 'unica' | tr }}</span> }</small></span>
+      <span class="what"><b><app-item-name [def]="i" /></b><small>{{ categoryKey(i) | t }}@if (i.unique) { · <span class="unique">{{ 'unica' | tr }}</span> }@if (i.glam) { · <span class="glam">{{ 'Glam' | tr }}</span> }</small></span>
       @if (hands && i.hands > 0) {
         <span class="hands" [title]="'briefing.handsOf' | t: { n: i.hands }">@for (n of dots(i.hands); track $index) { <app-icon class="hand" [name]="'back_hand'" [size]="14" /> }</span>
       }
     </ng-template>
 
+    <!-- «Imposta abilità»: al primo tocco si generano le abilità secondarie del mercenario (a caso, senza doppioni nella squadra) e si apre la dialog dove si possono cambiare pagando. -->
+    <button type="button" class="dlg-btn skillbtn" [class.primary]="!skillsSet()" (click)="openSkills()">{{ (skillsSet() ? 'briefing.skills' : 'briefing.setSkills') | t }}</button>
     <section class="kit" [attr.aria-label]="kitTitle() | t">
       @if (kitSold()) {
         <h3>{{ kitTitle() | t }}</h3>
@@ -86,6 +90,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
 
     </div>
 
+    <app-skills-dialog [open]="skillsOpen()" [mercenary]="mercenary()" [skills]="skills()" [rerollReasons]="rerollReasons()" [rerollCost]="rerollCost()" [budget]="budgetLeft()" (reroll)="skillReroll.emit($event)" (closed)="skillsOpen.set(false)" />
     @if (open() && shop(); as s) {
       <app-pregame-shop-dialog [mercenary]="mercenary()" [loadout]="loadout()" [shop]="s" [others]="others()" [skills]="skills()" (changed)="changed.emit($event)" (closed)="open.set(false)" />
     }
@@ -138,6 +143,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .gear b { font-weight: 600; min-width: 0; }
     .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
     .unique { color: var(--c-rare); }
+    .glam { color: var(--c-glam); }
     .qty { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
     .what small { color: var(--c-text-dim); font: 600 11px/1.2 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .slots { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
@@ -168,6 +174,15 @@ export class BriefingColumnComponent {
   readonly others = input<readonly Loadout[]>([]);
   readonly skills = input<readonly SkillDef[]>([]);
   readonly ready = input(false);
+  /** Le abilità secondarie sono già state generate (con «Imposta abilità»): senza, non si può dire «Pronto». */
+  readonly skillsSet = input(false);
+  /** Per ogni abilità, perché non si può cambiare (vuoto se si può). */
+  /** Quanto costa il prossimo cambio di un'abilità (0 il primo, poi 25 in più a ogni cambio). */
+  readonly rerollCost = input(0);
+  readonly rerollReasons = input<readonly ('' | 'noAlt')[]>([]);
+  readonly skillsGenerate = output<void>();
+  readonly skillReroll = output<number>();
+  protected readonly skillsOpen = signal(false);
   /** Il negozio di questo mercenario è già stato aperto almeno una volta: solo allora «Pronto» si accende. */
   readonly visited = input(false);
   readonly shopOpened = output<void>();
@@ -184,6 +199,12 @@ export class BriefingColumnComponent {
   protected readonly phone = signal(false);
   /** Telefono e negozio mai aperto: il tasto è il carrello. */
   protected readonly shopFirst = computed(() => this.phone() && !this.visited());
+  /** Si può dire «Pronto» solo dopo aver aperto il negozio e impostato le abilità. */
+  protected readonly canReady = computed(() => this.visited() && this.skillsSet());
+  protected openSkills() {
+    if (!this.skillsSet()) this.skillsGenerate.emit();
+    this.skillsOpen.set(true);
+  }
   constructor() {
     const mq = matchMedia('(max-width: 900px)');
     const update = () => this.phone.set(mq.matches);
@@ -198,7 +219,7 @@ export class BriefingColumnComponent {
   }
 
   protected toggleReady() {
-    if (this.visited()) this.readyChange.emit(!this.ready());
+    if (this.canReady()) this.readyChange.emit(!this.ready());
   }
 
   /** Gli eurodollari che restano: un solo budget per mod, oggetti, pozioni e tesori. */

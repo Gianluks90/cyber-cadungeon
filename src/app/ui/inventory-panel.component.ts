@@ -52,7 +52,7 @@ import { ItemCardComponent } from './item-card.component';
         @if (e.use; as u) {
           <!-- Un oggetto che si usa: il costo (overclock, punti movimento) viene prima del testo, e se consuma l'oggetto lo dice dopo. -->
           <button type="button" class="act" [class.overclock]="u.cost.includes('{overclock:')" [class.mov]="!u.cost.includes('{overclock:') && u.cost.includes('{mov:')" [class.off]="!u.enabled" [attr.aria-disabled]="!u.enabled" [title]="u.enabled ? ('Usa {name}' | tr: { name: e.name }) : plain(u.reason ?? '')"
-            (click)="u.enabled ? itemAction.emit({ action: 'use', itemId: e.id }) : denied.emit(u.reason ?? notPossible())">@if (u.cost) { <app-cost-text [text]="u.cost" /> }{{ 'Usa' | tr }}@if (u.extra) { · {{ u.extra }} }</button>
+            (click)="u.enabled ? itemAction.emit({ action: 'use', itemId: e.id }) : denied.emit(u.reason ?? notPossible())">@if (u.cost) { <app-cost-text [text]="u.cost" /> }{{ (u.prepare ? 'Prepara' : 'Usa') | tr }}@if (u.extra) { · {{ u.extra }} }</button>
         }
         <button type="button" class="act" [class.mov]="e.move.cost > 0" [class.off]="!e.move.enabled" [attr.aria-disabled]="!e.move.enabled" [title]="e.move.enabled ? e.move.label + ' (' + plain('{mov:' + e.move.cost + '}') + ')' : plain(e.move.reason ?? '')"
           (click)="e.move.enabled ? itemAction.emit({ action: e.where === 'backpack' ? 'equip' : 'stow', itemId: e.id }) : denied.emit(e.move.reason ?? notPossible())">@if (e.move.cost > 0) { <span class="cost"><app-icon name="footprint" [size]="14" />{{ e.move.cost }}</span> }{{ e.move.label }}</button>

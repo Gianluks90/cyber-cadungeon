@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PARTY_SIZE } from '../game/constants';
 import type { AdventureSetup } from '../game/map/map-data';
 import { Archetype, MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
-import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, budgetLeft, mercenaryBudgetBonus, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
+import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, rerollSkillCard, skillRerollCost, budgetLeft, mercenaryBudgetBonus, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -77,7 +77,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
       } @else {
         <div class="squad">
           @for (h of squad(); track h.id) {
-            <app-briefing-column [mercenary]="h" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" [visited]="visitedIds().includes(h.id)" (shopOpened)="markVisited(h.id)" [ready]="readyIds().includes(h.id)" (readyChange)="setReady(h.id, $event)" (changed)="setLoadout(h.id, $event)" />
+            <app-briefing-column [mercenary]="h" [skillsSet]="!!skillCards()[h.id]" [rerollReasons]="rerollReasonsOf(h.id)" [rerollCost]="rerollCostOf(h.id)" (skillsGenerate)="generateSkills(h.id)" (skillReroll)="rerollSkill(h.id, $event)" [loadout]="loadoutOf(h.id)" [shop]="shop()" [others]="othersOf(h.id)" [skills]="skillsOf(h.id)" [visited]="visitedIds().includes(h.id)" (shopOpened)="markVisited(h.id)" [ready]="readyIds().includes(h.id)" (readyChange)="setReady(h.id, $event)" (changed)="setLoadout(h.id, $event)" />
           }
         </div>
       }
@@ -90,7 +90,6 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
         <button type="button" class="dlg-btn primary confirm" [class.off]="!allReady()" [attr.aria-disabled]="allReady() ? null : 'true'" (click)="start()">{{ 'party.begin' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
       }
     </footer>
-    <app-confirm-dialog [open]="skillNotice()" [danger]="false" [title]="'gear.noticeTitle' | t" [text]="'gear.noticeText' | t" [confirmLabel]="'gear.noticeOk' | t" (confirmed)="skillNotice.set(false)" (cancel)="skillNotice.set(false)" />
     <app-mercenary-detail-dialog [mercenary]="detail()" [chosen]="!!detail() && order(detail()!.id) > 0" [canChoose]="!detail() || !full() || order(detail()!.id) > 0" (choose)="chooseFromDetail($event)" (closed)="detail.set(null)" />
     <app-confirm-dialog [open]="askUnspent()" [danger]="false" [title]="'party.unspentTitle' | t" [text]="'party.unspentText' | t: { names: unspentNames() }" [confirmLabel]="'party.startAnyway' | t" (confirmed)="askUnspent.set(false); go()" (cancel)="askUnspent.set(false)" />
   `,
@@ -226,6 +225,7 @@ export class PartyComponent {
     this.chosen.update((c) => (c.includes(id) ? c.filter((x) => x !== id) : c.length < PARTY_SIZE ? [...c, id] : c));
     // Un eroe lasciato a casa rimette in negozio ciò che aveva comprato.
     this.loadouts.update((l) => Object.fromEntries(Object.entries(l).filter(([mercenary]) => this.chosen().includes(mercenary))));
+    this.skillCards.update((all) => Object.fromEntries(Object.entries(all).filter(([mercenary]) => this.chosen().includes(mercenary))));
   }
 
   /** Il tasto della scheda: sceglie il mercenario o, se è già scelto, lo toglie; poi chiude la scheda. */
@@ -258,7 +258,7 @@ export class PartyComponent {
   }
   protected readonly allReady = computed(() => this.squad().length > 0 && this.squad().every((h) => this.readyIds().includes(h.id)));
   protected setReady(id: string, on: boolean) {
-    if (on && !this.visitedIds().includes(id)) return;
+    if (on && (!this.visitedIds().includes(id) || !this.skillCards()[id])) return; // serve aver aperto il negozio e impostato le abilità
     this.readyIds.update((r) => (on ? [...new Set([...r, id])] : r.filter((x) => x !== id)));
   }
 
@@ -274,25 +274,53 @@ export class PartyComponent {
 
   protected confirm() {
     if (!this.ready()) return;
-    this.assignSkills();
+    // Le abilità si generano nel Briefing («Imposta abilità»): chi esce dalla squadra perde le sue, chi resta le tiene.
+    this.skillCards.update((all) => Object.fromEntries(Object.entries(all).filter(([id]) => this.chosen().includes(id))));
     this.readyIds.set([]);
     this.visitedIds.set([]);
     this.step.set('gear');
-    this.skillNotice.set(true);
   }
 
-  /** Dà a ogni eroe della squadra le sue carte abilità secondarie (una a caso per punto di attributo, senza doppioni nella squadra); chi le ha già le tiene, chi esce dalla squadra le rimette nel mazzo. */
-  private assignSkills() {
-    const pool = [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school }));
-    const kept: Record<string, string[]> = {};
-    for (const h of this.squad()) if (this.skillCards()[h.id]) kept[h.id] = this.skillCards()[h.id];
-    const taken = new Set(Object.values(kept).flat());
-    for (const h of this.squad()) {
-      if (kept[h.id]) continue;
-      kept[h.id] = drawSkillCards(h.skills, pool, taken);
-      kept[h.id].forEach((id) => taken.add(id));
-    }
-    this.skillCards.set(kept);
+  /** Il mazzo da cui si generano le abilità: tutte quelle del catalogo, con il loro ramo. */
+  private readonly skillPool = computed(() => [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })));
+
+  /** «Imposta abilità»: genera a caso le abilità secondarie di un mercenario (una per punto di attributo), senza quelle già date agli altri della squadra. Una volta sola: riaprire la dialog mostra le stesse. */
+  protected generateSkills(id: string) {
+    const h = this.squad().find((x) => x.id === id);
+    if (!h || this.skillCards()[id]) return;
+    const taken = new Set(Object.values(this.skillCards()).flat());
+    this.skillCards.update((all) => ({ ...all, [id]: drawSkillCards(h.skills, this.skillPool(), taken) }));
+    this.readyIds.update((r) => r.filter((x) => x !== id));
+  }
+
+  /** Per ogni abilità del mercenario, se non si può cambiare: `noAlt` quando nel suo ramo non ne resta un'altra che nessuno ha; vuoto se si può. */
+  protected rerollReasonsOf(id: string): ('' | 'noAlt')[] {
+    const taken = new Set(Object.values(this.skillCards()).flat());
+    return (this.skillCards()[id] ?? []).map((card) => {
+      const school = this.skillCatalog().get(card)?.school;
+      return school && this.skillPool().some((c) => c.school === school && c.id !== card && !taken.has(c.id)) ? '' : 'noAlt';
+    });
+  }
+
+  /** Quanto costa il prossimo cambio: il primo è gratis, poi ognuno 25 in più del precedente. */
+  protected rerollCostOf(id: string): number {
+    return skillRerollCost(this.loadoutOf(id).skillRerolls ?? 0);
+  }
+
+  /** «Cambia»: sostituisce l'abilità `index` con un'altra dello stesso ramo e toglie il costo dal budget. Si può cambiare quante volte si vuole, pagando sempre di più. */
+  protected rerollSkill(id: string, index: number) {
+    const h = this.squad().find((x) => x.id === id);
+    const shop = this.shop();
+    const cards = this.skillCards()[id];
+    if (!h || !shop || !cards?.[index] || this.rerollReasonsOf(id)[index]) return;
+    const l = this.loadoutOf(id);
+    if (this.rerollCostOf(id) > budgetLeft(h.startingGear ?? [], l, shop, mercenaryBudgetBonus(h))) return;
+    const school = this.skillCatalog().get(cards[index])?.school;
+    if (!school) return;
+    const next = rerollSkillCard(cards[index], school, this.skillPool(), new Set(Object.values(this.skillCards()).flat()));
+    if (!next) return;
+    this.skillCards.update((all) => ({ ...all, [id]: cards.map((c, i) => (i === index ? next : c)) }));
+    this.setLoadout(id, { ...l, skillRerolls: (l.skillRerolls ?? 0) + 1 });
   }
 
   protected skillsOf(id: string): SkillDef[] {
@@ -305,8 +333,6 @@ export class PartyComponent {
     return this.squad().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop, mercenaryBudgetBonus(h)) === shop.budget + mercenaryBudgetBonus(h)).map((h) => h.name).join(', ');
   });
   protected readonly askUnspent = signal(false);
-  /** Entrando nell'Equipaggiamento una dialog avvisa che le abilità secondarie sono state assegnate a caso. */
-  protected readonly skillNotice = signal(false);
   /** La scheda di dettaglio aperta dal tasto "i" di una carta. */
   protected readonly detail = signal<MercenarySheet | null>(null);
   /** Il catalogo di oggetti, mod, abilità e personaggi. */

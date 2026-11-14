@@ -168,7 +168,7 @@ export class GameState {
     this.adversary = { deck, hand: deck.splice(0, handSize), discard: [], inPlay, traps: [], alarm: 0, gust: false };
   }
 
-  /** Mescola i mazzi delle carte abilità (una copia per carta) e dà a ogni eroe le sue abilità secondarie: tante per ramo quante dice la sua scheda. */
+  /** Mescola i mazzi delle carte abilità (una copia per carta) e dà a ogni eroe le sue abilità secondarie (se non le ha già dal Briefing): tante per ramo quante dice la sua scheda. */
   buildSkillDecks(): void {
     const decks: Record<SkillSchool, string[]> = { combat: [], cunning: [], hacking: [] };
     for (const s of this.skills.values()) decks[s.school].push(s.id);

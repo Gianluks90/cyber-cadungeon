@@ -8,11 +8,11 @@ import type { GameState } from './game-state';
  * Sono regole sullo stato, senza interfaccia: chi le chiama (la scena, lo script) mostra e tira i dadi.
  */
 
-export const STATUS_NAMES: Record<StatusKind, string> = { get burn() { return tr('Fiamma'); }, get web() { return tr('Rete'); }, get stun() { return tr('Stordimento'); }, get poison() { return tr('Veleno'); } };
+export const STATUS_NAMES: Record<StatusKind, string> = { get burn() { return tr('Fiamma'); }, get web() { return tr('Rete'); }, get stun() { return tr('Stordimento'); }, get shock() { return tr('Folgorato'); }, get poison() { return tr('Tossicità'); } };
 
 /** Nella lista `immune` di una pedina: immune a tutti gli stati. */
 export const IMMUNE_TO_ALL = 'all';
-const ALL_STATUSES: readonly StatusKind[] = ['burn', 'web', 'stun', 'poison'];
+const ALL_STATUSES: readonly StatusKind[] = ['burn', 'web', 'stun', 'shock', 'poison'];
 
 /** Cosa può rendere immuni (nei dati: `{ kind: 'rule', rule: 'immune', to: [...] }`). */
 export type Immunity = StatusKind | 'aura' | 'fear' | 'grip' | 'knockback';
@@ -20,7 +20,7 @@ export type Immunity = StatusKind | 'aura' | 'fear' | 'grip' | 'knockback';
 /** I nomi con cui le carte scrivono ciò a cui si è immuni, e cosa sono per il gioco. Per dare un'immunità a una cosa nuova basta una riga qui. */
 const IMMUNITY_NAMES: Record<string, Immunity> = {
   aura: 'aura', bruciare: 'burn', fiamma: 'burn', fiamme: 'burn', contraccolpo: 'knockback', paura: 'fear', presa: 'grip',
-  ragnatela: 'web', rete: 'web', stordire: 'stun', tramortire: 'stun', stordimento: 'stun', veleno: 'poison',
+  ragnatela: 'web', rete: 'web', stordire: 'stun', tramortire: 'stun', stordimento: 'stun', folgorato: 'shock', folgorazione: 'shock', veleno: 'poison', tossicità: 'poison',
 };
 
 /**
@@ -78,7 +78,7 @@ export function shedStatus(state: GameState, piece: Piece, kind: StatusKind): bo
 /** Ci sono stati? */
 export function hasStatus(piece: Piece): boolean {
   const s = piece.status;
-  return s.burn + s.web + s.stun + s.poison > 0;
+  return s.burn + s.web + s.stun + s.shock + s.poison > 0;
 }
 
 /** Gli stati a parole, per i pannelli ("Fiamma ×2"). */
@@ -102,7 +102,7 @@ export function healWounds(piece: Piece, amount: number): { healed: number; cure
 export type Keyword = 'Aura' | 'Paura' | 'Presa' | 'Volo' | 'Raggiungimento' | 'Colpo veloce' | 'Spazzata' | 'Soffio' | 'Stregoneria' | 'Comando' | 'Esplosione';
 
 const KEYWORD_NAMES: Record<Keyword, string[]> = {
-  Aura: ['aura'],
+  Aura: ['aura', 'aura emp'],
   Paura: ['paura', 'fear'],
   Presa: ['presa', 'grip'],
   Volo: ['volo', 'volare', 'fly'],
@@ -110,7 +110,7 @@ const KEYWORD_NAMES: Record<Keyword, string[]> = {
   'Colpo veloce': ['colpo veloce', 'attacco veloce', 'quick shot'],
   Spazzata: ['spazzata', 'spazzamento', 'sweep'],
   Soffio: ['soffio', 'breath'],
-  Stregoneria: ['stregoneria', 'sorcery'],
+  Stregoneria: ['stregoneria', 'sorcery', 'regolazione'],
   Comando: ['comando', 'command'],
   Esplosione: ['esplosione', 'blast'],
 };
@@ -144,8 +144,11 @@ export interface TurnStartResult {
   webLeft: number;
   /** Danno per i segnalini fiamma rimasti (l'armatura non lo riduce). */
   burnDamage: number;
-  /** Aveva un segnalino stordimento: ora lo perde ed è stordita per questo turno. */
+  /** Aveva un segnalino stordimento (o folgorato): ora lo perde ed è stordita per questo turno. */
   stunned: boolean;
+  /** Tossicità di un nemico: il danno dei segnalini che aveva (1 ciascuno) e quanti ne restano (se ne scarta 1 a turno). */
+  poisonDamage: number;
+  poisonLeft: number;
   /** È morta per le ferite della fiamma. */
   killed: boolean;
 }
@@ -157,7 +160,7 @@ export interface TurnStartResult {
  */
 export function applyTurnStart(piece: Piece, sparks: { burn: number; web: number }): TurnStartResult {
   const s = piece.status;
-  const r: TurnStartResult = { burnBefore: s.burn, burnLeft: 0, webBefore: s.web, webLeft: 0, burnDamage: 0, stunned: false, killed: false };
+  const r: TurnStartResult = { burnBefore: s.burn, burnLeft: 0, webBefore: s.web, webLeft: 0, burnDamage: 0, stunned: false, poisonDamage: 0, poisonLeft: 0, killed: false };
   s.burn -= Math.min(s.burn, sparks.burn);
   r.burnLeft = s.burn;
   if (s.burn > 0 && !piece.invincible && !piece.onlyHurtBy) {
@@ -172,6 +175,19 @@ export function applyTurnStart(piece: Piece, sparks: { burn: number; web: number
     s.stun -= 1;
     piece.stunned = true;
     r.stunned = true;
+  }
+  // Folgorato: come lo stordimento (la differenza è solo chi ne è immune: le macchine non si stordiscono ma si folgorano).
+  if (s.shock > 0) {
+    s.shock -= 1;
+    piece.stunned = true;
+    r.stunned = true;
+  }
+  // Tossicità di un nemico: 1 danno per segnalino (l'armatura non lo riduce) e poi se ne scarta 1. Sugli eroi resta com'era: ogni segnalino è un danno che si cura prima della salute.
+  if (piece.team === 'enemy' && s.poison > 0 && !piece.invincible && !piece.onlyHurtBy) {
+    r.poisonDamage = s.poison;
+    piece.wounds = Math.max(0, piece.wounds - s.poison);
+    s.poison -= 1;
+    r.poisonLeft = s.poison;
   }
   r.killed = piece.wounds <= 0;
   return r;

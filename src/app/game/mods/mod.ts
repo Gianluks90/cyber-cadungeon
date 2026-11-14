@@ -11,8 +11,8 @@ export const MOD_SLOTS: readonly ModSlot[] = ['weapon', 'armor', 'deck'];
 export type ModTier = 'base' | 'copper' | 'silver' | 'gold';
 
 /** Si compra al Briefing? Solo le mod base. */
-export function isBriefingMod(mod: { tier?: ModTier }): boolean {
-  return (mod.tier ?? 'base') === 'base';
+export function isBriefingMod(mod: { tier?: ModTier; grade?: number }): boolean {
+  return (mod.tier ?? 'base') === 'base' && (mod.grade ?? 1) === 1; // al Briefing solo il grado base: gli altri si ottengono salendo di grado
 }
 
 /** Un effetto attivo di una mod: si paga in scintille (le saette dei dadi neri), mai in Overclock. */
@@ -45,6 +45,14 @@ export interface ModDef {
   cost: number;
   /** Cosa aggiunge, piatto e senza descrizione: una voce per ogni aggiunta (es. "{spark:2} +1 danno"). Con più voci la card fa un elenco puntato. */
   effect: string[];
+  /** I gradi superiori di una mod migliorabile (il grado 1 è la mod stessa): ognuno cambia costo (il prezzo di quel grado), effetto e attivi. Al caricamento diventano mod a sé (`id@2`, `id@3`) con il nome «+» e «++». */
+  grades?: { cost: number; effect: string[]; active?: ModActive[]; passive?: ModDef['passive'] }[];
+  /** Il grado (1 se non è migliorabile), la famiglia (la mod di grado 1) e la mod del grado dopo: si sale di grado al terminale. Solo il grado 1 si compra al Briefing. */
+  grade?: number;
+  family?: string;
+  upgradesTo?: string;
+  /** Un programma: invece di un bonus, la mod dà al cyberdeck un'azione da usare (un attacco a intrusione a parte, senza consumare l'attacco del turno): paga overclock, tira contro l'ICE e, se riesce, piazza lo stato; se fallisce non lo piazza e chi la usa viene tracciato. */
+  program?: { cost: number; status: 'burn' | 'web' | 'stun' | 'shock' | 'poison'; amount?: number };
   /** I dadi che la mod aggiunge all'arma (uno per colore: `["red"]`). */
   dice?: DieColor[];
   /** Effetti passivi: `rules` è il testo che si mostra ("Perforare 1"), `effects` è ciò che legge il combattimento (vocabolario delle carte abilità: `attack`, `stat`; un `attack` può avere `pierce`), `ice` è l'ICE in più. */
@@ -63,7 +71,16 @@ export async function loadModCatalog(): Promise<Map<string, ModDef>> {
     const res = await fetch('mods/catalog.json');
     if (!res.ok) return mods;
     const file: { mods: ModDef[] } = await res.json();
-    for (const m of file.mods) mods.set(m.id, localizeName('mod', m));
+    for (const m of file.mods) {
+      const base = localizeName('mod', m);
+      const upgrades = m.grades ?? [];
+      mods.set(m.id, upgrades.length ? { ...base, grade: 1, family: m.id, upgradesTo: `${m.id}@2` } : base);
+      upgrades.forEach((g, i) => {
+        const grade = i + 2;
+        const { grades: _g, stock: _s, ...rest } = base;
+        mods.set(`${m.id}@${grade}`, { ...rest, ...g, id: `${m.id}@${grade}`, name: `${base.name} ${'+'.repeat(grade - 1)}`, grade, family: m.id, upgradesTo: i + 1 < upgrades.length ? `${m.id}@${grade + 1}` : undefined });
+      });
+    }
   } catch {
     console.warn('Catalogo delle mod non trovato');
   }
@@ -162,7 +179,8 @@ export function moddedItem(base: ItemDef, modIds: readonly string[], catalog: Re
   const effects = [...(base.effects ?? []), ...passiveEffects({ [base.id]: known }, catalog).map((e) => ({ ...e, itemBound: true }))];
   const spark = [...(base.spark ?? []), ...activeSparks({ [base.id]: known }, catalog)];
   const addDice = known.flatMap((id) => catalog.get(id)!.dice ?? []);
-  return { ...base, ...(addDice.length ? { dice: [...(base.dice ?? []), ...addDice] } : {}), id: moddedRef(base.id, known), moddedFrom: base.id, mods: known.map((id) => ({ id, name: catalog.get(id)!.name, effect: catalog.get(id)!.effect })), modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
+  const programs = known.flatMap((id) => { const m = catalog.get(id)!; return m.program ? [{ id, name: m.name, cost: m.program.cost, status: m.program.status, amount: m.program.amount ?? 1 }] : []; });
+  return { ...base, ...(addDice.length ? { dice: [...(base.dice ?? []), ...addDice] } : {}), ...(programs.length ? { programs: [...(base.programs ?? []), ...programs] } : {}), id: moddedRef(base.id, known), moddedFrom: base.id, mods: known.map((id) => ({ id, name: catalog.get(id)!.name, effect: catalog.get(id)!.effect })), modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
 }
 
 /** Mette nel catalogo `items` gli oggetti moddati di questi riferimenti (`id+mod+mod`), se non ci sono già. Un riferimento che non si capisce (oggetto o mod sconosciuti) si salta. */
@@ -177,7 +195,7 @@ export function registerModdedItems(items: Map<string, ItemDef>, catalog: Readon
 
 /** I riferimenti a oggetti moddati che compaiono in un testo (per esempio un salvataggio in JSON): così si ricostruiscono prima di riprendere la partita. */
 export function moddedRefsIn(text: string): string[] {
-  return [...new Set([...text.matchAll(/"([a-z0-9-]+(?:\+[a-z0-9-]+)+)"/g)].map((m) => m[1]))];
+  return [...new Set([...text.matchAll(/"([a-z0-9-]+(?:\+[a-z0-9@-]+)+)"/g)].map((m) => m[1]))];
 }
 
 /** Un oggetto come lo vedono le mod: l'id, il tipo (arma, armatura, deck), il tipo di attacco, gli slot e le categorie di mod che accetta. */
@@ -210,11 +228,11 @@ export function modFits(mod: ModDef, item: ModItem, installed: readonly Pick<Mod
 }
 
 /** La riga sotto il nome di una mod: dove si monta e a cosa si applica, per esempio "Arma · mischia" o "Arma · Hacking". */
-export function modTag(mod: Pick<ModDef, 'slot' | 'attack' | 'tags'>): string {
+export function modTag(mod: Pick<ModDef, 'slot' | 'attack' | 'tags' | 'upgradesTo'>): string {
   const slot = { weapon: tr('Arma'), armor: tr('Armatura'), deck: tr('Cyberdeck') }[mod.slot];
   const hacking = (mod.tags ?? []).includes('hacking');
   // Nelle mod hacking l'intrusione è sottintesa: il tag «Hacking» basta.
   const attack = (mod.attack ?? []).filter((a) => !(hacking && a === 'intrusion')).map((a) => ({ melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[a]));
   const tags = (mod.tags ?? []).map((t) => (t === 'hacking' ? tr('Hacking') : t));
-  return [slot, attack.length ? attack.join(' / ') : '', ...tags].filter(Boolean).join(' · ');
+  return [slot, attack.length ? attack.join(' / ') : '', ...tags, mod.upgradesTo ? tr('migliorabile') : ''].filter(Boolean).join(' · ');
 }

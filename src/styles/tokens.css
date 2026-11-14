@@ -31,11 +31,13 @@
   --c-burn:          #ff5a36;  /* stato: fiamma */
   --c-web:           #cfd4de;  /* stato: rete (ragnatela) */
   --c-stun:          #8f9bff;  /* stato: stordimento */
+  --c-shock:         #5ad7ff;  /* stato: folgorato (azzurro elettrico) */
   --c-poison:        #7ed957;  /* stato: veleno (i cuori verdi accanto alle ferite) */
   --c-armor:         #b7bcc6;  /* armatura / difesa */
   --c-intrusion:         #a98bf0;  /* Intrusione / pozioni di Intrusione */
   --c-water:         #4aa3d8;  /* acqua, texture a onde */
   --c-loot:          #c9b88c;  /* chiavi e tesori (sabbia spenta, NON oro); il denaro è --c-money */
+  --c-glam:          var(--c-hacking);  /* oggetti Glam: suffisso del nome e tag, hot pink come lo slot hacking */
   --c-hacking:       #ff3d9a;  /* slot (e mod) solo hacking: hot pink, in prova */
   --c-ice:           var(--px-cyan-2);  /* ICE: l'armatura digitale contro le Intrusioni (icona snowflake) */
   --c-money:         #ffe033;  /* denaro (Eurodollari, monete, scrigno d'oro): giallo pieno, NON oro */

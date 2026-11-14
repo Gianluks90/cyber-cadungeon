@@ -16,6 +16,6 @@ export function activationOf(state: GameState, board: Board | null, enemy: Piece
   const area = board?.areaAt(enemy.cell);
   if (!enemy.awake && area && !state.exploration.areas.has(area)) return null; // dorme: la sua area non è rivelata
   if (enemy.done) return 'done';
-  if ((enemy.stunned || enemy.status.stun > 0) && !enemy.enhanced) return 'blocked'; // uno potenziato stordito può ancora muoversi o attaccare
+  if ((enemy.stunned || enemy.status.stun > 0 || enemy.status.shock > 0) && !enemy.enhanced) return 'blocked'; // uno potenziato stordito può ancora muoversi o attaccare
   return 'ready';
 }

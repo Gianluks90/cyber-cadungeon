@@ -2,7 +2,7 @@ import { tr } from '../../i18n/catalog-text';
 import { localizeName } from '../../i18n/catalog-text';
 import { ChestTier } from '../board/marker';
 import type { SkillEffect } from '../skills/skill';
-import { BACKPACK_LIMIT, EQUIP_ARMOR_LIMIT, EQUIP_DECK_LIMIT, EQUIP_HANDS, EQUIP_OTHER_LIMIT, ITEM_GIVE_COST } from '../constants';
+import { BACKPACK_LIMIT, EQUIP_ARMOR_LIMIT, EQUIP_DECK_LIMIT, EQUIP_HANDS, EQUIP_OTHER_LIMIT, ITEM_GIVE_COST, GLAM_PRICE_BONUS } from '../constants';
 
 /** Il tipo di un oggetto: arma o scudo (usano le mani), armatura, oppure altro (né mani né armatura); `event` è una carta del mazzo che non si tiene (vedi `instant`). Le pozioni non sono oggetti: hanno il loro set. */
 export type ItemKind = 'weapon' | 'shield' | 'armor' | 'deck' | 'other' | 'event';
@@ -21,6 +21,18 @@ export interface ItemLevel {
   dice?: DieColor[];
   spark?: { cost: number; effect: string }[];
   rules?: string[];
+}
+
+/** Un programma del cyberdeck (da una mod hacking, vedi `ModDef.program`). */
+export interface ItemProgram {
+  /** L'id della mod. */
+  id: string;
+  name: string;
+  /** Overclock da pagare a ogni uso. */
+  cost: number;
+  /** Lo stato che piazza se riesce: `burn`, `stun`, `shock`, `poison` o `web`. */
+  status: 'burn' | 'web' | 'stun' | 'shock' | 'poison';
+  amount: number;
 }
 
 export interface ItemDef {
@@ -59,6 +71,10 @@ export interface ItemDef {
   consumable?: boolean;
   /** Un oggetto unico (la spada di un mercenario): nel sottotitolo ha la voce gialla «unica». */
   unique?: boolean;
+  /** Un oggetto Glam: vale `GLAM_PRICE_BONUS` E$ in più, ha un suffisso nel nome («Mako-3 Dorata», l'ultima parola) e il tag «Glam»: suffisso e tag in hot pink. */
+  glam?: boolean;
+  /** I programmi che le mod hacking montate sull'oggetto danno al cyberdeck: ognuno è un attacco a intrusione a parte (si paga overclock, si tira contro l'ICE del bersaglio, riuscendo piazza uno stato). */
+  programs?: ItemProgram[];
   /** Un oggetto legato al suo proprietario (la Kazoku di Kage): non si vende, non si cede e non si scarta, resta sempre con lui. */
   bound?: boolean;
   /** Finché è equipaggiato, chi lo porta non può viaggiare da un glifo all'altro. */
@@ -119,7 +135,11 @@ export async function loadItemCatalog(): Promise<Map<string, ItemDef>> {
     const res = await fetch('items/catalog.json');
     if (!res.ok) return items;
     const file: { items: ItemDef[] } = await res.json();
-    for (const item of file.items) if (!item.hide) items.set(item.id, localizeName('item', item));
+    for (const item of file.items) {
+      if (item.hide) continue;
+      const named = localizeName('item', item);
+      items.set(item.id, item.glam ? { ...named, price: named.price + GLAM_PRICE_BONUS } : named);
+    }
   } catch {
     console.warn('Catalogo degli oggetti non trovato');
   }
@@ -246,8 +266,14 @@ export function isSellable(item: ItemDef): boolean {
   return !item.unique && !item.bound && !item.tags?.includes('relic');
 }
 
+/** Il nome diviso in base e suffisso: per un oggetto Glam l'ultima parola è il suffisso («Mako-3» e «Dorata»), che si scrive in hot pink. */
+export function itemNameParts(item: Pick<ItemDef, 'name' | 'glam'>): { base: string; suffix: string } {
+  const i = item.glam ? item.name.lastIndexOf(' ') : -1;
+  return i > 0 ? { base: item.name.slice(0, i), suffix: item.name.slice(i + 1) } : { base: item.name, suffix: '' };
+}
+
 export function itemDetail(item: ItemDef): string {
-  const kind = { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: tr('Armatura') }[item.kind];
+  const kind = item.consumable ? tr('Consumabile') : { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: tr('Armatura') }[item.kind];
   const attackName = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
   // La gittata delle armi a distanza e dei deck a intrusione sta tra parentesi accanto al tipo: "distanza (3)", "intrusione (2)".
   const attack = attackName && (item.attack === 'ranged' || item.attack === 'intrusion') && item.range ? `${attackName} (${item.range})` : attackName;
