@@ -4,12 +4,13 @@ import { ADVENTURES } from '../adventures/adventures';
 import { objectiveText } from '../game/state/objective-text';
 import { MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
 import type { AdventureSetup } from '../game/map/map-data';
-import { Loadout, ShopData, briefingBudget, coinsWithSetup, budgetLeft, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, briefingBudget, coinsWithSetup, budgetLeft, mercenaryBudgetBonus, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { AdventureDialogComponent, AdventureView } from '../ui/adventure-dialog.component';
 import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
+import { CatalogDialogComponent } from '../ui/catalog-dialog.component';
 import { MercenaryDetailDialogComponent, scrollIfPartial } from '../ui/mercenary-detail-dialog.component';
 import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
@@ -34,11 +35,12 @@ import { composeRules } from '../game/state/setup-text';
  */
 @Component({
   selector: 'app-lobby',
-  imports: [AdventureDialogComponent, CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, FieldComponent, IconComponent, PageNavComponent, SelectComponent, TranslatePipe],
+  imports: [CatalogDialogComponent, AdventureDialogComponent, CatalogTextPipe, ConfirmDialogComponent, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, MercenaryLoadoutComponent, FieldComponent, IconComponent, PageNavComponent, SelectComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
-    <app-page-nav [confirmTitle]="(isHost ? 'lobby.closeTitle' : 'lobby.leaveTitle') | t" [confirmText]="(isHost ? 'lobby.closeText' : 'lobby.leaveText') | t" [confirmLabel]="(isHost ? 'lobby.close' : 'lobby.leave') | t" (back)="back()" (leave)="leaveGame()" />
+    <app-page-nav [confirmTitle]="(isHost ? 'lobby.closeTitle' : 'lobby.leaveTitle') | t" [confirmText]="(isHost ? 'lobby.closeText' : 'lobby.leaveText') | t" [confirmLabel]="(isHost ? 'lobby.close' : 'lobby.leave') | t" [showCatalog]="true" (catalog)="catalogOpen.set(true)" (back)="back()" (leave)="leaveGame()" />
+    <app-catalog-dialog [open]="catalogOpen()" (closed)="catalogOpen.set(false)" />
     <header class="head">
       <span class="kicker">{{ (isHost ? 'lobby.kickerHost' : 'lobby.kickerPlayer') | t }}</span>
       <button type="button" class="code" [title]="'lobby.copy' | t" [attr.aria-label]="'lobby.copy' | t" (click)="copy()">
@@ -222,7 +224,7 @@ export class LobbyComponent {
   }
   private readonly skillCatalog = signal<ReadonlyMap<string, SkillDef>>(new Map());
   protected readonly host: LobbyHost | undefined = this.isHost
-    ? new LobbyHost(this.code, this.lobby!.mercenaries, () => ({ mercenaryIds: this.mercenaries().map((h) => h.id), startingGear: (id) => this.mercenaries().find((h) => h.id === id)?.startingGear ?? [], shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), mercenarySkills: (id) => this.mercenaries().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
+    ? new LobbyHost(this.code, this.lobby!.mercenaries, () => ({ mercenaryIds: this.mercenaries().map((h) => h.id), startingGear: (id) => this.mercenaries().find((h) => h.id === id)?.startingGear ?? [], budgetBonus: (id) => mercenaryBudgetBonus(this.mercenaries().find((h) => h.id === id)), shop: this.shop(), skillPool: [...this.skillCatalog().values()].map((c) => ({ id: c.id, school: c.school })), mercenarySkills: (id) => this.mercenaries().find((h) => h.id === id)?.skills ?? { combat: 0, cunning: 0, hacking: 0 } }))
     : undefined;
   private readonly client: LobbyClient | undefined = this.isHost ? undefined : new LobbyClient(this.code);
 
@@ -255,10 +257,12 @@ export class LobbyComponent {
   protected readonly skillNotice = signal(false);
   /** La scheda di dettaglio aperta dal tasto "i" di una carta. */
   protected readonly detail = signal<MercenarySheet | null>(null);
+  /** Il catalogo di oggetti, mod, abilità e personaggi. */
+  protected readonly catalogOpen = signal(false);
   /** I miei eroi che non hanno speso niente (hanno ancora tutte le monete). */
   protected readonly unspentNames = computed(() => {
     const shop = this.shop();
-    return this.myMercenaries().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop) === shop.budget).map((h) => h.name).join(', ');
+    return this.myMercenaries().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop, mercenaryBudgetBonus(h)) === shop.budget + mercenaryBudgetBonus(h)).map((h) => h.name).join(', ');
   });
   /** Eroi confermati: si passa alla schermata degli acquisti (finché il gruppo è completo). */
   protected readonly gearStep = signal(false);
@@ -332,7 +336,7 @@ export class LobbyComponent {
     const shop = this.shop();
     if (!h || !shop) return '';
     const l = slot.player?.loadouts[h.id] ?? emptyLoadout();
-    return this.i18n.t('lobby.gear', { coins: budgetLeft(h.startingGear ?? [], l, shop), n: l.items.length + l.potions.length });
+    return this.i18n.t('lobby.gear', { coins: budgetLeft(h.startingGear ?? [], l, shop, mercenaryBudgetBonus(h)), n: l.items.length + l.potions.length });
   }
 
   /** Eroi confermati: si passa agli acquisti e una dialog avvisa delle abilità assegnate. */

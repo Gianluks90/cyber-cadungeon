@@ -5,9 +5,9 @@
       "name": "Filo vibrante",
       "slot": "weapon",
       "attack": ["melee"],
-      "cost": 50,
+      "cost": 100,
       "stock": 2,
-      "text": "La lama vibra e taglia le armature.",
+      "effect": ["Perforare 1", "{spark:2} Perforare 1"],
       "passive": { "rules": ["Perforare 1"], "effects": [{ "kind": "attack", "on": ["melee"], "pierce": 1 }] },
       "active": [{ "sparks": 2, "effect": "Perforare 1" }]
     },
@@ -15,9 +15,10 @@
       "id": "calibration",
       "name": "Calibrazione",
       "slot": "weapon",
-      "cost": 75,
+      "attack": ["melee", "ranged"],
+      "cost": 150,
       "stock": 2,
-      "text": "Taratura fine: +1 danno con una sola scintilla.",
+      "effect": ["{spark:1} +1 danno"],
       "active": [{ "sparks": 1, "effect": "+1 danno" }]
     },
     {
@@ -27,7 +28,7 @@
       "attack": ["melee"],
       "cost": 100,
       "stock": 1,
-      "text": "Colpi ampi che raggiungono più bersagli.",
+      "effect": ["{spark:2} Spazzata"],
       "active": [{ "sparks": 2, "effect": "Spazzata" }]
     },
     {
@@ -36,7 +37,7 @@
       "slot": "armor",
       "cost": 75,
       "stock": 2,
-      "text": "Placche che si induriscono all'impatto: +1 Armatura.",
+      "effect": ["{armor:+1|Armatura}"],
       "passive": { "effects": [{ "kind": "stat", "stat": "armor", "amount": 1 }] }
     },
     {
@@ -45,7 +46,7 @@
       "slot": "deck",
       "cost": 50,
       "stock": 2,
-      "text": "Un muro digitale contro le intrusioni: +1 ICE.",
+      "effect": ["{ice:+1|ICE}"],
       "passive": { "ice": 1 }
     },
     {
@@ -55,7 +56,7 @@
       "tier": "copper",
       "attack": ["melee"],
       "cost": 250,
-      "text": "Più energia nel colpo: +1 danno in mischia.",
+      "effect": ["+1 danno in mischia"],
       "passive": { "effects": [{ "kind": "attack", "on": ["melee"], "damage": 1 }] }
     },
     {
@@ -65,25 +66,27 @@
       "tier": "copper",
       "attack": ["melee", "ranged"],
       "cost": 250,
-      "text": "Più scintille dai dadi: +1 scintilla bonus in ogni attacco.",
+      "effect": ["l'attacco ottiene una {spark} bonus"],
       "passive": { "effects": [{ "kind": "attack", "on": ["melee", "ranged"], "sparks": 1 }] }
     },
     {
       "id": "fragmentation",
       "name": "Frammentazione",
       "slot": "weapon",
+      "attack": ["melee", "ranged"],
       "tier": "copper",
       "cost": 250,
-      "text": "Il colpo si spacca: danneggia anche i nemici vicini al bersaglio.",
+      "effect": ["{spark:2} Esplosione 1"],
       "active": [{ "sparks": 2, "effect": "Esplosione 1" }]
     },
     {
       "id": "stunner",
       "name": "Stordente",
       "slot": "weapon",
+      "attack": ["melee", "ranged"],
       "tier": "copper",
       "cost": 250,
-      "text": "Un impulso che blocca il bersaglio ferito.",
+      "effect": ["{spark:2} {stun:+1|segnalino stordito}"],
       "active": [{ "sparks": 2, "effect": "+1 segnalino stordito" }]
     },
     {
@@ -93,35 +96,137 @@
       "tier": "silver",
       "attack": ["ranged"],
       "cost": 500,
-      "text": "Ottiche di precisione: +2 gittata.",
+      "effect": ["{range:+2|gittata}"],
       "passive": { "effects": [{ "kind": "attack", "on": ["ranged"], "range": 2 }] }
     },
     {
       "id": "piercing-tip",
       "name": "Punta perforante",
       "slot": "weapon",
+      "attack": ["melee", "ranged"],
       "tier": "silver",
       "cost": 500,
-      "text": "Una punta che fora le corazze: Perforare 2 con una scintilla.",
+      "effect": ["{spark:1} Perforare 2"],
       "active": [{ "sparks": 1, "effect": "Perforare 2" }]
     },
     {
-      "id": "dissipator",
-      "name": "Dissipatore",
+      "id": "absorber",
+      "name": "Ammortizzatore",
       "slot": "armor",
-      "tier": "silver",
-      "cost": 500,
-      "text": "Un campo che disperde l'impatto: per ogni ferita tiri un dado e annulli 1 ferita per ogni scintilla.",
-      "passive": { "effects": [{ "kind": "react", "on": "wounds", "auto": true, "dice": "perWound", "cancel": "spark" }] }
+      "tier": "copper",
+      "cost": 250,
+      "effect": ["Reazione: annulla 1 danno per ogni {spark} ottenuta tirando i tuoi dadi competenza di mischia contro un attacco in mischia"],
+      "passive": { "effects": [{ "kind": "react", "on": "wounds", "auto": true, "attack": "melee", "dice": "competence", "cancel": "spark" }] }
+    },
+    {
+      "id": "deflector",
+      "name": "Deflettore",
+      "slot": "armor",
+      "tier": "copper",
+      "cost": 250,
+      "effect": ["Reazione: annulla 1 danno per ogni {spark} ottenuta tirando i tuoi dadi competenza di distanza contro un attacco in distanza"],
+      "passive": { "effects": [{ "kind": "react", "on": "wounds", "auto": true, "attack": "ranged", "dice": "competence", "cancel": "spark" }] }
     },
     {
       "id": "overheat",
       "name": "Surriscaldante",
       "slot": "weapon",
+      "attack": ["melee", "ranged"],
       "tier": "gold",
       "cost": 750,
-      "text": "Sovraccarica il bersaglio e lo fa surriscaldare.",
+      "effect": ["{spark:2} {burn:+1|segnalino surriscaldamento}"],
       "active": [{ "sparks": 2, "effect": "+1 segnalino surriscaldamento" }]
+    },
+    {
+      "id": "topaz",
+      "name": "Modulo Topaz",
+      "slot": "weapon",
+      "attack": ["ranged"],
+      "tier": "copper",
+      "cost": 250,
+      "effect": ["+1 dado {die|yellow}"],
+      "dice": ["yellow"]
+    },
+    {
+      "id": "emerald",
+      "name": "Modulo Emerald",
+      "slot": "weapon",
+      "attack": ["melee", "ranged"],
+      "tier": "copper",
+      "cost": 250,
+      "effect": ["+1 dado {die|green}"],
+      "dice": ["green"]
+    },
+    {
+      "id": "sapphire",
+      "name": "Modulo Sapphire",
+      "slot": "weapon",
+      "attack": ["melee", "ranged"],
+      "tier": "silver",
+      "cost": 500,
+      "effect": ["+1 dado {die|blue}"],
+      "dice": ["blue"]
+    },
+    {
+      "id": "ruby",
+      "name": "Modulo Ruby",
+      "slot": "weapon",
+      "attack": ["melee"],
+      "tier": "silver",
+      "cost": 500,
+      "effect": ["+1 dado {die|red}"],
+      "dice": ["red"]
+    },
+    {
+      "id": "diamond",
+      "name": "Modulo Diamond",
+      "slot": "deck",
+      "attack": ["intrusion"],
+      "tier": "gold",
+      "cost": 750,
+      "effect": ["+1 dado {die|white}"],
+      "dice": ["white"]
+    },
+    {
+      "id": "signal-repeater",
+      "name": "Ripetitore di segnale",
+      "slot": "deck",
+      "attack": ["intrusion"],
+      "cost": 50,
+      "stock": 2,
+      "effect": ["{range:+1|portata}"],
+      "passive": { "effects": [{ "kind": "attack", "on": ["intrusion"], "range": 1 }] }
+    },
+    {
+      "id": "directional-antenna",
+      "name": "Antenna direzionale",
+      "slot": "deck",
+      "attack": ["intrusion"],
+      "cost": 50,
+      "stock": 2,
+      "effect": ["{spark:2} {range:+1|portata}"],
+      "active": [{ "sparks": 2, "effect": "+1 portata" }]
+    },
+    {
+      "id": "exploit",
+      "name": "Exploit",
+      "slot": "deck",
+      "attack": ["intrusion"],
+      "cost": 75,
+      "stock": 2,
+      "effect": ["{spark:2} +1 danno"],
+      "active": [{ "sparks": 2, "effect": "+1 danno" }]
+    },
+    {
+      "id": "ice-ice-baby",
+      "name": "Ice Ice Baby",
+      "slot": "deck",
+      "tags": ["hacking"],
+      "attack": ["intrusion"],
+      "cost": 75,
+      "stock": 2,
+      "effect": ["Rompighiaccio 1"],
+      "passive": { "rules": ["Rompighiaccio 1"], "effects": [{ "kind": "attack", "on": ["intrusion"], "pierce": 1 }] }
     }
   ]
 }

@@ -14,7 +14,7 @@ import {
 } from '../constants';
 import { Reveal } from '../exploration';
 import { MarkerEvent, POTION_NAMES, collectLoot, enterCell, pickupAt, pickupBlocked, pickupName } from '../markers/marker-rules';
-import { AttackType, ItemDef, cappedSpeed, movementBonusOf, conflictsWith, fitsEquipment, itemDetail, itemsToDisplace, totalArmor } from '../items/item';
+import { AttackType, ItemDef, cappedSpeed, movementBonusOf, conflictsWith, fitsEquipment, itemDetail, itemsToDisplace, totalArmor, weaponAllowed, weaponTagRestriction } from '../items/item';;
 import { MercenaryAction, MercenaryOrder, Piece, footprint, occupies } from '../pieces/piece';
 import { GameState } from './game-state';
 import { effectsOf, hasRule, ruleAmount, statBonus } from './effects';
@@ -375,8 +375,11 @@ export function speedOf(state: GameState, piece: Piece): number {
 export function armorOf(state: GameState, piece: Piece, vs?: AttackType): number {
   if (piece.toad) return 0; // il rospo non ha armatura
   // Il Berserk acceso toglie Armatura (sempre) e ICE (contro l'Intrusione): il prezzo della sua forza. Mai sotto 0.
-  const berserkLoss = (piece.berserk ?? 0) > 0 ? BERSERK_ARMOR_LOSS + (vs === 'intrusion' ? BERSERK_ICE_LOSS : 0) : 0;
-  const base = Math.max(0, totalArmor(piece.armor, equippedDefs(state, piece)) + statBonus(state, piece, 'armor', { vs }) + (vs === 'intrusion' ? statBonus(state, piece, 'ice') : 0) + (piece.tempArmor ?? 0) - berserkLoss); // l'ICE (cyberdeck e mod) conta solo contro l'Intrusione
+  const berserk = (piece.berserk ?? 0) > 0;
+  // Contro l'Intrusione conta solo l'ICE (l'armatura digitale: cyberdeck e mod); l'armatura fisica no. Contro gli altri attacchi solo l'armatura fisica.
+  const base = vs === 'intrusion'
+    ? Math.max(0, statBonus(state, piece, 'ice') - (berserk ? BERSERK_ICE_LOSS : 0))
+    : Math.max(0, totalArmor(piece.armor, equippedDefs(state, piece)) + statBonus(state, piece, 'armor', { vs }) + (piece.tempArmor ?? 0) - (berserk ? BERSERK_ARMOR_LOSS : 0)); // l'ICE (cyberdeck e mod) conta solo contro l'Intrusione
   // I nemici vicini a un famiglio con `weaken` (Nero il Corvo) hanno meno armatura, mai meno di 0.
   return piece.team === 'enemy' ? Math.max(0, base - weakening(state, piece).armor) : base;
 }
@@ -763,7 +766,7 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
       }
       for (const id of [...piece.equipped, ...piece.backpack]) {
         const item = state.items.get(id);
-        if (!item) continue;
+        if (!item || item.bound) continue; // un oggetto legato (la Kazoku) resta sempre con il suo proprietario
         const giveCost = item.giveCost ?? ITEM_GIVE_COST;
         const reason = !canReceiveItem(state, other, id) ? tr('{name} non ha posto', { name: other.name }) : costReason(giveCost);
         out.push({ id: `giveitem:${other.id}:${id}`, kind: 'item', icon: item.icon ?? 'inventory_2', label: tr('Dai a {name}: {name2}', { name: other.name, name2: item.name.toLowerCase() }), cost: giveCost, enabled: !reason, reason });
@@ -928,7 +931,7 @@ function cursedDisplaced(state: GameState, piece: Piece, item: ItemDef): string[
   const eq = equippedDefs(state, piece);
   if (conflictsWith(eq, item)) return null;
   const out = fitsEquipment(eq, item) ? [] : itemsToDisplace(eq, item);
-  if (!out || out.some((d) => d.cursed) || piece.backpack.length + out.length > BACKPACK_LIMIT) return null;
+  if (!out || out.some((d) => d.cursed || d.bound) || piece.backpack.length + out.length > BACKPACK_LIMIT) return null;
   return out.map((d) => d.id);
 }
 
@@ -936,6 +939,7 @@ function cursedDisplaced(state: GameState, piece: Piece, item: ItemDef): string[
 export function canReceiveItem(state: GameState, piece: Piece, id: string): boolean {
   const item = state.items.get(id);
   if (!item) return false;
+  if (!weaponAllowed(weaponTagRestriction(piece.mercenaryEffects), item)) return false; // chi ha una restrizione sulle armi (Kage) non riceve le altre
   if (item.cursed) return cursedDisplaced(state, piece, item) !== null; // un oggetto maledetto si equipaggia sempre: ciò che gli fa posto va nello zaino, se c'è posto
   return fitsEquipment(equippedDefs(state, piece), item) || (!item.carried && piece.backpack.length < BACKPACK_LIMIT); // un oggetto trasportato non va nello zaino
 }
@@ -968,7 +972,7 @@ export function receiveItem(state: GameState, piece: Piece, id: string): 'equipp
 }
 
 export interface ItemResult {
-  code: 'ok' | 'busy' | 'none' | 'cost' | 'full' | 'far' | 'conflict' | 'carried' | 'cursed';
+  code: 'ok' | 'busy' | 'none' | 'cost' | 'full' | 'far' | 'conflict' | 'carried' | 'cursed' | 'bound';
 }
 
 /** Controlla se si può equipaggiare un oggetto dello zaino: quali oggetti equipaggiati dovrebbero fare posto, e se nello zaino c'è posto per loro. */
@@ -979,6 +983,7 @@ function checkEquip(state: GameState, piece: Piece, id: string): { code: ItemRes
   const eq = equippedDefs(state, piece);
   if (conflictsWith(eq, item)) return { code: 'conflict', displaced: [] };
   const out = fitsEquipment(eq, item) ? [] : itemsToDisplace(eq, item);
+  if (out?.some((d) => d.bound)) return { code: 'bound', displaced: [] }; // un oggetto legato non si mette da parte per fare posto
   if (!out || piece.backpack.length - 1 + out.length > BACKPACK_LIMIT) return { code: 'full', displaced: [] };
   if (piece.points < REEQUIP_COST) return { code: 'cost', displaced: [] };
   return { code: 'ok', displaced: out.map((d) => d.id) };
@@ -1004,6 +1009,7 @@ function checkStow(state: GameState, piece: Piece, id: string): ItemResult['code
   if (!canAct(state, piece)) return 'busy';
   if (!piece.equipped.includes(id)) return 'none';
   if (state.items.get(id)?.cursed) return 'cursed'; // maledetto: non si toglie
+  if (state.items.get(id)?.bound) return 'bound'; // legato (la Kazoku di Kage): resta sempre equipaggiato, non va nello zaino
   if (state.items.get(id)?.carried) return 'carried'; // si porta in braccio: si posa, non va nello zaino
   if (piece.backpack.length >= BACKPACK_LIMIT) return 'full';
   if (piece.points < REEQUIP_COST) return 'cost';
@@ -1025,6 +1031,7 @@ export function stowItem(state: GameState, piece: Piece, id: string): ItemResult
 export function dropItem(state: GameState, piece: Piece, id: string): ItemResult {
   if (!canAct(state, piece)) return { code: 'busy' };
   if (state.items.get(id)?.cursed) return { code: 'cursed' }; // un oggetto maledetto non si scarta né si posa: si cede
+  if (state.items.get(id)?.bound) return { code: 'bound' }; // un oggetto legato non si scarta
   if (state.items.get(id)?.carried) {
     const i = piece.equipped.indexOf(id);
     if (i < 0) return { code: 'none' };
@@ -1052,6 +1059,7 @@ export function giveItem(state: GameState, board: Board, giver: Piece, receiverI
   if (!receiver) return { code: 'far' };
   const list = giver.equipped.includes(id) ? giver.equipped : giver.backpack.includes(id) ? giver.backpack : null;
   if (!list) return { code: 'none' };
+  if (state.items.get(id)?.bound) return { code: 'bound' }; // un oggetto legato non si cede
   if (!canReceiveItem(state, receiver, id)) return { code: 'full' };
   const giveCost = state.items.get(id)?.giveCost ?? ITEM_GIVE_COST;
   if (giver.points < giveCost) return { code: 'cost' };
@@ -1089,7 +1097,7 @@ export interface InventoryView {
 }
 
 const ITEM_REASON: Record<ItemResult['code'], string> = {
-  ok: '', get busy() { return tr('Ora non puoi'); }, none: '', far: '', get full() { return tr('Non c\'è posto nello zaino'); }, get conflict() { return tr('Incompatibile con un oggetto equipaggiato'); }, get cost() { return tr('Servono {mov:{reequipCost}}', { reequipCost: REEQUIP_COST }); }, get carried() { return tr('Si porta in braccio: si posa a terra'); }, get cursed() { return tr('È maledetta: non si può togliere, solo cedere'); },
+  ok: '', get busy() { return tr('Ora non puoi'); }, none: '', far: '', get full() { return tr('Non c\'è posto nello zaino'); }, get conflict() { return tr('Incompatibile con un oggetto equipaggiato'); }, get cost() { return tr('Servono {mov:{reequipCost}}', { reequipCost: REEQUIP_COST }); }, get carried() { return tr('Si porta in braccio: si posa a terra'); }, get cursed() { return tr('È maledetta: non si può togliere, solo cedere'); }, get bound() { return tr('Resta sempre con il suo proprietario'); },
 };
 
 /** L'inventario di un eroe com'è oggi, per la scheda completa. */
@@ -1102,7 +1110,7 @@ export function inventoryOf(state: GameState, piece: Piece): InventoryView {
     return {
       id, def: item, name: item.name, icon: item.icon ?? 'inventory_2', detail: itemDetail(item), where,
       move: { label: where === 'backpack' ? tr('Equipaggia') : tr('Nello zaino'), cost: REEQUIP_COST, enabled: code === 'ok', reason: code === 'ok' ? undefined : ITEM_REASON[code] },
-      canDrop: canAct(state, piece) && !item.cursed, // un oggetto maledetto non si scarta
+      canDrop: canAct(state, piece) && !item.cursed && !item.bound, // un oggetto maledetto non si scarta
       carried,
     };
   };

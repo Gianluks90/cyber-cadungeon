@@ -84,7 +84,8 @@ import { EnemyDetails } from '../ui/enemy-sheet.component';
 import { AttackDialogComponent, AttackView, DecisionView } from '../ui/attack-dialog.component';
 import { CatalogCategory, CatalogEntry, ComponentsDialogComponent } from '../ui/components-dialog.component';
 import { MenuItem } from '../ui/logo-button.component';
-import { ItemDef, itemDetail } from './items/item';
+import { AttackType, ItemDef, itemDetail } from './items/item';
+import { potionDef } from './items/potion';
 import { AttackOption, AttackPlan, Breath, applyAttack, areaCells, areaVictims, attackOptions, breathDirTo, controlledAttackOptions, enemyAttackOption, planAttack, scriptSparks, resolveAttack } from './state/combat';
 import { POTION_NAMES } from './markers/marker-rules';
 import { MercenaryAction, ORDER_NAMES, Piece, PieceData, StatusKind, createPieces, footprint, occupies } from './pieces/piece';
@@ -489,7 +490,7 @@ export class GameSceneComponent implements OnDestroy {
   });
   protected readonly enemyPanel = signal<string | null>(null);
   protected readonly enemyInfo = computed<EnemyDetails | null>(() => {
-    void this.members(); // si ricalcola a ogni cambio dello stato (ferite, ecc.)
+    void this.members(); // si ricalcola a ogni cambio dello stato (salute, ecc.)
     const p = this.state?.pieces.find((q) => q.id === this.enemyPanel() && q.team === 'enemy');
     if (!p) return null; // le carte dei nemici sono pubbliche: la scheda si apre anche nella vista dei giocatori
     const attack = p.attackType ? { melee: tr('Mischia'), ranged: tr('Distanza'), intrusion: tr('Intrusione') }[p.attackType] : '—';
@@ -1452,7 +1453,7 @@ export class GameSceneComponent implements OnDestroy {
     this.dice.scheduleClear(true);
     // Un eroe che sta per subire ferite può reagire (Mantelli, Scudi, Pelle di corteccia): quelle che restano sono quelle che subisce davvero.
     if (target.team === 'mercenary' && outcome.damage > 0 && !outcome.kill) {
-      const left = await this.reduceWounds(target, outcome.damage);
+      const left = await this.reduceWounds(target, outcome.damage, Math.min(outcome.pierce, outcome.armor, outcome.damage), se.plan.option.attack);
       if (left !== outcome.damage) outcome = { ...outcome, damage: left, poison: outcome.poison > 0 ? left : 0 };
     }
     // Immortale: se il colpo sarebbe mortale si tira un dado competenza; con una scintilla il nemico si rialza.
@@ -1479,7 +1480,7 @@ export class GameSceneComponent implements OnDestroy {
     result.applied.forEach((a, i) => this.pieces?.floatTag(target, STATUS_NAMES[a.kind], a.kind, i * 450));
     if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'speed', 'mercenary'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
-    const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} E$', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 ferita a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} ferite a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
+    const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} E$', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 danno a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} danni a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
     const by = attacker.team === 'enemy' ? 'adversary' : 'mercenary';
     if (outcome.alarmLoss) this.showHud(this.pieces?.active ?? null);
     if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('L\'Avversario perde 1 punto Allarme') : tr('L\'Avversario perde {n} punti Allarme', { n: outcome.alarmLoss }), 'skull', 'adversary');
@@ -1490,7 +1491,7 @@ export class GameSceneComponent implements OnDestroy {
     for (const v of victims) {
       let vo = resolveAttack(this.state, v, { ...se.plan, fearless: true }, se.rolls, se.choices, se.spent, se.sorcery);
       if (v.team === 'mercenary' && vo.damage > 0) {
-        const left = await this.reduceWounds(v, vo.damage);
+        const left = await this.reduceWounds(v, vo.damage, Math.min(vo.pierce, vo.armor, vo.damage), se.plan.option.attack);
         if (left !== vo.damage) vo = { ...vo, damage: left, poison: vo.poison > 0 ? left : 0 };
       }
       const vr = applyAttack(this.state, attacker, v, vo, { extra: true, option: se.option });
@@ -1498,7 +1499,7 @@ export class GameSceneComponent implements OnDestroy {
       this.pieces?.afterCombat(attacker, v, vr.killed);
       this.pieces?.enemiesSlain(vr.slain);
       this.afterDrop(vr.drop);
-      this.showNotice(vr.killed ? `${v.name} è ${v.team === 'mercenary' ? 'caduto' : 'sconfitto'}!` : `${se.option.name}: ${vo.damage} ${vo.damage === 1 ? 'ferita' : 'ferite'} a ${v.name}`, vr.killed ? 'skull' : 'swords', by);
+      this.showNotice(vr.killed ? `${v.name} è ${v.team === 'mercenary' ? 'caduto' : 'sconfitto'}!` : (vo.damage === 1 ? tr('{name}: 1 danno a {target}', { name: se.option.name, target: v.name }) : tr('{name}: {n} danni a {target}', { name: se.option.name, n: vo.damage, target: v.name })), vr.killed ? 'skull' : 'swords', by);
     }
     if (result.slain.length) {
       this.pieces?.enemiesSlain(result.slain);
@@ -1516,31 +1517,37 @@ export class GameSceneComponent implements OnDestroy {
    * ferita e ne annullano una per faccia vuota (inganno) o per scintilla (nebbie, Elfico); gli Scudi (si esauriscono) e Pelle di corteccia si propongono al giocatore, che
    * può usarle una dopo l'altra finché ci sono ferite e reazioni. Restituisce le ferite che subisce davvero.
    */
-  private async reduceWounds(mercenary: Piece, damage: number): Promise<number> {
+  private async reduceWounds(mercenary: Piece, damage: number, ignoresArmor = 0, incoming?: AttackType): Promise<number> {
     let left = damage;
+    // Il danno che ignora l'armatura (i punti di Perforare che contano davvero) non si può annullare con una reazione: solo il resto.
+    const cancellable = () => Math.max(0, left - ignoresArmor);
     const reactions = woundReactions(this.state, mercenary);
     for (const r of reactions.filter((x) => x.auto && !reactionBlock(mercenary, x))) {
-      if (left <= 0) break;
-      const faces = await this.proficiencyDice(Math.min(left, 8));
+      if (cancellable() <= 0) break;
+      if (r.attack && r.attack !== incoming) continue; // vale solo contro il suo tipo di attacco (mischia o distanza)
+      // `competence`: si tirano i dadi competenza che l'eroe ha per quel tipo di attacco (nessuno, niente da tirare); altrimenti uno per ogni danno.
+      const nDice = r.dice === 'competence' && r.attack ? mercenary.dice[r.attack] : Math.min(cancellable(), 8);
+      if (nDice <= 0) continue;
+      const faces = await this.proficiencyDice(nDice);
       const n = r.cancel === 'blank' ? faces.filter(isBlank).length : r.cancel === 'spark' ? sparks(faces) : 0;
-      const cancelled = Math.min(left, n);
+      const cancelled = Math.min(cancellable(), n);
       left -= cancelled;
-      this.showNotice(cancelled ? (cancelled === 1 ? tr('{name}: 1 ferita annullata', { name: r.name }) : tr('{name}: {n} ferite annullate', { name: r.name, n: cancelled })) : tr('{name}: nessuna ferita annullata', { name: r.name }), 'shield', 'mercenary');
+      this.showNotice(cancelled ? (cancelled === 1 ? tr('{name}: 1 danno annullato', { name: r.name }) : tr('{name}: {n} danni annullati', { name: r.name, n: cancelled })) : tr('{name}: nessun danno annullato', { name: r.name }), 'shield', 'mercenary');
     }
-    for (let guard = 0; guard < 6 && left > 0; guard++) {
+    for (let guard = 0; guard < 6 && cancellable() > 0; guard++) {
       const options = reactions.filter((x) => !x.auto && !reactionBlock(mercenary, x));
       if (!options.length) break;
       const answer = await this.askChoice({
         title: tr('Reazione'),
-        text: left === 1 ? tr('{name} sta per subire 1 ferita. Usare una reazione?', { name: mercenary.name }) : tr('{name} sta per subire {left} ferite. Usare una reazione?', { name: mercenary.name, left }),
-        choices: [...options.map((o) => ({ id: o.id, label: `${o.name} (−${cancelAmount(this.state, mercenary, o)})`, primary: true })), { id: 'no', label: tr('Subisci le ferite') }],
+        text: left === 1 ? tr('{name} sta per subire 1 danno. Usare una reazione?', { name: mercenary.name }) : tr('{name} sta per subire {left} danni. Usare una reazione?', { name: mercenary.name, left }),
+        choices: [...options.map((o) => ({ id: o.id, label: `${o.name} (−${cancelAmount(this.state, mercenary, o)})`, primary: true })), { id: 'no', label: tr('Subisci il danno') }],
       });
       const picked = options.find((o) => o.id === answer);
       if (!picked) break;
       markReactionUsed(mercenary, picked);
-      const cancelled = Math.min(left, cancelAmount(this.state, mercenary, picked));
+      const cancelled = Math.min(cancellable(), cancelAmount(this.state, mercenary, picked));
       left -= cancelled;
-      this.showNotice(cancelled === 1 ? tr('{name}: 1 ferita annullata', { name: picked.name }) : tr('{name}: {n} ferite annullate', { name: picked.name, n: cancelled }), 'shield', 'mercenary');
+      this.showNotice(cancelled === 1 ? tr('{name}: 1 danno annullato', { name: picked.name }) : tr('{name}: {n} danni annullati', { name: picked.name, n: cancelled }), 'shield', 'mercenary');
     }
     return left;
   }
@@ -1821,7 +1828,7 @@ export class GameSceneComponent implements OnDestroy {
     this.showNotice(tr('{name} è scaraventato', { name: target.name }), 'swords', 'mercenary');
     if (out.fell) this.showNotice(tr('{name} cade in una buca', { name: target.name }), 'warning');
     out.auraHits.forEach((h, i) => this.pieces?.floatTag(h, tr('Aura'), 'skill', i * 450));
-    for (const h of out.auraHits) this.showNotice(tr('{name} subisce 1 ferita per l\'Aura di {name2}', { name: target.name, name2: h.name }), 'warning');
+    for (const h of out.auraHits) this.showNotice(tr('{name} subisce 1 danno per l\'Aura di {name2}', { name: target.name, name2: h.name }), 'warning');
     this.afterDrop(out.drop);
     if (out.died) {
       this.pieces?.afterCombat(target, target, true);
@@ -1873,7 +1880,7 @@ export class GameSceneComponent implements OnDestroy {
     const web = await sparksOf(s.web);
     const r = applyTurnStart(piece, { burn, web });
     const by = piece.team === 'mercenary' ? 'mercenary' : 'adversary';
-    if (r.burnBefore) this.showNotice(tr('{burn}: {done} su {total} spente', { burn: STATUS_NAMES.burn, done: r.burnBefore - r.burnLeft, total: r.burnBefore }) + (r.burnDamage ? (r.burnDamage === 1 ? tr(', {name} subisce 1 ferita', { name: piece.name }) : tr(', {name} subisce {n} ferite', { name: piece.name, n: r.burnDamage })) : ''), 'skull', by);
+    if (r.burnBefore) this.showNotice(tr('{burn}: {done} su {total} spente', { burn: STATUS_NAMES.burn, done: r.burnBefore - r.burnLeft, total: r.burnBefore }) + (r.burnDamage ? (r.burnDamage === 1 ? tr(', {name} subisce 1 danno', { name: piece.name }) : tr(', {name} subisce {n} danni', { name: piece.name, n: r.burnDamage })) : ''), 'skull', by);
     if (r.webBefore) this.showNotice(r.webLeft ? tr('{web}: {name} resta impigliato e non può muoversi', { web: STATUS_NAMES.web, name: piece.name }) : tr('{web}: {name} si libera', { web: STATUS_NAMES.web, name: piece.name }), 'warning', by);
     if (r.stunned) this.showNotice((piece.team === 'mercenary' ? tr('{name} è stordito: può solo muoversi o attaccare', { name: piece.name }) : tr('{name} è stordito: perde il turno', { name: piece.name })), 'warning', by);
     if (r.killed) {
@@ -2005,7 +2012,7 @@ export class GameSceneComponent implements OnDestroy {
           const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
           if (h.team === 'mercenary' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'speed', 'mercenary');
           const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
-          if (h.team === 'mercenary' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'mercenary');
+          if (h.team === 'mercenary' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 Salute', { name: h.name }) : tr('{name} recupera {n} Salute', { name: h.name, n: healed }), 'tokens/potion', 'mercenary');
         }
         await this.flushEvents(); // messaggi e avvisi degli eventi di fine turno
         this.pieces?.roundStarted();
@@ -2420,16 +2427,16 @@ export class GameSceneComponent implements OnDestroy {
     return this.proficiencyDice(n + ruleAmount(this.state, mercenary, 'trapProficiencyDice'));
   }
 
-  /** Ferite che l'armatura non riduce, da una trappola (1 in meno con Prudente, mai meno di 0). Se l'eroe cade lo racconta e restituisce true. */
+  /** Danno che l'armatura non riduce, da una trappola (1 in meno con Prudente, mai meno di 0). Se l'eroe cade lo racconta e restituisce true. */
   private hurtByTrap(mercenary: Piece, base: number): boolean {
     const amount = Math.max(0, base + ruleAmount(this.state, mercenary, 'trapWounds'));
     if (amount <= 0) {
-      this.showNotice(tr('{name} non subisce ferite', { name: mercenary.name }), 'shield', 'adversary');
+      this.showNotice(tr('{name} non subisce danni', { name: mercenary.name }), 'shield', 'adversary');
       return false;
     }
     const dead = woundIgnoringArmor(mercenary, amount);
     loseOrdersOnWounds(mercenary); // e perde la Mira e la Guardia
-    this.showNotice(`${mercenary.name} subisce ${amount} ${amount === 1 ? 'ferita' : 'ferite'}`, 'skull', 'adversary');
+    this.showNotice((amount === 1 ? tr('{name} subisce 1 danno', { name: mercenary.name }) : tr('{name} subisce {n} danni', { name: mercenary.name, n: amount })), 'skull', 'adversary');
     if (!dead) {
       this.pieces?.redraw(mercenary);
       return false;
@@ -2845,14 +2852,10 @@ export class GameSceneComponent implements OnDestroy {
     const skillEntries = (school: string): CatalogEntry[] =>
       [...s.skills.values()].filter((k) => k.school === school).map((k): CatalogEntry => ({ kind: 'skill', id: k.id, name: k.name, def: k, search: `${k.name} ${k.text}` })).sort(byName);
     // Le pozioni non sono oggetti del catalogo (ogni eroe ne porta fino a 3 nel suo set) e altri consumabili potranno aggiungersi: hanno la loro categoria, con il prezzo del negozio.
-    const potion = (id: string, name: string, kind: PotionKind, rules: string[]): CatalogEntry => {
-      const def: ItemDef = { id, name, kind: 'other', hands: 0, price: POTION_PRICES[kind], rules };
-      return { kind: 'item', id, name, def, icon: 'tokens/potion', detail: tr('Consumabile'), count: null, search: [name, tr('consumabile'), ...rules].join(' ') };
-    };
-    const potionEntries: CatalogEntry[] = [
-      potion('potion-heal', tr('Medi-stim'), 'heal', [tr('Recupera {potionHeal} ferite. Berla costa {potionDrinkCos} punto movimento.', { potionHeal: POTION_HEAL, potionDrinkCos: POTION_DRINK_COST }), tr('Si portano fino a 3 consumabili.')]),
-      potion('potion-overclock', tr('Ricarica-OC'), 'overclock', [tr('Riporta l\'overclock {overclock} al massimo. Berla costa {mov:1}.'), tr('Si portano fino a 3 consumabili.')]),
-    ];
+    const potionEntries: CatalogEntry[] = (['heal', 'overclock'] as const).map((kind): CatalogEntry => {
+      const def = potionDef(kind);
+      return { kind: 'item', id: def.id, name: def.name, def, icon: 'tokens/potion', detail: tr('Consumabile'), count: null, search: [def.name, tr('consumabile'), ...(def.rules ?? [])].join(' ') };
+    });
     const mercenaryEntries = mercenaries.map((h): CatalogEntry => ({
       kind: 'mercenary', id: h.id, name: h.name, sheet: h, search: [h.name, h.class].join(' '),
     })).sort(byName);
@@ -2962,7 +2965,7 @@ export class GameSceneComponent implements OnDestroy {
     }
     const answer = await this.askChoice({
       title: tr('Prepararsi: piazza un ordine'),
-      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o sei ferito. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'overclock torna al massimo, se non sei ferito. Guardia: interrompi il turno dell\'Avversario con un attacco, fino al tuo prossimo turno.'),
+      text: tr('Mira: ripeti dei dadi del tuo prossimo attacco, finché non ti muovi, cambi equipaggiamento o subisci danno. Schivata: fai ripetere un attacco nemico, fino al tuo prossimo turno. Riposo: all\'inizio del round dopo l\'overclock torna al massimo, se non subisci danno. Guardia: interrompi il turno dell\'Avversario con un attacco, fino al tuo prossimo turno.'),
       choices: [
         { id: 'aim', label: tr('Mira'), primary: true }, { id: 'dodge', label: tr('Schivata'), primary: true }, { id: 'rest', label: tr('Riposo'), primary: true }, { id: 'guard', label: tr('Guardia'), primary: true },
         { id: 'no', label: tr('Nessuno per ora') },
@@ -3147,7 +3150,7 @@ export class GameSceneComponent implements OnDestroy {
   /** Le maledizioni di fine turno (`ItemDef.curse`): quante ferite ha preso chi porta l'oggetto e, se è morto, svanisce in rosso. */
   private tellCurses(curses: CurseHit[] | undefined) {
     for (const c of curses ?? []) {
-      this.showNotice(c.wounds === 1 ? tr('{name} subisce 1 ferita per la maledizione di {item}', { name: c.mercenary.name, item: c.item.name }) : tr('{name} subisce {wounds} ferite per la maledizione di {item}', { name: c.mercenary.name, item: c.item.name, wounds: c.wounds }), 'skull', 'adversary');
+      this.showNotice(c.wounds === 1 ? tr('{name} subisce 1 danno per la maledizione di {item}', { name: c.mercenary.name, item: c.item.name }) : tr('{name} subisce {wounds} danni per la maledizione di {item}', { name: c.mercenary.name, item: c.item.name, wounds: c.wounds }), 'skull', 'adversary');
       if (c.died) {
         this.pieces?.mercenaryDied(c.mercenary, c.slain);
         this.showNotice(this.fallenNotice(c.mercenary), 'skull');
@@ -3555,7 +3558,7 @@ export class GameSceneComponent implements OnDestroy {
         const gained = h.overclock - (overclockBefore.get(h.id) ?? h.overclock);
         if (h.team === 'mercenary' && gained > 0 && ruleAmount(this.state, h, 'overclockAtStart') > 0) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: h.name, n: gained }), 'speed', 'mercenary');
           const healed = h.wounds - (woundsBefore.get(h.id) ?? h.wounds);
-          if (h.team === 'mercenary' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 ferita', { name: h.name }) : tr('{name} recupera {n} ferite', { name: h.name, n: healed }), 'tokens/potion', 'mercenary');
+          if (h.team === 'mercenary' && healed > 0 && ruleAmount(this.state, h, 'regenerate') > 0) this.showNotice(healed === 1 ? tr('{name} recupera 1 Salute', { name: h.name }) : tr('{name} recupera {n} Salute', { name: h.name, n: healed }), 'tokens/potion', 'mercenary');
       }
       await this.flushEvents(); // messaggi e avvisi degli eventi di fine turno
       this.pieces?.roundStarted();
@@ -4266,7 +4269,7 @@ export class GameSceneComponent implements OnDestroy {
     const r = this.pieces?.drinkPotion(kind);
     if (!r) return;
     const name = POTION_NAMES[kind];
-    if (r.code === 'drunk') this.showNotice(kind === 'overclock' ? tr('{name} bevuta: overclock al massimo', { name }) : tr('{name} bevuta: +{healed} ferite', { name, healed: r.healed }), 'tokens/potion');
+    if (r.code === 'drunk') this.showNotice(kind === 'overclock' ? tr('{name} bevuta: overclock al massimo', { name }) : tr('{name} bevuta: +{healed} Salute', { name, healed: r.healed }), 'tokens/potion');
     else if (r.code === 'full-health') this.showNotice(tr('Sei già in piena salute'), 'warning');
     else if (r.code === 'full-overclock') this.showNotice(tr('Hai già l\'overclock al massimo'), 'warning');
     else if (r.code === 'cost') this.showNotice(tr('Serve {mov:1}'), 'warning');
@@ -4442,6 +4445,7 @@ export class GameSceneComponent implements OnDestroy {
     else if (r.code === 'conflict') this.showNotice(tr('Incompatibile con un oggetto equipaggiato'), 'warning');
     else if (r.code === 'carried') this.showNotice(tr('Si porta in braccio: si posa a terra'), 'warning');
     else if (r.code === 'cursed') this.showNotice(tr('È maledetta: non si può togliere, solo cedere'), 'warning');
+    else if (r.code === 'bound') this.showNotice(tr('Resta sempre con il suo proprietario'), 'warning');
   }
 
   /** L'eroe attivo dà un oggetto a un eroe adiacente (dal bottone contestuale). */

@@ -64,7 +64,7 @@ export class SkillCardComponent {
     return overclock.length ? overclock.join(' ') + ' ' : '';
   }
 
-  /** Il resto del costo (per esempio "esaurisci la carta") resta dopo, separato dal puntino. */
+  /** Il resto del costo (per esempio "una volta per turno") resta dopo, separato dal puntino. */
   protected costAfter(cost: string): string {
     const rest = cost.split(' · ').filter((p) => p && !p.startsWith('{overclock:'));
     return rest.length ? ' · ' + rest.join(' · ') : '';

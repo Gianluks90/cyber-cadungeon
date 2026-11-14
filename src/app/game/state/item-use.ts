@@ -63,7 +63,7 @@ export function itemUse(state: GameState, board: Board | null, piece: Piece, ite
   if (!canActOnMap(state, piece)) reason = tr('Ora non puoi');
   else if (piece.toad) reason = tr('Un rospo non usa oggetti');
   else if (e.when === 'turnStart' && (piece.pointsUsed > 0 || piece.attacksUsed > 0)) reason = tr('Solo all\'inizio del tuo turno, prima di muoverti o attaccare');
-  else if (c.exhaust && piece.exhausted?.includes(itemId)) reason = tr('L\'oggetto è esaurito fino al prossimo round');
+  else if (c.exhaust && piece.exhausted?.includes(itemId)) reason = tr('Già usato in questo turno');
   else if (c.movement && piece.points < c.movement) reason = tr('Servono {mov:{movement}}', { movement: c.movement });
   else if (c.overclock && piece.overclock < c.overclock) reason = tr('Non hai abbastanza overclock');
   else if (!worthUsing(e, targetsFor(state, board, piece, who))) reason = who === 'self' ? tr('Sei già in piena salute') : tr('Nessuno ha bisogno di cure');
@@ -93,7 +93,7 @@ export function useItem(state: GameState, board: Board | null, piece: Piece, ite
     for (const t of targets) {
       if (op.op === 'heal') {
         const r = healWounds(t, full(op.amount, t.maxWounds));
-        notes.push(`${t.name}: ${r.healed === 1 ? tr('+1 ferita') : tr('+{n} ferite', { n: r.healed })}${r.curedPoison ? tr(', −{n} veleno', { n: r.curedPoison }) : ''}`);
+        notes.push(`${t.name}: ${r.healed === 1 ? tr('+1 Salute') : tr('+{n} Salute', { n: r.healed })}${r.curedPoison ? tr(', −{n} veleno', { n: r.curedPoison }) : ''}`);
       } else if (op.op === 'recoverOverclock') {
         const n = Math.min(t.maxOverclock - t.overclock, full(op.amount, t.maxOverclock));
         t.overclock += n;

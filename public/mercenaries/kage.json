@@ -1,0 +1,47 @@
+{
+  "id": "kage",
+  "name": "Kage",
+  "class": "Lama corporativa",
+  "archetype": "brawler",
+  "portrait": "characters/kage-token.webp",
+  "portraitFull": "characters/kage-portrait.webp",
+  "wounds": 10,
+  "overclock": 3,
+  "armor": 1,
+  "speed": 4,
+  "value": 3,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "startingGear": [
+    "kazoku",
+    "silk",
+    "protect-tate"
+  ],
+  "skills": {
+    "combat": 2,
+    "cunning": 1,
+    "hacking": 0
+  },
+  "dice": {
+    "melee": 2,
+    "ranged": 0,
+    "intrusion": 1
+  },
+  "abilityName": "Tradizione e ricchezza",
+  "ability": "Hai 100 E$ aggiuntivi nel tuo budget iniziale, tuttavia l'unica arma che potrai utilizzare è la Kazoku.",
+  "effects": [
+    {
+      "kind": "stat",
+      "stat": "budget",
+      "amount": 100,
+      "name": "Tradizione e ricchezza"
+    },
+    {
+      "kind": "rule",
+      "rule": "onlyWeaponTag",
+      "tag": "kazoku",
+      "name": "Tradizione e ricchezza"
+    }
+  ]
+}

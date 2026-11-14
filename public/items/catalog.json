@@ -1,52 +1,6 @@
 {
   "items": [
     {
-      "id": "mono-blade",
-      "slots": 2,
-      "name": "Lama monomolecolare",
-      "kind": "weapon",
-      "attack": "melee",
-      "hands": 1,
-      "price": 75,
-      "dice": [
-        "red",
-        "green"
-      ],
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        }
-      ],
-      "offHand": "+1 danno",
-      "icon": "swords"
-    },
-    {
-      "id": "hack-deck",
-      "name": "Deck di intrusione",
-      "kind": "deck",
-      "attack": "intrusion",
-      "hands": 0,
-      "price": 150,
-      "dice": [
-        "white",
-        "yellow"
-      ],
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        },
-        {
-          "cost": 2,
-          "effect": "+1 gittata"
-        }
-      ],
-      "icon": "deployed_code",
-      "range": 4,
-      "ice": 1
-    },
-    {
       "id": "ballistic-vest",
       "slots": 1,
       "name": "Giubbotto balistico",
@@ -73,7 +27,7 @@
       "hands": 1,
       "price": 25,
       "rules": [
-        "Esaurisci questa carta per annullare 1 ferita appena ricevuta. Questa carta non può annullare le ferite che ignorano l'armatura."
+        "**Reagisci**: annulla 1 danno appena subito. Puoi usare questa abilità una volta per turno e solo su danni che non ignorano l'armatura."
       ],
       "icon": "shield"
     },
@@ -107,7 +61,7 @@
       "copies": 2,
       "price": 250,
       "rules": [
-        "Se è equipaggiato all'inizio del tuo turno, scartalo per recuperare 6 ferite e i tuoi segnalini overclock {overclock} fino al loro massimo livello."
+        "Se è equipaggiato all'inizio del tuo turno, scartalo per recuperare 6 Salute e i tuoi segnalini overclock {overclock} fino al loro massimo livello."
       ],
       "icon": "genetics"
     },
@@ -166,76 +120,6 @@
       ],
       "icon": "burn",
       "range": 6
-    },
-    {
-      "id": "street-deck",
-      "slots": 1,
-      "name": "Deck da strada",
-      "kind": "deck",
-      "attack": "intrusion",
-      "hands": 0,
-      "price": 75,
-      "dice": [
-        "white"
-      ],
-      "range": 3,
-      "ice": 0,
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        }
-      ],
-      "icon": "deployed_code"
-    },
-    {
-      "id": "military-deck",
-      "name": "Deck militare",
-      "kind": "deck",
-      "attack": "intrusion",
-      "hands": 0,
-      "price": 300,
-      "dice": [
-        "white",
-        "green",
-        "yellow"
-      ],
-      "range": 5,
-      "ice": 2,
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        },
-        {
-          "cost": 2,
-          "effect": "+1 gittata"
-        }
-      ],
-      "icon": "deployed_code"
-    },
-    {
-      "id": "silenced-pistol",
-      "name": "Pistola silenziata",
-      "kind": "weapon",
-      "attack": "ranged",
-      "hands": 1,
-      "price": 200,
-      "dice": [
-        "blue",
-        "green"
-      ],
-      "range": 4,
-      "tags": [
-        "silenced"
-      ],
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        }
-      ],
-      "icon": "target"
     },
     {
       "id": "iron-fists",
@@ -346,7 +230,8 @@
           "stat": "ice",
           "amount": 2
         }
-      ]
+      ],
+      "tagSlots": 2
     },
     {
       "id": "voss-sr90",
@@ -355,7 +240,7 @@
       "attack": "ranged",
       "hands": 2,
       "price": 200,
-      "slots": 1,
+      "slots": 2,
       "dice": [
         "blue",
         "green"
@@ -364,12 +249,6 @@
       "icon": "target",
       "rules": [
         "Perforare 1"
-      ],
-      "spark": [
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        }
       ]
     },
     {
@@ -406,7 +285,12 @@
       ],
       "rules": [
         "+{range:1|Gittata}"
-      ]
+      ],
+      "attack": "intrusion",
+      "dice": [
+        "yellow"
+      ],
+      "range": 2
     },
     {
       "id": "light-pistol",
@@ -421,14 +305,96 @@
         "green"
       ],
       "range": 3,
+      "offHand": "+1 danno",
+      "icon": "target"
+    },
+    {
+      "id": "katana",
+      "slots": 2,
+      "name": "Katana",
+      "kind": "weapon",
+      "attack": "melee",
+      "hands": 2,
+      "price": 150,
+      "dice": [
+        "red",
+        "green"
+      ],
       "spark": [
         {
           "cost": 2,
           "effect": "+1 danno"
         }
       ],
-      "offHand": "+1 danno",
-      "icon": "target"
+      "icon": "swords"
+    },
+    {
+      "id": "kazoku",
+      "slots": 3,
+      "name": "Kazoku",
+      "kind": "weapon",
+      "attack": "melee",
+      "hands": 2,
+      "price": 0,
+      "dice": [
+        "red",
+        "green"
+      ],
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "+1 danno"
+        }
+      ],
+      "icon": "swords",
+      "tags": [
+        "kazoku"
+      ],
+      "unique": true,
+      "bound": true
+    },
+    {
+      "id": "silk",
+      "name": "Seta",
+      "kind": "armor",
+      "hands": 0,
+      "armor": 1,
+      "price": 100,
+      "slots": 1,
+      "icon": "frame_person",
+      "modTags": [
+        "hacking"
+      ]
+    },
+    {
+      "id": "protect-tate",
+      "name": "Protect-Tate",
+      "kind": "deck",
+      "hands": 0,
+      "price": 100,
+      "slots": 1,
+      "icon": "deployed_code",
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "ice",
+          "amount": 1
+        },
+        {
+          "kind": "stat",
+          "stat": "armor",
+          "amount": 1,
+          "vs": "melee"
+        }
+      ],
+      "rules": [
+        "{armor:+1|Armatura} contro gli attacchi in mischia"
+      ],
+      "attack": "intrusion",
+      "dice": [
+        "yellow"
+      ],
+      "range": 2
     }
   ]
 }

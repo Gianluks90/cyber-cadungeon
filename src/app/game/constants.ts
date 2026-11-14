@@ -348,7 +348,7 @@ export const OBSTACLE_VARIANTS: readonly { type: 'rock' | 'pit' | 'water'; lengt
 export const PIT_FALL_WOUNDS = 1;
 export const PIT_CLIMB_COST = 2;
 export const PIT_JUMP_COST_PER_SPACE = 3;
-/** Ferite di partenza, se la mappa non le indica. Quelle degli eroi sono multipli di 4 (cuori divisi in quarti). */
+/** Salute di partenza, se la mappa non le indica. Quelle degli eroi sono multipli di 4 (cuori divisi in quarti). */
 export const DEFAULT_MERCENARY_WOUNDS = 12;
 export const DEFAULT_MONSTER_WOUNDS = 8;
 /** Distanza dell'ostacolo dal bordo della cella. */

@@ -35,7 +35,7 @@ export interface MercenarySheet {
   portrait?: string;
   /** L'immagine a figura intera (alta), per i pannelli dell'eroe. */
   portraitFull?: string;
-  /** Ferite: sempre multipli di 4 (un cuore = 4 ferite). */
+  /** Salute: sempre multipli di 4 (un cuore = 4 ferite). */
   wounds: number;
   /** Overclock (per ora solo dato: l'overclock è fuori scope). */
   overclock: number;
@@ -66,7 +66,7 @@ export interface MercenarySheet {
 /** Controlla che una scheda segua i pattern dei riferimenti; si limita ad avvisare (i valori sono da bilanciare). */
 function check(s: MercenarySheet) {
   const sum = (o: object) => Object.values(o).reduce((a: number, b: number) => a + b, 0);
-  if (s.wounds % 4 !== 0) console.warn(`Eroe "${s.id}": le ferite (${s.wounds}) dovrebbero essere un multiplo di 4`);
+  if (s.wounds % 4 !== 0) console.warn(`Eroe "${s.id}": la Salute (${s.wounds}) dovrebbe essere un multiplo di 4`);
   if (sum(s.dice) !== 3) console.warn(`Eroe "${s.id}": i dadi dei tre attacchi di solito sommano 3 (qui ${sum(s.dice)})`);
   if (sum(s.skills) !== 3) console.warn(`Eroe "${s.id}": le abilità iniziali di solito sommano 3 (qui ${sum(s.skills)})`);
 }

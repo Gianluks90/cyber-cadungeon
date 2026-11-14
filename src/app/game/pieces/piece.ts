@@ -5,7 +5,7 @@ import { ADVANCE_ATTACKS, DEFAULT_MERCENARY_WOUNDS, DEFAULT_MONSTER_WOUNDS, PAWN
 import { Cell } from '../board/board';
 import { ChestTier, Loot, PotionKind } from '../board/marker';
 import { AttackDice, MercenarySheet, StartingSkills } from '../mercenaries/mercenary-sheet';
-import { DieColor, ItemDef, AttackType, placeGear } from '../items/item';
+import { DieColor, ItemDef, AttackType, placeGear, soldFlags } from '../items/item';
 import { itemKeys } from '../mods/mod';
 import type { SkillEffect } from '../skills/skill';
 import { EnemyDef, playersKey } from '../enemies/enemy';
@@ -69,7 +69,7 @@ export interface Piece {
   attacksUsed: number;
   /** Ha finito il suo turno (ha passato). */
   done: boolean;
-  /** Ferite (punti vita) che restano, e il massimo. */
+  /** Salute (punti vita) che restano, e il massimo. */
   wounds: number;
   maxWounds: number;
   /** Immagine del ritratto (percorso in public/, es. characters/ferdinand-token.webp). Senza, la pedina mostra un segnaposto. */
@@ -109,7 +109,7 @@ export interface Piece {
   seenAtStart?: string[];
   /** I tipi di attacco già fatti in questo round (per "il primo attacco a distanza" di Occhio del cacciatore). */
   attackTypesUsed?: string[];
-  lastAttack?: { type: AttackType; weaponId?: string } | null;
+  lastAttack?: { type: AttackType; weaponId?: string; /** L'attacco è andato a segno (non mancato). */ hit?: boolean } | null;
   lastKill?: { weaponId?: string } | null;
   /** Gli oggetti (id) con cui ha dato il colpo mortale a un nemico in questo turno: serve alla maledizione di fine turno (`ItemDef.curse`). Si svuota a inizio round. */
   killedWith?: string[];
@@ -267,9 +267,10 @@ export function createPieces(
     const wounds = Math.max(1, (d.wounds ?? sheet?.wounds ?? tier?.wounds[playersKey(mercenaryCount)] ?? (d.team === 'mercenary' ? DEFAULT_MERCENARY_WOUNDS : DEFAULT_MONSTER_WOUNDS)) + (bonus?.wounds ?? 0));
     // La fornitura iniziale (quella non venduta) e poi ciò che si è comprato prima di partire: ognuno parte equipaggiato se ci sta (mani, armatura, deck…), altrimenti va nello zaino
     // (stessa regola del Briefing, `placeGear`). Il prezzo dei comprati si toglie dalle monete.
-    const sold = new Set(d.soldGear ?? []);
+    const startGear = sheet?.startingGear ?? [];
+    const soldAt = soldFlags(startGear, d.soldGear);
     const bought = d.items ?? sheet?.items ?? [];
-    const carried = [...(sheet?.startingGear ?? []).filter((g) => !sold.has(g)), ...bought].filter((id) => items.has(id));
+    const carried = [...startGear.filter((_, i) => !soldAt[i]), ...bought].filter((id) => items.has(id));
     const keys = itemKeys(carried); // le stesse chiavi del Briefing: ogni copia ha le sue mod
     const placed = placeGear(carried.map((id, i) => { const ref = d.modded?.[keys[i]]; const use = ref && items.has(ref) ? ref : id; return { id: use, def: items.get(use)! }; }));
     const equipped = placed.equipped.map((e) => e.id);

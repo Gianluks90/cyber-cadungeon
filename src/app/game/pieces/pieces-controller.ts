@@ -1219,9 +1219,9 @@ export class PiecesController {
     const outcome = act.applyStep(this.state, this.board!, m.piece, step);
     if (step.size) this.drawPiece(m.piece); // la sagoma è cambiata: ridisegna la forma
     if (landed) this.landingBurst(m.piece); // la raggiera parte dalla casella di atterraggio (la pedina ormai è lì), non da quella di partenza
-    if (outcome.fell) this.onNotice(tr('{name} cade in una buca: {wounds} ferita', { name: m.piece.name, wounds: PIT_FALL_WOUNDS }), 'warning');
+    if (outcome.fell) this.onNotice(tr('{name} cade in una buca: {wounds} danno', { name: m.piece.name, wounds: PIT_FALL_WOUNDS }), 'warning');
     outcome.auraHits.forEach((h, i) => this.floatTag(h, tr('Aura'), 'skill', i * 450));
-    for (const h of outcome.auraHits) this.onNotice(tr("{name} subisce 1 ferita per l'Aura di {source}", { name: m.piece.name, source: h.name }), 'warning');
+    for (const h of outcome.auraHits) this.onNotice(tr("{name} subisce 1 danno per l'Aura di {source}", { name: m.piece.name, source: h.name }), 'warning');
     if (outcome.died && m.piece.team === 'enemy') {
       // Un nemico morto per strada (Aura): svanisce come quando lo si sconfigge.
       this.dyingPieces.set(m.piece.id, m.piece);

@@ -226,7 +226,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                     @else if (!o.inRange) { {{ 'Fuori portata: {a} su {b}' | tr: { a: o.range, b: v.distance } }} }
                     @else if (o.invincible) { {{ 'Colpito, ma non lo scalfisce' | tr }} }
                     @else if (o.damage === 0) { {{ "Colpito, ma l'armatura assorbe tutto" | tr }} }
-                    @else { {{ (o.damage === 1 ? 'Colpito: 1 ferita' : 'Colpito: {n} ferite') | tr: { n: o.damage } }}@if (o.hearts + o.bonusDamage > o.damage) { <small>{{ '(l\\'armatura ne assorbe parte)' | tr }}</small> } }
+                    @else { {{ (o.damage === 1 ? 'Colpito: 1 danno' : 'Colpito: {n} danni') | tr: { n: o.damage } }}@if (o.hearts + o.bonusDamage > o.damage) { <small>{{ '(l\\'armatura ne assorbe parte)' | tr }}</small> } }
                     @if (v.victims.length) {
                       <small class="states">{{ 'Colpisce anche:' | tr }} @for (x of v.victims; track $index) { {{ x.name }}{{ x.friend ? (' (amico)' | tr) : '' }} {{ x.damage }}{{ $last ? '' : ',' }} }</small>
                     }

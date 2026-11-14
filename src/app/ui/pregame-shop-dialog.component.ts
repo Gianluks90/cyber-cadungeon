@@ -4,17 +4,21 @@ import { POTION_HEAL, POTION_LIMIT, POTION_PRICES } from '../game/constants';
 import { money } from '../game/money';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { mercenaryStats } from '../game/mercenaries/mercenary-stats';
-import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, carriedItems, equippedDefs, gearSalePrice, loadoutCost, modStockLeft, placeItems, pruneMods, startingKit, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
+import { Loadout, ShopData, TREASURE_KEYS, budgetLeft, mercenaryBudgetBonus, carriedItems, equippedDefs, gearSalePrice, loadoutCost, modStockLeft, placeItems, pruneMods, startingKit, stockLeft, treasureRoom } from '../game/mercenaries/party-setup';
 import { ChestTier } from '../game/board/marker';
 import { TREASURE_PRICES } from '../game/constants';
 import { translate } from '../i18n/i18n.service';
-import { ITEM_GROUPS, ItemDef, ItemGroup, itemDetail, itemGroup, placeGear } from '../game/items/item';
+import { ITEM_GROUPS, ItemDef, ItemGroup, itemDetail, itemGroup, placeGear, soldFlags, isSellable, weaponAllowed, weaponTagRestriction } from '../game/items/item';
+import { potionDef } from '../game/items/potion';
 import { POTION_NAMES } from '../game/markers/marker-rules';
 import { PotionKind } from '../game/board/marker';
 import { I18nService } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { TrPipe } from '../i18n/tr.pipe';
+import { ModCardComponent } from './mod-card.component';
+import { CostTextComponent } from './cost-text.component';
 import { SkillDef } from '../game/skills/skill';
-import { isBriefingMod, modFits, modSlotOf } from '../game/mods/mod';
+import { isBriefingMod, modFits, modSlotOf, modTag, reservedSlots } from '../game/mods/mod';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 import { SkillCardComponent } from './skill-card.component';
 import { AttackDiceComponent } from './attack-dice.component';
@@ -33,7 +37,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
  */
 @Component({
   selector: 'app-pregame-shop-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
+  imports: [AttackDiceComponent, CatalogTextPipe, TrPipe, CostTextComponent, ModCardComponent, DialogComponent, MercenaryFaceComponent, SkillCardComponent, IconComponent, ItemCardComponent, MoneyCounterComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dialog [title]="'shop.kicker' | t" [subtitle]="'shop.subtitle' | t" height="var(--shop-h)" [subFlush]="true" [accent]="mercenary().name" (closed)="closed.emit()">
@@ -79,27 +83,14 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
                 <span class="chev" aria-hidden="true"></span>
                 <span class="what"><b>{{ c.def.name }}@if (c.equipped) { <span class="eq" [title]="'briefing.equipped' | t" [attr.aria-label]="'briefing.equipped' | t">E</span> }</b></span>
                 <!-- Gli slot per le mod: un pallino ciascuno, pieno se c'è una mod montata. -->
-                <span class="slotdots" [title]="'briefing.slotsUsed' | t: { used: c.used, max: c.max }">@for (n of dots(c.max); track $index) { <i [class.full]="$index < c.used" [class.hack]="c.def.modTags?.includes('hacking')"></i> }</span>
+                <span class="slotdots" [title]="'briefing.slotsUsed' | t: { used: c.used, max: c.max }">@for (n of dots(c.max); track $index) { <i [class.full]="$index < c.used" [class.hack]="c.def.modTags?.includes('hacking') && $index < reserved(c.def)"></i> }</span>
               </summary>
               <div class="list">
-                <small class="gdetail">{{ c.detail }}</small>
+                <small class="gdetail">{{ c.detail }}@if (c.def.unique) { · <span class="unique">{{ 'unica' | tr }}</span> }</small>
                 @for (o of c.options; track o.mod.id) {
-                  <div class="row mod" [class.on]="o.on">
-                    <div class="what">
-                      <b>{{ o.mod.name }}</b>
-                      <small class="fx">{{ o.mod.text | ct }}</small>
-                      <small class="fx">
-                        @if (o.mod.passive) { <span>{{ 'briefing.passive' | t }}</span> }
-                        @for (a of o.mod.active ?? []; track $index) { <span>{{ 'briefing.active' | t: { n: a.sparks } }}: {{ a.effect | ct }}</span> }
-                      </small>
-                      @if (o.left !== undefined) { <small class="stock">{{ (o.left === 1 ? 'shop.stockOne' : 'shop.stockMany') | t: { n: o.left } }}</small> }
-                    </div>
-                    <!-- Il piede come quello delle card oggetto: il prezzo a sinistra e il tasto a destra. -->
-                    <footer class="mfoot">
-                      <span class="price">{{ money(o.mod.cost) }}</span>
-                      <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.on ? 'briefing.remove' : 'briefing.install') | t" [title]="o.reason || ((o.on ? 'briefing.remove' : 'briefing.install') | t)" (click)="toggleMod(c.key, o.mod.id)"><app-icon [name]="o.on ? 'remove_shopping_cart' : 'add_shopping_cart'" [size]="20" /></button>
-                    </footer>
-                  </div>
+                  <app-mod-card [mod]="o.mod" [left]="o.left" [on]="o.on">
+                    <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.on ? 'briefing.remove' : 'briefing.install') | t" [title]="o.reason || ((o.on ? 'briefing.remove' : 'briefing.install') | t)" (click)="toggleMod(c.key, o.mod.id)"><app-icon [name]="o.on ? 'remove_shopping_cart' : 'add_shopping_cart'" [size]="20" /></button>
+                  </app-mod-card>
                 } @empty {
                   <p class="none">{{ 'briefing.noMods' | t }}</p>
                 }
@@ -121,14 +112,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
       <h3>{{ 'shop.potions' | t }} <small>{{ 'shop.potionsHint' | t: { n: potionLimit } }}</small></h3>
       <div class="cards">
         @for (k of potionKinds; track k) {
-          <app-item-card [def]="potionDef(k)" [count]="potionCount(k)">
-            <div cardBody class="pbody">
-              <h5>{{ 'shop.abilities' | t }}</h5>
-              <small class="fx">
-                @if (k === 'heal') { {{ 'shop.restore' | t }} <span class="life">{{ healAmount }} <app-icon name="favorite" [size]="14" /> {{ 'stats.health' | t }}</span> }
-                @else { {{ 'shop.maxBefore' | t }} <span class="oc"><app-icon name="speed" [size]="18" /> {{ 'stats.overclock' | t }}</span> {{ 'shop.maxAfter' | t }} }
-              </small>
-            </div>
+          <app-item-card [def]="potionDef(k)" [detail]="'briefing.consumable' | t" [count]="potionCount(k)">
             <button type="button" class="act cart" [class.off]="!potionCount(k)" [attr.aria-disabled]="!potionCount(k)" [attr.aria-label]="'shop.refund' | t" [title]="'shop.refund' | t" (click)="refundPotion(k)"><app-icon name="remove_shopping_cart" [size]="20" /></button>
             <button type="button" class="act cart" [class.off]="!!potionReason(k)" [attr.aria-disabled]="!!potionReason(k)" [attr.aria-label]="'shop.buy' | t" [title]="potionReason(k) || ('shop.buy' | t)" (click)="buyPotion(k)"><app-icon name="add_shopping_cart" [size]="20" /></button>
           </app-item-card>
@@ -148,11 +132,11 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
       }
 
       @if (gearOffers().length) {
-        <h3>{{ 'shop.gear' | t }} <small>{{ 'shop.gearHint' | t }}</small></h3>
+        <h3>{{ ((loadout().soldGear ?? []).length ? 'briefing.gear' : 'shop.gear') | t }} <small>{{ 'shop.gearHint' | t }}</small></h3>
         <div class="cards">
-          @for (o of gearOffers(); track o.id) {
+          @for (o of gearOffers(); track o.idx) {
             <app-item-card [class.sold]="o.sold" [def]="o.def" [detail]="o.detail" [price]="o.sale">
-              <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.sold ? 'shop.undoSale' : 'shop.sell') | t" [title]="o.reason || ((o.sold ? 'shop.undoSale' : 'shop.sell') | t)" (click)="toggleSale(o.id)"><app-icon [name]="o.sold ? 'undo' : 'sell'" [size]="20" /></button>
+              <button type="button" class="act cart" [class.off]="!!o.reason" [attr.aria-disabled]="!!o.reason" [attr.aria-label]="(o.sold ? 'shop.undoSale' : 'shop.sell') | t" [title]="o.reason || ((o.sold ? 'shop.undoSale' : 'shop.sell') | t)" (click)="toggleSale(o.idx)"><app-icon [name]="o.sold ? 'undo' : 'sell'" [size]="20" /></button>
             </app-item-card>
           }
         </div>
@@ -199,11 +183,6 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .gear { display: flex; align-items: baseline; gap: 10px; }
     .gear b { font: 600 13px/1.2 var(--font-ui); }
     .gear span { flex: 1; color: var(--c-text-dim); font-size: 12px; }
-    .row.mod.on { border-color: var(--c-interact); }
-    /* La mod è una card come gli oggetti: il corpo sopra, in basso una fascia con il filetto fino ai bordi. */
-    .row.mod { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 16px 0; overflow: hidden; }
-    .mfoot { display: flex; align-items: center; justify-content: flex-end; gap: 12px; margin: 0 -16px; padding: 10px 16px; border-top: 1px solid var(--c-line); }
-    .mfoot .price { margin-right: auto; font: 15px var(--font-mono); }
     /* La carta di un oggetto nella tab Mod: un <details> (si comprime), spenta se l'oggetto non ha slot per le mod. */
     .gearcard { border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-bg); }
     .gearcard > summary, .gearcard .head { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
@@ -220,6 +199,9 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .bagsep { position: relative; display: flex; justify-content: flex-end; margin: 6px 0; }
     .bagsep::before { content: ''; position: absolute; left: 0; right: 0; top: 50%; border-top: 1px solid var(--c-line-strong); }
     .bagsep span { position: relative; padding: 0 8px; background: var(--c-surface); font: 600 10px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    /* Il sottotitolo di una mod: come quello degli oggetti (card oggetto). */
+    .meta { color: var(--c-text-dim); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
+    .unique { color: var(--c-rare); }
     .gdetail { padding: 2px 0 4px; }
     .slotdots { display: inline-flex; gap: 5px; }
     .slotdots i { width: 12px; height: 12px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--c-text-dim); }
@@ -239,8 +221,6 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .row b { flex: 1; min-width: 0; font-weight: 600; }
     .price { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-variant-numeric: tabular-nums; color: var(--cad-coin); }
     .fx { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--c-text-dim); }
-    .pbody { display: flex; flex-direction: column; gap: 4px; }
-    .pbody h5 { margin: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .fx .life, .fx .oc { display: inline-flex; align-items: center; gap: 4px; }
     .fx .life { color: var(--c-life); }
     .fx .oc { color: var(--c-overclock); }
@@ -279,15 +259,15 @@ export class PregameShopDialogComponent {
   /** La fornitura iniziale del mercenario (gli id) e quella che si può vendere: ognuna vale metà del prezzo, arrotondata a 25 (minimo 25). */
   protected readonly gear = computed(() => this.mercenary().startingGear ?? []);
   protected readonly gearOffers = computed(() =>
-    this.gear().flatMap((id) => {
+    this.gear().flatMap((id, idx) => {
       const def = this.shop().items.get(id);
-      if (!def) return [];
-      const sold = (this.loadout().soldGear ?? []).includes(id);
+      if (!def || !isSellable(def)) return []; // gli oggetti unici e legati non si vendono: non compaiono nell'elenco
+      const sold = soldFlags(this.gear(), this.loadout().soldGear)[idx];
       const sale = gearSalePrice(def.price);
-      return [{ id, def, sold, sale, detail: itemDetail(def), reason: sold && sale > this.budgetLeft() ? this.i18n.t('shop.noCoins') : '' }];
+      return [{ id, idx, def, sold, sale, detail: itemDetail(def), reason: sold && sale > this.budgetLeft() ? this.i18n.t('shop.noCoins') : '' }];
     }),
   );
-  protected readonly budgetLeft = computed(() => budgetLeft(this.gear(), this.loadout(), this.shop()));
+  protected readonly budgetLeft = computed(() => budgetLeft(this.gear(), this.loadout(), this.shop(), mercenaryBudgetBonus(this.mercenary())));
   protected readonly money = money;
   /** Le carte chiuse nella tab Mod (di default sono tutte aperte): chi non serve si comprime per occupare meno spazio. */
   private readonly closedCards = signal<ReadonlySet<string>>(new Set());
@@ -321,7 +301,7 @@ export class PregameShopDialogComponent {
               .map((mod) => {
                 const on = installed.includes(mod.id);
                 const left = modsLeft[mod.id];
-                const reason = on ? '' : left !== undefined && left <= 0 ? this.i18n.t('shop.soldOut') : installed.length >= max ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
+                const reason = on ? '' : left !== undefined && left <= 0 ? this.i18n.t('shop.soldOut') : installed.length >= max || !modFits(mod, def, installed.flatMap((id) => shop.mods.get(id) ?? [])) ? this.i18n.t('briefing.noSlots') : mod.cost > this.budgetLeft() ? this.i18n.t('briefing.noBudget') : '';
                 return { mod, on, reason, left };
               })
           : [];
@@ -339,7 +319,7 @@ export class PregameShopDialogComponent {
       .filter((i) => i.id in shop.stock)
       .map((def) => {
         const left = this.left()[def.id];
-        const reason = left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.budgetLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop, startingKit(this.gear(), l, shop)) ? '' : this.i18n.t('shop.noRoom');
+        const reason = !weaponAllowed(weaponTagRestriction(this.mercenary().effects), def) ? this.i18n.t('shop.weaponLocked') : left <= 0 ? this.i18n.t('shop.soldOut') : def.price > this.budgetLeft() ? this.i18n.t('shop.noCoins') : placeItems([...l.items, def.id], shop, startingKit(this.gear(), l, shop)) ? '' : this.i18n.t('shop.noRoom');
         return { id: def.id, def, left, reason, detail: itemDetail(def), count: l.items.filter((id) => id === def.id).length, group: itemGroup(def) };
       })
       .sort((a, b) => a.def.name.localeCompare(b.def.name, 'it'));
@@ -407,10 +387,12 @@ export class PregameShopDialogComponent {
     const i = this.loadout().potions.lastIndexOf(k);
     if (i >= 0) this.removePotion(i);
   }
+  protected readonly modTag = modTag;
+  protected readonly reserved = reservedSlots;
   protected dots = (n: number) => Array.from({ length: Math.max(0, n) }, (_, i) => i);
   protected potionName =(k: PotionKind) => POTION_NAMES[k];
   /** La carta di un consumabile, nella stessa forma degli altri oggetti (nome e valore; l'effetto lo scrive il negozio nel corpo). */
-  protected potionDef = (k: PotionKind): ItemDef => ({ id: `potion-${k}`, name: POTION_NAMES[k], kind: 'other', hands: 0, price: POTION_PRICES[k] });
+  protected readonly potionDef = potionDef;
   protected potionPrice = (k: PotionKind) => POTION_PRICES[k];
   protected itemName = (id: string) => this.shop().items.get(id)?.name ?? id;
   protected itemPrice = (id: string) => this.shop().items.get(id)?.price ?? 0;
@@ -447,11 +429,13 @@ export class PregameShopDialogComponent {
 
   /** Rimborsa una copia di questo oggetto (l'ultima comprata). */
   /** Vende un oggetto della fornitura iniziale (o annulla la vendita, se serve il budget per riprenderlo). */
-  protected toggleSale(id: string) {
-    const o = this.gearOffers().find((x) => x.id === id);
+  protected toggleSale(idx: number) {
+    const o = this.gearOffers().find((x) => x.idx === idx);
     if (!o || o.reason) return;
     const sold = this.loadout().soldGear ?? [];
-    this.emitItems({ ...this.loadout(), soldGear: o.sold ? sold.filter((x) => x !== id) : [...sold, id] });
+    // Con due copie dello stesso oggetto si vende o si annulla una copia alla volta.
+    const at = sold.lastIndexOf(o.id);
+    this.emitItems({ ...this.loadout(), soldGear: o.sold ? sold.filter((_, i) => i !== at) : [...sold, o.id] });
   }
 
   protected refundItem(id: string) {

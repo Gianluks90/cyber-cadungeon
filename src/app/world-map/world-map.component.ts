@@ -721,7 +721,8 @@ export class WorldMapComponent {
     this.devForced.set(c.id);
   }
 
-  /** Un segnaposto per contratto: il numero, in verde se sbloccato, spento se bloccato, in risalto se è quello aperto. Il tocco apre la scheda (fuori da NgZone, quindi rientra con un). */
+  /** Un segnaposto per contratto: il numero, in verde se sbloccato, spento se bloccato, in risalto se è quello aperto. Il tocco apre la scheda (fuori da NgZone, quindi rientra con 
+un). */
   private showContracts(list: readonly Contract[], unlocked: ReadonlySet<string>, selected: string | null): void {
     const map = this.map;
     if (!map) return;

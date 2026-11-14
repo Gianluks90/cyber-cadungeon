@@ -4,7 +4,7 @@ import { ChestTier, Marker, PotionKind } from '../board/marker';
 import { ATTACK_DICE_MAX, ATTACK_DICE_PRICE, CITY_TELEPORT_COST, POTION_LIMIT, POTION_PRICES, SELL_STEP_COINS, SKILL_CARD_PRICE, TEMPLE_HEAL_COST, TREASURE_PRICES } from '../constants';
 import { AttackDice } from '../mercenaries/mercenary-sheet';
 import { SKILL_SCHOOLS, SKILL_SCHOOL_NAMES, SkillSchool } from '../skills/skill';
-import { ItemDef, itemDetail } from '../items/item';
+import { ItemDef, isSellable, itemDetail } from '../items/item';
 import { POTION_NAMES } from '../markers/marker-rules';
 import { CityService, Piece, occupies } from '../pieces/piece';
 import { canAct, canActOnMap, canReceiveItem, drawTreasureFor, receiveItem, spendPoints } from './actions';
@@ -153,7 +153,7 @@ export function sellItem(state: GameState, piece: Piece, id: string): CityResult
   if (bad) return bad;
   const item = state.items.get(id);
   const list = piece.equipped.includes(id) ? piece.equipped : piece.backpack.includes(id) ? piece.backpack : null;
-  if (!item || !list || item.tags?.includes('relic')) return { code: 'none' }; // le reliquie non si vendono
+  if (!item || !list || !isSellable(item)) return { code: 'none' }; // le reliquie, gli oggetti unici e quelli legati non si vendono
   list.splice(list.indexOf(id), 1);
   piece.coins += sellPrice(item);
   if (id in state.shop) state.shop[id] = (state.shop[id] ?? 0) + 1;
@@ -266,7 +266,7 @@ export function cityView(state: GameState, piece: Piece): CityView | null {
       }).sort((a, b) => a.name.localeCompare(b.name, 'it')),
       sell: [...piece.equipped, ...piece.backpack].flatMap((id) => {
         const item = state.items.get(id);
-        return item && !item.tags?.includes('relic') ? [{ id, name: item.name, price: sellPrice(item), enabled: true }] : [];
+        return item && isSellable(item) ? [{ id, name: item.name, price: sellPrice(item), enabled: true }] : [];
       }),
     };
   }

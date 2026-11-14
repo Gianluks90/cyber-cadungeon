@@ -55,6 +55,12 @@ export interface ItemDef {
   giveCost?: number;
   /** Non occupa nessun posto fra gli equipaggiamenti (né mani, né oggetti vari): Zanna. */
   slotless?: boolean;
+  /** Un consumabile (pozione): si usa una volta sola; la sua card non ha il pallino pieno accanto all'abilità. */
+  consumable?: boolean;
+  /** Un oggetto unico (la spada di un mercenario): nel sottotitolo ha la voce gialla «unica». */
+  unique?: boolean;
+  /** Un oggetto legato al suo proprietario (la Kazoku di Kage): non si vende, non si cede e non si scarta, resta sempre con lui. */
+  bound?: boolean;
   /** Finché è equipaggiato, chi lo porta non può viaggiare da un glifo all'altro. */
   blocksTravel?: boolean;
   /** Una carta evento dei mazzi: quando si pesca non entra nell'inventario, ha subito il suo effetto (monete e una pozione a chi la pesca, e quante carte in più pescare dallo stesso mazzo). La pozione non c'è se ne porta già il massimo. */
@@ -75,11 +81,13 @@ export interface ItemDef {
   slots?: number;
   /** Solo per un oggetto con mod (`moddedItem`): l'id dell'oggetto di partenza e le mod montate (nome già nella lingua di adesso, testo in italiano come nel catalogo: la carta lo mostra con `ct`). */
   moddedFrom?: string;
-  mods?: { id: string; name: string; text: string }[];
+  mods?: { id: string; name: string; effect: string[] }[];
   /** Solo per un oggetto con mod: quanto si aggiunge al prezzo di vendita in città per le mod montate (ognuna, metà del suo costo arrotondata a 25). */
   modsSaleValue?: number;
   /** Se c'è, l'oggetto accetta solo mod con almeno una di queste categorie (`ModDef.tags`): il Kitsune-9 solo `hacking`. */
   modTags?: string[];
+  /** Quanti dei suoi slot sono riservati alle mod con una di queste etichette (`modTags`): gli altri sono comuni. Senza, sono tutti riservati (la Seta). */
+  tagSlots?: number;
   /** Il nome di un'icona (public/icons/). */
   icon?: string;
   /** Etichette di categoria, per esempio `rune` (un oggetto "Runa": certe armature non permettono di equipaggiarlo). */
@@ -208,11 +216,41 @@ export function itemGroup(item: ItemDef): ItemGroup {
   return 'deck';
 }
 
+/**
+ * Quali oggetti della fornitura iniziale sono stati venduti, uno per posizione: `sold` elenca gli id venduti, e se un oggetto compare più volte (due Mako-3) ogni id venduto
+ * ne toglie una copia sola, la prima ancora in vendita.
+ */
+export function soldFlags(startingGear: readonly string[], sold: readonly string[] = []): boolean[] {
+  const left = new Map<string, number>();
+  for (const id of sold) left.set(id, (left.get(id) ?? 0) + 1);
+  return startingGear.map((id) => {
+    const n = left.get(id) ?? 0;
+    if (n > 0) left.set(id, n - 1);
+    return n > 0;
+  });
+}
+
+/** Se un mercenario ha la regola `onlyWeaponTag` (per esempio Kage: solo la Kazoku), l'etichetta che un'arma deve avere per poterla usare; altrimenti null. */
+export function weaponTagRestriction(effects: readonly { kind: string; rule?: unknown; tag?: unknown }[] | undefined): string | null {
+  const e = (effects ?? []).find((x) => x.kind === 'rule' && x.rule === 'onlyWeaponTag');
+  return e && typeof e.tag === 'string' ? e.tag : null;
+}
+
+/** Il mercenario con questa restrizione può usare l'oggetto? Vale solo per le armi: armature, cyberdeck e il resto non sono limitati. */
+export function weaponAllowed(restriction: string | null, item: ItemDef): boolean {
+  return !restriction || item.kind !== 'weapon' || !!item.tags?.includes(restriction);
+}
+
+/** Si può vendere? Gli oggetti unici e quelli legati non hanno valore e non si vendono; le reliquie nemmeno. */
+export function isSellable(item: ItemDef): boolean {
+  return !item.unique && !item.bound && !item.tags?.includes('relic');
+}
+
 export function itemDetail(item: ItemDef): string {
   const kind = { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: tr('Armatura') }[item.kind];
   const attackName = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
-  // La gittata delle armi a distanza sta tra parentesi accanto al tipo: "distanza (3)".
-  const attack = attackName && item.attack === 'ranged' && item.range ? `${attackName} (${item.range})` : attackName;
+  // La gittata delle armi a distanza e dei deck a intrusione sta tra parentesi accanto al tipo: "distanza (3)", "intrusione (2)".
+  const attack = attackName && (item.attack === 'ranged' || item.attack === 'intrusion') && item.range ? `${attackName} (${item.range})` : attackName;
   const hands = item.hands ? (item.hands === 1 ? tr('1 mano') : tr('{n} mani', { n: item.hands })) : null;
   const relic = item.tags?.includes('relic') ? tr('Reliquia') : null;
   const rune = item.tags?.includes('rune') ? tr('Runa') : null;
@@ -276,7 +314,7 @@ export function applyItemMods(items: ReadonlyMap<string, ItemDef>, mods: readonl
     } else if (m.giveCost !== undefined) copy.giveCost = m.giveCost;
     if (m.curse) {
       copy.curse = { fraction: m.curse.fraction };
-      rules.push(tr('Al termine del tuo turno, se non hai ucciso un nemico con questo oggetto durante il turno, subisci ferite pari a 1/{n} delle tue ferite massime: l\'armatura non le riduce.', { n: m.curse.fraction }));
+      rules.push(tr('Al termine del tuo turno, se non hai ucciso un nemico con questo oggetto durante il turno, subisci un danno pari a 1/{n} della tua Salute massima: l\'armatura non lo riduce.', { n: m.curse.fraction }));
     }
     if (m.protectFrom?.length) {
       copy.effects = [...(base.effects ?? []), { kind: 'rule', rule: 'protectFrom', items: [...m.protectFrom] }];

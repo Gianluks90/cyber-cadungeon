@@ -16,6 +16,10 @@ import { IconComponent } from './icon.component';
     <div class="nav">
       <button type="button" class="home" [attr.aria-label]="'adventures.backHome' | t" [title]="'adventures.backHome' | t" (click)="ask()"><app-brand-logo /></button>
     </div>
+    <!-- Facoltativo: il Catalogo, in alto a destra (chi lo vuole ascolta l'uscita catalog e apre la dialog). -->
+    @if (showCatalog()) {
+      <button type="button" class="catalog" [attr.aria-label]="'nav.catalog' | t" [title]="'nav.catalog' | t" (click)="catalog.emit()"><app-icon name="inventory_2" [size]="20" /><span>{{ 'nav.catalog' | t }}</span></button>
+    }
     <button type="button" class="square back" [attr.aria-label]="'nav.back' | t" [title]="'nav.back' | t" (click)="back.emit()"><app-icon name="arrow_back" [size]="20" /></button>
     <app-confirm-dialog [open]="asking()" [title]="confirmTitle()" [text]="confirmText()" [confirmLabel]="confirmLabel()" (confirmed)="asking.set(false); leave.emit()" (cancel)="asking.set(false)" />
   `,
@@ -27,8 +31,10 @@ import { IconComponent } from './icon.component';
     .home { display: inline-flex; padding: 0; border: 0; background: none; color: var(--c-text); cursor: pointer; transition: color 0.15s; }
     .home:hover, .home:focus-visible { color: var(--c-interact); outline: none; }
     .home:hover app-brand-logo, .home:focus-visible app-brand-logo { border-color: var(--c-interact); }
+    .catalog { position: fixed; z-index: 3; top: calc(12px + env(safe-area-inset-top)); right: 12px; display: inline-flex; align-items: center; gap: 8px; box-sizing: border-box; height: 36px; padding: 0 12px; cursor: pointer; border-radius: var(--radius-1); background: var(--c-surface); border: 1px solid var(--c-line-strong); color: var(--c-text); font: 600 13px/1 var(--font-ui); transition: color 0.15s, border-color 0.15s; }
+    .catalog:hover, .catalog:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     .square { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36px; height: 36px; padding: 0; cursor: pointer; border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-strong); transition: color 0.15s, border-color 0.15s; }
-    @media (pointer: coarse) { .square { width: 44px; height: 44px; } .home { --logo-h: 44px; } }
+    @media (pointer: coarse) { .catalog { height: 44px; } .square { width: 44px; height: 44px; } .home { --logo-h: 44px; } }
     .square:hover, .square:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
   `,
 })
@@ -36,6 +42,9 @@ export class PageNavComponent {
   readonly confirmTitle = input.required<string>();
   readonly confirmText = input.required<string>();
   readonly confirmLabel = input.required<string>();
+  /** Mostra il tasto «Catalogo» accanto al logo. */
+  readonly showCatalog = input(false);
+  readonly catalog = output<void>();
   readonly back = output<void>();
   /** Confermato: si esce dalla preparazione. */
   readonly leave = output<void>();

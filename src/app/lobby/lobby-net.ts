@@ -19,6 +19,8 @@ export interface LobbyWorld {
   mercenaryIds: readonly string[];
   /** La fornitura iniziale di un mercenario (gli id di `MercenarySheet.startingGear`). */
   startingGear: (mercenaryId: string) => readonly string[];
+  /** Il budget in più di un mercenario (`mercenaryBudgetBonus`). */
+  budgetBonus: (mercenaryId: string) => number;
   shop: ShopData | null;
   /** Le carte abilità del catalogo e i punti di attributo di ogni eroe: servono a pescare le abilità secondarie. */
   skillPool: readonly SkillPoolCard[];
@@ -175,7 +177,7 @@ export class LobbyHost {
     const me = s.players.find((p) => p.pid === pid);
     if (s.started || !me || !me.mercenaries.includes(mercenary) || !w.shop) return;
     const others = s.players.flatMap((p) => Object.entries(p.loadouts).filter(([h]) => h !== mercenary).map(([, l]) => l));
-    if (!validLoadout(loadout, w.startingGear(mercenary), w.shop, others)) return this.send(pid);
+    if (!validLoadout(loadout, w.startingGear(mercenary), w.shop, others, w.budgetBonus(mercenary))) return this.send(pid);
     const clean: Loadout = { items: [...loadout.items], potions: [...loadout.potions], treasures: [...(loadout.treasures ?? [])] };
     this.update((st) => ({ ...st, players: st.players.map((p) => (p.pid === pid ? { ...p, loadouts: { ...p.loadouts, [mercenary]: clean }, ready: false } : p)) }));
   }
@@ -204,7 +206,7 @@ export class LobbyHost {
     for (const p of this.state().players) {
       for (const mercenary of p.mercenaries) {
         const l = p.loadouts[mercenary] ?? { items: [], potions: [] };
-        out[mercenary] = { ...l, coins: w.shop ? Math.max(0, budgetLeft(w.startingGear(mercenary), l, w.shop)) : 0, skillCards: p.skillCards[mercenary] ?? [] };
+        out[mercenary] = { ...l, coins: w.shop ? Math.max(0, budgetLeft(w.startingGear(mercenary), l, w.shop, w.budgetBonus(mercenary))) : 0, skillCards: p.skillCards[mercenary] ?? [] };
       }
     }
     return out;

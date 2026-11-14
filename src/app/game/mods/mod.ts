@@ -1,6 +1,6 @@
-import { localizeName } from '../../i18n/catalog-text';
+import { localizeName, tr } from '../../i18n/catalog-text';
 import { SELL_STEP_COINS } from '../constants';
-import type { AttackType, ItemDef } from '../items/item';
+import type { AttackType, DieColor, ItemDef } from '../items/item';
 import type { SkillEffect } from '../skills/skill';
 /** In che tipo di oggetto va la mod: arma, armatura-cromo o cyberdeck (docs/DESIGN-MOD-CONTRATTI.md, §2.1). */
 export type ModSlot = 'weapon' | 'armor' | 'deck';
@@ -43,8 +43,10 @@ export interface ModDef {
   stock?: number;
   /** Il prezzo in eurodollari: al Briefing per le mod base, ai terminali per le altre fasce. */
   cost: number;
-  /** Cosa fa, in breve. */
-  text: string;
+  /** Cosa aggiunge, piatto e senza descrizione: una voce per ogni aggiunta (es. "{spark:2} +1 danno"). Con più voci la card fa un elenco puntato. */
+  effect: string[];
+  /** I dadi che la mod aggiunge all'arma (uno per colore: `["red"]`). */
+  dice?: DieColor[];
   /** Effetti passivi: `rules` è il testo che si mostra ("Perforare 1"), `effects` è ciò che legge il combattimento (vocabolario delle carte abilità: `attack`, `stat`; un `attack` può avere `pierce`), `ice` è l'ICE in più. */
   passive?: { rules?: string[]; effects?: SkillEffect[]; ice?: number };
   /** Effetti attivi a scintille (sotto-passo 4). */
@@ -98,9 +100,11 @@ export function validMods(mods: ModLoadout | undefined, catalog: ReadonlyMap<str
     if (!Array.isArray(ids)) return false;
     const base = carried.get(key);
     if (!base || ids.length > (base.slots ?? 0) || new Set(ids).size !== ids.length) return false;
+    const placed: ModDef[] = [];
     for (const id of ids) {
       const mod = catalog.get(id);
-      if (!mod || !isBriefingMod(mod) || !modFits(mod, base)) return false;
+      if (!mod || !isBriefingMod(mod) || !modFits(mod, base, placed)) return false;
+      placed.push(mod);
       cost += mod.cost;
     }
   }
@@ -157,7 +161,8 @@ export function moddedItem(base: ItemDef, modIds: readonly string[], catalog: Re
   const modsSaleValue = known.reduce((n, id) => n + modSalePrice(catalog.get(id)!.cost), 0);
   const effects = [...(base.effects ?? []), ...passiveEffects({ [base.id]: known }, catalog).map((e) => ({ ...e, itemBound: true }))];
   const spark = [...(base.spark ?? []), ...activeSparks({ [base.id]: known }, catalog)];
-  return { ...base, id: moddedRef(base.id, known), moddedFrom: base.id, mods: known.map((id) => ({ id, name: catalog.get(id)!.name, text: catalog.get(id)!.text })), modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
+  const addDice = known.flatMap((id) => catalog.get(id)!.dice ?? []);
+  return { ...base, ...(addDice.length ? { dice: [...(base.dice ?? []), ...addDice] } : {}), id: moddedRef(base.id, known), moddedFrom: base.id, mods: known.map((id) => ({ id, name: catalog.get(id)!.name, effect: catalog.get(id)!.effect })), modsSaleValue, ...(effects.length ? { effects } : {}), ...(spark.length ? { spark } : {}) };
 }
 
 /** Mette nel catalogo `items` gli oggetti moddati di questi riferimenti (`id+mod+mod`), se non ci sono già. Un riferimento che non si capisce (oggetto o mod sconosciuti) si salta. */
@@ -176,7 +181,12 @@ export function moddedRefsIn(text: string): string[] {
 }
 
 /** Un oggetto come lo vedono le mod: l'id, il tipo (arma, armatura, deck), il tipo di attacco, gli slot e le categorie di mod che accetta. */
-export type ModItem = Pick<ItemDef, 'id' | 'kind' | 'attack' | 'slots' | 'modTags'>;
+export type ModItem = Pick<ItemDef, 'id' | 'kind' | 'attack' | 'slots' | 'modTags' | 'tagSlots'>;
+
+/** Quanti slot di un oggetto sono riservati alle mod con la sua etichetta (`modTags`): `tagSlots`, o tutti se non è scritto; 0 se non chiede etichette. */
+export function reservedSlots(item: Pick<ItemDef, 'slots' | 'modTags' | 'tagSlots'>): number {
+  return item.modTags ? Math.min(item.tagSlots ?? item.slots ?? 0, item.slots ?? 0) : 0;
+}
 
 /** In che slot di mod va l'oggetto: le armi in `weapon`, le armature in `armor`, i cyberdeck in `deck`; scudi e altro non hanno mod. */
 export function modSlotOf(item: Pick<ItemDef, 'kind'>): ModSlot | null {
@@ -185,11 +195,26 @@ export function modSlotOf(item: Pick<ItemDef, 'kind'>): ModSlot | null {
 
 /**
  * La mod `mod` si può montare su `item`? Serve che il tipo corrisponda (arma, armatura, deck), che il tipo di attacco sia ammesso se la mod lo elenca (`attack`),
- * che l'oggetto ci sia se la mod ha un elenco di id e che la categoria sia ammessa se l'oggetto ne chiede una (`modTags`).
+ * che l'oggetto ci sia se la mod ha un elenco di id e che la categoria sia ammessa se l'oggetto ne chiede una (`modTags`). Una mod senza l'etichetta si monta solo in uno slot comune:
+ * `installed` sono le altre mod già montate, per sapere se ce n'è ancora uno libero (gli slot riservati si riempiono con le mod che hanno l'etichetta).
  */
-export function modFits(mod: ModDef, item: ModItem): boolean {
+export function modFits(mod: ModDef, item: ModItem, installed: readonly Pick<ModDef, 'tags'>[] = []): boolean {
   if (mod.slot !== modSlotOf(item)) return false;
   if (mod.attack && !(item.attack && mod.attack.includes(item.attack))) return false;
   if (mod.compatible && !mod.compatible.includes(item.id)) return false;
-  return !item.modTags || item.modTags.some((t) => mod.tags?.includes(t));
+  if (!item.modTags) return true;
+  const tagged = (m: Pick<ModDef, 'tags'>) => item.modTags!.some((t) => m.tags?.includes(t));
+  if (tagged(mod)) return true;
+  const common = (item.slots ?? 0) - reservedSlots(item);
+  return installed.filter((m) => !tagged(m)).length < common;
+}
+
+/** La riga sotto il nome di una mod: dove si monta e a cosa si applica, per esempio "Arma · mischia" o "Arma · Hacking". */
+export function modTag(mod: Pick<ModDef, 'slot' | 'attack' | 'tags'>): string {
+  const slot = { weapon: tr('Arma'), armor: tr('Armatura'), deck: tr('Cyberdeck') }[mod.slot];
+  const hacking = (mod.tags ?? []).includes('hacking');
+  // Nelle mod hacking l'intrusione è sottintesa: il tag «Hacking» basta.
+  const attack = (mod.attack ?? []).filter((a) => !(hacking && a === 'intrusion')).map((a) => ({ melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[a]));
+  const tags = (mod.tags ?? []).map((t) => (t === 'hacking' ? tr('Hacking') : t));
+  return [slot, attack.length ? attack.join(' / ') : '', ...tags].filter(Boolean).join(' · ');
 }

@@ -50,7 +50,7 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
       <div class="life">
         <app-hearts [wounds]="m.wounds" [max]="m.maxWounds" [poison]="m.poison" [size]="18" />
         <span class="dots" aria-hidden="true"></span>
-        <span class="health" [title]="'Ferite rimaste' | tr">{{ m.wounds }}</span>
+        <span class="health" [title]="'Salute rimasta' | tr">{{ m.wounds }}</span>
       </div>
       <div class="row stats">
         <span class="stat speed" [title]="'Velocità: punti movimento a ogni attivazione' | tr"><app-icon name="footprint" [size]="18" /><span class="v">{{ m.speed }}<small>{{ 'Velocità' | tr }}</small></span></span>

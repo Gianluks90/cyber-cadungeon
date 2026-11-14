@@ -28,22 +28,54 @@ interface Trigger extends Effect {
   cost?: { overclock?: number; exhaust?: boolean };
   action?: string;
   attack?: string;
+  /** `turn`: una volta per turno (vale per ogni evento, non solo `chooseAction`). */
   limit?: string;
+  /** Per `attackDone`: solo se l'attacco è andato a segno. */
+  ifHit?: boolean;
+  /** Solo se ha equipaggiato almeno `count` armi di questo tipo (`attack`) e con queste mani (`hands`): "due armi a distanza a una mano". */
+  wielding?: { attack?: string; hands?: number; count?: number };
   repeatable?: boolean;
   optional?: boolean;
   do?: { op: string; amount?: number | string; who?: string }[];
 }
 
-/** Le abilità con un bottone, per i trigger che sappiamo gestire. */
-function triggersOf(state: GameState, piece: Piece): { id: string; cardId: string; effect: Trigger }[] {
-  const out: { id: string; cardId: string; effect: Trigger }[] = [];
+/** Il `cardId` delle abilità che vengono dall'eroe stesso (la sua abilità primaria), non da una carta: il bottone sta nella scheda, sotto l'abilità. */
+export const MERCENARY_SOURCE = 'mercenary';
+
+interface TriggerSource {
+  id: string;
+  cardId: string;
+  /** Chi dà l'abilità (carta, eroe o oggetto), per i messaggi. */
+  name: string;
+  effect: Trigger;
+}
+
+/** Le abilità con un bottone, per i trigger che sappiamo gestire: da qualunque fonte (carte abilità, l'eroe, gli oggetti equipaggiati), nello stesso formato. */
+function triggersOf(state: GameState, piece: Piece): TriggerSource[] {
+  const out: TriggerSource[] = [];
+  const add = (id: string, cardId: string, name: string, e: unknown) => {
+    const t = e as Trigger;
+    if (t.kind === 'trigger' && t.optional && ['chooseAction', 'attackDone', 'kill'].includes(String(t.on))) out.push({ id, cardId, name, effect: t });
+  };
   for (const cardId of piece.skillCards) {
-    (state.skills.get(cardId)?.effects ?? []).forEach((e, i) => {
-      const t = e as Trigger;
-      if (t.kind === 'trigger' && t.optional && ['chooseAction', 'attackDone', 'kill'].includes(String(t.on))) out.push({ id: `${cardId}:${i}`, cardId, effect: t });
-    });
+    const card = state.skills.get(cardId);
+    (card?.effects ?? []).forEach((e, i) => add(`${cardId}:${i}`, cardId, card!.name, e));
+  }
+  (piece.mercenaryEffects ?? []).forEach((e, i) => add(`${MERCENARY_SOURCE}:${i}`, MERCENARY_SOURCE, String(e['name'] ?? (piece.abilityName || piece.name)), e));
+  for (const id of piece.equipped) {
+    const d = state.items.get(id);
+    (d?.effects ?? []).forEach((e, i) => add(`item:${id}:${i}`, `item:${id}`, d!.name, e));
   }
   return out;
+}
+
+/** Ha equipaggiato le armi che chiede `wielding`? */
+function wieldsRequired(state: GameState, piece: Piece, w: NonNullable<Trigger['wielding']>): boolean {
+  const n = piece.equipped.filter((id) => {
+    const d = state.items.get(id);
+    return d?.kind === 'weapon' && (!w.attack || d.attack === w.attack) && (w.hands === undefined || d.hands === w.hands);
+  }).length;
+  return n >= (w.count ?? 1);
 }
 
 /** Le abilità attive (si avviano dal bottone e chiedono altro): per ora la Telecinesi. */
@@ -73,7 +105,7 @@ export function skillActions(state: GameState, piece: Piece): SkillAction[] {
   const berserk = berserkAction(state, piece);
   return [...(berserk ? [berserk] : []), ...actives, ...triggersOf(state, piece).map(({ id, cardId, effect: t }) => {
     const overclock = t.cost?.overclock ?? 0;
-    const cost = [overclock ? `{overclock:${overclock}}` : '', t.cost?.exhaust ? tr('esaurisci la carta') : ''].filter(Boolean).join(' · ');
+    const cost = [overclock ? `{overclock:${overclock}}` : '', t.cost?.exhaust ? tr('una volta per turno') : ''].filter(Boolean).join(' · ');
     let reason: string | undefined;
     if (!canActOnMap(state, piece)) reason = tr('Ora non puoi');
     else if (piece.toad) reason = tr('Un rospo non usa abilità');
@@ -82,11 +114,14 @@ export function skillActions(state: GameState, piece: Piece): SkillAction[] {
       else if (piece.pointsUsed > 0 || piece.attacksUsed > 0) reason = tr('Va usata prima di muoverti o attaccare');
       else if (piece.usedSkills?.includes(id)) reason = tr('Già usata in questo turno');
     } else if (t.on === 'attackDone') {
-      if (!piece.lastAttack || (t.attack && piece.lastAttack.type !== t.attack)) reason = tr('Serve un attacco {kind} appena fatto', { kind: ({ ranged: tr('a distanza'), intrusion: tr('di Intrusione'), melee: tr('in mischia') } as Record<string, string>)[String(t.attack)] ?? '' });
+      if (t.ifHit && piece.lastAttack && !piece.lastAttack.hit) reason = tr('Serve un attacco andato a segno');
+      else if (t.limit === 'turn' && piece.usedSkills?.includes(id)) reason = tr('Già usata in questo turno');
+      else if (t.wielding && !wieldsRequired(state, piece, t.wielding)) reason = tr('Non hai equipaggiato le armi richieste');
+      else if (!piece.lastAttack || (t.attack && piece.lastAttack.type !== t.attack)) reason = tr('Serve un attacco {kind} appena fatto', { kind: ({ ranged: tr('a distanza'), intrusion: tr('di Intrusione'), melee: tr('in mischia') } as Record<string, string>)[String(t.attack)] ?? '' });
     } else if (t.on === 'kill') {
       if (!piece.lastKill) reason = tr('Serve un nemico appena ucciso in mischia');
     }
-    if (!reason && t.cost?.exhaust && piece.exhausted?.includes(cardId)) reason = tr('La carta è esaurita fino al prossimo round');
+    if (!reason && t.cost?.exhaust && piece.exhausted?.includes(cardId)) reason = tr('Già usata in questo turno');
     if (!reason && piece.overclock < overclock) reason = tr('Non hai abbastanza overclock');
     return { id, cardId, kind: 'trigger' as const, cost, enabled: !reason, reason };
   })];
@@ -104,7 +139,7 @@ export function useSkill(state: GameState, piece: Piece, id: string): SkillResul
   if (!found || !action) return { ok: false, reason: tr('Non hai questa abilità') };
   if (!action.enabled) return { ok: false, reason: action.reason ?? tr('Non è possibile') };
   const t = found.effect;
-  const card = state.skills.get(found.cardId)!;
+  const name = found.name;
   piece.overclock -= t.cost?.overclock ?? 0;
   if (t.cost?.exhaust) (piece.exhausted ??= []).push(found.cardId);
   const lastWeapon = t.on === 'kill' ? piece.lastKill?.weaponId : piece.lastAttack?.weaponId;
@@ -135,9 +170,9 @@ export function useSkill(state: GameState, piece: Piece, id: string): SkillResul
       }
     }
   }
-  if (t.on === 'chooseAction') (piece.usedSkills ??= []).push(found.id);
+  if (t.on === 'chooseAction' || t.limit === 'turn') (piece.usedSkills ??= []).push(found.id);
   if (t.on === 'kill') piece.lastKill = null; // una volta per nemico ucciso
-  return { ok: true, notice: `${card.name}: ${notes.join(', ')}` };
+  return { ok: true, notice: `${name}: ${notes.join(', ')}` };
 }
 
 /** Le abilità automatiche quando si uccide un nemico (Sangue vampirico: +1 overclock). Restituisce quanta overclock ha dato. */

@@ -29,7 +29,7 @@ const ATTACK = { get melee() { return tr('Mischia'); }, get ranged() { return tr
             <section [class.enh]="t.enhanced">
               <h5>{{ t.label }}</h5>
               <dl>
-                <dt [title]="'Ferite con 2-3, 4 e 5 giocatori' | tr">{{ 'Ferite' | tr }}</dt><dd>{{ t.tier.wounds['2-3'] }} / {{ t.tier.wounds['4'] }} / {{ t.tier.wounds['5'] }}</dd>
+                <dt [title]="'Salute con 2-3, 4 e 5 giocatori' | tr">{{ 'Salute' | tr }}</dt><dd>{{ t.tier.wounds['2-3'] }} / {{ t.tier.wounds['4'] }} / {{ t.tier.wounds['5'] }}</dd>
                 <dt>{{ 'Velocità' | tr }}</dt><dd>{{ t.tier.speed }}</dd>
                 <dt>{{ 'Armatura' | tr }}</dt><dd>{{ t.tier.armor }}</dd>
                 <dt>{{ 'Dadi' | tr }}</dt>

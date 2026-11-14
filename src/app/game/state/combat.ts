@@ -48,6 +48,8 @@ export interface SparkEffect {
   damage: number;
   range: number;
   pierce: number;
+  /** Rompighiaccio: come Perforare ma per l'ICE (solo attacchi a intrusione). */
+  icebreak: number;
   /** Gli stati che piazza (per ogni uso). */
   stun: number;
   burn: number;
@@ -221,7 +223,7 @@ function equippedWeapons(state: GameState, piece: Piece): ItemDef[] {
 }
 
 /** Interpreta il testo di un effetto delle scintille o di una regola: danno, gittata e Perforare in più. */
-export function parseEffect(text: string): { damage: number; range: number; pierce: number; stun: number; burn: number; web: number; blast: number; sweep: boolean; kill: boolean; double: number; alarm: number; supported: boolean } {
+export function parseEffect(text: string): { damage: number; range: number; pierce: number; stun: number; burn: number; web: number; blast: number; sweep: boolean; kill: boolean; double: number; alarm: number; icebreak: number; supported: boolean } {
   let blast = 0;
   let sweep = false;
   let kill = false;
@@ -230,14 +232,16 @@ export function parseEffect(text: string): { damage: number; range: number; pier
   let damage = 0;
   let range = 0;
   let pierce = 0;
+  let icebreak = 0;
   let stun = 0;
   let burn = 0;
   let web = 0;
   let known = 0;
   for (const part of text.split(/\s+e\s+/i)) {
     const d = part.match(/^\+(\d+)\s+dann[oi]$/i);
-    const r = part.match(/^\+(\d+)\s+gittata$/i);
+    const r = part.match(/^\+(\d+)\s+(?:gittata|portata)$/i); // «portata» è la gittata dei deck
     const p = part.match(/^Perforare\s+(\d+)$/i);
+    const ib = part.match(/^Rompighiaccio\s+(\d+)$/i);
     const bl = part.match(/^Esplosione\s+(\d+)$/i);
     const s = part.match(/^\+(\d+)\s+segnalin[oi]\s+(stordit[oi]|bruciare|rete|ragnatela)$/i);
     const k = /^Uccide il bersaglio all'istante/i.test(part);
@@ -250,6 +254,7 @@ export function parseEffect(text: string): { damage: number; range: number; pier
     else if (d) { damage += +d[1]; known++; }
     else if (r) { range += +r[1]; known++; }
     else if (p) { pierce += +p[1]; known++; }
+    else if (ib) { icebreak += +ib[1]; known++; }
     else if (bl) { blast += +bl[1]; known++; }
     else if (s) {
       const kind = s[2].toLowerCase();
@@ -259,7 +264,7 @@ export function parseEffect(text: string): { damage: number; range: number; pier
       known++;
     }
   }
-  return { damage, range, pierce, stun, burn, web, blast, sweep, kill, double, alarm, supported: known > 0 && known === text.split(/\s+e\s+/i).length };
+  return { damage, range, pierce, icebreak, stun, burn, web, blast, sweep, kill, double, alarm, supported: known > 0 && known === text.split(/\s+e\s+/i).length };
 }
 
 /** Uno stato che l'attacco può piazzare sul bersaglio e quando: `before` = se ha inflitto almeno 1 danno prima dell'armatura, `after` = dopo l'armatura. */
@@ -591,12 +596,13 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
     for (const t of attacker.traits) {
       const e = parseEffect(t);
       if (!e.supported) continue;
-      pierce += e.pierce; bonusRange += e.range; damage += e.damage;
+      pierce += option.attack === 'intrusion' ? e.icebreak : e.pierce; bonusRange += e.range; damage += e.damage;
       // Ogni abilità che pesa sull'attacco si mostra con il suo nome e cosa fa, così il totale si legge per intero.
       const what = [
         e.damage ? tr('+{n} danno a ogni attacco', { n: e.damage }) : '',
         e.range ? tr('+{n} gittata a ogni attacco', { n: e.range }) : '',
-        e.pierce ? tr('ignora {n} punti di armatura del bersaglio', { n: e.pierce }) : '',
+        e.pierce && option.attack !== 'intrusion' ? tr('ignora {n} punti di armatura del bersaglio', { n: e.pierce }) : '',
+        e.icebreak && option.attack === 'intrusion' ? tr('ignora {n} punti di ICE del bersaglio', { n: e.icebreak }) : '',
       ].filter(Boolean);
       if (what.length) traitSources.push({ source: t, text: what.join(' · ') });
     }
@@ -617,8 +623,10 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
   for (const rule of weapon?.rules ?? []) {
     const bonus = rule.match(/guadagni\s+(\d+)\s+scintille?\s+di\s+potere\s+bonus/i);
     const p = rule.match(/^Perforare\s+(\d+)$/i);
+    const ib = rule.match(/^Rompighiaccio\s+(\d+)$/i);
     if (bonus) bonusSparks += +bonus[1];
-    if (p) pierce += +p[1];
+    if (p && option.attack !== 'intrusion') pierce += +p[1]; // Perforare non ha senso su un'Intrusione
+    if (ib && option.attack === 'intrusion') pierce += +ib[1]; // e Rompighiaccio solo su un'Intrusione
   }
   // I bonus delle carte abilità e degli oggetti equipaggiati per questo tipo di attacco, e di Comando.
   const bonus = attackBonus(state, attacker, option.attack, target, option.itemId);
@@ -680,7 +688,7 @@ export function resolveAttack(
     sparksSpent += e.cost;
     bonusDamage += e.damage;
     range += e.range;
-    pierce += e.pierce;
+    pierce += plan.option.attack === 'intrusion' ? e.icebreak : e.pierce;
     extraStun += e.stun;
     extraBurn += e.burn;
     extraWeb += e.web;
@@ -703,7 +711,7 @@ export function resolveAttack(
   let damage = hit && !invincible ? Math.max(0, raw - Math.max(0, armor - pierce)) : 0;
   if (hit && !invincible && doubles) damage *= 2 ** doubles; // Raddoppia il danno: dopo i bonus e l'armatura
   const kill = hit && instantKill && !invincible;
-  if (kill) damage = Math.max(damage, target.wounds); // uccisione istantanea: le ferite che servono, e niente Immortale
+  if (kill) damage = Math.max(damage, target.wounds); // uccisione istantanea: la Salute che serve, e niente Immortale
   // Gli stati: "prima dell'armatura" vuol dire almeno 1 danno lordo, "dopo" almeno 1 ferita vera.
   const counts = new Map<StatusKind, { n: number; when: 'before' | 'after' }>();
   for (const f of plan.inflictions) if (f.kind !== 'poison') counts.set(f.kind, { n: (counts.get(f.kind)?.n ?? 0) + f.n, when: f.when });
@@ -741,7 +749,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
     attacker.attacksUsed += 1;
   }
   if (!opts.extra && attacker.team === 'mercenary' && opts.option) {
-    attacker.lastAttack = { type: opts.option.attack, weaponId: opts.option.itemId }; // per le abilità "dopo un attacco"
+    attacker.lastAttack = { type: opts.option.attack, weaponId: opts.option.itemId, hit: !outcome.miss }; // per le abilità "dopo un attacco"
     (attacker.attackTypesUsed ??= []).push(opts.option.attack); // per "il primo attacco di quel tipo"
     if (attacker.attacks <= 0) attacker.lockedWeapon = null; // l'attacco in più con la stessa arma è stato fatto
   }

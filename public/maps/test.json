@@ -349,7 +349,7 @@
       "team": "mercenary",
       "x": 2,
       "y": 2,
-      "mercenary": "bastion", "items": ["mono-blade", "shield", "ballistic-vest"]
+      "mercenary": "bastion", "items": ["wire-knife", "shield", "ballistic-vest"]
     },
     {
       "id": "h2",

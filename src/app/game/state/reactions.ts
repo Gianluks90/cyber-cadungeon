@@ -1,4 +1,5 @@
 import { tr } from '../../i18n/catalog-text';
+import type { AttackType } from '../items/item';
 import { Piece } from '../pieces/piece';
 import type { GameState } from './game-state';
 import { ruleAmount } from './effects';
@@ -10,7 +11,7 @@ import { ruleAmount } from './effects';
  * Valgono per le ferite degli attacchi (che l'armatura può ridurre); le ferite che la ignorano (buche, fiamme, trappole) non si possono annullare così.
  */
 export interface WoundReaction {
-  /** Un nome stabile: `<id oggetto>:<posizione>` o `mercenary:<posizione>` (serve per ricordare che è esaurita). */
+  /** Un nome stabile: `<id oggetto>:<posizione>` o `mercenary:<posizione>` (serve per ricordare che è già usata). */
   id: string;
   name: string;
   /** Automatica (i dadi) o a scelta. */
@@ -21,6 +22,10 @@ export interface WoundReaction {
   exhaust: boolean;
   /** È lo scudo di un oggetto (Ambidestro ne annulla 1 in più). */
   shield: boolean;
+  /** Vale solo contro questo tipo di attacco (la mod da mischia solo contro la mischia). */
+  attack?: AttackType;
+  /** `competence`: si tirano i dadi competenza che l'eroe ha per quel tipo di attacco (tanti quanti ne ha); `perWound`: uno per ogni danno. */
+  dice?: 'perWound' | 'competence';
 }
 
 interface ReactEffect {
@@ -30,6 +35,8 @@ interface ReactEffect {
   auto?: boolean;
   cancel?: number | 'blank' | 'spark';
   cost?: { exhaust?: boolean };
+  attack?: AttackType;
+  dice?: 'perWound' | 'competence';
 }
 
 /** Le reazioni alle ferite dell'eroe (di oggetti equipaggiati e dell'abilità dell'eroe). */
@@ -38,18 +45,18 @@ export function woundReactions(state: GameState, mercenary: Piece): WoundReactio
   for (const itemId of mercenary.equipped) {
     const def = state.items.get(itemId);
     ((def?.effects ?? []) as ReactEffect[]).forEach((e, i) => {
-      if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `${itemId}:${i}`, name: def!.name, auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: def!.kind === 'shield' });
+      if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `${itemId}:${i}`, name: def!.name, auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: def!.kind === 'shield', attack: e.attack, dice: e.dice });
     });
   }
   (mercenary.mercenaryEffects as ReactEffect[] | undefined)?.forEach((e, i) => {
-    if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `mercenary:${i}`, name: e.name ?? tr('Abilità'), auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: false });
+    if (e.kind === 'react' && e.on === 'wounds') out.push({ id: `mercenary:${i}`, name: e.name ?? tr('Abilità'), auto: !!e.auto, cancel: e.cancel ?? 1, exhaust: !!e.cost?.exhaust, shield: false, attack: e.attack, dice: e.dice });
   });
   return out;
 }
 
-/** Perché una reazione non si può usare adesso (esaurita), o undefined. */
+/** Perché una reazione non si può usare adesso (già usata nel turno), o undefined. */
 export function reactionBlock(mercenary: Piece, r: WoundReaction): string | undefined {
-  return r.exhaust && mercenary.exhausted?.includes(r.id) ? tr('esaurita fino al prossimo round') : undefined;
+  return r.exhaust && mercenary.exhausted?.includes(r.id) ? tr('Già usata in questo turno') : undefined;
 }
 
 /** Quante ferite annulla una reazione a numero fisso: quelle scritte, più 1 con Ambidestro se è uno scudo. */

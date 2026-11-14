@@ -1,19 +1,19 @@
 /**
- * I valori nei testi: si scrive `{mov:N}` (punti movimento), `{overclock:N}` (overclock), `{alarm:N}` (Odio), `{armor:N}` (armatura), `{ice:N}` (ICE), `{range:N}` (gittata) o `{health:N}` (salute)
+ * I valori nei testi: si scrive `{mov:N}` (punti movimento), `{overclock:N}` (overclock), `{alarm:N}` (Odio), `{armor:N}` (armatura), `{ice:N}` (ICE), `{range:N}` (gittata), `{health:N}` (salute), `{spark:N}` (scintille: tanti fulmini quanti N), `{stun:N}` (stordito), `{burn:N}` (fiamma) o `{die|colore}` (un dado colorato: il cubo nel colore del dado; il nome del colore è `red`, `green`, `blue`, `yellow` o `white`)
  * e l'interfaccia li mostra come il valore con l'icona, nel colore giusto, invece di "N punti movimento". Un `+` prima del numero (`{armor:+2}`) resta nel valore, e dopo una barra
  * (`{armor:+2|Armatura}`) c'è il nome del parametro, che segue l'icona nello stesso colore ("+2 🛡 Armatura"). Senza numero (`{overclock}`) c'è solo l'icona, da mettere dopo la parola
  * ("l'overclock {overclock} al massimo"). Il grassetto si scrive `**così**`. Dove il testo non può avere icone (un suggerimento col mouse), `plainCostText` li riscrive a parole.
  */
-const COST = /\{(mov|overclock|alarm|armor|ice|range|health)(?::(\+?)(\d+))?(?:\|([^}]+))?\}/g;
+const COST = /\{(mov|overclock|alarm|armor|ice|range|health|spark|stun|burn|die)(?::(\+?)(\d+))?(?:\|([^}]+))?\}/g;
 
-export type CostKind = 'mov' | 'overclock' | 'alarm' | 'armor' | 'ice' | 'range' | 'health';
+export type CostKind = 'mov' | 'overclock' | 'alarm' | 'armor' | 'ice' | 'range' | 'health' | 'spark' | 'stun' | 'burn' | 'die';
 
 /** Un pezzo di testo con valori: testo semplice (anche in grassetto) o un valore (`n` è null se c'è solo l'icona; `label` è il nome del parametro, se scritto). */
 export type CostSegment = { text: string; bold?: boolean } | { kind: CostKind; n: number | null; plus: boolean; label: string | null };
 
 /** Il nome a parole di un valore, per i testi senza icone. */
 const WORDS = (kind: CostKind, n: string): string =>
-  kind === 'mov' ? `${n} ${n === '1' ? 'punto' : 'punti'} movimento` : kind === 'overclock' ? `${n} overclock` : kind === 'alarm' ? `${n} Odio` : kind === 'armor' ? `${n} armatura` : kind === 'ice' ? `${n} ICE` : kind === 'range' ? `${n} gittata` : `${n} salute`;
+  kind === 'mov' ? `${n} ${n === '1' ? 'punto' : 'punti'} movimento` : kind === 'overclock' ? `${n} overclock` : kind === 'alarm' ? `${n} Odio` : kind === 'armor' ? `${n} armatura` : kind === 'ice' ? `${n} ICE` : kind === 'range' ? `${n} gittata` : kind === 'spark' ? `${n} ${n === '1' ? 'scintilla' : 'scintille'}` : kind === 'die' ? `${n} dado` : kind === 'stun' ? `${n} stordito` : kind === 'burn' ? `${n} fiamma` : `${n} salute`;
 
 /** Il testo con i valori riscritti a parole ("2 punti movimento", "1 overclock", "3 Odio"); le icone senza numero spariscono. */
 export function plainCostText(text: string): string {

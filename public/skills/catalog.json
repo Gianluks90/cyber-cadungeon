@@ -4,7 +4,7 @@
       "id": "reinforced-frame",
       "name": "Telaio rinforzato",
       "school": "combat",
-      "text": "Il tuo valore massimo di ferite è aumentato di 4.",
+      "text": "La tua Salute massima è aumentata di 4.",
       "effects": [
         {
           "kind": "stat",

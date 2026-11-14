@@ -1,13 +1,14 @@
 import { NgTemplateOutlet } from '@angular/common';
 import { ChangeDetectionStrategy, Component, DestroyRef, computed, effect, inject, input, output, signal } from '@angular/core';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
-import { ItemDef, itemGroup } from '../game/items/item';
-import { Loadout, ShopData, budgetLeft, carriedItems } from '../game/mercenaries/party-setup';
+import { ItemDef, itemGroup, soldFlags } from '../game/items/item';
+import { Loadout, ShopData, budgetLeft, mercenaryBudgetBonus, carriedItems } from '../game/mercenaries/party-setup';
 import { POTION_NAMES } from '../game/markers/marker-rules';
-import { modsCost } from '../game/mods/mod';
+import { modsCost, reservedSlots } from '../game/mods/mod';
 import { SkillDef } from '../game/skills/skill';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { TrPipe } from '../i18n/tr.pipe';
 import { IconComponent } from './icon.component';
 import { MoneyCounterComponent } from './money-counter.component';
 import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
@@ -18,7 +19,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
  */
 @Component({
   selector: 'app-briefing-column',
-  imports: [CatalogTextPipe, IconComponent, MoneyCounterComponent, NgTemplateOutlet, PregameShopDialogComponent, TranslatePipe],
+  imports: [CatalogTextPipe, IconComponent, MoneyCounterComponent, NgTemplateOutlet, PregameShopDialogComponent, TranslatePipe, TrPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <!-- I badge (budget e «Pronto») stanno fuori dal token: su schermo largo restano fissi mentre la colonna scorre; su telefono stanno sopra la card. -->
@@ -41,20 +42,20 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
 
     <!-- Il contenuto di una card oggetto: la usano la fornitura iniziale e l'inventario. -->
     <ng-template #gearCard let-i let-hands="hands" let-used="used">
-      <span class="slots" [title]="'briefing.slotsOf' | t: { n: i.slots ?? 0 }">@for (n of dots(i.slots); track $index) { <i [class.full]="$index < used" [class.hack]="i.modTags?.includes('hacking')"></i> }</span>
-      <span class="what"><b>{{ i.name }}</b><small>{{ categoryKey(i) | t }}</small></span>
+      <span class="slots" [title]="'briefing.slotsOf' | t: { n: i.slots ?? 0 }">@for (n of dots(i.slots); track $index) { <i [class.full]="$index < used" [class.hack]="i.modTags?.includes('hacking') && $index < reserved(i)"></i> }</span>
+      <span class="what"><b>{{ i.name }}</b><small>{{ categoryKey(i) | t }}@if (i.unique) { · <span class="unique">{{ 'unica' | tr }}</span> }</small></span>
       @if (hands && i.hands > 0) {
         <span class="hands" [title]="'briefing.handsOf' | t: { n: i.hands }">@for (n of dots(i.hands); track $index) { <app-icon class="hand" [name]="'back_hand'" [size]="14" /> }</span>
       }
     </ng-template>
 
-    <section class="kit" [attr.aria-label]="'briefing.kit' | t">
+    <section class="kit" [attr.aria-label]="kitTitle() | t">
       @if (kitSold()) {
-        <h3>{{ 'briefing.kit' | t }}</h3>
+        <h3>{{ kitTitle() | t }}</h3>
         <hr />
         <p class="empty">{{ 'briefing.kitSold' | t }}</p>
       } @else if (kit().length) {
-        <h3>{{ 'briefing.kit' | t }}</h3>
+        <h3>{{ kitTitle() | t }}</h3>
         <hr />
         <ul>
           @for (i of kit(); track i.id; let n = $index) {
@@ -136,6 +137,7 @@ import { PregameShopDialogComponent } from './pregame-shop-dialog.component';
     .gear { position: relative; display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 10px 56px 10px 10px; box-sizing: border-box; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-surface); }
     .gear b { font-weight: 600; min-width: 0; }
     .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .unique { color: var(--c-rare); }
     .qty { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
     .what small { color: var(--c-text-dim); font: 600 11px/1.2 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .slots { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; }
@@ -202,7 +204,7 @@ export class BriefingColumnComponent {
   /** Gli eurodollari che restano: un solo budget per mod, oggetti, pozioni e tesori. */
   protected readonly budgetLeft = computed(() => {
     const s = this.shop();
-    return s ? budgetLeft(this.mercenary().startingGear ?? [], this.loadout(), s) : 0;
+    return s ? budgetLeft(this.mercenary().startingGear ?? [], this.loadout(), s, mercenaryBudgetBonus(this.mercenary())) : 0;
   });
   /** Il budget mostrato dal badge: segue quello vero solo a negozio chiuso, così il conto scorre quando si preme «Fatto» e non durante gli acquisti. */
   protected readonly badgeBudget = signal(0);
@@ -219,7 +221,12 @@ export class BriefingColumnComponent {
     return defs.length === ids.length ? defs : [];
   });
   /** Ciò che resta della fornitura: gli oggetti non venduti nel negozio. */
-  protected readonly kit = computed<ItemDef[]>(() => this.allGear().filter((d) => !(this.loadout().soldGear ?? []).includes(d.id)));
+  protected readonly kit = computed<ItemDef[]>(() => {
+    const sold = soldFlags(this.mercenary().startingGear ?? [], this.loadout().soldGear);
+    return this.allGear().filter((_, i) => !sold[i]);
+  });
+  /** Il titolo della sezione: se si è venduto qualcosa il set iniziale non c'è più intero e resta solo «Equipaggiamento». */
+  protected readonly kitTitle = computed(() => ((this.loadout().soldGear ?? []).length > 0 ? 'briefing.gear' : 'briefing.kit') as 'briefing.gear' | 'briefing.kit');
   protected readonly kitSold = computed(() => this.allGear().length > 0 && this.kit().length === 0);
   /** La categoria dell'oggetto, come sottotitolo: arma da mischia, arma a distanza, armatura o cyberdeck (i deck sono le armi a intrusione e gli oggetti con l'etichetta `deck`). */
   protected categoryKey(i: ItemDef): 'briefing.catMelee' | 'briefing.catRanged' | 'briefing.armor' | 'briefing.deck' {
@@ -246,5 +253,6 @@ export class BriefingColumnComponent {
       return count ? [{ kind, name: POTION_NAMES[kind], count }] : [];
     });
   });
+  protected readonly reserved = reservedSlots;
   protected dots = (n: number | undefined) => Array.from({ length: n ?? 0 });
 }

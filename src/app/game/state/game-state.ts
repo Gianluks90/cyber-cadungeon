@@ -204,7 +204,7 @@ export class GameState {
     const card = id ? this.skills.get(id) : undefined;
     if (!card) return null;
     mercenary.skillCards.push(card.id);
-    applyPermanentStats(mercenary, card.effects); // per esempio Resistente: +4 ferite massime
+    applyPermanentStats(mercenary, card.effects); // per esempio Resistente: +4 Salute massima
     this.grantSkillItems(mercenary, card.effects);
     return card;
   }

@@ -5,6 +5,10 @@ import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { ItemDef } from '../game/items/item';
 import { EnemyDef } from '../game/enemies/enemy';
 import { SkillDef } from '../game/skills/skill';
+import { ModDef } from '../game/mods/mod';
+import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
+import { CostTextComponent } from './cost-text.component';
+import { ModCardComponent } from './mod-card.component';
 import { DialogComponent } from './dialog.component';
 import { FamiliarCardComponent } from './familiar-card.component';
 import { MercenaryCardComponent } from './mercenary-card.component';
@@ -16,6 +20,7 @@ import { SkillCardComponent } from './skill-card.component';
 export type CatalogEntry =
   | { kind: 'item'; id: string; name: string; def: ItemDef; icon: string; detail: string; count: number | null; search: string }
   | { kind: 'skill'; id: string; name: string; def: SkillDef; search: string }
+  | { kind: 'mod'; id: string; name: string; def: ModDef; detail: string; search: string }
   | { kind: 'mercenary'; id: string; name: string; sheet: MercenarySheet; search: string }
   | { kind: 'enemy'; id: string; name: string; def: EnemyDef; search: string }
   | { kind: 'familiar'; id: string; name: string; def: FamiliarDef; search: string };
@@ -37,7 +42,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
  */
 @Component({
   selector: 'app-components-dialog',
-  imports: [TrPipe, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
+  imports: [TrPipe, CatalogTextPipe, CostTextComponent, ModCardComponent, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
@@ -62,6 +67,8 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
                   </app-item-card>
                 } @else if (e.kind === 'skill') {
                   <app-skill-card [skill]="e.def" />
+                } @else if (e.kind === 'mod') {
+                  <app-mod-card [mod]="e.def" />
                 } @else if (e.kind === 'mercenary') {
                   <app-mercenary-card [sheet]="e.sheet" />
                 } @else if (e.kind === 'familiar') {

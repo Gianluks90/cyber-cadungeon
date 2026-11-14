@@ -7,7 +7,7 @@ import { MarkdownPipe } from './markdown.pipe';
 import { IconComponent } from './icon.component';
 import { PictureComponent } from './picture.component';
 
-/** La card di un eroe nel catalogo: ritratto, nome e classe, parametri, dadi d'attacco, abilità iniziali e abilità (per ora un testo segnaposto). */
+/** La card di un eroe nel catalogo: ritratto, nome e classe, parametri, dadi d'attacco, abilità primaria e abilità secondarie (i punti nei tre rami). */
 @Component({
   selector: 'app-mercenary-card',
   imports: [TrPipe, CatalogTextPipe, MarkdownPipe, AttackDiceComponent, IconComponent, PictureComponent],
@@ -23,7 +23,7 @@ import { PictureComponent } from './picture.component';
           </div>
         </header>
         <div class="stats">
-          <span class="life" [title]="'Ferite rimaste' | tr"><app-icon name="favorite" [size]="16" />{{ h.wounds }}</span>
+          <span class="life" [title]="'Salute rimasta' | tr"><app-icon name="favorite" [size]="16" />{{ h.wounds }}</span>
           <span class="speed" [title]="'Velocità' | tr"><app-icon name="footprint" [size]="16" />{{ h.speed }}</span>
           <span class="overclock" [title]="'Overclock' | tr"><app-icon name="speed" [size]="16" />{{ h.overclock }}</span>
           <span [title]="'Armatura' | tr"><app-icon name="shield" [size]="16" />{{ h.armor }}</span>
@@ -33,14 +33,15 @@ import { PictureComponent } from './picture.component';
           <h5>{{ 'Dadi competenza' | tr }}</h5>
           <app-attack-dice [dice]="h.dice" />
         </section>
-        <section>
-          <h5>{{ 'Abilità iniziali' | tr }}</h5>
-          <p>{{ 'Combattimento' | tr }} {{ h.skills.combat }} · {{ 'Astuzia' | tr }} {{ h.skills.cunning }} · {{ 'Hacking' | tr }} {{ h.skills.hacking }}</p>
-        </section>
         <!-- L'abilità primaria della scheda; se non è ancora definita, un testo segnaposto -->
         <section>
           <h5>{{ 'Abilità primaria' | tr }}@if (h.abilityName) { <span class="aname">: {{ h.abilityName | ct }}</span> }</h5>
           @if (h.ability) { <div class="ability md" [innerHTML]="h.ability | ct | markdown"></div> } @else { <p class="placeholder">{{ 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.' | tr }}</p> }
+        </section>
+        <!-- Le abilità secondarie (i punti nei tre rami) stanno sotto quella primaria. -->
+        <section>
+          <h5>{{ 'Abilità secondarie' | tr }}</h5>
+          <p>{{ 'Combattimento' | tr }} {{ h.skills.combat }} · {{ 'Astuzia' | tr }} {{ h.skills.cunning }} · {{ 'Hacking' | tr }} {{ h.skills.hacking }}</p>
         </section>
       </article>
     }

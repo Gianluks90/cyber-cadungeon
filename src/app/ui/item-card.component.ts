@@ -1,3 +1,4 @@
+import { reservedSlots } from '../game/mods/mod';
 import { catalogText, tr } from '../i18n/catalog-text';
 import { money } from '../game/money';
 import { TrPipe } from '../i18n/tr.pipe';
@@ -21,10 +22,11 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <article class="card" [class.plain]="plain()">
+      <!-- L'intestazione: nome e tipo a sinistra, i dadi (si tirano toccandoli) e l'ICE a destra, nello stesso contenitore e con lo stesso margine interno, su un fondo azzurro appena visibile. -->
       <header class="head">
         <div class="titles">
           <h4>{{ def().name }}@if (count()) { <span class="count">({{ count() }})</span> }</h4>
-          @if (detail()) { <span class="meta">{{ detail() }}</span> }
+          @if (detail() || def().unique) { <span class="meta">{{ detail() }}@if (def().unique) { @if (detail()) { · } <span class="unique">{{ 'unica' | tr }}</span> }</span> }
         </div>
         @if (def().dice?.length) {
           <button type="button" class="cubes dice" [title]="'Tira i dadi dell\\'oggetto (prova temporanea)' | tr" (click)="rollDice()">
@@ -40,23 +42,29 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
         <div class="level" [title]="'L\\'oggetto cresce: i valori della carta sono quelli del livello di adesso' | tr">{{ def().levelLabel! | ct }}: <b>{{ def().level }}/{{ def().levelMax }}</b></div>
       }
 
-      @if (passives().length || def().spark?.length || def().offHand) {
+      @if (passives().length || def().spark?.length || def().offHand || def().slots) {
         <section class="skills">
-          <h5>{{ 'Abilità' | tr }}</h5>
+          @if (passives().length || def().spark?.length || def().offHand) { <h5>{{ 'Abilità' | tr }}</h5> }
           <!-- Prima le passive (armatura, velocità massima, ICE, regole), poi quelle da attivare con le scintille. -->
           @for (p of passives(); track $index) {
-            <div class="line"><span class="what"><app-cost-text [text]="p" [numberFirst]="true" /></span></div>
+            <div class="line">@if ($first && !def().consumable) { <i class="dot full"></i> }<span class="what"><app-cost-text [text]="p" [numberFirst]="true" /></span></div>
           }
           @for (s of def().spark ?? []; track $index) {
             <div class="line" [title]="'Spendi {n} scintille per questo effetto' | tr: { n: s.cost }">
-              <span class="cubes">@for (n of cubes(s.cost); track n) { <app-icon name="bolt" [size]="16" /> }</span>
+              @if ($first && !passives().length) { <i class="dot full"></i> }
+              <span class="cubes">@for (n of cubes(s.cost); track n) { <app-icon name="bolt" [size]="12" /> }</span>
               <span class="what"><app-cost-text [text]="s.effect | ct" [numberFirst]="true" /></span>
             </div>
           }
           @if (def().offHand) {
             <div class="line" [title]="'Con due armi da mischia a una mano, quella con cui non attacchi aggiunge questo bonus all\\'attacco dell\\'altra (si applicherà con il combattimento)' | tr">
+              @if (!passives().length && !def().spark?.length) { <i class="dot full"></i> }
               <span class="what">{{ 'Bonus di supporto {bonus}' | tr: { bonus: (def().offHand! | ct) } }}</span>
             </div>
+          }
+          <!-- Gli slot per le mod, uno per riga di seguito alle abilità (stessa spaziatura): pieno se c'è una mod montata. L'abilità che l'oggetto ha di base (la prima) ha un pallino pieno, come una mod già installata. -->
+          @for (n of cubes(def().slots!); track n) {
+            <div class="line slot"><i [class.full]="n < (def().mods?.length ?? 0)" [class.hack]="isHackSlot(n)"></i><span class="what">{{ (isHackSlot(n) ? 'Slot per Hacking' : 'Slot per modifica') | tr }}</span></div>
           }
         </section>
       }
@@ -69,13 +77,13 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
         <section class="skills">
           <h5>{{ 'Mod' | tr }}</h5>
           @for (m of def().mods ?? []; track m.id) {
-            <div class="line"><span class="what"><b>{{ m.name }}</b> · {{ m.text | ct }}</span></div>
+            <div class="line"><span class="what"><b>{{ m.name }}</b> @for (e of m.effect; track $index) { · <app-cost-text [text]="e | ct" [numberFirst]="true" /> }</span></div>
           }
         </section>
       }
 
       <footer class="foot">
-        @if ((price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr">{{ money(price() ?? def().price) }}</span> }
+        @if (!def().unique && (price() ?? def().price) > 0) { <span class="price" [title]="'Valore' | tr">{{ money(price() ?? def().price) }}</span> }
         <div class="actions"><ng-content /></div>
       </footer>
     </article>
@@ -86,17 +94,30 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
     .level b { color: var(--c-interact); font-family: var(--font-mono); }
     .card { position: relative; box-sizing: border-box; height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 14px 16px; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-bg); }
     /* Senza i tasti (come nel catalogo) il piede non ha il divisorio */
-    .plain .foot { margin: auto 0 0; border-top: 0; padding: 0; }
-    .head { display: flex; align-items: center; gap: 12px; }
+    /* Anche senza tasti (catalogo) il piede ha il filetto sopra il valore; se non c'è né valore né tasti (un oggetto unico nel catalogo) sparisce. */
+    .foot:not(:has(.price, .actions > *)) { display: none; }
+    /* L'intestazione a tutta larghezza (come il piede), con il fondo azzurro appena visibile e il filetto sotto. */
+    .head { display: flex; align-items: center; gap: 12px; margin: -14px -16px 0; padding: 12px 16px; background: color-mix(in srgb, var(--c-interact) 7%, transparent); border-bottom: 1px solid var(--c-line); border-radius: calc(var(--radius-1) - 1px) calc(var(--radius-1) - 1px) 0 0; }
+    /* Una riga per slot: il pallino (pieno se c'è una mod) e l'etichetta. */
+    .slot { gap: 8px; }
+    /* Il pallino pieno accanto alla prima abilità: è già "installata", come una mod. */
+    .dot { flex: none; width: 11px; height: 11px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--c-text-dim); }
+    .dot.full { background: var(--c-text-dim); }
+    .slot i { flex: none; width: 11px; height: 11px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid var(--c-text-dim); }
+    .slot i.hack { border-color: var(--c-hacking); }
+    .slot i.full { background: var(--c-text-dim); }
+    .slot i.hack.full { background: var(--c-hacking); }
     .ice { flex: none; display: inline-flex; align-items: center; gap: 3px; color: var(--c-ice); font: 700 14px/1 var(--font-mono); }
     .count { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
     .titles { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
     h4 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); }
     .meta { color: var(--c-text-dim); font-size: 12px; }
+    /* La voce «unica» del sottotitolo: gialla, come i contratti rari. */
+    .unique { color: var(--c-rare); }
     .skills { display: flex; flex-direction: column; gap: 4px; }
     .line { display: flex; align-items: center; gap: 6px; font-size: 12px; }
     .line .what { min-width: 0; }
-    .cubes { display: inline-flex; align-items: center; gap: 1px; }
+    .cubes { display: inline-flex; align-items: center; gap: 0; }
     h5 { margin: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     .dice { flex: none; gap: 2px; padding: 0; border: 0; background: none; cursor: pointer; }
     /* Il piede è una fascia: il filetto arriva ai bordi laterali e il prezzo sta a sinistra e i tasti a destra. */
@@ -131,7 +152,7 @@ export class ItemCardComponent {
   readonly detail = input('');
   /** Il prezzo da mostrare, se diverso da quello della carta (per esempio quando si vende). */
   readonly price = input<number | null>(null);
-  /** Senza il divisorio sopra il piede (il catalogo non ha azioni). */
+  /** Il catalogo non ha azioni (oggi il piede è lo stesso: con il filetto sopra il valore). */
   readonly plain = input(false);
 
   /** Prova temporanea: toccare i dadi della card li tira. */
@@ -145,6 +166,11 @@ export class ItemCardComponent {
 
   protected dieName(d: string): string {
     return DIE_NAMES[d] ?? d;
+  }
+
+  /** Lo slot `n` accetta solo mod hacking: l'oggetto ha `modTags` con hacking e i primi `tagSlots` slot (tutti, se non è scritto) sono riservati. */
+  protected isHackSlot(n: number): boolean {
+    return !!this.def().modTags?.includes('hacking') && n < reservedSlots(this.def());
   }
 
   protected cubes(n: number): number[] {

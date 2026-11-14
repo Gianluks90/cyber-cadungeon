@@ -142,7 +142,7 @@ export interface TurnStartResult {
   burnLeft: number;
   webBefore: number;
   webLeft: number;
-  /** Ferite per i segnalini fiamma rimasti (l'armatura non le riduce). */
+  /** Danno per i segnalini fiamma rimasti (l'armatura non lo riduce). */
   burnDamage: number;
   /** Aveva un segnalino stordimento: ora lo perde ed è stordita per questo turno. */
   stunned: boolean;

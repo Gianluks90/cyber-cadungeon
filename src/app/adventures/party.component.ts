@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { PARTY_SIZE } from '../game/constants';
 import type { AdventureSetup } from '../game/map/map-data';
 import { Archetype, MercenarySheet, loadAllMercenarySheets } from '../game/mercenaries/mercenary-sheet';
-import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, budgetLeft, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
+import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, budgetLeft, mercenaryBudgetBonus, emptyLoadout, loadAdventureSetup, loadPregameShop, partySetupStore } from '../game/mercenaries/party-setup';
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
@@ -11,6 +11,7 @@ import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { MarkdownPipe } from '../ui/markdown.pipe';
 import { DotTrailComponent } from '../ui/dot-trail.component';
 import { MercenaryStatsPillComponent } from '../ui/mercenary-stats-pill.component';
+import { CatalogDialogComponent } from '../ui/catalog-dialog.component';
 import { MercenaryDetailDialogComponent, scrollIfPartial } from '../ui/mercenary-detail-dialog.component';
 import { ValueStarComponent } from '../ui/value-star.component';
 import { SkillDef, loadSkillCatalog } from '../game/skills/skill';
@@ -32,11 +33,12 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
  */
 @Component({
   selector: 'app-party',
-  imports: [CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
+  imports: [CatalogDialogComponent, CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
-    <app-page-nav [confirmTitle]="'party.cancelTitle' | t" [confirmText]="'party.cancelText' | t" [confirmLabel]="'party.cancelLabel' | t" (back)="back()" (leave)="home()" />
+    <app-page-nav [confirmTitle]="'party.cancelTitle' | t" [confirmText]="'party.cancelText' | t" [confirmLabel]="'party.cancelLabel' | t" [showCatalog]="true" (catalog)="catalogOpen.set(true)" (back)="back()" (leave)="home()" />
+    <app-catalog-dialog [open]="catalogOpen()" (closed)="catalogOpen.set(false)" />
     <header class="head">
       <span class="kicker">{{ title }}</span>
       @if (step() === 'pick') {
@@ -300,13 +302,15 @@ export class PartyComponent {
   /** Gli eroi che non hanno speso niente (hanno ancora tutte le monete): prima di partire si chiede conferma. */
   protected readonly unspentNames = computed(() => {
     const shop = this.shop();
-    return this.squad().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop) === shop.budget).map((h) => h.name).join(', ');
+    return this.squad().filter((h) => !shop || budgetLeft(h.startingGear ?? [], this.loadoutOf(h.id), shop, mercenaryBudgetBonus(h)) === shop.budget + mercenaryBudgetBonus(h)).map((h) => h.name).join(', ');
   });
   protected readonly askUnspent = signal(false);
   /** Entrando nell'Equipaggiamento una dialog avvisa che le abilità secondarie sono state assegnate a caso. */
   protected readonly skillNotice = signal(false);
   /** La scheda di dettaglio aperta dal tasto "i" di una carta. */
   protected readonly detail = signal<MercenarySheet | null>(null);
+  /** Il catalogo di oggetti, mod, abilità e personaggi. */
+  protected readonly catalogOpen = signal(false);
 
   protected start() {
     if (!this.ready() || !this.allReady()) return;
@@ -320,7 +324,7 @@ export class PartyComponent {
     const setup: PartySetup = {};
     for (const h of this.squad()) {
       const l = this.loadoutOf(h.id);
-      setup[h.id] = { ...l, coins: shop ? Math.max(0, budgetLeft(h.startingGear ?? [], l, shop)) : 0, skillCards: this.skillCards()[h.id] ?? [] };
+      setup[h.id] = { ...l, coins: shop ? Math.max(0, budgetLeft(h.startingGear ?? [], l, shop, mercenaryBudgetBonus(h))) : 0, skillCards: this.skillCards()[h.id] ?? [] };
     }
     partySetupStore.save(setup);
     void this.router.navigate(['/play', this.map], { queryParams: { new: 1, party: this.chosen().join(',') } });

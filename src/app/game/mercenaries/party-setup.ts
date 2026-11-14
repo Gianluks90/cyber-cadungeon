@@ -4,7 +4,7 @@ import { BACKPACK_LIMIT, BRIEFING_BUDGET, POTION_LIMIT, POTION_PRICES, TREASURE_
 import type { AdventureSetup } from '../map/map-data';
 import { SKILL_SCHOOLS, SkillSchool } from '../skills/skill';
 import { StartingSkills } from './mercenary-sheet';
-import { ItemDef, loadItemCatalog, loadShopStock, placeGear } from '../items/item';
+import { ItemDef, loadItemCatalog, loadShopStock, placeGear, soldFlags, isSellable } from '../items/item';
 
 /** Ciò che un eroe ha comprato prima di partire: oggetti (id del catalogo) e pozioni. Le monete rimaste sono 300 meno il costo. */
 export interface Loadout {
@@ -93,18 +93,24 @@ export function gearSalePrice(price: number): number {
 
 /** Gli oggetti della fornitura iniziale che l'eroe ha ancora (non venduti), come schede; quelli che non sono nel catalogo si saltano. */
 export function startingKit(startingGear: readonly string[], l: Loadout, shop: ShopData): ItemDef[] {
-  const sold = new Set(l.soldGear ?? []);
-  return startingGear.filter((id) => !sold.has(id)).flatMap((id) => shop.items.get(id) ?? []);
+  const sold = soldFlags(startingGear, l.soldGear);
+  return startingGear.filter((_, i) => !sold[i]).flatMap((id) => shop.items.get(id) ?? []);
 }
 
 /** Quanti E$ ha ricavato vendendo parte della fornitura iniziale. */
 export function gearSales(startingGear: readonly string[], l: Loadout, shop: ShopData): number {
-  return startingGear.filter((id) => (l.soldGear ?? []).includes(id)).reduce((n, id) => n + gearSalePrice(shop.items.get(id)?.price ?? 0), 0);
+  const sold = soldFlags(startingGear, l.soldGear);
+  return startingGear.filter((_, i) => sold[i]).reduce((n, id) => n + gearSalePrice(shop.items.get(id)?.price ?? 0), 0);
+}
+
+/** Il budget in più che dà un mercenario con i suoi effetti (`stat` `budget`, per esempio Tradizione e ricchezza di Kage: +100 E$). */
+export function mercenaryBudgetBonus(sheet: { effects?: readonly { kind: string; stat?: unknown; amount?: unknown }[] } | null | undefined): number {
+  return (sheet?.effects ?? []).reduce((n, e) => (e.kind === 'stat' && e.stat === 'budget' ? n + (Number(e.amount) || 0) : n), 0);
 }
 
 /** Il budget che resta: un solo conto per mod, oggetti, consumabili e tesori, più quanto si è ricavato vendendo la fornitura iniziale. */
-export function budgetLeft(startingGear: readonly string[], l: Loadout, shop: ShopData): number {
-  return shop.budget - modsCost(l.mods, shop.mods) - loadoutCost(l, shop) + gearSales(startingGear, l, shop);
+export function budgetLeft(startingGear: readonly string[], l: Loadout, shop: ShopData, bonus = 0): number {
+  return shop.budget + bonus - modsCost(l.mods, shop.mods) - loadoutCost(l, shop) + gearSales(startingGear, l, shop);
 }
 
 /** Gli oggetti che il mercenario porta in partenza, nell'ordine: la fornitura iniziale non venduta e poi ciò che ha comprato. `key` è la chiave dell'oggetto (per le mod: `itemKeys`). */
@@ -143,17 +149,20 @@ export function pruneMods(l: Loadout, startingGear: readonly string[], shop: Sho
   for (const [key, ids] of Object.entries(l.mods)) {
     const def = carried.get(key);
     if (!def) continue;
-    const kept = ids.filter((id) => { const m = shop.mods.get(id); return !!m && modFits(m, def); }).slice(0, def.slots ?? 0);
+    const placed: ModDef[] = [];
+    const kept = ids.filter((id) => { const m = shop.mods.get(id); if (!m || placed.length >= (def.slots ?? 0) || !modFits(m, def, placed)) return false; placed.push(m); return true; });
     if (kept.length) mods[key] = kept;
   }
   return { ...l, mods };
 }
 
 /** Il `loadout` è valido? Oggetti in vendita, copie sufficienti (`others`: ciò che hanno già comprato gli altri eroi), pozioni nei limiti, posto per tutto e budget sufficiente (contando le vendite). */
-export function validLoadout(l: Loadout, startingGear: readonly string[], shop: ShopData, others: readonly Loadout[]): boolean {
+export function validLoadout(l: Loadout, startingGear: readonly string[], shop: ShopData, others: readonly Loadout[], bonus = 0): boolean {
   if (!Array.isArray(l?.items) || !Array.isArray(l?.potions)) return false;
   const sold = l.soldGear ?? [];
-  if (!Array.isArray(sold) || new Set(sold).size !== sold.length || sold.some((id) => !startingGear.includes(id))) return false;
+  // Ogni id venduto può comparire al massimo quante volte è nella fornitura iniziale (due Mako-3: se ne possono vendere due).
+  if (Array.isArray(sold) && sold.some((id) => { const d = shop.items.get(id); return !!d && !isSellable(d); })) return false; // gli oggetti unici e legati non si vendono
+  if (!Array.isArray(sold) || sold.some((id) => sold.filter((x) => x === id).length > startingGear.filter((x) => x === id).length)) return false;
   if (l.potions.length > POTION_LIMIT || l.potions.some((k) => !(k in POTION_PRICES))) return false;
   const treasures = l.treasures ?? [];
   if (!Array.isArray(treasures) || treasures.some((t) => !shop.treasureTiers.includes(t))) return false;
@@ -164,9 +173,9 @@ export function validLoadout(l: Loadout, startingGear: readonly string[], shop: 
     if (!(id in left) || !shop.items.has(id) || left[id] <= 0) return false;
     left[id] -= 1;
   }
-  if (!validMods(l.mods, shop.mods, new Map(carriedItems(startingGear, l, shop).map((c) => [c.key, c.def])), shop.budget)) return false;
+  if (!validMods(l.mods, shop.mods, new Map(carriedItems(startingGear, l, shop).map((c) => [c.key, c.def])), shop.budget + bonus)) return false;
   if (Object.values(modStockLeft(shop, [...others, l])).some((n) => n < 0)) return false;
-  return !!placeItems(l.items, shop, kit) && budgetLeft(startingGear, l, shop) >= 0;
+  return !!placeItems(l.items, shop, kit) && budgetLeft(startingGear, l, shop, bonus) >= 0;
 }
 
 /** I dati passati dalla scelta degli eroi alla partita: per ogni eroe ciò che ha comprato e le monete che gli restano. */
