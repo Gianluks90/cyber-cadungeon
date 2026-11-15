@@ -11,7 +11,7 @@ import { SkillAction } from '../game/state/skills';
 import { AttackDiceComponent } from './attack-dice.component';
 import { FamiliarDef } from '../game/familiars/familiar';
 import { FamiliarCardComponent } from './familiar-card.component';
-import { MarkdownPipe } from './markdown.pipe';
+import { CostTextComponent } from './cost-text.component';
 import { IconComponent } from './icon.component';
 import { SkillCardComponent } from './skill-card.component';
 
@@ -62,7 +62,7 @@ export interface MercenaryDetails {
  */
 @Component({
   selector: 'app-mercenary-sheet',
-  imports: [FamiliarCardComponent, MarkdownPipe, TrPipe, CatalogTextPipe, AttackDiceComponent, IconComponent, SkillCardComponent],
+  imports: [CostTextComponent, FamiliarCardComponent, TrPipe, CatalogTextPipe, AttackDiceComponent, IconComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (mercenary(); as h) {
@@ -87,7 +87,7 @@ export interface MercenaryDetails {
 
       @if (h.ability) {
         <h3>{{ 'Abilità primaria' | tr }}@if (h.abilityName) { <span class="aname">: {{ h.abilityName | ct }}</span> }</h3>
-        <div class="ability md" [innerHTML]="h.ability | ct | markdown"></div>
+        <div class="ability"><app-cost-text [text]="h.ability | ct" /></div>
         <!-- Se l'abilità primaria si usa (un trigger dell'eroe), il bottone sta qui, come sulle carte abilità. -->
         @if (actionOf(h, 'mercenary'); as a) {
           <div class="useRow">

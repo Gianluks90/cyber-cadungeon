@@ -2311,5 +2311,16 @@
   "item.light-pistol-glam": "Mako-3 Dorata",
   "c.glam_6f660": "Glam",
   "c.spark31Danno_4b009": "{spark:3} +1 danno",
-  "c.migliorabile_349c3": "migliorabile"
+  "c.migliorabile_349c3": "migliorabile",
+  "c.colpoBasso_d08f0": "Colpo basso",
+  "c.quandoCombattiAManiNude_8945e": "Quando combatti a mani nude o con un'arma **pugni**, il tuo attacco in mischia infligge sempre almeno 1 danno ignorando l'armatura, anche se manca.",
+  "c.iTuoiAttacchiControUn_6796f": "I tuoi attacchi contro un nemico che non ti vedeva all'inizio del turno ottengono **+2 danni**.",
+  "c.ping_7f0a9": "Ping",
+  "c.nameSegnalato_55b32": "{name} Segnalato",
+  "c.segnalaName_5baab": "Segnala: {name}",
+  "c.segnalato_263b5": "Segnalato",
+  "c.nonPuoiSegnalareQuestoNemico_a5ff5": "Non puoi Segnalare questo nemico",
+  "c.unaVoltaPerTurnoMarked_ccb0c": "Una volta per turno, {marked|segnali} un nemico visibile fino all'inizio del tuo prossimo turno. Gli altri mercenari fanno **+1 danno** contro un nemico {marked|Segnalato}.",
+  "c.tradizioneERicchezza_99510": "Tradizione e ricchezza",
+  "c.haiMoney100EAggiuntivi_479c7": "Hai {money:100|E$} aggiuntivi nel tuo budget iniziale, tuttavia l'unica arma che potrai utilizzare è l'arma unica {unique|Kazoku}."
 }

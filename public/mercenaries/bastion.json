@@ -24,9 +24,14 @@
     "ranged": 0,
     "intrusion": 0
   },
-  "abilityName": "Falange di titanio",
-  "ability": "Anche con un risultato mancato il tuo attacco in mischia infligge sempre almeno 1 danno a purchè combatti senza armi.",
+  "abilityName": "Colpo basso",
+  "ability": "Quando combatti a mani nude o con un'arma **pugni**, il tuo attacco in mischia infligge sempre almeno 1 danno ignorando l'armatura, anche se manca.",
   "effects": [
+    {
+      "kind": "rule",
+      "rule": "lowBlow",
+      "name": "Colpo basso"
+    },
     {
       "kind": "rule",
       "rule": "overclockOnWounded",

@@ -6,6 +6,7 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { AttackDiceComponent } from './attack-dice.component';
 import { DialogComponent } from './dialog.component';
 import { MarkdownPipe } from './markdown.pipe';
+import { CostTextComponent } from './cost-text.component';
 import { IconComponent } from './icon.component';
 import { MercenaryFaceComponent } from './mercenary-face.component';
 
@@ -27,7 +28,7 @@ export const scrollIfPartial = (card: HTMLElement): boolean => {
  */
 @Component({
   selector: 'app-mercenary-detail-dialog',
-  imports: [AttackDiceComponent, CatalogTextPipe, MarkdownPipe, DialogComponent, IconComponent, MercenaryFaceComponent, TranslatePipe],
+  imports: [CostTextComponent, AttackDiceComponent, CatalogTextPipe, MarkdownPipe, DialogComponent, IconComponent, MercenaryFaceComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (mercenary(); as h) {
@@ -51,7 +52,7 @@ export const scrollIfPartial = (card: HTMLElement): boolean => {
         <app-attack-dice [dice]="h.dice" />
 
         <h3>{{ 'detail.primary' | t }}@if (h.abilityName) { <span class="aname">: {{ h.abilityName | ct }}</span> }</h3>
-        @if (h.ability) { <div class="ability md" [innerHTML]="h.ability | ct | markdown"></div> } @else { <p class="soon">{{ 'detail.soon' | t }}</p> }
+        @if (h.ability) { <div class="ability"><app-cost-text [text]="h.ability | ct" /></div> } @else { <p class="soon">{{ 'detail.soon' | t }}</p> }
 
         <h3>{{ 'detail.attributes' | t }}</h3>
         <div class="soon" [innerHTML]="'detail.attributesHint' | t: { n: total() } | markdown"></div>

@@ -127,6 +127,7 @@
       "id": "iron-fists",
       "name": "Pugni di ferro",
       "kind": "weapon",
+      "tags": ["fists"],
       "attack": "melee",
       "hands": 2,
       "price": 150,

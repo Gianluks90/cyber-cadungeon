@@ -24,13 +24,13 @@
     "ranged": 0,
     "intrusion": 3
   },
-  "abilityName": "Rete tattica",
-  "ability": "Guadagni l'abilità **Comando**: quando un mercenario entro 3 spazi da te (te compreso) attacca, ottiene **+1 danno** e **+1 gittata**.",
+  "abilityName": "Ping",
+  "ability": "Una volta per turno, {marked|segnali} un nemico visibile fino all'inizio del tuo prossimo turno. Gli altri mercenari fanno **+1 danno** contro un nemico {marked|Segnalato}.",
   "effects": [
     {
-      "kind": "grant",
-      "keyword": "command",
-      "name": "Rete tattica"
+      "kind": "rule",
+      "rule": "ping",
+      "name": "Ping"
     }
   ]
 }

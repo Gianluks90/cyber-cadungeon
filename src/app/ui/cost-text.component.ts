@@ -3,7 +3,7 @@ import { CostKind, costSegments } from './cost-text';
 import { IconComponent } from './icon.component';
 
 /** Le icone dei valori: impronte (movimento), speed (overclock), teschio (Odio), scudo (armatura), snowflake (ICE) e cuore (salute); la gittata non ha icona, solo numero e nome (salute). */
-const ICONS: Record<CostKind, string | null> = { mov: 'footprint', overclock: 'speed', alarm: 'skull', armor: 'shield', ice: 'ac_unit', range: null, health: 'favorite', spark: 'bolt', die: 'deployed_code', stun: 'stun', shock: 'charger', poison: 'water_drop', burn: 'burn' };
+const ICONS: Record<CostKind, string | null> = { mov: 'footprint', overclock: 'speed', alarm: 'skull', armor: 'shield', ice: 'ac_unit', range: null, health: 'favorite', spark: 'bolt', die: 'deployed_code', stun: 'stun', shock: 'charger', poison: 'water_drop', burn: 'burn', marked: 'flag', money: null, unique: null };
 
 /** Un testo in cui i valori sono numero e icona (e, se scritto, il nome del parametro), ognuno nel colore del suo parametro; senza numero solo l'icona. Il `**grassetto**` si vede. */
 @Component({
@@ -31,6 +31,11 @@ const ICONS: Record<CostKind, string | null> = { mov: 'footprint', overclock: 's
     .cost[data-kind='shock'] { color: var(--c-shock); }
     .cost[data-kind='poison'] { color: var(--c-poison); }
     .cost[data-kind='burn'] { color: var(--c-burn); }
+    .cost[data-kind='marked'] { color: var(--c-marked); }
+    /* Il denaro: giallo e font mono come il prezzo delle card. */
+    .cost[data-kind='money'] { color: var(--c-money); font-family: var(--font-mono); }
+    /* Il nome di un oggetto unico: corsivo, nel colore del tag «unica». */
+    .cost[data-kind='unique'] { color: var(--c-unique); font-style: italic; font-weight: 600; }
     /* L'icona speed occupa meno altezza delle altre: è più grande, con margini negativi perché non allarghi la riga. */
     .cost[data-kind='overclock'] app-icon { margin-block: -2px; }
     strong { font-weight: 700; color: var(--c-text); }

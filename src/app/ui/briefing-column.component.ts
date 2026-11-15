@@ -142,7 +142,7 @@ import { ItemNameComponent } from './item-name.component';
     .gear { position: relative; display: flex; align-items: center; gap: 8px; min-height: 64px; padding: 10px 56px 10px 10px; box-sizing: border-box; border-radius: var(--radius-1); border: 1px solid var(--c-line-strong); background: var(--c-surface); }
     .gear b { font-weight: 600; min-width: 0; }
     .what { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-    .unique { color: var(--c-rare); }
+    .unique { color: var(--c-unique); }
     .glam { color: var(--c-glam); }
     .qty { margin-left: 6px; color: var(--c-text-dim); font-weight: 400; }
     .what small { color: var(--c-text-dim); font: 600 11px/1.2 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }

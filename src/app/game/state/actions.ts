@@ -19,6 +19,7 @@ import { MercenaryAction, MercenaryOrder, Piece, footprint, occupies } from '../
 import { GameState } from './game-state';
 import { effectsOf, hasRule, ruleAmount, statBonus } from './effects';
 import { weakening } from './familiars';
+import { pingTargets } from './ping';
 import { clearStatus, healWounds, immuneTo, isGrappled, keywordLevel } from './status';
 import { RemovalResult, removeEnemy } from './loot';
 
@@ -623,6 +624,7 @@ export function startRound(state: GameState): void {
     p.stunned = false;
     p.webbed = false;
     p.usedSkills = [];
+    p.markedBy = undefined; // il Segnalato di Ping dura fino all'inizio del round dopo
     p.orderPlaced = false;
     p.exhausted = [];
     p.attackTypesUsed = [];
@@ -653,7 +655,7 @@ export function selectMercenary(state: GameState, id: string): boolean {
 export interface ContextAction {
   /** 'door:<numero>', 'chest', 'pickup', 'stairs', 'drink:<tipo>', 'give:<eroe>:<tipo>' o 'giveitem:<eroe>:<oggetto>' o 'city' o 'interact:<pedina>'. */
   id: string;
-  kind: 'door' | 'chest' | 'stairs' | 'potion' | 'item' | 'city' | 'attack' | 'interact' | 'pickup' | 'encounter' | 'zone';
+  kind: 'door' | 'chest' | 'stairs' | 'potion' | 'item' | 'city' | 'attack' | 'interact' | 'pickup' | 'encounter' | 'zone' | 'ping';
   /** Il nome dell'icona (public/icons/). */
   icon: string;
   label: string;
@@ -748,6 +750,11 @@ export function contextActions(state: GameState, board: Board, piece: Piece, see
       const reason = costReason(cost);
       out.push({ id: `interact:${target.id}`, kind: 'interact', icon: 'help', label: tr('Interagisci con {name}', { name: target.name }), cost, enabled: !reason, reason });
     }
+  }
+
+  // Ping (Halo): una voce per ogni nemico visibile che può Segnalare, gratis, una volta per turno.
+  for (const target of pingTargets(state, board, piece)) {
+    out.push({ id: `ping:${target.id}`, kind: 'ping', icon: 'flag', label: tr('Segnala: {name}', { name: target.name }), cost: 0, enabled: true });
   }
 
   // Le pozioni che porta: berle, o darle a un eroe adiacente.

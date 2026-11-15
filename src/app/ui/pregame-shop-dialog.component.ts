@@ -200,7 +200,7 @@ const GROUP_TITLES: Record<ItemGroup, 'shop.groupMelee' | 'shop.groupRanged' | '
     .bagsep span { position: relative; padding: 0 8px; background: var(--c-surface); font: 600 10px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
     /* Il sottotitolo di una mod: come quello degli oggetti (card oggetto). */
     .meta { color: var(--c-text-dim); font-size: 12px; font-weight: 400; letter-spacing: 0; text-transform: none; }
-    .unique { color: var(--c-rare); }
+    .unique { color: var(--c-unique); }
     .glam { color: var(--c-glam); }
     .gdetail { padding: 2px 0 4px; }
     .slotdots { display: inline-flex; gap: 5px; }

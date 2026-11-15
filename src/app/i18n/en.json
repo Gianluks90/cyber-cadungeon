@@ -1915,7 +1915,7 @@
   "c.soldatoCorazzato_6c294": "Armored soldier",
   "c.assorbitoriCinetici_aae44": "Kinetic absorbers",
   "c.cecchino_11717": "Sniper",
-  "c.colpoDallOmbra_c8923": "Shot from the shadows",
+  "c.colpoDallOmbra_c8923": "Shadow strike",
   "c.tecnicoDiSupporto_adbe1": "Support tech",
   "c.reteTattica_6c6cd": "Tactical network",
   "c.giocaQuestaCartaAllInizio_eaf0e": "Play this card at the start of your turn and place it face up in front of you. When you reveal a new area, place your choice of: 2 extra Corporate guards, or 2 extra Sentry drones, or 2 extra Hostile netrunners, adjacent to any other monster in the revealed area.",
@@ -2311,5 +2311,16 @@
   "item.light-pistol-glam": "Mako-3 Gilded",
   "c.glam_6f660": "Glam",
   "c.spark31Danno_4b009": "{spark:3} +1 damage",
-  "c.migliorabile_349c3": "upgradable"
+  "c.migliorabile_349c3": "upgradable",
+  "c.colpoBasso_d08f0": "Low blow",
+  "c.quandoCombattiAManiNude_8945e": "When you fight bare-handed or with a **fists** weapon, your melee attack always deals at least 1 damage, ignoring armor, even if it misses.",
+  "c.iTuoiAttacchiControUn_6796f": "Your attacks against an enemy that did not see you at the start of the turn get **+2 damage**.",
+  "c.ping_7f0a9": "Ping",
+  "c.nameSegnalato_55b32": "{name} tagged",
+  "c.segnalaName_5baab": "Tag: {name}",
+  "c.segnalato_263b5": "Tagged",
+  "c.nonPuoiSegnalareQuestoNemico_a5ff5": "You can't tag this enemy",
+  "c.unaVoltaPerTurnoMarked_ccb0c": "Once per turn, you {marked|tag} a visible enemy until the start of your next turn. Other mercenaries deal **+1 damage** against a {marked|Tagged} enemy.",
+  "c.tradizioneERicchezza_99510": "Tradition and wealth",
+  "c.haiMoney100EAggiuntivi_479c7": "You have {money:100|E$} extra in your starting budget, but the only weapon you can use is the unique weapon {unique|Kazoku}."
 }

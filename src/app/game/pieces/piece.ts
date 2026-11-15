@@ -111,8 +111,10 @@ export interface Piece {
   order?: MercenaryOrder | null;
   /** Ha piazzato un ordine in questo turno: l'azione Prepararsi non si può più annullare. */
   orderPlaced?: boolean;
-  /** I nemici che vedeva con la sua linea di vista all'inizio del round (solo per chi ha il Colpo a tradimento: `state/ambush.ts`). */
-  seenAtStart?: string[];
+  /** I nemici che avevano l'eroe nella loro linea di vista all'inizio del round (solo per chi ha il Colpo a tradimento: `state/ambush.ts`). */
+  seenByAtStart?: string[];
+  /** Per un nemico: l'eroe che l'ha Segnalato con Ping (stato Segnalato, segnalino viola con la bandierina) (gli altri eroi fanno più danno contro di lui) fino all'inizio del round dopo (`state/ping.ts`). */
+  markedBy?: string;
   /** I tipi di attacco già fatti in questo round (per "il primo attacco a distanza" di Occhio del cacciatore). */
   attackTypesUsed?: string[];
   lastAttack?: { type: AttackType; weaponId?: string; /** L'attacco è andato a segno (non mancato). */ hit?: boolean } | null;

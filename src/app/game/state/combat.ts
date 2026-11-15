@@ -98,6 +98,8 @@ export interface AttackPlan {
   area: { sweep: boolean; blast: number; breath: boolean };
   /** Livello di Stregoneria di chi attacca: dopo il tiro si aggiunge fino a questo totale alla gittata o al danno. */
   sorcery: number;
+  /** Colpo basso: a mani nude o con un'arma pugni, l'attacco in mischia infligge almeno 1 danno che ignora l'armatura, anche se manca. */
+  lowBlow: boolean;
   /** Chi dà i bonus fissi e cosa (carte abilità, oggetti), da mostrare nella finestra. */
   sources: { source: string; text: string }[];
 }
@@ -625,7 +627,7 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
       if (what.length) traitSources.push({ source: t, text: what.join(' · ') });
     }
     const cmd = commandBonus(state, attacker);
-    return { option, distance: option.distance ?? distanceTo(attacker, target), needsRange: option.attack !== 'melee' && !areaFrom(attacker.traits).breath, effects: [], bonusSparks: 0, supportDamage: damage + cmd, pierce, bonusRange: bonusRange + cmd, sources: [...traitSources, ...(cmd ? [commandSource(cmd)] : [])], inflictions: inflictionsFrom(attacker.traits), fearless: immuneTo(state, attacker, 'fear'), area: areaFrom(attacker.traits), knockback: attacker.traits.some((t) => /^Contraccolpo$/i.test(t)), sorcery: keywordLevel(state, attacker, 'Stregoneria') };
+    return { option, distance: option.distance ?? distanceTo(attacker, target), needsRange: option.attack !== 'melee' && !areaFrom(attacker.traits).breath, effects: [], bonusSparks: 0, supportDamage: damage + cmd, pierce, bonusRange: bonusRange + cmd, sources: [...traitSources, ...(cmd ? [commandSource(cmd)] : [])], inflictions: inflictionsFrom(attacker.traits), fearless: immuneTo(state, attacker, 'fear'), area: areaFrom(attacker.traits), knockback: attacker.traits.some((t) => /^Contraccolpo$/i.test(t)), sorcery: keywordLevel(state, attacker, 'Stregoneria'), lowBlow: false };
   }
   const weapon = option.itemId ? state.items.get(option.itemId) : undefined;
   const shield = option.itemId ? protectionFrom(state, target, option.itemId) : null;
@@ -655,6 +657,7 @@ export function planAttack(state: GameState, attacker: Piece, target: Piece, opt
     effects, bonusSparks: bonusSparks + bonus.sparks, pierce: pierce + bonus.pierce, supportDamage: support + bonus.damage + cmd, bonusRange: bonus.range + cmd,
     sources: [...bonus.sources, ...(support ? [{ source: tr('Bonus di supporto'), text: `+${support} danno` }] : []), ...(cmd ? [commandSource(cmd)] : [])],
     inflictions: inflictionsFrom(weapon?.rules ?? []), fearless: immuneTo(state, attacker, 'fear'), area: areaFrom(weapon?.rules ?? []), knockback: (weapon?.rules ?? []).some((t) => /^Contraccolpo$/i.test(t)), sorcery: keywordLevel(state, attacker, 'Stregoneria'),
+    lowBlow: option.attack === 'melee' && !option.program && hasRule(state, attacker, 'lowBlow') && (!weapon || !!weapon.tags?.includes('fists')),
   };
 }
 
@@ -729,6 +732,8 @@ export function resolveAttack(
   const invincible = !!target.invincible || (!!target.onlyHurtBy && plan.option.itemId !== target.onlyHurtBy);
   let damage = hit && !invincible ? Math.max(0, raw - Math.max(0, armor - pierce)) : 0;
   if (hit && !invincible && doubles) damage *= 2 ** doubles; // Raddoppia il danno: dopo i bonus e l'armatura
+  // Colpo basso: il danno minimo c'è anche se si manca, e l'armatura non lo ferma (il bersaglio deve almeno essere raggiungibile e non Paura-bloccato).
+  if (plan.lowBlow && !invincible && !feared) damage = Math.max(damage, 1);
   const kill = hit && instantKill && !invincible;
   if (kill) damage = Math.max(damage, target.wounds); // uccisione istantanea: la Salute che serve, e niente Immortale
   // Gli stati: "prima dell'armatura" vuol dire almeno 1 danno lordo, "dopo" almeno 1 ferita vera.

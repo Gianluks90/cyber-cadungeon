@@ -459,3 +459,12 @@ Budget fisso: `check()` in `heroes/hero-sheet.ts:58` avvisa già se dadi o punti
 - **Q30.** Senza account (Auth fuori scope), la progressione degli eroi sta in localStorage dietro un'interfaccia pronta per Firestore?
 - **Q31.** Tentativi e scadenza di un contratto: partiamo senza (solo campi vuoti nei dati) o li implementiamo?
 - **Q32 ✔ (2026-11-12).** Risposta: i contratti sono legati alla mappa del mondo (marker, sblocco a 50 m), non a `ADVENTURES`. Domanda originale: I contratti "si raccolgono fisicamente": nella prima versione sono una lista di mappe in `ADVENTURES` (nessuna geolocalizzazione) o dobbiamo legarli alla mappa del mondo che già c'è?
+
+## Idee per abilità di personaggio (non decise)
+
+Alternative scartate per Halo quando è stata scelta **Ping** («Segnalato»: una volta per turno segnali un nemico visibile fino al tuo prossimo turno, gli altri mercenari fanno +1 danno contro di lui). Da riusare per un altro Incursore o per una variante futura:
+- **Zero-day di serie**: la prima volta che usi un programma in un turno costa 1 OC in meno (rende i programmi il suo gioco naturale).
+- **Rete in cascata**: quando una tua Intrusione colpisce, lo stesso effetto passa gratis a un altro nemico entro 2 spazi dal bersaglio (stato del programma, o metà del danno).
+- **Blackout**: all'inizio del tuo turno scegli un nemico visibile: fino al tuo prossimo turno perde 1 ICE e non può usare Reagisci.
+- **Rete tattica** (la vecchia abilità di Halo): aura **Comando**, +1 danno e +1 gittata ai mercenari entro 3 spazi. Ancora nel motore come `grant: command`.
+- Direzione più difensiva: sulle porte e sui terminali (scassinare/hackerare gratis, aprire a distanza), da collegare alle porte hackerabili.

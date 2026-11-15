@@ -25,7 +25,7 @@
     "intrusion": 0
   },
   "abilityName": "Colpo dall'ombra",
-  "ability": "I tuoi attacchi infliggono +2 danni contro un nemico che non vedevi all'inizio del turno.",
+  "ability": "I tuoi attacchi contro un nemico che non ti vedeva all'inizio del turno ottengono **+2 danni**.",
   "effects": [
     {
       "kind": "attack",
@@ -35,7 +35,7 @@
         "intrusion"
       ],
       "damage": 2,
-      "ifUnseenAtStart": true,
+      "ifUnseenByTarget": true,
       "name": "Colpo dall'ombra"
     }
   ]

@@ -29,7 +29,7 @@
     "intrusion": 1
   },
   "abilityName": "Tradizione e ricchezza",
-  "ability": "Hai 100 E$ aggiuntivi nel tuo budget iniziale, tuttavia l'unica arma che potrai utilizzare è la Kazoku.",
+  "ability": "Hai {money:100|E$} aggiuntivi nel tuo budget iniziale, tuttavia l'unica arma che potrai utilizzare è l'arma unica {unique|Kazoku}.",
   "effects": [
     {
       "kind": "stat",

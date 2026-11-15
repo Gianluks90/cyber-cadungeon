@@ -31,6 +31,7 @@
   --c-burn:          #ff5a36;  /* stato: fiamma */
   --c-web:           #cfd4de;  /* stato: rete (ragnatela) */
   --c-stun:          #8f9bff;  /* stato: stordimento */
+  --c-marked:        #c77dff;  /* stato: segnalato da Ping (viola) */
   --c-shock:         #5ad7ff;  /* stato: folgorato (azzurro elettrico) */
   --c-poison:        #7ed957;  /* stato: veleno (i cuori verdi accanto alle ferite) */
   --c-armor:         #b7bcc6;  /* armatura / difesa */
@@ -45,6 +46,7 @@
   --c-you:           #2bff88;  /* SOLO: la posizione del giocatore sulla mappa del mondo (verde neon, con glow) */
   --c-ok:            #6cc08a;  /* verifica dell'avventura: tutto a posto */
   --c-rare:           var(--px-amber);  /* contratti rari sulla mappa del mondo (giallo, come il segnaposto) */
+  --c-unique:         orange;     /* oggetti unici: tag «unica» e nome nei testi */
   --c-warn:           var(--px-amber);  /* verifica dell'avventura: va bene ma manca qualcosa */
   --c-error:         var(--c-danger);  /* verifica dell'avventura: qualcosa è sbagliato */
 

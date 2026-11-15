@@ -3,14 +3,14 @@ import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
 import { AttackDiceComponent } from './attack-dice.component';
-import { MarkdownPipe } from './markdown.pipe';
+import { CostTextComponent } from './cost-text.component';
 import { IconComponent } from './icon.component';
 import { PictureComponent } from './picture.component';
 
 /** La card di un eroe nel catalogo: ritratto, nome e classe, parametri, dadi d'attacco, abilità primaria e abilità secondarie (i punti nei tre rami). */
 @Component({
   selector: 'app-mercenary-card',
-  imports: [TrPipe, CatalogTextPipe, MarkdownPipe, AttackDiceComponent, IconComponent, PictureComponent],
+  imports: [CostTextComponent, TrPipe, CatalogTextPipe, AttackDiceComponent, IconComponent, PictureComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (sheet(); as h) {
@@ -36,7 +36,7 @@ import { PictureComponent } from './picture.component';
         <!-- L'abilità primaria della scheda; se non è ancora definita, un testo segnaposto -->
         <section>
           <h5>{{ 'Abilità primaria' | tr }}@if (h.abilityName) { <span class="aname">: {{ h.abilityName | ct }}</span> }</h5>
-          @if (h.ability) { <div class="ability md" [innerHTML]="h.ability | ct | markdown"></div> } @else { <p class="placeholder">{{ 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.' | tr }}</p> }
+          @if (h.ability) { <div class="ability"><app-cost-text [text]="h.ability | ct" /></div> } @else { <p class="placeholder">{{ 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore.' | tr }}</p> }
         </section>
         <!-- Le abilità secondarie (i punti nei tre rami) stanno sotto quella primaria. -->
         <section>

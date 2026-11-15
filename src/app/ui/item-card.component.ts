@@ -114,7 +114,7 @@ const DIE_NAMES: Record<string, string> = { get red() { return tr('dado rosso');
     h4 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); }
     .meta { color: var(--c-text-dim); font-size: 12px; }
     /* La voce «unica» del sottotitolo: gialla, come i contratti rari. */
-    .unique { color: var(--c-rare); }
+    .unique { color: var(--c-unique); }
     .glam { color: var(--c-glam); }
     .skills { display: flex; flex-direction: column; gap: 4px; }
     .line { display: flex; align-items: center; gap: 6px; font-size: 12px; }

@@ -75,7 +75,7 @@ export interface ThemeColors {
   /** Le scorte dell'eroe nella barra: movimento e overclock (armatura e pozioni sono bianche, come il testo). */
   stat: { movement: number; overclock: number };
   /** I segnalini degli stati sulla pedina: fiamma, rete, stordimento, veleno. */
-  status: { burn: number; web: number; stun: number; shock: number; poison: number };
+  status: { burn: number; web: number; stun: number; shock: number; poison: number; marked: number };
   /** Il pallino di attivazione dei nemici (solo per il Maligno): da attivare, non attivabile, attivazione completata. */
   activation: { ready: number; blocked: number; done: number };
   /** I famigli: il contorno azzurro del loro segnalino, per distinguerli da eroi e nemici. */
@@ -217,7 +217,7 @@ const dark: Theme = {
     },
     ui: { text: 0xd8cfc4, textMuted: 0x8a8178, border: 0x3a352f, panel: 0x000000, panelBorder: 0x5a554d },
     stat: { movement: 0xe0a040, overclock: 0x6cc08a },
-    status: { burn: 0xff5a36, web: 0xcfd4de, stun: 0x8f9bff, shock: 0x5ad7ff, poison: 0x7ed957 },
+    status: { burn: 0xff5a36, web: 0xcfd4de, stun: 0x8f9bff, shock: 0x5ad7ff, poison: 0x7ed957, marked: 0xc77dff },
     activation: { ready: 0x6cc08a, blocked: 0xe8c547, done: 0x8a8a93 },
     health: 0xd2504a,
     familiar: 0x5aa9ff,
@@ -324,6 +324,7 @@ const TOKEN_ROLES: [path: string, cssVar: string][] = [
   ['status.stun', '--c-stun'],
   ['status.shock', '--c-shock'],
   ['status.poison', '--c-poison'],
+  ['status.marked', '--c-marked'],
   ['activation.ready', '--c-ok'],
   ['activation.blocked', '--c-warn'],
   ['activation.done', '--c-line-strong'],

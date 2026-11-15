@@ -474,3 +474,6 @@ export const SCENERY = { pebbleChance: 0.55, pebbleMax: 3, debrisMax: 4, pebbleS
 
 /** La distanza massima a cui un nemico con un attacco a distanza o di Intrusione cerca di stare dal bersaglio (si ferma prima se la sua gittata di solito è minore). */
 export const SHOOTER_DISTANCE_CAP = 5;
+
+/** Il danno in più che gli altri mercenari fanno contro un nemico Segnalato (Ping di Halo). */
+export const PING_DAMAGE = 1;

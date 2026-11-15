@@ -27,6 +27,7 @@ import { LINE, theme } from '../theme';
 import { Board, Cell, cellKey } from '../board/board';
 import { Reach, pathTo } from '../board/movement';
 import { reachOutline } from './reach-outline';
+import { ping } from '../state/ping';
 import { ORDER_ICONS, Piece, footprint, occupies } from './piece';
 import { Marker, PotionKind } from '../board/marker';
 import { GameState } from '../state/game-state';
@@ -348,6 +349,19 @@ export class PiecesController {
     if (result.code === 'ok') {
       const target = this.state.pieces.find((p) => p.id === targetId);
       for (const p of [...(target ? [target] : []), ...(result.modified ?? [])]) if (this.views.has(p.id)) this.drawPiece(p);
+      this.onChange(active);
+      this.refresh();
+    }
+    return result;
+  }
+
+  /** L'eroe attivo Segnala un nemico visibile (Ping, vedi state/ping.ts): la pedina ne mostra il segnalino. */
+  ping(targetId: string): { ok: boolean; reason?: string } {
+    const active = this.active;
+    if (!this.board || !active || this.moving || !this.enabled) return { ok: false };
+    const result = ping(this.state, this.board, active, targetId);
+    if (result.ok) {
+      for (const p of this.state.pieces) if (this.views.has(p.id)) this.drawPiece(p);
       this.onChange(active);
       this.refresh();
     }
@@ -1078,6 +1092,17 @@ export class PiecesController {
       label.anchor.set(0.5);
       label.position.set(x, y);
       view.badges.addChild(dot, label);
+      i++;
+    }
+    if (p.team === 'enemy' && p.markedBy) {
+      // Segnalato (Ping): come gli altri stati, un cerchietto viola con la bandierina.
+      const r = 9;
+      const x = a - r - i * (2 * r + 2);
+      const y = -b + r;
+      const dot = new Graphics().circle(x, y, r).fill(theme.color.status.marked).stroke({ width: 1, color: theme.color.token.fill });
+      const icon = createFilledIcon('flag', 12, 0x111111);
+      icon.position.set(x, y);
+      view.badges.addChild(dot, icon);
       i++;
     }
   }

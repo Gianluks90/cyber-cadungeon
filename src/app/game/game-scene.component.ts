@@ -4530,6 +4530,11 @@ export class GameSceneComponent implements OnDestroy {
     }
     else if (id.startsWith('zone:')) this.useZoneHere(id.slice(5));
     else if (id.startsWith('interact:')) this.interactWith(id.slice(9));
+    else if (id.startsWith('ping:')) {
+      const r = this.pieces?.ping(id.slice(5));
+      if (r?.ok) this.showNotice(tr('{name} Segnalato', { name: this.state.pieces.find((p) => p.id === id.slice(5))?.name ?? '' }), 'flag');
+      else if (r?.reason) this.showNotice(r.reason, 'warning');
+    }
     else if (id.startsWith('drink:')) this.drinkPotion(id.slice(6) as PotionKind);
     else if (id.startsWith('give:')) {
       const [, target, kind] = id.split(':');
