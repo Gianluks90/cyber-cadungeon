@@ -273,7 +273,7 @@ export function applyStep(state: GameState, board: Board, piece: Piece, step: Re
  * (la sua pedina non c'è più), con ferite al massimo. Passa il turno da solo (lo fa chi lo chiama); al round dopo rientra su un glifo acceso senza pagare.
  */
 export function killMercenary(state: GameState, piece: Piece): Piece[] {
-  // Giustizia divina: quando muore uccide i nemici senza un nome entro 3 spazi (anche gli Immortali). Restituisce quelli uccisi, che la scena fa svanire.
+  // Dead Man's Switch: quando muore uccide i nemici non unici entro 3 spazi (anche quelli con Cuore di riserva). Restituisce quelli uccisi, che la scena fa svanire.
   const slain: Piece[] = [];
   for (const { effect: e } of effectsOf(state, piece)) {
     if (e.kind !== 'trigger' || e.on !== 'death') continue;

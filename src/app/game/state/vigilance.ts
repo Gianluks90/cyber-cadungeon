@@ -48,7 +48,8 @@ export function vigilanceChances(state: GameState, board: Board, enemy: Piece, f
     const cost = vigilanceCost(state, mercenary);
     if (cost === null || mercenary.overclock < cost) continue;
     if (!adjacent(mercenary, enemy) || adjacent(mercenary, from)) continue; // deve essere appena entrato
-    const options = controlledAttackOptions(state, board, mercenary, enemy);
+    // È un confronto fisico: solo la mischia (un'arma da mischia, o a mani nude se non ce n'è); niente armi a distanza né Intrusione.
+    const options = controlledAttackOptions(state, board, mercenary, enemy).filter((o) => o.attack === 'melee');
     if (options.length) out.push({ mercenary, cost, options });
   }
   return out;

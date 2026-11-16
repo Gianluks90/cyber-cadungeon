@@ -271,7 +271,7 @@
       "id": "dead-mans-switch",
       "name": "Dead Man's Switch",
       "school": "hacking",
-      "text": "Quando vieni ucciso, tutti i nemici senza nome entro 3 spazi da te vengono immediatamente uccisi anch'essi. Questa abilità ignora Immortale.",
+      "text": "Quando muori, tutti i nemici non unici entro 3 spazi dalla tua posizione vengono immediatamente uccisi. Questa abilità ignora **Cuore di riserva**.",
       "effects": [
         {
           "kind": "trigger",
@@ -280,8 +280,8 @@
             {
               "op": "killNearby",
               "range": 3,
-              "unnamedOnly": true,
-              "ignoresImmortal": true
+              "nonUniqueOnly": true,
+              "ignoresBackupHeart": true
             }
           ]
         }
@@ -416,7 +416,7 @@
       "id": "carpe-diem",
       "name": "Carpe diem",
       "school": "cunning",
-      "text": "Quando un nemico entra in uno spazio adiacente a te, puoi spendere {overclock:2} per eseguire subito l'attacco contro quel nemico. Puoi farlo una sola volta per ogni nemico che entra.",
+      "text": "Quando un nemico entra in uno spazio adiacente a te, puoi spendere {overclock:2} per attaccarlo subito in mischia, con un'arma da mischia o a mani nude. Puoi farlo una sola volta per ogni nemico che entra.",
       "effects": [
         {
           "kind": "trigger",

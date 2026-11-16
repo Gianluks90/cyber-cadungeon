@@ -1494,9 +1494,9 @@ export class GameSceneComponent implements OnDestroy {
       const left = await this.reduceWounds(target, outcome.damage, Math.min(outcome.pierce, outcome.armor, outcome.damage), se.plan.option.attack);
       if (left !== outcome.damage) outcome = { ...outcome, damage: left, poison: outcome.poison > 0 ? left : 0 };
     }
-    // Immortale: se il colpo sarebbe mortale si tira un dado competenza; con una scintilla il nemico si rialza.
+    // Cuore di riserva: se il colpo sarebbe mortale si tira un dado competenza; con una scintilla il nemico si rialza.
     let undying = false;
-    if (outcome.damage > 0 && outcome.damage >= target.wounds && !outcome.kill && target.traits.some((t) => /^Immortale$/i.test(t))) { // il Tocco della morte ignora Immortale
+    if (outcome.damage > 0 && outcome.damage >= target.wounds && !outcome.kill && target.traits.some((t) => /^Cuore di riserva$/i.test(t))) { // il Tocco della morte ignora Cuore di riserva
       const roll = await this.dice.rollFaces(['black']);
       await this.sleep(1600);
       undying = !!roll?.some((r) => r.face.spark > 0);
@@ -1518,7 +1518,7 @@ export class GameSceneComponent implements OnDestroy {
     result.applied.forEach((a, i) => this.pieces?.floatTag(target, STATUS_NAMES[a.kind], a.kind, i * 450));
     if (result.overclockGained) this.showNotice(tr('{name} recupera {overclock:{n}}', { name: target.name, n: result.overclockGained }), 'speed', 'mercenary'); // Furia del dolore
     const states = result.applied.map((a) => `${STATUS_NAMES[a.kind]} ×${a.n}`).join(', ');
-    const text = result.undying ? tr('{name} è immortale e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} E$', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 danno a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} danni a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
+    const text = result.undying ? tr('{name} ha un cuore di riserva e si rialza!', { name: target.name }) : result.killed ? tr('{name} è sconfitto!', { name: target.name }) + (result.reward ? tr(' +{n} E$', { n: result.reward }) : '') : outcome.miss ? tr('{name}: mancato', { name: se.option.name }) : !outcome.inRange ? tr('{name}: fuori portata', { name: se.option.name }) : outcome.damage ? (outcome.damage === 1 ? tr('{name}: 1 danno a {target}', { name: se.option.name, target: target.name }) : tr('{name}: {n} danni a {target}', { name: se.option.name, n: outcome.damage, target: target.name })) + (states ? ` (${states})` : '') : tr('{name}: nessun danno a {target}', { name: se.option.name, target: target.name });
     const by = attacker.team === 'enemy' ? 'adversary' : 'mercenary';
     if (outcome.alarmLoss) this.showHud(this.pieces?.active ?? null);
     if (outcome.alarmLoss) this.showNotice(outcome.alarmLoss === 1 ? tr('L\'Avversario perde 1 punto Allarme') : tr('L\'Avversario perde {n} punti Allarme', { n: outcome.alarmLoss }), 'skull', 'adversary');
@@ -2620,7 +2620,7 @@ export class GameSceneComponent implements OnDestroy {
     for (const chance of vigilanceChances(this.state, this.board, enemy, from)) {
       if (!this.state.pieces.includes(enemy)) return;
       const answer = await this.askChoice({
-        title: tr('Vigilanza'),
+        title: tr('Carpe diem'),
         text: tr('{name} è entrato accanto a {name2}. Spendere {overclock:{cost}} per attaccarlo subito?', { name: enemy.name, name2: chance.mercenary.name, cost: chance.cost }),
         choices: [...chance.options.map((o) => ({ id: o.id, label: o.name, primary: true })), { id: 'no', label: tr('Rinuncia') }],
       });

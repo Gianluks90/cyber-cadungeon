@@ -120,7 +120,7 @@ Gli stati sono conti di segnalini sulla pedina (sezione 2c della v1). **Conferma
 - **Folgorazione** (*Cortocircuito*) [nuovo]. Proposta *(da bilanciare)*: piazzamento e tiro di inizio turno come Fiamma; per ogni segnalino rimasto: **−1 Fatica** (eroi), **−1 velocità** (umanoidi nemici), **Stordimento** (macchine, una volta). Gli eroi con Incursore perdono anche **−1 al raggio del cyberdeck** per segnalino.
 - **Tracciato** [nuovo], solo sull'Incursore: lo piazza un **tracciamento** (Mancato sul dado base dell'Intrusione). I nemici con Intrusione possono bersagliarlo **senza LOS**. Si toglie se **muore il Netrunner** che lo sfrutta o se il **nodo** da cui è partito viene **sovraccaricato**.
 
-**Da valutare**: **Rete** (Ragnatela, qui un'etichetta tipo *Inceppamento*) e **Stordimento** (*Riavvio*). Restano le parole chiave Aura, Paura, Presa, Immortale, Contraccolpo (2c e 2d della v1).
+**Da valutare**: **Rete** (Ragnatela, qui un'etichetta tipo *Inceppamento*) e **Stordimento** (*Riavvio*). Restano le parole chiave Aura, Paura, Presa, Cuore di riserva (era Immortale), Contraccolpo (2c e 2d della v1).
 Le **macchine** sono immuni a Veleno e Fatica e vulnerabili a Stordimento e Intrusione.
 
 ## 9. Terminali, Fama e caduta degli eroi [cambia]

@@ -61,7 +61,7 @@ export interface SparkEffect {
   blast: number;
   /** Spazzata: pagando questa scintilla l'attacco in mischia colpisce anche tutti i nemici adiacenti a chi attacca (la mod Spazzata). */
   sweep: boolean;
-  /** Uccide il bersaglio all'istante, anche se è Immortale (Tocco della morte). */
+  /** Uccide il bersaglio all'istante, anche se ha un Cuore di riserva (Tocco della morte). */
   kill: boolean;
   /** Quante volte raddoppia il danno inflitto (Divoratrice di anime). */
   double: number;
@@ -120,7 +120,7 @@ export interface AttackOutcome {
   damage: number;
   /** Contraccolpo: se l'attacco infligge almeno 1 danno lordo, chi attacca può spostare il bersaglio di fino a 3 spazi. */
   knockback: boolean;
-  /** Uccisione istantanea (Tocco della morte): il bersaglio muore, anche se è Immortale. */
+  /** Uccisione istantanea (Tocco della morte): il bersaglio muore, anche se ha un Cuore di riserva. */
   kill: boolean;
   /** Il bersaglio è invincibile (o non si ferisce con quest'arma): il danno è 0 anche se colpito. */
   invincible: boolean;
@@ -738,7 +738,7 @@ export function resolveAttack(
   // Colpo basso: il danno minimo c'è anche se si manca, e l'armatura non lo ferma (il bersaglio deve almeno essere raggiungibile e non Paura-bloccato).
   if (plan.lowBlow && !invincible && !feared) damage = Math.max(damage, 1);
   const kill = hit && instantKill && !invincible;
-  if (kill) damage = Math.max(damage, target.wounds); // uccisione istantanea: la Salute che serve, e niente Immortale
+  if (kill) damage = Math.max(damage, target.wounds); // uccisione istantanea: la Salute che serve, e niente Cuore di riserva
   // Gli stati: "prima dell'armatura" vuol dire almeno 1 danno lordo, "dopo" almeno 1 ferita vera.
   const counts = new Map<StatusKind, { n: number; when: 'before' | 'after' }>();
   for (const f of plan.inflictions) if (f.kind !== 'poison') counts.set(f.kind, { n: (counts.get(f.kind)?.n ?? 0) + f.n, when: f.when });
@@ -757,7 +757,7 @@ export interface AttackResult {
   target: Piece;
   /** Gli stati che ha davvero ricevuto (quelli a cui è immune non ci sono). */
   applied: { kind: StatusKind; n: number }[];
-  /** Un nemico Immortale che si è rialzato. */
+  /** Un nemico con Cuore di riserva che si è rialzato. */
   undying: boolean;
   /** I nemici uccisi da Giustizia divina dell'eroe che è appena morto. */
   slain: Piece[];
@@ -787,7 +787,7 @@ export function applyAttack(state: GameState, attacker: Piece, target: Piece, ou
   if (outcome.damage > 0 && target.team === 'mercenary') {
     loseOrdersOnWounds(target); // perde la Mira, il Riposo (non recupera l'overclock) e la Guardia
   }
-  // Immortale: se il dado competenza ha dato una scintilla il nemico si rialza a salute piena, meno i danni in più del colpo mortale.
+  // Cuore di riserva: se il dado competenza ha dato una scintilla il nemico si rialza a salute piena, meno i danni in più del colpo mortale.
   if (target.wounds <= 0 && opts.undying) {
     const excess = outcome.damage - before;
     target.wounds = Math.max(1, target.maxWounds - excess);

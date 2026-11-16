@@ -9,7 +9,7 @@ export interface EnemyTier {
   armor: number;
   /** I dadi d'attacco, per colore (il nero è il dado competenza). */
   dice: DieColor[];
-  /** Abilità speciali, a parole (Perforare 1, Veleno, Aura...). Perforare, +Gittata, +danno, Veleno, Ragnatela, Stordire, Bruciare, Aura, Paura e Presa hanno effetto; Immortale pure. */
+  /** Abilità speciali, a parole (Perforare 1, Veleno, Aura...). Perforare, +Gittata, +danno, Veleno, Ragnatela, Stordire, Bruciare, Aura, Paura e Presa hanno effetto; Cuore di riserva pure. */
   abilities: string[];
   /** A cosa è immune: `burn`, `web`, `stun`, `poison`, `aura`, `fear`, `grip`, `knockback`. */
   immune?: string[];

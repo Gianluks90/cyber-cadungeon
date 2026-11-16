@@ -8,7 +8,7 @@ Parte dalle schede legacy (`docs/legacy/cards/monsters.md`) e dal regolamento v2
 - **Potenziato**: ferite e armatura in più, **dado nero** in più e abilità aggiuntive (come nelle schede legacy).
 - **Gittata**: campo fisso (non più dai dadi). **Vigilanza**: raggio in caselle con cui nota gli eroi (sezione 9b del regolamento).
 - **Colore dei dadi base** (con la faccia Mancato): rosso = mischia, blu = distanza, bianco = Intrusione.
-- Gli stati e le parole chiave non elencate (Perforare, Esplosione, Contraccolpo, Stordire, Spazzata, Bruciare, Attacco veloce, Volo, Comando, Immortale, Raggiungere) restano quelle della v1.
+- Gli stati e le parole chiave non elencate (Perforare, Esplosione, Contraccolpo, Stordire, Spazzata, Bruciare, Attacco veloce, Volo, Comando, Cuore di riserva (era Immortale), Raggiungere) restano quelle della v1.
 
 ## 1. Tabella
 

@@ -41,7 +41,7 @@ const LOOT_KINDS: { kind: Loot['kind']; name: string }[] = [
 ];
 
 /** Abilità che si possono aggiungere (oltre a quelle che un nemico ha già sulla sua carta): si può scrivere anche altro, e il gioco legge le parole che conosce. */
-const ABILITIES = ['Contraccolpo', 'Aura', 'Bruciare', 'Veleno', 'Ragnatela', 'Stordire', 'Presa', 'Immortale', 'Volare', 'Raggiungere', 'Spazzata', 'Soffio', 'Attacco veloce', 'Comando', 'Paura X', 'Perforare X', '+X Danno', '+X Gittata', 'Stregoneria X'];
+const ABILITIES = ['Contraccolpo', 'Aura', 'Bruciare', 'Veleno', 'Ragnatela', 'Stordire', 'Presa', 'Cuore di riserva', 'Volare', 'Raggiungere', 'Spazzata', 'Soffio', 'Attacco veloce', 'Comando', 'Paura X', 'Perforare X', '+X Danno', '+X Gittata', 'Stregoneria X'];
 
 /** Il segnaposto del livello nelle abilità che ne hanno uno ("Paura X"): chi le aggiunge lo sostituisce con un numero. */
 const LEVEL_PLACEHOLDER = /(^|[\s+])x(\s|$)/i;
