@@ -14,7 +14,7 @@ import { IconComponent } from './icon.component';
   host: { '[style.width]': "'min(calc(320px + ' + slots() * 75 + 'px), calc(100vw - 24px))'" },
   template: `
     <button type="button" class="block" data-sheet-toggle [class.on]="view()" [class.playing]="playing()" [attr.aria-pressed]="view()" [attr.aria-label]="'Vista dell\\'Avversario' | tr" [title]="'Vista dell\\'Avversario: schede dei nemici' | tr" (click)="toggle.emit()">
-      <span class="avatar"><img src="characters/adversary-token.webp" alt="" draggable="false" /></span>
+      <span class="avatar"><img src="adversary/token.webp" alt="" draggable="false" /></span>
       <span class="info">
         <span class="name">{{ 'Avversario' | tr }}</span>
         <span class="hearts-gap"></span>

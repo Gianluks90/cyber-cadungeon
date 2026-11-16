@@ -74,7 +74,7 @@ export interface Piece {
   /** Salute (punti vita) che restano, e il massimo. */
   wounds: number;
   maxWounds: number;
-  /** Immagine del ritratto (percorso in public/, es. characters/ferdinand-token.webp). Senza, la pedina mostra un segnaposto. */
+  /** Immagine del ritratto (percorso in public/, es. mercenaries/kage/token.webp). Senza, la pedina mostra un segnaposto. */
   portrait?: string;
   /** L'immagine a figura intera (dalla scheda), per i pannelli dell'eroe. */
   portraitFull?: string;

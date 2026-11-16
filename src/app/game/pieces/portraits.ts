@@ -1,7 +1,7 @@
 import { Assets, Texture } from 'pixi.js';
 
 /**
- * Carica le immagini dei ritratti (public/characters/...). Quelle che non si caricano restano fuori dalla mappa:
+ * Carica le immagini dei ritratti (public/mercenaries/<id>/token.webp ecc.). Quelle che non si caricano restano fuori dalla mappa:
  * la pedina usa allora il segnaposto. Le immagini sono più grandi della pedina, quindi si usano i mipmap, perché
  * restino nitide anche quando si rimpicciolisce lo zoom.
  */

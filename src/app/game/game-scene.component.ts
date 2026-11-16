@@ -3233,7 +3233,7 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Chi firma la notifica. */
   private noticeAuthor(by: 'mercenary' | 'adversary' | 'game'): ToastAuthor {
-    if (by === 'adversary') return { name: tr('Avversario'), portrait: 'characters/adversary-token.webp' };
+    if (by === 'adversary') return { name: tr('Avversario'), portrait: 'adversary/token.webp' };
     const mercenary = by === 'mercenary' ? this.state.pieces.find((p) => p.id === this.state.activeId && p.team === 'mercenary') : undefined;
     return mercenary ? { name: mercenary.name, portrait: mercenary.portrait } : { name: tr('Gioco') };
   }

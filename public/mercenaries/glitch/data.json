@@ -1,0 +1,28 @@
+{
+  "id": "glitch",
+  "name": "Glitch",
+  "class": "Giovane promessa",
+  "archetype": "raider",
+  "portrait": "mercenaries/glitch/token.webp",
+  "portraitFull": "mercenaries/glitch/portrait.webp",
+  "wounds": 8,
+  "overclock": 6,
+  "armor": 1,
+  "speed": 3,
+  "value": 3,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "startingGear": [],
+  "skills": {
+    "combat": 1,
+    "cunning": 0,
+    "hacking": 2
+  },
+  "dice": {
+    "melee": 1,
+    "ranged": 1,
+    "intrusion": 1
+  },
+  "ability": ""
+}

@@ -14,7 +14,7 @@ import { IconComponent } from './icon.component';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="who">
-      <span class="avatar"><img src="characters/adversary-token.webp" alt="" draggable="false" /></span>
+      <span class="avatar"><img src="adversary/token.webp" alt="" draggable="false" /></span>
       <span class="titles">
         <span class="name">{{ 'Avversario' | tr }}</span>
         <span class="sub">{{ 'Round {n}' | tr: { n: round() } }}@if (phase()) { · <span class="phase">{{ phase() }}</span> }</span>

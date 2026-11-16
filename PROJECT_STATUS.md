@@ -37,7 +37,7 @@ Documento di contesto per chi non vede il codice. Fotografia presa leggendo il r
 - `src/app/editor/` — editor completo (tessere, porte, ostacoli, oggetti, nemici, aree, zone, eventi, verifica).
 - `src/app/lobby/` — lobby PeerJS. `src/app/auth/` — login finto. `src/app/world-map/` — mappa del mondo. `src/app/adventures/` — scelta della squadra (`/party/:map`); la route `/adventures` è stata rimossa.
 - `src/app/ui/` — componenti HTML sopra il canvas. `src/app/i18n/` — traduzioni (`it.json`, `en.json`, pipe `t`, `tr`, `ct`).
-- `public/` — dati: `contracts/` (intestazioni), `mods/`, `tiles/`, `maps/`, `mercenaries/`, `enemies/`, `items/`, `skills/`, `adversary/`, `shops/`, `icons/` (SVG), `characters/`, `mobs/`, `dice/`.
+- `public/` — dati: `contracts/` (intestazioni), `mods/`, `tiles/`, `maps/`, `mercenaries/`, `enemies/`, `items/`, `skills/`, `adversary/`, `shops/`, `icons/` (SVG), `mobs/`, `dice/`. Ogni mercenario è una cartella `mercenaries/<id>/` (`data.json`, `portrait.webp`, `token.webp`).
 - `docs/` — `style-guide.md`, `PIANO-DESIGN.md`, `PIANO-CHIAVI-I18N.md`, `legacy/`.
 - `scripts/i18n-check.mjs` — controlla che ogni testo `tr()` abbia la riga in entrambe le lingue (`npm run i18n:check`).
 
@@ -129,7 +129,7 @@ Principio: **stato = dati puri** (`GameState`), regole = funzioni che lo modific
 ## 7. Punti di estensione previsti
 
 - **Missioni geolocalizzate**: **fatte nella forma minima** (vedi «Contratti sulla mappa»): marker su `WorldMapComponent` → scheda → `/party/:map` → `/play/:map`, con i dati dietro `ContractStore`/`UnlockStore`. `ADVENTURES` resta vuoto e non serve a questo. Restano: Firestore al posto di file e localStorage, tentativi e scadenza, strumento «Posiziona» nell'editor, contratti nascosti, Fixer-giocatori (tutti rimandati).
-- **Eroi**: schede JSON in `public/mercenaries/` (`index.json` + una per eroe) caricate da `mercenaries/`; la squadra predefinita è `DEFAULT_PARTY`. Eroi persistenti/collezionabili sono fuori scope per ora; l'interfaccia `SaveStore` è il punto dove agganciare eroi salvati.
+- **Eroi**: schede JSON in `public/mercenaries/` (`index.json` + una cartella per eroe con `data.json`) caricate da `mercenaries/`; la squadra predefinita è `DEFAULT_PARTY`. Eroi persistenti/collezionabili sono fuori scope per ora; l'interfaccia `SaveStore` è il punto dove agganciare eroi salvati.
 - **Fixer**: definito nel design (`docs/DESIGN-MOD-CONTRATTI.md` §2.7: chi crea e pubblica contratti, diritto che si guadagna con la Fama), ma **nel codice c'è solo il campo segnaposto `Contract.fixer`**; Fixer-giocatori, Fama e Reputazione sono rimandati e non esistono.
 - **Rete**: completare gioco in rete su `LobbyHost` (stato autoritativo) / `LobbyClient` (intenzioni), con filtro delle parti non scoperte.
 - **Backend**: Firebase Auth al posto di `FakeAuthBackend`; Firestore al posto di `LocalSaveStore`/`LocalLobbyStore`/`DraftStore` (avventure, mappe, eroi, checkpoint).

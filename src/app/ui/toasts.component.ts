@@ -7,7 +7,7 @@ import { IconComponent } from './icon.component';
 /** Chi parla in una notifica: un eroe (con il ritratto), il Maligno o il gioco stesso (senza ritratto). */
 export interface ToastAuthor {
   name: string;
-  /** Percorso del ritratto in public/ (es. characters/ferdinand-token.webp). Senza, si vede l'icona della notifica. */
+  /** Percorso del ritratto in public/ (es. mercenaries/kage/token.webp). Senza, si vede l'icona della notifica. */
   portrait?: string;
 }
 

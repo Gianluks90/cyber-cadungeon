@@ -7,6 +7,7 @@ import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, rerollSk
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
+import { ArchetypeMarkComponent } from '../ui/archetype-mark.component';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { MarkdownPipe } from '../ui/markdown.pipe';
 import { DotTrailComponent } from '../ui/dot-trail.component';
@@ -33,7 +34,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
  */
 @Component({
   selector: 'app-party',
-  imports: [CatalogDialogComponent, CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
+  imports: [ArchetypeMarkComponent, CatalogDialogComponent, CatalogTextPipe, ConfirmDialogComponent, MarkdownPipe, DotTrailComponent, FamiliarPillComponent, ValueStarComponent, MercenaryDetailDialogComponent, MercenaryStatsPillComponent, BriefingColumnComponent, IconComponent, PageNavComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
@@ -56,14 +57,17 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
           @for (h of mercenaries(); track h.id) {
             <div class="card" role="button" tabindex="0" [class.on]="order(h.id) > 0" [attr.aria-pressed]="order(h.id) > 0" [attr.aria-disabled]="!order(h.id) && full() ? 'true' : null" (click)="tap($event, h.id)" (keydown.enter)="toggle(h.id)" (keydown.space)="toggle(h.id); $event.preventDefault()">
               <img [src]="h.portraitFull" [alt]="h.name" />
-              <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="18" /></button>
+              <!-- Gli archetipi in pallini, in colonna in alto a sinistra. -->
+              <app-archetype-mark class="mark" [dice]="h.dice" />
       <app-value-star class="value" [value]="h.value" />
               <div class="cap">
                 @if (familiarsOf(h).length) { <app-familiar-pill class="fam" [familiars]="familiarsOf(h)" /> }
                 <app-mercenary-stats-pill class="stats" [health]="h.wounds" [speed]="h.speed" [overclock]="h.overclock" [armor]="h.armor" />
                 <b>{{ h.name }}</b><span>{{ h.class | ct }}</span>
-                @if (order(h.id) > 0) { <span class="n">{{ order(h.id) }}</span> }
+                <button type="button" class="info" [attr.aria-label]="'detail.open' | t: { name: h.name }" [title]="'detail.open' | t: { name: h.name }" (click)="$event.stopPropagation(); detail.set(h)"><app-icon name="info" [size]="24" /></button>
               </div>
+              <!-- Il numero di scelta: una linea azzurra appena sotto la card, inclinata con lei, col numero al centro. -->
+              @if (order(h.id) > 0) { <span class="order"><span class="n">{{ order(h.id) }}</span></span> }
             </div>
           }
           @if (mercenaries().length) {
@@ -123,12 +127,13 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     @media (pointer: coarse) { .confirm { height: 44px; } }
     /* Su telefono i due tasti occupano gli angoli in basso: l'avviso sale sopra, a tutta larghezza. Nel Briefing, dove l'avviso non c'è, il piede è alto solo quanto i tasti e il resto va al contenuto. */
     @media (max-width: 900px) { .foot { min-height: 0; padding: 0 16px calc(60px + env(safe-area-inset-bottom)); } .foot.pick { min-height: calc(144px + env(safe-area-inset-bottom)); padding-bottom: calc(66px + env(safe-area-inset-bottom)); } .warn { bottom: calc(66px + env(safe-area-inset-bottom)); max-width: calc(100% - 32px); flex-direction: column; gap: 2px; } }
-    .row { display: flex; gap: 24px; width: 100%; box-sizing: border-box; padding: 18px 28px 22px 56px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 56px 28px; overscroll-behavior-x: contain; }
+    /* In fondo 34px: la linea del numero di scelta sporge sotto le card e, con l'inclinazione, scende ancora di più verso destra. */
+    .row { display: flex; gap: 24px; width: 100%; box-sizing: border-box; padding: 18px 28px 34px 56px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 56px 28px; overscroll-behavior-x: contain; }
     /* Con poche carte stanno al centro, con tante partono da sinistra: i margini automatici si azzerano quando non c'è spazio (con il centramento diretto la parte a sinistra restava tagliata e irraggiungibile). */
     .row > :first-child { margin-inline-start: auto; }
     .row > :last-child { margin-inline-end: auto; }
     .card {
-      position: relative; flex: none; box-sizing: border-box; width: 210px; height: min(440px, 56dvh); min-height: 300px; margin: 0; padding: 0; overflow: hidden; scroll-snap-align: start; cursor: pointer;
+      position: relative; flex: none; box-sizing: border-box; width: 210px; height: min(440px, 56dvh); min-height: 300px; margin: 0; padding: 0; scroll-snap-align: start; cursor: pointer;
       border-radius: 0 var(--radius-2) 0 var(--radius-2); border: 1px solid var(--c-line-strong); background: var(--c-tile); color: var(--c-text); font: inherit;
       transform: rotate(4deg); transform-origin: 30% 100%; box-shadow: 0 8px 22px rgba(0, 0, 0, 0.55); transition: border-color 0.15s, transform 0.15s;
     }
@@ -144,17 +149,21 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     .card.on { border-color: var(--c-interact); box-shadow: 0 0 0 1px var(--c-interact), 0 8px 22px rgba(0, 0, 0, 0.55); }
     .card[aria-disabled='true'] { cursor: not-allowed; }
     .card[aria-disabled='true'] img { filter: grayscale(1) brightness(0.45); }
-    img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: filter 0.2s; }
-    /* Il numero di scelta sta nel piede, a destra, accanto al nome. */
-    .cap .n { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border-radius: var(--radius-round); background: var(--c-interact); color: var(--c-bg); font: 700 13px/1 var(--font-mono); letter-spacing: 0; text-transform: none; }
+    /* La card non ritaglia più (la linea del numero sta fuori): l'immagine e il piede seguono da soli gli angoli arrotondati, 1px dentro il bordo. */
+    img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0 calc(var(--radius-2) - 1px) 0 calc(var(--radius-2) - 1px); transition: filter 0.2s; }
+    /* Il numero di scelta: una linea azzurra appena sotto la card, che gira con lei, col numero in un pallino al centro. */
+    .order { position: absolute; left: 0; right: 0; top: calc(100% + 8px); height: 2px; display: flex; align-items: center; justify-content: center; background: var(--c-interact); pointer-events: none; }
+    .n { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 24px; height: 24px; border-radius: var(--radius-round); background: var(--c-interact); color: var(--c-bg); font: 700 13px/1 var(--font-mono); letter-spacing: 0; text-transform: none; }
+    /* Gli archetipi: pallini in colonna in alto a sinistra, dove prima c'era il tasto «i». */
+    .mark { position: absolute; z-index: 2; top: 8px; left: 8px; }
     /* I punti ferita in cuori in colonna in alto a destra; velocità, overclock e armatura nella pillola sopra il piede a sinistra, il Valore a destra. */
     .fam { position: absolute; left: 8px; right: 8px; bottom: calc(100% + 54px); }
     .stats { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(100% + 6px); }
     .value { position: absolute; right: 8px; top: 8px; }
-    /* Il tasto "i": un pallino scuro in alto a sinistra che apre la scheda di dettaglio. */
-    .info { position: absolute; z-index: 2; top: 8px; left: 8px; display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; cursor: pointer; border-radius: var(--radius-round); border: 1px solid var(--c-line-strong); background: rgba(0, 0, 0, 0.7); color: var(--c-text); transition: color 0.15s, border-color 0.15s; }
-    .info:hover, .info:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
-    .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 10px; background: var(--c-surface); border-top: 1px solid var(--c-line-strong); text-align: left; }
+    /* Il tasto "i": solo l'icona (il cerchio è già nel disegno), a destra nel piede e centrata in altezza; apre la scheda di dettaglio. */
+    .info { position: absolute; z-index: 2; top: 50%; right: 10px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; cursor: pointer; border: 0; background: none; color: var(--c-text-dim); transition: color 0.15s; }
+    .info:hover, .info:focus-visible { color: var(--c-interact); outline: none; }
+    .cap { position: absolute; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; gap: 2px; padding: 8px 12px 10px; background: var(--c-surface); border-top: 1px solid var(--c-line-strong); border-radius: 0 0 0 calc(var(--radius-2) - 1px); text-align: left; }
     .cap b { font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.04em; }
     .cap span { color: var(--c-text-dim); font-size: 11px; font-weight: 600; letter-spacing: var(--label-tracking); text-transform: uppercase; }
   `,

@@ -1,0 +1,43 @@
+{
+  "id": "bastion",
+  "name": "Bastion",
+  "class": "Pugno di ferro",
+  "archetype": "brawler",
+  "portrait": "mercenaries/bastion/token.webp",
+  "portraitFull": "mercenaries/bastion/portrait.webp",
+  "wounds": 16,
+  "overclock": 3,
+  "armor": 2,
+  "speed": 3,
+  "value": 4,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "startingGear": ["iron-fists", "adonis-skin", "berserker-mk1"],
+  "skills": {
+    "combat": 3,
+    "cunning": 0,
+    "hacking": 0
+  },
+  "dice": {
+    "melee": 3,
+    "ranged": 0,
+    "intrusion": 0
+  },
+  "abilityName": "Colpo basso",
+  "story": "*Maxime Laurent, detto Le Bastion. 32 anni, francese. Portuale e mercenario indipendente.*\n\nMaxime Laurent ha avuto una giovinezza fin troppo normale, divisa tra palestra, amici e lavoretti poco entusiasmanti. Il suo talento nel menare le mani lo ha portato nei circuiti di combattimento clandestini, dove ha scoperto che i potenziamenti cibernetici potevano trasformare un buon pugile in una dannata macchina da guerra.\n\nUn innesto dopo l'altro, *Le Bastion*, come lo chiamavano sul ring perché nessuno riusciva a farlo arretrare, ha continuato a spingersi oltre il limite. Finché una grave crisi da sovrainnesto non gli ha fatto capire che, prima o poi, avrebbe finito per prendersela con qualcuno a cui voleva bene.\n\nHa mollato gli incontri di sua spontanea volontà.\n\nOggi lavora come portuale e arrotonda facendo il mercenario. Ha lasciato perdere i combattimenti clandestini, ma non la palestra, gli occhialetti rosa da quattro soldi o la convinzione di essere **l'uomo più duro della stanza**.",
+  "ability": "Quando combatti a mani nude o con un'arma **pugni**, il tuo attacco in mischia infligge sempre almeno 1 danno ignorando l'armatura, anche se manca.",
+  "effects": [
+    {
+      "kind": "rule",
+      "rule": "lowBlow",
+      "name": "Colpo basso"
+    },
+    {
+      "kind": "rule",
+      "rule": "overclockOnWounded",
+      "amount": 1,
+      "name": "Assorbitori cinetici"
+    }
+  ]
+}

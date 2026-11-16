@@ -21,7 +21,7 @@ export interface StartingSkills {
 }
 
 /**
- * La scheda di un eroe: un archetipo pronto (public/mercenaries/<id>.json). Le regole stanno in docs/REGOLE-v2.md, sezione 3.
+ * La scheda di un eroe: un archetipo pronto (public/mercenaries/<id>/data.json, con portrait.webp e token.webp accanto). Le regole stanno in docs/REGOLE-v2.md, sezione 3.
  * Le quattro caratteristiche (forza, conoscenza, volontà, percezione) sono in pausa e non fanno parte della scheda.
  */
 export interface MercenarySheet {
@@ -78,7 +78,7 @@ export async function loadMercenarySheets(ids: readonly (string | undefined)[]):
   await Promise.all(
     unique.map(async (id) => {
       try {
-        const res = await fetch(`mercenaries/${id}.json`);
+        const res = await fetch(`mercenaries/${id}/data.json`);
         if (!res.ok) throw new Error(String(res.status));
         const sheet: MercenarySheet = await res.json();
         check(sheet);

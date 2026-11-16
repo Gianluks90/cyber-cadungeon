@@ -37,7 +37,7 @@ export const scrollIfPartial = (card: HTMLElement): boolean => {
         <figure dialogSide class="card left"><app-mercenary-face [mercenary]="h" /></figure>
         <figure dialogSide class="card right">
           <figcaption class="head">{{ 'detail.story' | t }}</figcaption>
-          <div class="story"><p>{{ h.story || ('detail.storyPlaceholder' | t) }}</p></div>
+          <div class="story" [innerHTML]="h.story || ('detail.storyPlaceholder' | t) | markdown"></div>
         </figure>
 
         <h3>{{ 'detail.params' | t }}</h3>
@@ -64,7 +64,7 @@ export const scrollIfPartial = (card: HTMLElement): boolean => {
         <!-- Dove le carte laterali non ci stanno (telefono e schermi stretti) la storia segue le abilità secondarie. -->
         <section class="story-inline">
           <h3>{{ 'detail.story' | t }}</h3>
-          <p>{{ h.story || ('detail.storyPlaceholder' | t) }}</p>
+          <div class="story-text" [innerHTML]="h.story || ('detail.storyPlaceholder' | t) | markdown"></div>
         </section>
         <!-- «Scegli» al posto di «Chiudi»: chiude la scheda e sceglie il mercenario in un solo tocco (la X resta per chiudere e basta). -->
         <ng-container dialogFooter><button type="button" class="dlg-btn primary" [class.on]="chosen()" [attr.aria-pressed]="chosen()" [attr.aria-disabled]="canChoose() ? null : 'true'" (click)="canChoose() && choose.emit(h)">{{ (chosen() ? 'detail.chosen' : 'detail.choose') | t }}</button></ng-container>
@@ -97,11 +97,14 @@ export const scrollIfPartial = (card: HTMLElement): boolean => {
     /* Già scelto: il tasto è «Scelto», acceso come le carte selezionate; un tocco toglie la scelta. */
     .dlg-btn.on { border-color: var(--c-ok); color: var(--c-ok); }
     .story-inline { display: none; flex-direction: column; gap: 8px; }
-    .story-inline p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-text-dim); }
+    /* La storia arriva dal pipe markdown con [innerHTML]: i suoi <p> non hanno l'attributo dello stile del componente, quindi servono i selettori \`::ng-deep\`. */
+    .story-text { font-size: 13px; line-height: 1.5; color: var(--c-text-dim); }
+    :host ::ng-deep :is(.story, .story-text) p { margin: 0 0 8px; font-size: 13px; line-height: 1.5; color: var(--c-text-dim); }
+    :host ::ng-deep :is(.story, .story-text) p:last-child { margin-bottom: 0; }
+    :host ::ng-deep :is(.story, .story-text) :is(strong, em) { color: var(--c-text); }
     .card .head { flex: none; padding: 10px 10px 8px 14px; border-bottom: 1px solid var(--c-line-strong); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
-    .story { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 10px 12px 14px; scrollbar-width: none; }
+    .story { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 12px 12px 16px; scrollbar-width: none; }
     .story::-webkit-scrollbar { display: none; }
-    .story p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--c-text-dim); }
     /* Sotto i 1000px le carte laterali non ci stanno: attenzione, \`.card.right\` ha \`display: flex\` e vince su \`.card\`, quindi vanno nominate tutte e due. */
     @media (max-width: 1000px) { .card, .card.left, .card.right { display: none; } .story-inline { display: flex; } }
     /* Su telefono i tre slot delle abilità secondarie stanno uno sotto l'altro. */
