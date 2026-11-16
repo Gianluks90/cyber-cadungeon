@@ -4,8 +4,8 @@ import { Archetype, AttackDice } from '../game/mercenaries/mercenary-sheet';
 import { IconComponent } from './icon.component';
 
 /** L'icona di ogni archetipo: le stesse dei rami di abilità (mischia il guantone, distanza il bersaglio, Intrusione il chip). */
-const ICON = { brawler: 'sports_mma', gunner: 'target', raider: 'memory' } as const satisfies Record<Archetype, string>;
-const NAME = { brawler: 'archetype.brawler', gunner: 'archetype.gunner', raider: 'archetype.raider' } as const satisfies Record<Archetype, string>;
+export const ARCHETYPE_ICON = { brawler: 'sports_mma', gunner: 'target', raider: 'memory' } as const satisfies Record<Archetype, string>;
+export const ARCHETYPE_NAME = { brawler: 'archetype.brawler', gunner: 'archetype.gunner', raider: 'archetype.raider' } as const satisfies Record<Archetype, string>;
 
 /** Gli archetipi di un mercenario, ricavati dai dadi competenza: un tipo di dado oltre zero è un archetipo (gli ibridi ne hanno due o tre), sempre nello stesso ordine. */
 export function archetypesFromDice(dice: AttackDice): Archetype[] {
@@ -23,7 +23,7 @@ export function archetypesFromDice(dice: AttackDice): Archetype[] {
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @for (k of kinds(); track k) {
-      <span class="m" [title]="NAME[k] | t"><app-icon [name]="ICON[k]" [size]="18" aria-hidden="true" /></span>
+      <span class="m" [title]="ARCHETYPE_NAME[k] | t"><app-icon [name]="ARCHETYPE_ICON[k]" [size]="18" aria-hidden="true" /></span>
     }
   `,
   styles: `
@@ -34,7 +34,7 @@ export function archetypesFromDice(dice: AttackDice): Archetype[] {
 })
 export class ArchetypeMarkComponent {
   readonly dice = input.required<AttackDice>();
-  protected readonly ICON = ICON;
-  protected readonly NAME = NAME;
+  protected readonly ARCHETYPE_ICON = ARCHETYPE_ICON;
+  protected readonly ARCHETYPE_NAME = ARCHETYPE_NAME;
   protected readonly kinds = computed(() => archetypesFromDice(this.dice()));
 }

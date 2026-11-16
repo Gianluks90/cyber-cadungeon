@@ -410,9 +410,9 @@ export class GameSceneComponent implements OnDestroy {
   /** Il menu dell'app (dal logo). Le prime due voci sono segnaposto. */
   protected readonly menuItems: MenuItem[] = [
     { id: 'quit', label: tr('Concludi partita') },
-    { id: 'components', label: tr('Componenti') },
+    { id: 'components', label: tr('Catalogo') },
   ];
-  /** Il catalogo dei componenti di gioco: aperto dal menu, costruito dai cataloghi caricati. */
+  /** Il Catalogo di gioco: aperto dal menu, costruito dai cataloghi caricati. */
   protected readonly componentsOpen = signal(false);
   /** La domanda "Concludere la partita?" è aperta. */
   protected readonly confirmQuit = signal(false);

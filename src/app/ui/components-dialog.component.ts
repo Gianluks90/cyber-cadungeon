@@ -1,4 +1,5 @@
 import { TrPipe } from '../i18n/tr.pipe';
+import { TranslatePipe } from '../i18n/translate.pipe';
 import { ChangeDetectionStrategy, Component, computed, input, output, signal } from '@angular/core';
 import { FamiliarDef } from '../game/familiars/familiar';
 import { MercenarySheet } from '../game/mercenaries/mercenary-sheet';
@@ -40,14 +41,14 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
  */
 @Component({
   selector: 'app-components-dialog',
-  imports: [TrPipe, ModCardComponent, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
+  imports: [TrPipe, TranslatePipe, ModCardComponent, DialogComponent, FamiliarCardComponent, MercenaryCardComponent, ItemCardComponent, EnemyCardComponent, SkillCardComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @if (open()) {
-      <app-dialog [closeOnBackdrop]="false" [title]="'Componenti' | tr" width="min(1020px, 100%)" height="min(680px, calc(100dvh - 24px))" [flush]="true" (closed)="closed.emit()">
+      <app-dialog [closeOnBackdrop]="false" [title]="'nav.catalog' | t" width="min(1020px, 100%)" height="min(680px, calc(100dvh - 24px))" [flush]="true" (closed)="closed.emit()">
         <div class="layout">
           <aside class="side">
-            <input type="search" class="search" [placeholder]="'Cerca' | tr" [attr.aria-label]="'Cerca fra i componenti' | tr" [value]="query()" (input)="query.set($any($event.target).value)" />
+            <input type="search" class="search" [placeholder]="'Cerca' | tr" [attr.aria-label]="'Cerca nel catalogo' | tr" [value]="query()" (input)="query.set($any($event.target).value)" />
             <nav class="cats" [attr.aria-label]="'Categorie' | tr">
               @for (c of shown(); track c.id) {
                 @if ($first || shown()[$index - 1].group !== c.group) { <h3>{{ c.group }}</h3> }
@@ -75,7 +76,7 @@ const normalize = (s: string) => s.normalize('NFD').replace(/\p{Diacritic}/gu, '
                   <app-enemy-card [enemy]="e.def" />
                 }
               } @empty {
-                <p class="empty">{{ 'Nessun componente corrisponde alla ricerca.' | tr }}</p>
+                <p class="empty">{{ 'Nessun elemento corrisponde alla ricerca.' | tr }}</p>
               }
             </div>
         </div>

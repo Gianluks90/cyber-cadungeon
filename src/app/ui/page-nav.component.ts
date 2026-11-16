@@ -20,7 +20,7 @@ import { IconComponent } from './icon.component';
     @if (showCatalog()) {
       <button type="button" class="catalog" [attr.aria-label]="'nav.catalog' | t" [title]="'nav.catalog' | t" (click)="catalog.emit()"><app-icon name="inventory_2" [size]="20" /><span>{{ 'nav.catalog' | t }}</span></button>
     }
-    <button type="button" class="square back" [attr.aria-label]="'nav.back' | t" [title]="'nav.back' | t" (click)="back.emit()"><app-icon name="arrow_back" [size]="20" /></button>
+    <button type="button" class="square back" [class.labelled]="!!backLabel()" [attr.aria-label]="backLabel() || ('nav.back' | t)" [title]="backLabel() || ('nav.back' | t)" (click)="back.emit()"><app-icon [name]="backIcon()" [size]="20" />@if (backLabel()) { <span>{{ backLabel() }}</span> }</button>
     <app-confirm-dialog [open]="asking()" [title]="confirmTitle()" [text]="confirmText()" [confirmLabel]="confirmLabel()" (confirmed)="asking.set(false); leave.emit()" (cancel)="asking.set(false)" />
   `,
   styles: `
@@ -35,6 +35,10 @@ import { IconComponent } from './icon.component';
     .catalog:hover, .catalog:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     .square { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; width: 36px; height: 36px; padding: 0; cursor: pointer; border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); border: 1px solid var(--c-line-strong); transition: color 0.15s, border-color 0.15s; }
     @media (pointer: coarse) { .catalog { height: 44px; } .square { width: 44px; height: 44px; } .home { --logo-h: 44px; } }
+    /* Con la scritta il tasto non è più quadrato: largo quanto serve, icona e testo affiancati. */
+    .square.labelled { width: auto; gap: 8px; padding: 0 14px 0 10px; font: 600 13px/1 var(--font-ui); }
+    /* Su schermi stretti la scritta sparisce e il tasto torna quadrato (resta l'aria-label). */
+    @media (max-width: 900px) { .square.labelled { aspect-ratio: 1; padding: 0; gap: 0; } .square.labelled span { display: none; } .catalog { aspect-ratio: 1; padding: 0; gap: 0; justify-content: center; } .catalog span { display: none; } }
     .square:hover, .square:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
   `,
 })
@@ -44,6 +48,9 @@ export class PageNavComponent {
   readonly confirmLabel = input.required<string>();
   /** Mostra il tasto «Catalogo» accanto al logo. */
   readonly showCatalog = input(false);
+  /** L'icona del tasto in basso a sinistra (di solito la freccia indietro) e, se c'è, la sua scritta (già tradotta). */
+  readonly backIcon = input('arrow_back');
+  readonly backLabel = input<string | null>(null);
   readonly catalog = output<void>();
   readonly back = output<void>();
   /** Confermato: si esce dalla preparazione. */

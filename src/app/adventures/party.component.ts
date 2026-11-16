@@ -7,7 +7,7 @@ import { Loadout, PartySetup, ShopData, coinsWithSetup, drawSkillCards, rerollSk
 import { CatalogTextPipe } from '../i18n/catalog-text.pipe';
 import { translate } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
-import { ArchetypeMarkComponent } from '../ui/archetype-mark.component';
+import { ARCHETYPE_ICON, ARCHETYPE_NAME, ArchetypeMarkComponent } from '../ui/archetype-mark.component';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { MarkdownPipe } from '../ui/markdown.pipe';
 import { DotTrailComponent } from '../ui/dot-trail.component';
@@ -38,7 +38,7 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-dot-trail />
-    <app-page-nav [confirmTitle]="'party.cancelTitle' | t" [confirmText]="'party.cancelText' | t" [confirmLabel]="'party.cancelLabel' | t" [showCatalog]="true" (catalog)="catalogOpen.set(true)" (back)="back()" (leave)="home()" />
+    <app-page-nav [confirmTitle]="'party.cancelTitle' | t" [confirmText]="'party.cancelText' | t" [confirmLabel]="'party.cancelLabel' | t" [showCatalog]="true" backIcon="close" [backLabel]="'nav.exit' | t" (catalog)="catalogOpen.set(true)" (back)="back()" (leave)="home()" />
     <app-catalog-dialog [open]="catalogOpen()" (closed)="catalogOpen.set(false)" />
     <header class="head">
       <span class="kicker">{{ title }}</span>
@@ -88,10 +88,18 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     </main>
     <footer class="foot" [class.pick]="step() === 'pick'">
       @if (step() === 'pick') {
-        <button type="button" class="dlg-btn primary confirm" [class.off]="!ready()" [attr.aria-disabled]="ready() ? null : 'true'" (click)="confirm()">{{ 'party.confirm' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
-        @if (!ready()) { <p class="warn" role="status"><app-icon name="warning" [size]="18" />{{ warning() }}</p> }
+        <button type="button" class="dlg-btn primary confirm" [class.off]="!ready()" [attr.aria-disabled]="ready() ? null : 'true'" [attr.aria-label]="'party.confirm' | t" (click)="confirm()"><span class="btn-label">{{ 'party.confirm' | t }}</span><app-icon name="arrow_forward" [size]="20" /></button>
+        <!-- La squadra a colpo d'occhio: gialla finché manca un ruolo, verde quando è valida; un pallino per ruolo (pieno se coperto). La frase che spiega cosa manca resta nel tooltip e per i lettori di schermo. -->
+        <div class="status" [class.ok]="ready()" [class.bad]="full() && !ready()">
+          <p class="warn" role="status" [attr.aria-label]="ready() ? ('party.complete' | t) : warning()" [title]="ready() ? ('party.complete' | t) : warning()">
+            <app-icon [name]="ready() ? 'check' : 'warning'" [size]="18" />
+            @for (r of roles; track r) { <span class="role" [class.on]="!missingRoles().includes(r)"><span class="dot"><app-icon [name]="archetypeIcon[r]" [size]="16" aria-hidden="true" /></span><span class="lbl">{{ archetypeName[r] | t }}</span></span> }
+          </p>
+          <!-- Rimette a zero la scelta: un pallino a destra della pillola, con i suoi stessi colori (segue il suo bordo quando si allarga); spento finché non c'è almeno un mercenario scelto. -->
+          <button type="button" class="reset" [class.off]="!chosen().length" [attr.aria-disabled]="chosen().length ? null : 'true'" [attr.aria-label]="'party.reset' | t" [title]="'party.reset' | t" (click)="reset()"><app-icon name="undo" [size]="18" /></button>
+        </div>
       } @else {
-        <button type="button" class="dlg-btn primary confirm" [class.off]="!allReady()" [attr.aria-disabled]="allReady() ? null : 'true'" (click)="start()">{{ 'party.begin' | t }}<app-icon name="arrow_forward" [size]="20" /></button>
+        <button type="button" class="dlg-btn primary confirm" [class.off]="!allReady()" [attr.aria-disabled]="allReady() ? null : 'true'" [attr.aria-label]="'party.begin' | t" (click)="start()"><span class="btn-label">{{ 'party.begin' | t }}</span><app-icon name="arrow_forward" [size]="20" /></button>
       }
     </footer>
     <app-mercenary-detail-dialog [mercenary]="detail()" [chosen]="!!detail() && order(detail()!.id) > 0" [canChoose]="!detail() || !full() || order(detail()!.id) > 0" (choose)="chooseFromDetail($event)" (closed)="detail.set(null)" />
@@ -121,12 +129,40 @@ const MISSING_ROLE = { brawler: 'party.missingBrawler', gunner: 'party.missingGu
     @media (min-width: 901px) { .squad { height: 100%; grid-template-rows: minmax(0, 1fr); margin-block: 0; padding-top: 12px; } }
     @media (max-width: 900px) { .squad { grid-template-columns: minmax(0, 1fr); max-width: 520px; padding-inline: 16px; } }
     /* Fuori dal flusso: quando sparisce l'altezza del piè di pagina non cambia e le card non scattano. */
-    .warn { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: max-content; display: inline-flex; align-items: center; gap: 6px; margin: 0; max-width: calc(100% - 340px); color: var(--c-warn); font-size: 13px; text-align: center; }
+    /* La pillola della squadra: gialla finché manca un ruolo, verde quando c'è tutto. Il colore (currentColor) dà bordo, fondo e pallini. */
+    /* Il gruppo in basso al centro: la pillola, centrata (si allarga da tutti e due i lati all'hover) e, fuori dal flusso, il reset che le sta a destra e ne segue il bordo. */
+    .status { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 8px; color: var(--c-warn); transition: color 0.2s; }
+    .status.ok { color: var(--c-ok); }
+    /* Tre mercenari scelti ma i ruoli non tornano: rossa, perché serve cambiare qualcuno (non basta aggiungere). */
+    .status.bad { color: var(--c-error); }
+    .warn { width: max-content; display: flex; align-items: center; gap: 8px; margin: 0; padding: 6px 12px 6px 10px; border-radius: 0 18px 0 18px; border: 1px solid color-mix(in srgb, currentColor 55%, transparent); background: color-mix(in srgb, currentColor 10%, var(--c-bg)); }
+    /* Il reset: un pallino con i colori della pillola (a destra di lei, fuori dal flusso, così la pillola resta centrata; quando lei si allarga si sposta con il suo bordo). */
+    .reset { position: absolute; left: calc(100% + 8px); top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; padding: 0; cursor: pointer; border-radius: 50%; border: 1px solid color-mix(in srgb, currentColor 55%, transparent); background: color-mix(in srgb, currentColor 10%, var(--c-bg)); color: inherit; transition: background-color 0.15s, opacity 0.2s; }
+    .reset:hover:not(.off), .reset:focus-visible:not(.off) { background: color-mix(in srgb, currentColor 22%, var(--c-bg)); outline: none; }
+    .reset.off { opacity: 0.4; cursor: default; pointer-events: none; }
+    /* Un pallino per archetipo con la sua icona: spento (tenue, tratteggiato) finché il ruolo manca, acceso quando è coperto. */
+    .role { display: inline-flex; align-items: center; opacity: 0.5; transition: opacity 0.2s; }
+    .role.on { opacity: 1; }
+    .dot { display: inline-flex; align-items: center; justify-content: center; flex: none; width: 26px; height: 26px; box-sizing: border-box; border-radius: 50%; border: 1px dashed currentColor; }
+    .role.on .dot { border-style: solid; background: color-mix(in srgb, currentColor 18%, transparent); }
+    /* All'hover la pillola si allarga: i nomi degli archetipi scorrono fuori accanto alle icone (la pillola è centrata, quindi cresce da tutti e due i lati). */
+    .lbl { max-width: 0; margin-left: 0; overflow: hidden; white-space: nowrap; opacity: 0; font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; transition: max-width 0.3s ease, margin 0.3s ease, opacity 0.25s ease; }
+    @media (min-width: 901px) { .warn:hover .lbl { max-width: 110px; margin-left: 6px; margin-right: 4px; opacity: 1; } }
+    @media (prefers-reduced-motion: reduce) { .lbl { transition: none; } }
     /* «Conferma» in basso a destra, alto quanto la freccia indietro in basso a sinistra (36px, 44px sul tocco), con la freccia a destra della scritta. */
     .confirm { position: fixed; z-index: 3; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); box-sizing: border-box; height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px 0 16px; }
     @media (pointer: coarse) { .confirm { height: 44px; } }
     /* Su telefono i due tasti occupano gli angoli in basso: l'avviso sale sopra, a tutta larghezza. Nel Briefing, dove l'avviso non c'è, il piede è alto solo quanto i tasti e il resto va al contenuto. */
-    @media (max-width: 900px) { .foot { min-height: 0; padding: 0 16px calc(60px + env(safe-area-inset-bottom)); } .foot.pick { min-height: calc(144px + env(safe-area-inset-bottom)); padding-bottom: calc(66px + env(safe-area-inset-bottom)); } .warn { bottom: calc(66px + env(safe-area-inset-bottom)); max-width: calc(100% - 32px); flex-direction: column; gap: 2px; } }
+    /* Su telefono i due tasti diventano solo icona (X ed «avanti») e la pillola sta in mezzo a loro, sulla stessa riga: senza hover non ci sono nomi e solo il reset risponde al tocco. */
+    @media (max-width: 900px) {
+      .foot { min-height: 0; padding: 0 16px calc(60px + env(safe-area-inset-bottom)); }
+      .btn-label { display: none; }
+      .confirm { aspect-ratio: 1; padding: 0; gap: 0; justify-content: center; }
+      .status { bottom: calc(14px + env(safe-area-inset-bottom)); }
+      .warn { pointer-events: none; }
+      /* Il reset sta in fila accanto alla pillola (il gruppo è centrato tra i due tasti ai lati): senza hover la pillola non si allarga. */
+      .reset { position: static; transform: none; }
+    }
     /* In fondo 34px: la linea del numero di scelta sporge sotto le card e, con l'inclinazione, scende ancora di più verso destra. */
     .row { display: flex; gap: 24px; width: 100%; box-sizing: border-box; padding: 18px 28px 34px 56px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-inline: 56px 28px; overscroll-behavior-x: contain; }
     /* Con poche carte stanno al centro, con tante partono da sinistra: i margini automatici si azzerano quando non c'è spazio (con il centramento diretto la parte a sinistra restava tagliata e irraggiungibile). */
@@ -173,6 +209,9 @@ export class PartyComponent {
   private readonly map = inject(ActivatedRoute).snapshot.paramMap.get('map') ?? '';
   protected readonly title = ADVENTURES.find((a) => a.map === this.map)?.title ?? this.map;
   protected readonly size = PARTY_SIZE;
+  protected readonly roles = ROLES;
+  protected readonly archetypeName = ARCHETYPE_NAME;
+  protected readonly archetypeIcon = ARCHETYPE_ICON;
   private readonly rawMercenaries = signal<MercenarySheet[]>([]);
   /** La variante di preparazione dell'avventura (monete in più, tesori in negozio): letta dal file della mappa. */
   private readonly adventureSetup = signal<AdventureSetup>({});
@@ -228,6 +267,14 @@ export class PartyComponent {
   /** Un tocco sulla card: se è seminascosta fa solo scorrere l'elenco fin lì, altrimenti la sceglie. */
   protected tap(e: Event, id: string) {
     if (!scrollIfPartial(e.currentTarget as HTMLElement)) this.toggle(id);
+  }
+
+  /** Toglie tutti i mercenari scelti (e ciò che avevano comprato). */
+  protected reset() {
+    if (!this.chosen().length) return;
+    this.chosen.set([]);
+    this.loadouts.set({});
+    this.skillCards.set({});
   }
 
   protected toggle(id: string) {
