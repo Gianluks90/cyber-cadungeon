@@ -24,6 +24,7 @@
     "ranged": 0,
     "intrusion": 2
   },
+  "story": "*Ethan Kamau, detto Glitch. 23 anni, kenyano. Giovane promessa.*\n\nEthan Kamau è cresciuto in un quartiere popolare di Nairobi, una delle metropoli tecnologiche più avanzate dell'Africa, passando buona parte dell'infanzia a smontare dispositivi elettronici che, secondo i suoi genitori, funzionavano benissimo anche prima del suo intervento.\n\nGrazie a una mente brillante, una buona dose di testardaggine e una borsa di studio, si è trasferito all'estero per studiare informatica. Conclusi gli studi, ha rifiutato una prestigiosa offerta di lavoro corporativa, preferendo mettere il proprio talento al servizio di progetti decisamente meno convenzionali. E spesso meno legali.\n\nOggi si fa chiamare Glitch, un soprannome guadagnato per la sua straordinaria capacità di trovare errori nei sistemi informatici. Atletico e rapido di riflessi, porta con sé un manganello telescopico, utile soprattutto a guadagnare quei pochi secondi necessari per togliersi dai guai.\n\nGiovane, ambizioso e inguaribilmente ottimista, Ethan è convinto che la tecnologia possa ancora cambiare il mondo. Telefona spesso a casa, dove i suoi genitori sono orgogliosissimi del brillante figlio che lavora nell'informatica all'estero.\n\nNaturalmente, non hanno la minima idea di come si guadagni davvero da vivere.\n\n**«Non sto scappando. Sto cambiando strategia.»**",
   "abilityName": "Ottimizzazione",
   "ability": "La prima volta in ogni turno che usi un programma del tuo cyberdeck, costa {overclock:1} in meno.",
   "effects": [

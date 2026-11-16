@@ -28,6 +28,7 @@
     "ranged": 0,
     "intrusion": 1
   },
+  "story": "*Hiroshi Kanzaki, detto Kage. 41 anni, giapponese. Ex dirigente corporativo.*\n\nHiroshi Kanzaki è cresciuto in una famiglia tanto ricca quanto ossessionata dalle buone maniere, dove una parola data valeva più di un contratto e arrivare in ritardo a cena era considerato un affronto personale.\n\nEducato alla disciplina, agli affari e all'arte della spada, Hiroshi ha trascorso vent'anni a costruirsi una rispettabile carriera corporativa. Poi ha deciso che ne aveva abbastanza di riunioni interminabili, sorrisi falsi e persone convinte che il denaro potesse comprare qualsiasi cosa.\n\nHa lasciato il proprio incarico, non il patrimonio né i principi con cui è cresciuto.\n\nOggi si fa chiamare Kage, *ombra*, perché nonostante la propria indipendenza sa che il nome della famiglia continuerà sempre a precederlo. Porta con sé *Kazoku* (家族, famiglia), una katana tramandata da generazioni, e si rifiuta categoricamente di utilizzare altre armi. Una scelta che considera una questione d'onore e che chiunque lavori con lui considera una gran rottura di palle.\n\n**«Il denaro si può perdere. L'onore no. E la spada non si tocca.»**",
   "abilityName": "Tradizione e ricchezza",
   "ability": "Hai {money:100|E$} aggiuntivi nel tuo budget iniziale, tuttavia l'unica arma che potrai utilizzare è l'arma unica {unique|Kazoku}.",
   "effects": [

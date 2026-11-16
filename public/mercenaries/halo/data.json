@@ -24,6 +24,7 @@
     "ranged": 0,
     "intrusion": 3
   },
+  "story": "*Yelena Kovalenko, detta Halo. 27 anni, ucraina. Hacker clandestina.*\n\nYelena Kovalenko è cresciuta in un prestigioso collegio dell'Europa orientale, dove ai bambini più promettenti veniva insegnato a violare sistemi informatici prima ancora di capire come funzionasse il mondo fuori dalle mura dell'istituto.\n\nBrillante, indisciplinata e decisamente poco incline a prendere ordini, Yelena è diventata una delle migliori hacker del programma. Poi, un giorno, è sparita senza lasciare traccia.\n\nOggi si fa chiamare Halo, lavora come mercenaria e cambia identità digitale con la stessa facilità con cui cambia colore ai capelli. Nella Rete, la sua presenza è riconoscibile da un caratteristico alone luminoso, una firma che sembra divertirsi a lasciare dietro di sé.\n\nDiverse corporazioni la cercano. Lei sostiene che sia tutta una questione di gelosia professionale.\n\n**Di quello che è successo al collegio non parla. Mai.**",
   "abilityName": "Ping",
   "ability": "Una volta per turno, {marked|segnali} un nemico visibile fino all'inizio del tuo prossimo turno. Gli altri mercenari fanno **+1 danno** contro un nemico {marked|Segnalato}.",
   "effects": [

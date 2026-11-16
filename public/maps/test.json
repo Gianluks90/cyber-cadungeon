@@ -356,7 +356,7 @@
       "team": "mercenary",
       "x": 3,
       "y": 3,
-      "mercenary": "vesper"
+      "mercenary": "mitchell"
     },
     {"id": "m1", "team": "enemy", "enemy": "surveillance-drone", "x": 13, "y": 3}
   ],

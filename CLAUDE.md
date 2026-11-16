@@ -66,7 +66,7 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.md`. La rinomina nel codice e nei dati (TODO L1.9) è completata: non restano alias dei nomi vecchi.
 - **Avversario**: il ruolo opposto (era "Maligno"/"Megacorp"; nel codice `adversary`, `state.adversary`, rotta `/adversary/:map`).
 - **Allarme**: la sua risorsa (era "Odio"; nel codice `alarm`, `{alarm:N}`, `--c-alarm`).
-- **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice `mercenary`, cartelle `mercenaries/`). Li modella l'utente: `bastion`, `vesper`, `halo` sono solo di test e si ignorano.
+- **Mercenari**: i 3 personaggi della squadra (erano "Eroi"; nel codice `mercenary`, cartelle `mercenaries/`). Li modella l'utente: `bastion`, `mitchell`, `halo` sono solo di test e si ignorano.
 - **Picchiatore** (mischia), **Artigliere** (distanza), **Incursore** (Intrusione, ramo `hacking`): i tre archetipi.
 - **Intrusione**: attacco dell'Incursore (nei dati `intrusion`; il ramo abilità è `hacking`, "Hacking").
 - **Overclock**: la risorsa di fatica (era "Energia"/"Fatica"; nel codice `overclock`, `{overclock:N}`).

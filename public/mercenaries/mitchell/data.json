@@ -1,0 +1,43 @@
+{
+  "id": "mitchell",
+  "name": "Mitchell",
+  "class": "Tiratrice scelta",
+  "archetype": "gunner",
+  "portrait": "mercenaries/mitchell/token.webp",
+  "portraitFull": "mercenaries/mitchell/portrait.webp",
+  "wounds": 12,
+  "overclock": 2,
+  "armor": 1,
+  "speed": 5,
+  "value": 3,
+  "coins": 300,
+  "items": [],
+  "potions": [],
+  "startingGear": ["voss-sr90", "standard-camo", "headshot-beta"],
+  "skills": {
+    "combat": 0,
+    "cunning": 3,
+    "hacking": 0
+  },
+  "dice": {
+    "melee": 0,
+    "ranged": 3,
+    "intrusion": 0
+  },
+  "story": "*Sarah Mitchell. 35 anni, statunitense. Ex tiratrice scelta dell'esercito.*\n\nSarah Mitchell ha trascorso buona parte della sua vita nell'esercito, dove ha imparato tre cose: sparare dannatamente bene, mantenere la calma in qualsiasi situazione e sopportare superiori decisamente meno intelligenti di lei.\n\nTerminato il servizio, ha deciso di non rinnovare il contratto. Nessuna missione finita male, nessun tradimento, nessun dramma da raccontare davanti a una bottiglia. Semplicemente, qualcuno era disposto a pagarla molto di più per fare lo stesso lavoro, con meno scartoffie e senza dover chiedere il permesso per andare in bagno.\n\nMetodica, paziente e dotata di un umorismo talmente secco da passare spesso inosservato, Sarah è una professionista impeccabile. Fuori dal lavoro, invece, è pigra, disordinata e considera il cibo da asporto una delle più grandi conquiste dell'umanità.\n\nNon usa nomi di battaglia. Li trova una stronzata.\n\n**«Mitchell. Mi chiamo Mitchell.»**",
+  "abilityName": "Colpo dall'ombra",
+  "ability": "I tuoi attacchi contro un nemico che non ti vedeva all'inizio del turno ottengono **+2 danni**.",
+  "effects": [
+    {
+      "kind": "attack",
+      "on": [
+        "melee",
+        "ranged",
+        "intrusion"
+      ],
+      "damage": 2,
+      "ifUnseenByTarget": true,
+      "name": "Colpo dall'ombra"
+    }
+  ]
+}

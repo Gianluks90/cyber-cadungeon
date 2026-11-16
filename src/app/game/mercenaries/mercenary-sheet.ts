@@ -104,7 +104,7 @@ export async function loadAllMercenarySheets(): Promise<MercenarySheet[]> {
 }
 
 /** La squadra di una partita quando non ne è stata scelta una valida (avventure fatte con l'editor, `/adversary/<map>`): tre id di schede in `public/mercenaries/`, nell'ordine in cui entrano in campo. */
-export const DEFAULT_PARTY: readonly string[] = ['bastion', 'vesper', 'halo'];
+export const DEFAULT_PARTY: readonly string[] = ['bastion', 'mitchell', 'halo'];
 
 /**
  * La squadra scelta, se è valida: esattamente PARTY_SIZE mercenari, tutti diversi, con id scritti bene. Qualunque altra cosa (due, quattro, un doppione, un id strano) non è una squadra:
