@@ -148,6 +148,7 @@ import { EnemyDef, loadEnemyCatalog } from './enemies/enemy';
 import { loadAdversaryCatalog } from './adversary/card';
 import { cardCost, cardOf, cardsLeft, consumeCard, discardCard, inHand, adversaryUpkeep, miniaturesLeft, paySummon, playEvent, playPowerAt, playPowerCard, playSummonCard, spawnEnemy, summonCells, summonQueue, alarmPerTurn } from './state/adversary-deck';
 import { ruleAmount } from './state/effects';
+import { payProgram, programCost } from './state/programs';
 import { DieColor } from './items/item';
 import { FaceRoll } from './dice/faces';
 import { ArmedTrap, TrapSpot, armTrap, armTrapAt, consumeTrap, freeAdjacentCell, isBlank, trapCost, trapDamageBonus, trapLimitReached, trapSpots, sparks, woundIgnoringArmor } from './state/traps';
@@ -469,7 +470,7 @@ export class GameSceneComponent implements OnDestroy {
       auto: !!se.auto,
       weapon: { lead: attacker.team === 'enemy' ? tr('Attaccante') : tr('Arma utilizzata'), name: se.option.name, icon: se.option.icon, attackLabel: { melee: tr('in mischia'), ranged: tr('a distanza'), intrusion: tr('di Intrusione') }[se.option.attack], dice: se.option.dice },
       distance: se.plan.distance, needsRange: se.plan.needsRange, bonuses: se.plan.sources, step: se.step,
-      overclock: attacker.overclock, blackDice: se.rolls.filter((r) => r.color === 'black').length,
+      overclock: attacker.overclock, reserved: this.reservedOverclock(se.option, attacker), blackDice: se.rolls.filter((r) => r.color === 'black').length,
       sweep: se.step === 'preview' && !se.auto && attacker.team === 'mercenary' && se.option.attack === 'melee' && ruleAmount(this.state, attacker, 'sweepAttack') > 0 && (!se.plan.area.sweep || !!se.sweepPaid) // un'arma che ha già Spazzata non ne ha bisogno
         ? { cost: ruleAmount(this.state, attacker, 'sweepAttack'), on: !!se.sweepPaid, enough: !!se.sweepPaid || attacker.overclock >= ruleAmount(this.state, attacker, 'sweepAttack') }
         : null,
@@ -1348,11 +1349,15 @@ export class GameSceneComponent implements OnDestroy {
 
   /** Un dado competenza in più per 1 overclock, dopo il tiro (al massimo 5 dadi competenza in un attacco). */
   protected readonly addingDie = signal(false);
+  /** L'overclock che un programma si prenderà alla fine dell'attacco (si paga dopo il tiro): non si può spendere in dadi in più, altrimenti il programma costerebbe meno. Zero per gli altri attacchi. */
+  private reservedOverclock(option: AttackOption, attacker: Piece): number {
+    return option.program ? programCost(this.state, attacker, option.program) : 0;
+  }
   protected async addProficiencyDie() {
     const se = this.attackSession();
     const attacker = this.state.pieces.find((p) => p.id === se?.attackerId);
     if (!se || !attacker || se.step !== 'rolled' || se.auto || this.addingDie()) return;
-    if (attacker.overclock < 1 || se.rolls.filter((r) => r.color === 'black').length >= 5) return;
+    if (attacker.overclock - this.reservedOverclock(se.option, attacker) < 1 || se.rolls.filter((r) => r.color === 'black').length >= 5) return;
     this.addingDie.set(true);
     attacker.overclock -= 1; // l'overclock si spende subito: il dado non si può annullare
     this.pieces?.refreshActive();
@@ -1448,7 +1453,7 @@ export class GameSceneComponent implements OnDestroy {
    * altrimenti niente stato e chi l'ha usato viene tracciato (per ora solo a parole). Un mancato sul dado base è un fallimento; fuori portata non traccia.
    */
   private async finishProgram(attacker: Piece, target: Piece, p: ItemProgram, outcome: ReturnType<typeof resolveAttack> | null) {
-    attacker.overclock = Math.max(0, attacker.overclock - p.cost);
+    payProgram(this.state, attacker, p); // con Ottimizzazione (Glitch) il primo programma del turno costa 1 in meno
     const inRange = !outcome || outcome.inRange;
     const success = !outcome || (!outcome.miss && outcome.inRange && outcome.damage >= 1);
     if (success) {

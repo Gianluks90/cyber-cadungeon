@@ -68,62 +68,6 @@
       "consumable": true
     },
     {
-      "id": "rail-rifle",
-      "name": "Fucile a rotaia",
-      "kind": "weapon",
-      "attack": "ranged",
-      "hands": 2,
-      "deck": "silver",
-      "price": 500,
-      "dice": [
-        "blue",
-        "green",
-        "yellow"
-      ],
-      "spark": [
-        {
-          "cost": 1,
-          "effect": "+1 gittata"
-        },
-        {
-          "cost": 2,
-          "effect": "+1 danno"
-        }
-      ],
-      "rules": [
-        "Perforare 3"
-      ],
-      "icon": "target",
-      "range": 8
-    },
-    {
-      "id": "plasma-cannon",
-      "name": "Cannone al plasma",
-      "kind": "weapon",
-      "attack": "ranged",
-      "hands": 1,
-      "deck": "gold",
-      "price": 750,
-      "dice": [
-        "blue",
-        "green",
-        "green",
-        "yellow"
-      ],
-      "spark": [
-        {
-          "cost": 1,
-          "effect": "+2 danni"
-        },
-        {
-          "cost": 1,
-          "effect": "+1 gittata"
-        }
-      ],
-      "icon": "burn",
-      "range": 6
-    },
-    {
       "id": "iron-fists",
       "name": "Pugni di ferro",
       "kind": "weapon",
@@ -177,7 +121,7 @@
     {
       "id": "wire-knife",
       "name": "Coltello a filo",
-      "kind": "weapon",
+      "kind": "weapon", "tags": ["cable"],
       "attack": "melee",
       "hands": 1,
       "price": 50,
@@ -191,6 +135,26 @@
         {
           "cost": 2,
           "effect": "+1 danno"
+        }
+      ]
+    },
+    {
+      "id": "ext-baton",
+      "name": "Manganello estensibile",
+      "kind": "weapon", "tags": ["mace"],
+      "attack": "melee",
+      "hands": 1,
+      "price": 50,
+      "slots": 1,
+      "dice": [
+        "red",
+        "yellow"
+      ],
+      "icon": "swords",
+      "spark": [
+        {
+          "cost": 2,
+          "effect": "Stordimento 1"
         }
       ]
     },
@@ -238,9 +202,34 @@
       "tagSlots": 2
     },
     {
+      "id": "tanuki-5",
+      "name": "Tanuki-5",
+      "kind": "deck",
+      "attack": "intrusion",
+      "hands": 0,
+      "price": 100,
+      "slots": 2,
+      "dice": [
+        "white"
+      ],
+      "range": 3,
+      "icon": "deployed_code",
+      "modTags": [
+        "hacking"
+      ],
+      "effects": [
+        {
+          "kind": "stat",
+          "stat": "ice",
+          "amount": 1
+        }
+      ],
+      "tagSlots": 1
+    },
+    {
       "id": "voss-sr90",
       "name": "Voss SR-90",
-      "kind": "weapon",
+      "kind": "weapon", "tags": ["sniper"],
       "attack": "ranged",
       "hands": 2,
       "price": 200,
@@ -299,7 +288,7 @@
     {
       "id": "light-pistol",
       "name": "Mako-3",
-      "kind": "weapon",
+      "kind": "weapon", "tags": ["pistol"],
       "attack": "ranged",
       "hands": 1,
       "price": 150,
@@ -315,7 +304,7 @@
     {
       "id": "light-pistol-glam",
       "name": "Mako-3 Dorata",
-      "kind": "weapon",
+      "kind": "weapon", "tags": ["pistol"],
       "attack": "ranged",
       "hands": 1,
       "price": 150,
@@ -333,7 +322,7 @@
       "id": "katana",
       "slots": 2,
       "name": "Katana",
-      "kind": "weapon",
+      "kind": "weapon", "tags": ["sword"],
       "attack": "melee",
       "hands": 2,
       "price": 150,
@@ -369,7 +358,8 @@
       ],
       "icon": "swords",
       "tags": [
-        "kazoku"
+        "kazoku",
+        "sword"
       ],
       "unique": true,
       "bound": true
@@ -386,6 +376,16 @@
       "modTags": [
         "hacking"
       ]
+    },
+    {
+      "id": "college-jacket",
+      "name": "Giubbotto college",
+      "kind": "armor",
+      "hands": 0,
+      "armor": 1,
+      "price": 75,
+      "slots": 1,
+      "icon": "frame_person"
     },
     {
       "id": "protect-tate",

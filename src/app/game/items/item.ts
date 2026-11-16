@@ -273,7 +273,11 @@ export function itemNameParts(item: Pick<ItemDef, 'name' | 'glam'>): { base: str
 }
 
 export function itemDetail(item: ItemDef): string {
-  const kind = item.consumable ? tr('Consumabile') : { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: tr('Armatura') }[item.kind];
+  const base = item.consumable ? tr('Consumabile') : { weapon: tr('Arma'), shield: tr('Scudo'), deck: tr('Cyberdeck'), other: tr('Oggetto'), event: tr('Evento'), armor: tr('Armatura') }[item.kind];
+  // Il sottotipo di un'arma sta tra parentesi dopo il tipo: "Arma (Pugni)". Viene dal tag dell'oggetto; senza tag di sottotipo non si scrive niente.
+  const subtypes: Record<string, string> = { fists: tr('Pugni'), cable: tr('Cavo'), sword: tr('Spada'), mace: tr('Mazza'), pistol: tr('Pistola'), sniper: tr('Fucile di precisione') };
+  const subtype = item.kind === 'weapon' && !item.consumable ? item.tags?.map((t) => subtypes[t]).find(Boolean) : undefined;
+  const kind = subtype ? `${base} (${subtype})` : base;
   const attackName = item.attack ? { melee: tr('mischia'), ranged: tr('distanza'), intrusion: tr('intrusione') }[item.attack] : null;
   // La gittata delle armi a distanza e dei deck a intrusione sta tra parentesi accanto al tipo: "distanza (3)", "intrusione (2)".
   const attack = attackName && (item.attack === 'ranged' || item.attack === 'intrusion') && item.range ? `${attackName} (${item.range})` : attackName;

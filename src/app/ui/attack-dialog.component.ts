@@ -59,6 +59,8 @@ export interface AttackView {
   needsRange: boolean;
   /** Overclock che resta all'attaccante e dadi competenza già nel tiro (al massimo 5): serve per spenderla in un dado competenza in più. */
   overclock: number;
+  /** Quanto di quell'overclock è già prenotato dal programma in uso (si paga dopo il tiro): non si può spendere nei dadi in più. Zero se non è un programma. */
+  reserved: number;
   blackDice: number;
   /** Spazzata a pagamento (Grumshar), prima del tiro: costo in overclock, se è accesa e se l'overclock basta. Null se non c'è. */
   sweep: { cost: number; on: boolean; enough: boolean } | null;
@@ -181,10 +183,10 @@ const DIE_NAMES: Record<DieColor, string> = { get red() { return tr('dado rosso'
                 </ul>
                 @if (!v.auto && !v.outcome?.miss) {
                   <div class="overclock-row">
-                    <button type="button" class="btn" [class.off]="v.overclock < 1 || v.blackDice >= maxBlack || adding()" [attr.aria-disabled]="v.overclock < 1 || v.blackDice >= maxBlack || adding()"
-                      [title]="(v.blackDice >= maxBlack ? 'Hai già 5 dadi competenza' : v.overclock < 1 ? 'Non hai più overclock' : 'Spendi 1 overclock per tirare un dado competenza in più') | tr"
-                      (click)="v.overclock < 1 || v.blackDice >= maxBlack || adding() ? null : addDie.emit()"><app-icon name="speed" [size]="16" />{{ '1 +1 dado competenza' | tr }}</button>
-                    <small>{{ 'Overclock' | tr }} <app-icon name="speed" [size]="17" class="overclock-icon" />{{ v.overclock }} · {{ 'dadi competenza {a}/{b}' | tr: { a: v.blackDice, b: maxBlack } }}</small>
+                    <button type="button" class="btn" [class.off]="v.overclock - v.reserved < 1 || v.blackDice >= maxBlack || adding()" [attr.aria-disabled]="v.overclock - v.reserved < 1 || v.blackDice >= maxBlack || adding()"
+                      [title]="(v.blackDice >= maxBlack ? 'Hai già 5 dadi competenza' : v.overclock < 1 ? 'Non hai più overclock' : v.overclock - v.reserved < 1 ? 'Overclock riservato al programma' : 'Spendi 1 overclock per tirare un dado competenza in più') | tr"
+                      (click)="v.overclock - v.reserved < 1 || v.blackDice >= maxBlack || adding() ? null : addDie.emit()"><app-icon name="speed" [size]="16" />{{ '1 +1 dado competenza' | tr }}</button>
+                    <small>{{ 'Overclock' | tr }} <app-icon name="speed" [size]="17" class="overclock-icon" />{{ v.overclock }}@if (v.reserved > 0) { ({{ '{n} per il programma' | tr: { n: v.reserved } }}) } · {{ 'dadi competenza {a}/{b}' | tr: { a: v.blackDice, b: maxBlack } }}</small>
                   </div>
                 }
                 @if (v.sorcery.level > 0 && !v.outcome?.miss) {

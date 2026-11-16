@@ -53,7 +53,7 @@ export function effectsOf(state: GameState, piece: Piece): SourcedEffect[] {
     for (const effect of card?.effects ?? []) out.push({ source: card!.name, effect });
   }
   // Le mod di un oggetto sono già dentro i suoi effetti (`moddedItem`): valgono finché è equipaggiato; i bonus d'attacco `itemBound` solo attaccando con quell'oggetto.
-  for (const d of equippedDefs(state, piece)) for (const effect of d.effects ?? []) out.push({ source: String(effect['itemBound'] ? effect['name'] ?? d.name : d.name), effect, ...(effect['itemBound'] ? { item: d.id } : {}) });
+  for (const d of equippedDefs(state, piece)) for (const effect of d.effects ?? []) out.push({ source: String(effect['itemBound'] ? effect['name'] ?? d.name : d.name), effect, ...(effect['itemBound'] && d.attack ? { item: d.id } : {}) }); // i bonus d'attacco di una mod valgono solo con l'oggetto che attacca: quelli montati su un oggetto che non attacca (la Seta) valgono con ogni attacco del tipo giusto
   for (const effect of piece.mercenaryEffects ?? []) out.push({ source: String(effect['name'] ?? (piece.abilityName || piece.name)), effect });
   return out;
 }

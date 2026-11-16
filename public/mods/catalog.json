@@ -47,7 +47,7 @@
     {
       "id": "firewall",
       "name": "Firewall",
-      "slot": "deck",
+      "slot": "deck", "tags": ["hacking"],
       "cost": 50,
       "stock": 2,
       "effect": ["{ice:+1|ICE}"],
@@ -77,7 +77,7 @@
       "id": "fragmentation",
       "name": "Frammentazione",
       "slot": "weapon",
-      "attack": ["melee", "ranged"],
+      "attack": ["ranged"],
       "tier": "copper",
       "cost": 250,
       "effect": ["{spark:2} Esplosione 1"],
@@ -184,7 +184,7 @@
     {
       "id": "diamond",
       "name": "Modulo Diamond",
-      "slot": "deck",
+      "slot": "deck", "tags": ["hacking"],
       "attack": ["intrusion"],
       "tier": "gold",
       "cost": 750,
@@ -194,7 +194,7 @@
     {
       "id": "signal-repeater",
       "name": "Ripetitore di segnale",
-      "slot": "deck",
+      "slot": "deck", "tags": ["hacking"],
       "attack": ["intrusion"],
       "cost": 50,
       "stock": 2,
@@ -204,7 +204,7 @@
     {
       "id": "directional-antenna",
       "name": "Antenna direzionale",
-      "slot": "deck",
+      "slot": "deck", "tags": ["hacking"],
       "attack": ["intrusion"],
       "cost": 50,
       "stock": 2,
@@ -214,7 +214,7 @@
     {
       "id": "exploit",
       "name": "Exploit",
-      "slot": "deck",
+      "slot": "deck", "tags": ["hacking"],
       "attack": ["intrusion"],
       "cost": 25,
       "stock": 2,

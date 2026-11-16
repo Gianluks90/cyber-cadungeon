@@ -13,7 +13,7 @@
   "coins": 300,
   "items": [],
   "potions": [],
-  "startingGear": [],
+  "startingGear": ["ext-baton", "college-jacket", "tanuki-5"],
   "skills": {
     "combat": 1,
     "cunning": 0,
@@ -21,8 +21,16 @@
   },
   "dice": {
     "melee": 1,
-    "ranged": 1,
-    "intrusion": 1
+    "ranged": 0,
+    "intrusion": 2
   },
-  "ability": ""
+  "abilityName": "Ottimizzazione",
+  "ability": "La prima volta in ogni turno che usi un programma del tuo cyberdeck, costa {overclock:1} in meno.",
+  "effects": [
+    {
+      "kind": "rule",
+      "rule": "optimization",
+      "name": "Ottimizzazione"
+    }
+  ]
 }

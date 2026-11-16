@@ -212,17 +212,18 @@ export function modSlotOf(item: Pick<ItemDef, 'kind'>): ModSlot | null {
 }
 
 /**
- * La mod `mod` si può montare su `item`? Serve che il tipo corrisponda (arma, armatura, deck), che il tipo di attacco sia ammesso se la mod lo elenca (`attack`),
- * che l'oggetto ci sia se la mod ha un elenco di id e che la categoria sia ammessa se l'oggetto ne chiede una (`modTags`). Una mod senza l'etichetta si monta solo in uno slot comune:
+ * La mod `mod` si può montare su `item`? Se l'oggetto ha uno slot riservato (`modTags`, per esempio hacking) ogni mod con quell'etichetta ci sta, anche se è nata per un altro tipo di oggetto
+ * (Combustione, fatta per il deck, si monta anche sulla Seta). Altrimenti serve che il tipo corrisponda (arma, armatura, deck), che il tipo di attacco sia ammesso se la mod lo elenca (`attack`)
+ * e che l'oggetto ci sia se la mod ha un elenco di id. Una mod senza l'etichetta si monta solo in uno slot comune:
  * `installed` sono le altre mod già montate, per sapere se ce n'è ancora uno libero (gli slot riservati si riempiono con le mod che hanno l'etichetta).
  */
 export function modFits(mod: ModDef, item: ModItem, installed: readonly Pick<ModDef, 'tags'>[] = []): boolean {
+  if (mod.compatible && !mod.compatible.includes(item.id)) return false;
+  const tagged = (m: Pick<ModDef, 'tags'>) => !!item.modTags?.some((t) => m.tags?.includes(t));
+  if (tagged(mod)) return true;
   if (mod.slot !== modSlotOf(item)) return false;
   if (mod.attack && !(item.attack && mod.attack.includes(item.attack))) return false;
-  if (mod.compatible && !mod.compatible.includes(item.id)) return false;
   if (!item.modTags) return true;
-  const tagged = (m: Pick<ModDef, 'tags'>) => item.modTags!.some((t) => m.tags?.includes(t));
-  if (tagged(mod)) return true;
   const common = (item.slots ?? 0) - reservedSlots(item);
   return installed.filter((m) => !tagged(m)).length < common;
 }

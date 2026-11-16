@@ -10,6 +10,7 @@ import { Piece, footprint } from '../pieces/piece';
 import { armorOf, canActOnMap, killMercenary, loseOrdersOnWounds } from './actions';
 import { usedItem } from './behaviors';
 import { attackBonus, effectsOf, hasRule, hasRuleFor, onHitStatuses, ruleAmount, ruleAmountFor } from './effects';
+import { programCost } from './programs';
 import { onKillBonuses } from './skills';
 import { RemovalResult, removeEnemy } from './loot';
 import { immuneTo, inflictStatus, keywordLevel } from './status';
@@ -336,10 +337,12 @@ export function attackOptions(state: GameState, board: Board, attacker: Piece, t
     });
   }
   // I programmi del cyberdeck: un'opzione per ognuno, sullo stesso bersaglio dell'intrusione. Non consumano l'attacco del turno (si possono ripetere finché c'è overclock) ma serve la linea di vista.
+  // I programmi montati su un oggetto che non attacca (uno slot hacking sulla Seta) si usano con il cyberdeck: passano al primo deck equipaggiato.
+  const borrowed = attacker.equipped.flatMap((id) => { const d = state.items.get(id); return d && !d.attack ? d.programs ?? [] : []; });
   for (const w of equippedWeapons(state, attacker)) {
     if (w.attack !== 'intrusion') continue;
-    for (const p of w.programs ?? []) {
-      const reason = !seesAtRangeOf('intrusion') ? tr('Non hai linea di vista') : attacker.overclock < p.cost ? tr('Non hai abbastanza overclock') : undefined;
+    for (const p of [...(w.programs ?? []), ...borrowed.splice(0)]) {
+      const reason = !seesAtRangeOf('intrusion') ? tr('Non hai linea di vista') : attacker.overclock < programCost(state, attacker, p) ? tr('Non hai abbastanza overclock') : undefined;
       out.push({ id: `program:${w.id}:${p.id}`, itemId: w.id, name: p.name, icon: w.icon ?? 'memory', attack: 'intrusion', dice: [...(w.dice ?? []), ...extra('intrusion')], enabled: !reason, reason, program: p, ...through });
     }
   }

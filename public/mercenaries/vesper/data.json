@@ -15,13 +15,13 @@
   "potions": [],
   "startingGear": ["voss-sr90", "standard-camo", "headshot-beta"],
   "skills": {
-    "combat": 1,
-    "cunning": 2,
+    "combat": 0,
+    "cunning": 3,
     "hacking": 0
   },
   "dice": {
-    "melee": 1,
-    "ranged": 2,
+    "melee": 0,
+    "ranged": 3,
     "intrusion": 0
   },
   "abilityName": "Colpo dall'ombra",
