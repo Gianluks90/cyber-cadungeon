@@ -27,7 +27,11 @@ import { AuthService } from './auth.service';
     </app-dialog>
   `,
   styles: `
-    :host { display: block; height: 100%; background: var(--c-bg); }
+    :host {
+      display: block;
+      height: 100%;
+      background: var(--c-bg) url('/images/login-backgroun.png') center / cover no-repeat;
+    }
     form { display: flex; flex-direction: column; gap: 12px; }
     .dlg-btn { display: inline-flex; align-items: center; gap: 6px; }
   `,
