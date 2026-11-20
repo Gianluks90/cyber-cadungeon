@@ -5,8 +5,8 @@ import { DialogComponent } from './dialog.component';
 import { FieldComponent } from './field.component';
 
 /**
- * «Profilo» (home, tasto Account del menu): il giocatore sceglie il suo nickname e, se non usa Google, l'indirizzo della sua immagine.
- * Un campo lasciato vuoto toglie la scelta: il nickname torna a essere il nome dell'account fino al primo spazio, l'immagine sparisce.
+ * «Profilo» (home, tasto Account del menu): il giocatore sceglie il suo nickname e l'indirizzo della sua immagine.
+ * Un campo lasciato vuoto toglie la scelta: il nickname torna a essere il nome dell'account fino al primo spazio, l'immagine torna quella di Google (se c'è) o sparisce.
  * Non sa dove si salva: riceve i valori di adesso e dice cosa è stato scelto.
  */
 @Component({
@@ -21,14 +21,10 @@ import { FieldComponent } from './field.component';
             <input type="text" name="nickname" [attr.maxlength]="nicknameMax" [placeholder]="defaultNickname()" autocomplete="nickname" spellcheck="false" [value]="nickname()" (input)="nickname.set($any($event.target).value)" />
           </app-field>
           <small class="dlg-hint">{{ 'profile.nicknameHint' | t }}</small>
-          @if (googlePhoto()) {
-            <small class="dlg-hint">{{ 'profile.photoGoogle' | t }}</small>
-          } @else {
-            <app-field [label]="'profile.photo' | t" [error]="photoBad() ? ('profile.error.photo' | t) : ''">
-              <input type="url" name="photo" [attr.maxlength]="photoMax" placeholder="https://" autocapitalize="none" spellcheck="false" [class.bad]="photoBad()" [value]="photo()" (input)="photo.set($any($event.target).value)" />
-            </app-field>
-            <small class="dlg-hint">{{ 'profile.photoHint' | t }}</small>
-          }
+          <app-field [label]="'profile.photo' | t" [error]="photoBad() ? ('profile.error.photo' | t) : ''">
+            <input type="url" name="photo" [attr.maxlength]="photoMax" placeholder="https://" autocapitalize="none" spellcheck="false" [class.bad]="photoBad()" [value]="photo()" (input)="photo.set($any($event.target).value)" />
+          </app-field>
+          <small class="dlg-hint">{{ (googlePhoto() ? 'profile.photoHintGoogle' : 'profile.photoHint') | t }}</small>
         </form>
         <button dialogFooter type="submit" form="profile-form" class="dlg-btn primary">{{ 'common.confirm' | t }}</button>
       </app-dialog>
@@ -49,7 +45,7 @@ export class ProfileDialogComponent {
   readonly savedPhotoURL = input<string | null>(null);
   /** Il nickname che si userebbe senza scelta, scritto in grigio nel campo. */
   readonly defaultNickname = input('');
-  /** Chi entra con Google ha già la sua foto: il campo non serve. */
+  /** Chi entra con Google ha già la sua foto: se non sceglie un'immagine, resta quella (cambia solo il suggerimento sotto il campo). */
   readonly googlePhoto = input(false);
   readonly confirmed = output<ProfileChange>();
   readonly cancel = output<void>();
@@ -72,10 +68,10 @@ export class ProfileDialogComponent {
   protected submit(event: Event): void {
     event.preventDefault();
     const photo = this.photo().trim();
-    if (!this.googlePhoto() && photo && !photo.startsWith('https://')) {
+    if (photo && !photo.startsWith('https://')) {
       this.photoBad.set(true);
       return;
     }
-    this.confirmed.emit(this.googlePhoto() ? { nickname: this.nickname() } : { nickname: this.nickname(), photoURL: photo });
+    this.confirmed.emit({ nickname: this.nickname(), photoURL: photo });
   }
 }

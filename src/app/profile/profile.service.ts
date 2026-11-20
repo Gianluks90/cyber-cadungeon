@@ -95,8 +95,8 @@ export class ProfileService {
   readonly isAdmin = computed(() => this.role() === 'admin');
   /** Come chiamare il giocatore: il soprannome scelto, altrimenti il nome dell'account fino al primo spazio (o la parte dell'email prima della chiocciola). */
   readonly nickname = computed(() => this.loaded().nickname ?? defaultNickname(this.auth.user()?.name ?? ''));
-  /** L'immagine del giocatore: la foto di Google se c'è, altrimenti quella scelta nel profilo, altrimenti niente. */
-  readonly photoURL = computed(() => this.auth.user()?.photoURL ?? this.loaded().photoURL);
+  /** L'immagine del giocatore: quella scelta nel profilo, altrimenti la foto di Google se c'è, altrimenti niente. */
+  readonly photoURL = computed(() => this.loaded().photoURL ?? this.auth.user()?.photoURL ?? null);
 
   constructor() {
     // A ogni cambio di utente si rilegge il profilo; chi esce torna al profilo vuoto.

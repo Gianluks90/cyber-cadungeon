@@ -47,8 +47,8 @@ export interface DropdownItem {
     @media (pointer: fine) { kbd { display: block; } }
     .trigger { position: relative; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .trigger:hover, .trigger:focus-visible, .trigger.on { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
-    /* Il pannello (.sheet, non .panel: quella è una classe globale con il suo padding) è lo stesso dei filtri (stessi spazi, stessa intestazione, stesse righe, stesso scorrimento) ma dal lato destro, sotto il tasto. */
-    .sheet { --w: min(320px, 82vw); position: absolute; top: 46px; right: 0; width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(var(--w) + 20px)); transition: transform var(--t-base) var(--ease-draw); }
+    /* Il pannello (.sheet, non .panel: quella è una classe globale con il suo padding) è lo stesso dei filtri (stessi spazi, stessa intestazione, stesse righe, stesso scorrimento) ma dal lato destro, sotto il tasto, largo quanto gli altri pannelli laterali e i riquadri in basso a destra (--side-panel-w). */
+    .sheet { --w: min(var(--side-panel-w), 82vw); position: absolute; top: 46px; right: 0; width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(var(--w) + 20px)); transition: transform var(--t-base) var(--ease-draw); }
     .sheet.open { transform: none; }
     .sheet:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }

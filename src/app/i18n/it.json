@@ -88,7 +88,7 @@
   "profile.nicknameHint": "Se lo lasci vuoto usiamo il tuo nome, fino al primo spazio.",
   "profile.photo": "Immagine",
   "profile.photoHint": "L'indirizzo (https) di un'immagine. Lasciandolo vuoto non compare nessuna immagine.",
-  "profile.photoGoogle": "Usi la foto del tuo account Google.",
+  "profile.photoHintGoogle": "L'indirizzo (https) di un'immagine. Lasciandolo vuoto usiamo la foto del tuo account Google.",
   "profile.error.photo": "L'indirizzo deve iniziare con https://",
   "worldMap.night": "Notte",
   "worldMap.filter.title": "Filtri",

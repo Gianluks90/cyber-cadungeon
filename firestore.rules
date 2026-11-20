@@ -16,7 +16,7 @@ service cloud.firestore {
     //       Clients only read it, to enable admin/development features.
     //   - nickname: string, 1-24 characters. Chosen by the user; optional.
     //   - photoURL: string, https URL up to 500 characters. Chosen by the
-    //       user; optional (Google users show their Google photo instead).
+    //       user; optional (without it Google users show their Google photo).
     //   - locationConsent: map { at: timestamp, version: int }
     //       Proof that the user accepted the location notice. `at` is the
     //       server time of the write; `version` is the notice version (>= 1).

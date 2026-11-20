@@ -88,7 +88,7 @@
   "profile.nicknameHint": "If you leave it empty we use your name, up to the first space.",
   "profile.photo": "Image",
   "profile.photoHint": "The address (https) of an image. If you leave it empty, no image is shown.",
-  "profile.photoGoogle": "You are using your Google account photo.",
+  "profile.photoHintGoogle": "The address (https) of an image. If you leave it empty we use your Google account photo.",
   "profile.error.photo": "The address must start with https://",
   "worldMap.night": "Night",
   "worldMap.filter.title": "Filters",
