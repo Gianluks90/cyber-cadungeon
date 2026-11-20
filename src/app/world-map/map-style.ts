@@ -1,4 +1,5 @@
-import type { Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
+import type { FilterSpecification, Map as MapLibreMap, StyleSpecification } from 'maplibre-gl';
+import { BLOCKED_LANDUSE, PUBLIC_POI_KINDS } from './hangout-geo';
 import { layers } from '@protomaps/basemaps';
 import { BASEMAP_SOURCE_ID, DEM_SOURCE_ID, DEM_TILES_URL, GLYPHS_URL, LABEL_LANGUAGE, PMTILES_URL, SPRITE_BASE_URL, TERRAIN_EXAGGERATION } from './map-config';
 import type { MapTheme } from './map-theme';
@@ -52,6 +53,13 @@ export function buildMapStyle(theme: MapTheme): StyleSpecification {
   const atNow = at === -1 ? -1 : withShade.findIndex((l) => l.id === 'buildings');
   const allLayers = atNow === -1 ? [...withShade, outline, extrusion] : [...withShade.slice(0, atNow + 1), outline, extrusion, ...withShade.slice(atNow + 1)];
 
+  // Due livelli invisibili, sempre accesi: il ritrovo legge dai tasselli i luoghi pubblici (`pois`) e le aree vietate (`landuse`), ma MapLibre non dà i dati di un livello a nessuno se
+  // non c'è almeno un livello visibile che lo usa, e i filtri della mappa spengono quelli veri. Raggio zero e opacità zero: non si vedono, tengono solo vivi i dati.
+  const probes = [
+    { id: 'hangout-probe-pois', type: 'circle' as const, source: BASEMAP_SOURCE_ID, 'source-layer': 'pois', filter: ['in', ['get', 'kind'], ['literal', PUBLIC_POI_KINDS]] as unknown as FilterSpecification, paint: { 'circle-radius': 0, 'circle-opacity': 0 } },
+    { id: 'hangout-probe-landuse', type: 'fill' as const, source: BASEMAP_SOURCE_ID, 'source-layer': 'landuse', filter: ['in', ['get', 'kind'], ['literal', BLOCKED_LANDUSE]] as unknown as FilterSpecification, paint: { 'fill-opacity': 0 } },
+  ];
+
   return {
     version: 8,
     glyphs: GLYPHS_URL,
@@ -61,7 +69,7 @@ export function buildMapStyle(theme: MapTheme): StyleSpecification {
       // I crediti di queste sorgenti non stanno qui ma nella dialog del tasto info (vedi `map-config.ts`).
       [DEM_SOURCE_ID]: { type: 'raster-dem', tiles: [DEM_TILES_URL], encoding: 'terrarium', tileSize: 256, maxzoom: 15 },
     },
-    layers: allLayers,
+    layers: [...allLayers, ...probes],
   };
 }
 

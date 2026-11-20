@@ -2,7 +2,7 @@ import { Marker, type FilterSpecification, type GeoJSONSource, type Map as MapLi
 import type { HangoutPlace } from '../game/hangout/hangout-store';
 import { translate } from '../i18n/i18n.service';
 import { BASEMAP_SOURCE_ID } from './map-config';
-import { EXPAND_REACH_M, INFLUENCE_MAX_M, INFLUENCE_POINTS, INFLUENCE_START_M, INFLUENCE_STEP_M, PUBLIC_POI_KINDS, blockedLandFrom, ZONE_BUILDING_M, ZONE_PLACE_M, blockedBuildingsWithin, buildingsWithin, centerOf, footprintsFrom, unionOfCircles, type Circle, type Ring } from './hangout-geo';
+import { EXPAND_REACH_M, INFLUENCE_MAX_M, INFLUENCE_POINTS, INFLUENCE_START_M, INFLUENCE_STEP_M, PUBLIC_POI_KINDS, blockedLandFrom, ZONE_BUILDING_M, ZONE_PLACE_M, blockedBuildingsWithin, buildingsWithin, centerOf, footprintAreaM2, footprintsFrom, unionOfCircles, type Circle, type Ring } from './hangout-geo';
 
 const AREA_FILL = 'hangout-area-fill';
 const AREA_LINE = 'hangout-area-line';
@@ -13,6 +13,20 @@ const ZONE_FILL = 'hangout-zone-fill';
 const ZONE_LINE = 'hangout-zone-line';
 const BLOCKED_FILL = 'hangout-blocked-fill';
 const BLOCKED_LINE = 'hangout-blocked-line';
+/** Il tratteggio dell'area di influenza (tratto e spazio, in larghezze di linea) e come scorre: un giro completo ogni ZONE_PERIOD_MS, in ZONE_FRAMES passi. */
+const ZONE_DASH = 5;
+const ZONE_GAP = 5;
+const ZONE_FRAMES = 60;
+const ZONE_PERIOD_MS = 3000;
+/**
+ * Un tratteggio che scorre non si può animare con un "offset": si cambia, passo dopo passo, il disegno del tratteggio spostato in avanti di `s`. Ogni passo è un tratteggio a quattro
+ * valori che si ripete: da dentro un tratto (`s` < tratto) [tratto che resta, spazio, tratto già fatto, 0], da dentro uno spazio [0, spazio che resta, tratto, spazio già fatto].
+ */
+const ZONE_DASH_FRAMES: number[][] = Array.from({ length: ZONE_FRAMES }, (_, k) => {
+  const s = (k / ZONE_FRAMES) * (ZONE_DASH + ZONE_GAP);
+  return s < ZONE_DASH ? [ZONE_DASH - s, ZONE_GAP, s, 0] : [0, ZONE_GAP - (s - ZONE_DASH), ZONE_DASH, s - ZONE_DASH];
+});
+
 /** L'immagine delle righe a 45 gradi (id nelle immagini della mappa). */
 const HATCH = 'hangout-hatch';
 /** Il livello dei tasselli che contiene gli edifici. */
@@ -69,6 +83,9 @@ export class HangoutLayer {
   private selectedKey: string | null = null;
   private blocked: readonly BlockedBuilding[] = [];
   private zone: readonly Circle[] = [];
+  /** L'animazione del tratteggio dell'area: il fotogramma della pagina in corso e l'ultimo passo disegnato (-1: ancora nessuno). */
+  private zoneAnim = 0;
+  private zoneStep = -1;
   private blockedMarkers: Marker[] = [];
 
   constructor(private readonly map: MapLibreMap) {}
@@ -194,7 +211,8 @@ export class HangoutLayer {
       else {
         map.addSource(ZONE_SOURCE, { type: 'geojson', data: zoneData });
         map.addLayer({ id: ZONE_FILL, type: 'fill', source: ZONE_SOURCE, paint: { 'fill-color': you, 'fill-opacity': 0.08 } }, before);
-        map.addLayer({ id: ZONE_LINE, type: 'line', source: ZONE_SOURCE, paint: { 'line-color': you, 'line-width': 1.5, 'line-dasharray': [3, 2], 'line-opacity': 0.9 } }, before);
+        map.addLayer({ id: ZONE_LINE, type: 'line', source: ZONE_SOURCE, paint: { 'line-color': you, 'line-width': 1.5, 'line-dasharray': [ZONE_DASH, ZONE_GAP], 'line-opacity': 0.9 } }, before);
+        this.zoneStep = -1; // il livello è nuovo (anche dopo un cambio di tema): riparte dal primo passo
       }      const fill = (id: string, ids: readonly number[], color: string, opacity: number) => {
         if (map.getLayer(id)) map.setFilter(id, idFilter(ids));
         else map.addLayer({ id, type: 'fill', source: BASEMAP_SOURCE_ID, 'source-layer': BUILDINGS, filter: idFilter(ids), paint: { 'fill-color': color, 'fill-opacity': opacity } }, before);
@@ -216,9 +234,34 @@ export class HangoutLayer {
       line(BLOCKED_LINE, blockedIds, danger, 1.2);
 
       this.renderHome();
+      this.animateZone();
     } catch {
       /* stile non ancora pronto (cambio di tema o primi tasselli) */
     }
+  }
+
+  /** Fa scorrere lentamente il tratteggio dell'area finché c'è un'area (con la riduzione del movimento resta fermo). */
+  private animateZone(): void {
+    const wanted = this.zone.length > 0 && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!wanted) {
+      cancelAnimationFrame(this.zoneAnim);
+      this.zoneAnim = 0;
+      return;
+    }
+    if (this.zoneAnim) return; // già in corso
+    const tick = (now: number) => {
+      const step = Math.floor((now / ZONE_PERIOD_MS) * ZONE_FRAMES) % ZONE_FRAMES;
+      if (step !== this.zoneStep) {
+        try {
+          this.map.setPaintProperty(ZONE_LINE, 'line-dasharray', ZONE_DASH_FRAMES[step]);
+          this.zoneStep = step;
+        } catch {
+          /* stile non pronto: si riprova al prossimo fotogramma */
+        }
+      }
+      this.zoneAnim = requestAnimationFrame(tick);
+    };
+    this.zoneAnim = requestAnimationFrame(tick);
   }
 
   private renderHome(): void {
@@ -244,6 +287,8 @@ export class HangoutLayer {
   }
 
   destroy(): void {
+    cancelAnimationFrame(this.zoneAnim);
+    this.zoneAnim = 0;
     this.marker?.remove();
     this.marker = null;
     this.placeMarkers.forEach((m) => m.remove());
@@ -268,6 +313,11 @@ export class HangoutLayer {
       found.set(`${lng.toFixed(6)},${lat.toFixed(6)}`, { name, kind: String(f.properties['kind']), lng, lat });
     }
     return [...found.values()];
+  }
+
+  /** Quanti luoghi di interesse (di qualunque tipo) ci sono nei tasselli caricati: serve a capire se mancano i dati o solo i tipi ammessi. */
+  poiCount(): number {
+    return this.map.querySourceFeatures(BASEMAP_SOURCE_ID, { sourceLayer: 'pois' }).length;
   }
 
   private readBuildings() {
@@ -314,6 +364,19 @@ export class HangoutLayer {
     }
     if (!found || (requireAll && found < ids.length)) return null;
     return [west, south, east, north];
+  }
+
+  /** Un tocco in questo punto cade sul segnaposto del ritrovo (entro 24 px)? */
+  isNearHome(point: { x: number; y: number }): boolean {
+    if (!this.home) return false;
+    const p = this.map.project([this.home.lng, this.home.lat]);
+    return Math.hypot(p.x - point.x, p.y - point.y) <= 24;
+  }
+
+  /** Superficie (m²) e centro di un edificio, letti dai tasselli caricati; null se la sua forma non c'è. */
+  buildingStats(id: number): { areaM2: number; center: [number, number] } | null {
+    const fp = this.readBuildings().get(id);
+    return fp?.rings.length ? { areaM2: footprintAreaM2(fp), center: centerOf(fp) } : null;
   }
 
   /** L'identificativo dell'edificio dell'area (già scelto) toccato in questo punto, o null. */

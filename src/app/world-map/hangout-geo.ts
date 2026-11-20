@@ -37,7 +37,7 @@ export interface Footprint {
 interface GeoFeature {
   id?: number | string;
   properties?: Record<string, unknown> | null;
-  geometry: { type: string; coordinates: unknown };
+  geometry: { type: string; coordinates?: unknown };
 }
 
 /** I contorni esterni dei poligoni di una geometria GeoJSON (i buchi non servono). */
@@ -79,6 +79,15 @@ export function centerOf(fp: Footprint): [number, number] {
     minY = Math.min(minY, y); maxY = Math.max(maxY, y);
   }
   return [(minX + maxX) / 2, (minY + maxY) / 2];
+}
+
+/** La superficie di un edificio in metri quadri (i pezzi in cui arriva dai tasselli si sommano). */
+export function footprintAreaM2(fp: Footprint): number {
+  const lat0 = centerOf(fp)[1];
+  return flatten(fp.rings, lat0).reduce((sum, ring) => {
+    const twice = ring.reduce((s, p, k) => { const q = ring[(k + 1) % ring.length]; return s + (p[0] * q[1] - q[0] * p[1]); }, 0);
+    return sum + Math.abs(twice) / 2;
+  }, 0);
 }
 
 export function pointInRing(p: readonly number[], ring: Ring): boolean {

@@ -3,7 +3,7 @@ import { Router } from '@angular/router';
 import { Map as MapLibreMap, Marker, addProtocol, removeProtocol, setWorkerUrl, type GeoJSONSource } from 'maplibre-gl';
 import { Protocol } from 'pmtiles';
 import { AuthService } from '../auth/auth.service';
-import { translate } from '../i18n/i18n.service';
+import { translate, type MessageKey } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import { setGraphics, type GraphicsOptions } from '../game/graphics-settings';
 import { DropdownMenuComponent, type DropdownItem } from '../ui/dropdown-menu.component';
@@ -28,14 +28,16 @@ import { LocalHeldStore, type HeldStore } from '../game/contracts/held-store';
 import { CONTRACT_SLOTS, UNLOCK_BREACH_MS, UNLOCK_DECRYPT_MS } from '../game/constants';
 import { ContractListPanelComponent } from './contract-list-panel.component';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
-import { ContractPanelComponent, contractNumber } from './contract-panel.component';
+import { ContractPanelComponent, contractNumber, formatDistance } from './contract-panel.component';
 import { distanceMeters } from '../game/contracts/unlock-rule';
 import { DpcWeatherAlertService, WEATHER_CHECK_EVERY_MS, type WeatherAlert, type WeatherAlertService } from './weather-alert';
 import { OsrmFootRouteService, type RouteService, type WalkingRoute } from './route-service';
 import { ContractCounterComponent } from './contract-counter.component';
 import { MapLegendPanelComponent } from './map-legend-panel.component';
 import { LocalHangoutStore, type Hangout, type HangoutStore } from '../game/hangout/hangout-store';
-import { HANGOUT_PICK_RANGE_M, INFLUENCE_POINTS } from './hangout-geo';
+import { HANGOUT_PICK_RANGE_M, INFLUENCE_POINTS, ZONE_BUILDING_M, ZONE_PLACE_M } from './hangout-geo';
+import { HangoutInfoPanelComponent, type HangoutInfo } from './hangout-info-panel.component';
+import { localityAt } from './place-names';
 import { HangoutPlacePanelComponent } from './hangout-place-panel.component';
 import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { HangoutLayer, type Candidate } from './hangout-layer';
@@ -73,7 +75,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, ConfirmDialogComponent],
+  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, HangoutInfoPanelComponent, ConfirmDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -112,7 +114,7 @@ const USER_ZOOM = 16;
           <div class="mode-body">
             <p>
               @if (hangoutMode() === 'place') {
-                {{ (placesCount() ? 'worldMap.hangout.place.hint' : 'worldMap.hangout.place.none') | t }}
+                {{ placeHint() }}
               } @else if (hangoutMode() === 'influence') {
                 {{ (influenceTotal() ? 'worldMap.hangout.influence.hint' : 'worldMap.hangout.influence.none') | t }}
               }
@@ -134,6 +136,7 @@ const USER_ZOOM = 16;
           <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.edit' | t" [title]="'worldMap.hangout.pill.edit' | t"><app-icon name="edit" [size]="18" /></button>
           <button type="button" [attr.aria-pressed]="zonesOn()" [attr.aria-label]="'worldMap.hangout.pill.visibility' | t" [title]="'worldMap.hangout.pill.visibility' | t" (click)="zonesOn.set(!zonesOn())"><app-icon [name]="zonesOn() ? 'visibility' : 'visibility_off'" [size]="18" /></button>
           <button type="button" [attr.aria-label]="'worldMap.hangout.pill.delete' | t" [title]="'worldMap.hangout.pill.delete' | t" (click)="removeAsked.set(true)"><app-icon name="delete" [size]="18" /></button>
+          <button type="button" [attr.aria-pressed]="infoOn()" [attr.aria-label]="'worldMap.hangout.pill.info' | t" [title]="'worldMap.hangout.pill.info' | t" (click)="toggleInfo()"><app-icon name="help" [size]="18" /></button>
         </div>
       }      <section class="fixer" [class.mine]="!!hangout()" [class.active]="hangoutMode() === 'view'" [attr.aria-label]="'worldMap.fixer.title' | t">
         <header>
@@ -171,6 +174,7 @@ const USER_ZOOM = 16;
       </section>
     </div>
     <app-confirm-dialog [open]="removeAsked()" [title]="'worldMap.hangout.removeTitle' | t" [text]="'worldMap.hangout.removeText' | t" [confirmLabel]="'worldMap.hangout.remove' | t" (confirmed)="removeHangout()" (cancel)="removeAsked.set(false)" />
+    <app-hangout-info-panel [info]="infoData()" (closed)="infoTarget.set(null)" />
     <app-hangout-place-panel [place]="pendingPlace()" [distance]="pendingDistance()" (closed)="pendingPlace.set(null)" (confirmed)="confirmPlace()" />
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [alertLevel]="weatherAlert()?.level ?? null" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
@@ -225,7 +229,7 @@ const USER_ZOOM = 16;
     .rep { display: flex; align-items: center; gap: 8px; }
     /* Fama e Reputazione: l'etichetta in maiuscolo come «Contratti», il valore nel carattere del denaro. */
     .stat-label { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
-    .stat-val { font: 700 14px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-text); }
+    .stat-val { margin-left: auto; font: 700 14px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-text); } /* il valore sta a destra, lontano dall'etichetta */
     .add { flex: none; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: var(--radius-1); background: none; color: var(--accent); cursor: pointer; transition: background var(--t-fast); }
     /* Il tasto di ricerca nell'intestazione: solo icona, un blocchetto attaccato al fondo e al bordo destro dell'intestazione, con un filo a sinistra, del colore del riquadro. */
     /* Le intestazioni dei tre riquadri della colonna (istruzioni, Fixer, Mercenario) sono alte uguali: 28px, quanto è largo il tasto di ricerca (il blocchetto è quadrato). */
@@ -253,6 +257,9 @@ const USER_ZOOM = 16;
     /* La pillola dei comandi sopra il riquadro Fixer: tre tasti, con solo gli angoli in alto a destra e in basso a sinistra arrotondati (come i badge del Briefing), allineata a destra, sale dal basso come il box delle istruzioni. */
     .pill { align-self: flex-end; display: flex; gap: 4px; padding: 3px; border: 1px solid var(--c-you); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: auto; animation: mode-rise 0.28s var(--ease-draw); }
     .pill button { width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 0; background: none; color: var(--c-you); cursor: pointer; }
+    /* Il primo e l'ultimo tasto seguono la curva del contenitore (raggio della pillola meno il suo bordo e il suo margine interno: 1px + 3px), così il loro sfondo non esce dall'angolo. */
+    .pill button:first-child { border-bottom-left-radius: calc(var(--radius-2) - 4px); }
+    .pill button:last-child { border-top-right-radius: calc(var(--radius-2) - 4px); }
     .pill button:disabled { opacity: 0.4; cursor: default; }
     .pill button:enabled:hover, .pill button:enabled:focus-visible, .pill button[aria-pressed='true'] { background: color-mix(in srgb, var(--c-you) 20%, transparent); outline: none; }
     .clock, .weather { margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; }
@@ -417,9 +424,56 @@ export class WorldMapComponent {
   protected readonly zonesOn = signal(false);
   /** La dialog di conferma del cestino (rimuovere il ritrovo) è aperta. */
   protected readonly removeAsked = signal(false);
+  /** Quanto può distare un luogo dal giocatore per sceglierlo come ritrovo (metri), per le frasi della barra. */
+  protected readonly pickRange = HANGOUT_PICK_RANGE_M;
+  /** Il luogo ammesso più vicino al giocatore tra quelli nei tasselli caricati, in metri (null: nessuno trovato nei dati). */
+  private readonly placesNearest = signal<number | null>(null);
+  /** La frase della barra nella scelta del luogo: dice cosa fare, o perché non c'è niente da scegliere (nessuna posizione, luogo più vicino troppo lontano, dati non ancora caricati). */
+  protected readonly placeHint = computed(() => {
+    if (this.placesCount() > 0) return translate('worldMap.hangout.place.hint', { meters: HANGOUT_PICK_RANGE_M });
+    if (!this.location.position()) return translate('worldMap.hangout.place.noPosition');
+    const nearest = this.placesNearest();
+    return nearest === null ? translate('worldMap.hangout.place.noneLoaded') : translate('worldMap.hangout.place.none', { meters: HANGOUT_PICK_RANGE_M, nearest: formatDistance(nearest) });
+  });
+  /** Il punto di domanda della pillola è attivo: un tocco sul ritrovo o su un edificio dell'area ne apre le info nel pannello laterale. */
+  protected readonly infoOn = signal(false);
+  protected readonly infoTarget = signal<{ kind: 'place' } | { kind: 'building'; id: number; areaM2: number | null; distanceM: number | null } | null>(null);
+  /** Le info dell'elemento toccato (null: pannello chiuso). */
+  protected readonly infoData = computed<HangoutInfo | null>(() => {
+    const target = this.infoTarget();
+    const h = this.hangout();
+    if (!target || !h) return null;
+    // Quartiere e città (dello stesso luogo per tutta l'area): in testa a tutte le info, appena sono stati letti.
+    const loc = this.locality();
+    const tags = [
+      ...(loc?.city ? [{ label: translate('worldMap.hangout.info.cityLabel'), value: loc.city }] : []),
+      ...(loc?.neighborhood ? [{ label: translate('worldMap.hangout.info.neighborhoodLabel'), value: loc.neighborhood }] : []),
+    ];
+    if (target.kind === 'place') {
+      const n = h.buildings.length;
+      return {
+        title: h.place.name ?? translate('worldMap.hangout.info.placeTitle'),
+        badge: translate(`worldMap.hangout.kind.${h.place.kind}` as MessageKey),
+        icon: 'home',
+        lines: [translate(n === 1 ? 'worldMap.fixer.controlsOne' : 'worldMap.fixer.controlsMany', { n })],
+        tags,
+        loading: this.localityLoading(),
+        influence: ZONE_PLACE_M,
+      };
+    }
+    const lines: string[] = [];
+    if (target.distanceM !== null) lines.push(translate('worldMap.hangout.info.fromPlace', { distance: formatDistance(target.distanceM) }));
+    if (target.areaM2 !== null) lines.push(translate('worldMap.hangout.info.surface', { area: Math.max(10, Math.round(target.areaM2 / 10) * 10) }));
+    return { title: translate('worldMap.hangout.info.buildingTitle', { n: h.buildings.indexOf(target.id) + 1 }), badge: translate('worldMap.hangout.info.building'), icon: 'apartment', lines, tags, loading: this.localityLoading(), influence: ZONE_BUILDING_M };
+  });
+  /** Quartiere e città del ritrovo, letti una volta sola (finché non si rimuove il ritrovo). */
+  protected readonly locality = signal<{ neighborhood: string | null; city: string | null } | null>(null);
+  /** Quartiere e città si stanno scaricando. */
+  protected readonly localityLoading = signal(false);
   private hangoutLayer: HangoutLayer | null = null;
   /** Rilegge i tasselli per la modalità in corso (a ogni «idle» della mappa) e l'ultimo risultato, per non ridisegnare se non è cambiato nulla. */
   private hangoutRefresh: (() => void) | null = null;
+  private hangoutTimer: ReturnType<typeof setInterval> | null = null;
   private hangoutSignature = '';
   /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
   private readonly mapCreated = signal(false);
@@ -589,6 +643,7 @@ export class WorldMapComponent {
     this.location.start();
 
     this.destroyRef.onDestroy(() => {
+      if (this.hangoutTimer) clearInterval(this.hangoutTimer);
       this.hangoutLayer?.destroy();
       this.hangoutLayer = null;
       this.location.stop();
@@ -660,6 +715,8 @@ export class WorldMapComponent {
     const layer = this.hangoutLayer;
     if (!map || !layer) return;
     if (this.hangoutRefresh) map.off('idle', this.hangoutRefresh);
+    if (this.hangoutTimer) clearInterval(this.hangoutTimer);
+    this.hangoutTimer = null;
     this.hangoutRefresh = null;
     this.hangoutSignature = '';
     layer.setPlaces([]);
@@ -673,7 +730,9 @@ export class WorldMapComponent {
     }
     this.ngZone.run(() => {
       this.placesCount.set(0);
+      this.placesNearest.set(null);
       this.pendingPlace.set(null);
+      if (mode !== 'view') { this.infoOn.set(false); this.infoTarget.set(null); }
       if (mode !== 'influence') { this.influencePlace.set(null); this.influenceChosen.set([]); this.influenceTotal.set(0); }
     });
     if (mode === 'none') return;
@@ -681,7 +740,7 @@ export class WorldMapComponent {
     // Gli edifici completi esistono solo da zoom 15: ci si avvicina se serve.
     if (mode === 'place') {
       const here = this.location.position();
-      map.easeTo({ center: here ? [here.lng, here.lat] : map.getCenter(), zoom: Math.max(map.getZoom(), 17) }); // i luoghi sono entro 50 m dal giocatore: si guarda da vicino
+      map.easeTo({ center: here ? [here.lng, here.lat] : map.getCenter(), zoom: Math.max(map.getZoom(), 16) }); // i luoghi sono entro HANGOUT_PICK_RANGE_M dal giocatore: si guarda da vicino
     }
     const h = this.hangout();
     if (mode === 'view' && h) {
@@ -716,7 +775,7 @@ export class WorldMapComponent {
           return;
         }
         const circles = layer.zoneCircles(current.place, current.buildings);
-        const signature = 'on:' + circles.map((c) => `,,`).join('|');
+        const signature = 'on:' + circles.map((c) => `${c.lng.toFixed(6)},${c.lat.toFixed(6)},${c.r}`).join('|');
         if (signature === this.hangoutSignature) return;
         this.hangoutSignature = signature;
         layer.setZone(circles);
@@ -745,25 +804,60 @@ export class WorldMapComponent {
           this.influenceTotal.set(ids.length);
         });
       } else if (mode === 'place') {
-        // Solo i luoghi entro 50 m dal giocatore (senza posizione, nessuno).
+        // Solo i luoghi entro HANGOUT_PICK_RANGE_M dal giocatore (senza posizione, nessuno).
         const here = this.location.position();
-        const places = here ? layer.readPlaces().filter((p) => distanceMeters(p, here) <= HANGOUT_PICK_RANGE_M) : [];
-        const signature = places.map((p) => `${p.lng},${p.lat}`).sort().join('|');
+        const found = here ? layer.readPlaces() : [];
+        const places = here ? found.filter((p) => distanceMeters(p, here) <= HANGOUT_PICK_RANGE_M) : [];
+        const nearest = here && found.length ? Math.round(Math.min(...found.map((p) => distanceMeters(p, here)))) : null;
+        const signature = `${nearest}:` + places.map((p) => `${p.lng},${p.lat}`).sort().join('|');
+        if (isDevMode() && signature !== this.hangoutSignature) console.info('[ritrovo] luoghi', { zoom: Math.round(map.getZoom() * 10) / 10, posizione: here ? [here.lat, here.lng] : null, poiNeiTasselli: layer.poiCount(), ammessiNeiTasselli: found.length, entroRaggio: places.length, piuVicinoM: nearest });
         if (signature === this.hangoutSignature) return;
         this.hangoutSignature = signature;
         layer.setPlaces(places, (place) => this.ngZone.run(() => { this.selectedId.set(null); this.panel.set(null); this.pendingPlace.set(place); }));
-        this.ngZone.run(() => this.placesCount.set(places.length));
+        this.ngZone.run(() => { this.placesCount.set(places.length); this.placesNearest.set(nearest); });
       }
     };
     this.hangoutRefresh = refresh;
     refresh();
     map.on('idle', refresh);
+    // L'evento «a riposo» può non scattare (o scattare prima che arrivino i tasselli): finché si sceglie, si rilegge anche ogni secondo (se non è cambiato niente non si ridisegna nulla).
+    this.hangoutTimer = setInterval(refresh, 1000);
   }
 
   /** Un tocco sulla mappa: nella scelta del luogo prende un luogo pubblico, nella scelta dell'influenza prende o toglie un edificio. */
   private onHangoutTap(point: { x: number; y: number }): void {
     const layer = this.hangoutLayer;
     const mode = this.hangoutMode();
+    if (mode === 'view' && this.infoOn() && layer) {
+      // Il punto di domanda: un tocco sul ritrovo o su un edificio dell'area apre le sue info; un tocco altrove chiude il pannello.
+      const h = this.hangout();
+      if (!h) return;
+      // Il pannello si apre subito; quartiere e città si aggiungono appena arrivano (la prima volta serve leggere due piccoli tasselli).
+      // Si ricorda solo un risultato completo: se manca la città (o tutto) al prossimo tocco si riprova.
+      if (!this.locality()?.city) {
+        this.ngZone.run(() => this.localityLoading.set(true));
+        void localityAt(h.place.lng, h.place.lat).then((loc) => {
+          if (isDevMode()) console.info('[ritrovo] quartiere e città', loc);
+          this.ngZone.run(() => {
+            if (loc.neighborhood || loc.city) this.locality.set({ neighborhood: loc.neighborhood, city: loc.city });
+            this.localityLoading.set(false);
+          });
+        });
+      }
+      if (layer.isNearHome(point)) {
+        this.ngZone.run(() => this.infoTarget.set({ kind: 'place' }));
+        return;
+      }
+      const id = layer.areaAt(point);
+      if (id !== null && h.buildings.includes(id)) {
+        const stats = layer.buildingStats(id);
+        const distanceM = stats ? distanceMeters({ lng: stats.center[0], lat: stats.center[1] }, h.place) : null;
+        this.ngZone.run(() => this.infoTarget.set({ kind: 'building', id, areaM2: stats?.areaM2 ?? null, distanceM }));
+        return;
+      }
+      this.ngZone.run(() => this.infoTarget.set(null));
+      return;
+    }
     if (mode === 'place') {
       this.ngZone.run(() => this.pendingPlace.set(null)); // un tocco sulla mappa chiude il pannello del luogo (le casette fermano il loro tocco)
       return;
@@ -807,6 +901,12 @@ export class WorldMapComponent {
     this.hangoutMode.set('none');
   }
 
+  /** Il punto di domanda della pillola: acceso, i tocchi sul ritrovo e sugli edifici dell'area aprono le info; spento, il pannello si chiude. */
+  protected toggleInfo(): void {
+    this.infoOn.update((v) => !v);
+    if (!this.infoOn()) this.infoTarget.set(null);
+  }
+
   /**
    * Il cestino della pillola, dopo la conferma: via il ritrovo e tutta la sua area, e il riquadro Fixer torna all'inizio (frase di presentazione e tasto per fissare un ritrovo).
    * I punti rimborsati (la metà di quelli spesi, minimo 3: per ora sempre 3) non hanno ancora dove andare, perché non esiste un conto dei punti; e i contratti creati nella zona
@@ -814,6 +914,7 @@ export class WorldMapComponent {
    */
   protected removeHangout(): void {
     this.hangoutStore.clear();
+    this.locality.set(null);
     this.removeAsked.set(false);
     this.zonesOn.set(false);
     this.hangoutMode.set('none');
