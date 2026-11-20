@@ -154,6 +154,8 @@
   /* I pannelli che scivolano da destra e la colonna di riquadri in basso a destra (Fixer, Mercenario con i contratti): larghi uguale; i pannelli stanno appena sotto il tasto del menu. */
   --side-panel-w: 306px;
   --side-panel-top: calc(var(--hud-edge) + var(--hud-btn) + var(--hud-gap));
+  /* La colonna di sinistra (filtri, legenda, navigazione) parte appena sotto il logo, ancorata in alto. */
+  --rail-top: calc(var(--hud-edge) + var(--hud-btn) + var(--hud-gap));
   --side-panel-reserve: 250px; /* altezza lasciata libera in basso per i riquadri Fixer e Mercenario (con i contratti) */
 }
 

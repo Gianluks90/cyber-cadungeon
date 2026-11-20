@@ -34,7 +34,7 @@ import { IconComponent } from '../ui/icon.component';
     .bar:hover .label, .bar:focus-visible .label, .bar.on .label { color: var(--c-interact); }
     /* La lettera del tasto, piccola e grigia in basso a destra, solo dove c'è una tastiera (come sui tasti dei filtri e del menu). Il margine a destra della barra le lascia posto accanto all'ultimo spazio. */
     kbd { display: none; position: absolute; right: 4px; bottom: 2px; font: 600 9px/1 var(--font-mono); text-transform: uppercase; color: var(--c-text-dim); pointer-events: none; }
-    @media (pointer: fine) { kbd { display: block; } }
+    @media (pointer: fine) and (min-width: 641px) { kbd { display: block; } }
 
     .empty { box-sizing: border-box; width: 24px; height: 24px; border: 1px dashed var(--c-line-strong); border-radius: var(--radius-1); }
     .marker { color: var(--c-interact); }

@@ -33,10 +33,10 @@ const ERROR_KEYS: Record<Exclude<AuthError, 'cancelled'>, MessageKey> = {
       <div class="brand-mark" role="img" [attr.aria-label]="'worldMap.logo' | t"></div>
       <p class="tagline">{{ 'login.tagline' | t }}</p>
     </div>
-    <!-- In basso: l'avviso sulla posizione e il tasto che apre la finestra di accesso (anche con Invio); la finestra si può chiudere. -->
+    <!-- In basso: il tasto che apre la finestra di accesso (anche con Invio; la finestra si può chiudere) e, sotto, l'avviso sulla posizione. -->
     <div class="bottom">
-      <p class="warning" role="note"><app-icon name="warning" [size]="16" /> {{ 'login.locationWarning' | t }}</p>
       <button type="button" class="enter dlg-btn primary" (click)="open.set(true)"><app-icon name="login" [size]="16" /> {{ 'login.title' | t }}</button>
+      <p class="warning" role="note"><app-icon name="warning" [size]="16" /> {{ 'login.locationWarning' | t }}</p>
     </div>
     @if (open()) {
       <app-dialog [title]="(mode() === 'login' ? 'login.title' : 'login.registerTitle') | t" width="360px" (closed)="open.set(false)">
@@ -80,10 +80,10 @@ const ERROR_KEYS: Record<Exclude<AuthError, 'cancelled'>, MessageKey> = {
       linear-gradient(to top, color-mix(in srgb, var(--c-bg) 80%, transparent) 0%, transparent 28%); }
     /* Logo e sottotitolo: al centro della pagina. Quando la finestra di accesso è aperta stanno sotto il suo sfondo scuro; non prendono i clic. */
     .brand { position: absolute; z-index: 1; left: 50%; top: 50%; width: min(840px, 90vw); transform: translate(-50%, -56%); display: flex; flex-direction: column; align-items: center; gap: 24px; pointer-events: none; }
-    /* In basso al centro: l'avviso sulla posizione sopra il tasto «Accedi». */
+    /* In basso al centro: il tasto «Accedi» e, sotto, l'avviso sulla posizione. */
     .bottom { position: absolute; z-index: 1; left: 50%; bottom: calc(32px + env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, 92vw); display: flex; flex-direction: column; align-items: center; gap: 14px; }
     /* L'avviso: giallo come gli altri avvisi dell'app, su una lastra scura sfocata come il sottotitolo. */
-    .warning { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 14px; text-align: left; color: var(--c-warn); font: 600 12px/1.4 var(--font-ui); background: color-mix(in srgb, var(--c-bg) 60%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border: 1px solid color-mix(in srgb, var(--c-warn) 45%, transparent); border-radius: var(--radius-1); }
+    .warning { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0; padding: 8px 14px; text-align: center; color: var(--c-warn); font: 600 12px/1.4 var(--font-ui); background: color-mix(in srgb, var(--c-bg) 60%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); border: 1px solid color-mix(in srgb, var(--c-warn) 45%, transparent); border-radius: var(--radius-1); }
     .warning app-icon { flex: none; }
     /* Il tasto «Accedi»: alto come gli altri tasti dell'interfaccia (36px). */
     .enter { height: var(--hud-btn); padding: 0 28px; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; background: color-mix(in srgb, var(--c-bg) 85%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); box-shadow: 0 0 16px color-mix(in srgb, var(--c-interact) 40%, transparent); }

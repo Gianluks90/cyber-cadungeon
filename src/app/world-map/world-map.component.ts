@@ -287,7 +287,10 @@ const USER_ZOOM = 16;
     /* Su telefono l'orologio non si vede, l'allerta resta (è una sicurezza) e sale sopra l'avviso di posizione, che prende tutta la larghezza. */
     @media (max-width: 640px) {
       .corner:not(.end) .clock { display: none; }
-      .corner { bottom: 52px; }
+      /* Sopra la riga di stato (alta 22px, a 10px dal fondo) con 4px di spazio. */
+      .corner { bottom: 36px; }
+      /* I riquadri Fixer e Mercenario occupano tutta la larghezza, meno 10px per lato. */
+      .corner.end { left: 10px; width: auto; }
       .status { left: 10px; right: 10px; transform: none; max-width: none; justify-content: center; }
     }
   `,

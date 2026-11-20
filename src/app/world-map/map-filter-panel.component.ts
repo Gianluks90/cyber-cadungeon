@@ -81,15 +81,15 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
     :host { display: contents; }
     .wrap { --w: min(320px, 82vw); --rail: 56px; position: absolute; inset: 0; pointer-events: none; }
     /* Il container verticale lungo il lato sinistro: ospita i tasti quadrati. */
-    .rail { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 3; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    .rail { position: absolute; left: 10px; top: var(--rail-top); z-index: 3; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .item { position: relative; }
     .tab, .close { display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .tab { position: relative; pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     /* Il pannello si apre accanto al container, scivolando da sinistra. */
-    .sheet { position: absolute; z-index: 2; left: var(--rail); top: 50%; max-height: calc(100% - 112px); /* parte da metà altezza, vicino ai tasti, e cresce dal centro fino a lasciare libero il logo (10+36px dall'alto) e l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translate(calc(-1 * (var(--w) + var(--rail))), -50%); transition: transform var(--t-base) var(--ease-draw); }
-    .wrap.open .sheet { transform: translate(0, -50%); }
+    .sheet { position: absolute; z-index: 2; left: var(--rail); top: var(--rail-top); max-height: calc(100% - var(--rail-top) - 56px); /* parte all'altezza dei tasti, appena sotto il logo, e cresce verso il basso fino a lasciare libero l'orologio (10+36px dal fondo), con 10px di respiro */ width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
+    .wrap.open .sheet { transform: none; }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
@@ -104,7 +104,7 @@ const SECTIONS: { id: FilterSection; label: MessageKey }[] = [
     .segment.on { background: var(--c-interact); }
     /* La lettera del tasto, piccola e grigia in basso a destra, solo dove c'è una tastiera. */
     kbd { display: none; position: absolute; right: 3px; bottom: 2px; font: 600 9px/1 var(--font-mono); text-transform: uppercase; color: var(--c-text-dim); pointer-events: none; }
-    @media (pointer: fine) { kbd { display: block; } }
+    @media (pointer: fine) and (min-width: 641px) { kbd { display: block; } }
     .tab, .step { position: relative; }
     .list { flex: 1 1 auto; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 14px; }
     .label { margin: 10px 0 4px; }

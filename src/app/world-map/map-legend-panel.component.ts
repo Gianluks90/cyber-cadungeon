@@ -53,21 +53,21 @@ const ENTRIES: { icon: string; color: string; label: MessageKey }[] = [
   styles: `
     :host { display: contents; }
     .wrap { --w: min(320px, 82vw); --rail: 56px; position: absolute; inset: 0; pointer-events: none; }
-    /* Il tasto sta sotto quello dei filtri: quello è al centro del lato (36px) e qui si parte da metà più 18px più 10px di spazio. */
-    .item { position: absolute; z-index: 3; left: 10px; top: calc(50% + 18px + var(--hud-gap-tight)); } /* subito sotto il tasto dei filtri (che finisce 18px sotto metà altezza), con lo spazio ridotto */
+    /* Il tasto sta sotto quello dei filtri (che è appena sotto il logo, 36px), con lo spazio ridotto. */
+    .item { position: absolute; z-index: 3; left: 10px; top: calc(var(--rail-top) + var(--hud-btn) + var(--hud-gap-tight)); }
     .tab, .close { position: relative; display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .tab { pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }
     .tab:hover, .tab:focus-visible, .tab.on, .close:hover, .close:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
-    /* Il pannello scivola da sinistra come quello dei filtri (stessa animazione e stessa origine, a metà altezza) ed è alto quanto basta. */
-    .sheet { position: absolute; z-index: 2; left: var(--rail); top: 50%; max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translate(calc(-1 * (var(--w) + var(--rail))), -50%); transition: transform var(--t-base) var(--ease-draw); }
-    .wrap.open .sheet { transform: translate(0, -50%); }
+    /* Il pannello scivola da sinistra come quello dei filtri (stessa animazione e stessa origine, all'altezza dei tasti) ed è alto quanto basta. */
+    .sheet { position: absolute; z-index: 2; left: var(--rail); top: var(--rail-top); max-height: calc(100% - var(--rail-top) - 56px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; pointer-events: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); transform: translateX(calc(-1 * (var(--w) + var(--rail)))); transition: transform var(--t-base) var(--ease-draw); }
+    .wrap.open .sheet { transform: none; }
     .wrap:not(.open) .sheet { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 14px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-line-strong); }
     kbd { display: none; position: absolute; right: 3px; bottom: 2px; font: 600 9px/1 var(--font-mono); text-transform: uppercase; color: var(--c-text-dim); pointer-events: none; }
-    @media (pointer: fine) { kbd { display: block; } }
+    @media (pointer: fine) and (min-width: 641px) { kbd { display: block; } }
     .list { margin: 0; padding: 12px 14px 14px; list-style: none; display: flex; flex-direction: column; gap: 4px; }
     .row { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 1px solid var(--c-line); border-radius: var(--radius-1); color: var(--c-text-dim); font: 600 12px/1.2 var(--font-ui); letter-spacing: 0.06em; text-transform: uppercase; }
     .glyph { display: inline-flex; flex: none; }
