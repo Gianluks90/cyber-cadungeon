@@ -37,6 +37,7 @@ import { MapLegendPanelComponent } from './map-legend-panel.component';
 import { LocalHangoutStore, type Hangout, type HangoutStore } from '../game/hangout/hangout-store';
 import { HANGOUT_PICK_RANGE_M, INFLUENCE_POINTS } from './hangout-geo';
 import { HangoutPlacePanelComponent } from './hangout-place-panel.component';
+import { ConfirmDialogComponent } from '../ui/confirm-dialog.component';
 import { HangoutLayer, type Candidate } from './hangout-layer';
 
 /** Cosa si sta facendo con il ritrovo: niente, scegliere il luogo, scegliere gli edifici dell'influenza, o guardare l'area di influenza (la lente nel profilo Fixer). */
@@ -72,7 +73,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent, HangoutPlacePanelComponent],
+  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, ConfirmDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -132,7 +133,7 @@ const USER_ZOOM = 16;
         <div class="pill" role="toolbar" [attr.aria-label]="'worldMap.hangout.pill.label' | t">
           <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.edit' | t" [title]="'worldMap.hangout.pill.edit' | t"><app-icon name="edit" [size]="18" /></button>
           <button type="button" [attr.aria-pressed]="zonesOn()" [attr.aria-label]="'worldMap.hangout.pill.visibility' | t" [title]="'worldMap.hangout.pill.visibility' | t" (click)="zonesOn.set(!zonesOn())"><app-icon [name]="zonesOn() ? 'visibility' : 'visibility_off'" [size]="18" /></button>
-          <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.delete' | t" [title]="'worldMap.hangout.pill.delete' | t"><app-icon name="delete" [size]="18" /></button>
+          <button type="button" [attr.aria-label]="'worldMap.hangout.pill.delete' | t" [title]="'worldMap.hangout.pill.delete' | t" (click)="removeAsked.set(true)"><app-icon name="delete" [size]="18" /></button>
         </div>
       }      <section class="fixer" [class.mine]="!!hangout()" [class.active]="hangoutMode() === 'view'" [attr.aria-label]="'worldMap.fixer.title' | t">
         <header>
@@ -169,6 +170,7 @@ const USER_ZOOM = 16;
         </p>
       </section>
     </div>
+    <app-confirm-dialog [open]="removeAsked()" [title]="'worldMap.hangout.removeTitle' | t" [text]="'worldMap.hangout.removeText' | t" [confirmLabel]="'worldMap.hangout.remove' | t" (confirmed)="removeHangout()" (cancel)="removeAsked.set(false)" />
     <app-hangout-place-panel [place]="pendingPlace()" [distance]="pendingDistance()" (closed)="pendingPlace.set(null)" (confirmed)="confirmPlace()" />
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [alertLevel]="weatherAlert()?.level ?? null" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
@@ -413,6 +415,8 @@ export class WorldMapComponent {
   });
   /** L'occhio della pillola: le aree rotonde attorno al ritrovo (100 m) e agli edifici (50 m) sono visibili. */
   protected readonly zonesOn = signal(false);
+  /** La dialog di conferma del cestino (rimuovere il ritrovo) è aperta. */
+  protected readonly removeAsked = signal(false);
   private hangoutLayer: HangoutLayer | null = null;
   /** Rilegge i tasselli per la modalità in corso (a ogni «idle» della mappa) e l'ultimo risultato, per non ridisegnare se non è cambiato nulla. */
   private hangoutRefresh: (() => void) | null = null;
@@ -801,6 +805,19 @@ export class WorldMapComponent {
     this.hangoutStore.save(hangout);
     this.hangout.set(hangout);
     this.hangoutMode.set('none');
+  }
+
+  /**
+   * Il cestino della pillola, dopo la conferma: via il ritrovo e tutta la sua area, e il riquadro Fixer torna all'inizio (frase di presentazione e tasto per fissare un ritrovo).
+   * I punti rimborsati (la metà di quelli spesi, minimo 3: per ora sempre 3) non hanno ancora dove andare, perché non esiste un conto dei punti; e i contratti creati nella zona
+   * non esistono ancora: quando ci saranno, qui vanno riportati allo stato «posizionabile».
+   */
+  protected removeHangout(): void {
+    this.hangoutStore.clear();
+    this.removeAsked.set(false);
+    this.zonesOn.set(false);
+    this.hangoutMode.set('none');
+    this.hangout.set(null);
   }
 
   /** Torna alla mia posizione, restando almeno allo zoom di partenza. */
