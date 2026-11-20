@@ -9,6 +9,7 @@ import { AuthService } from './auth.service';
 /** La pagina di accesso (`/login`): utente e password in una dialog. Per ora il login è finto (utente `test`, password `test`). */
 @Component({
   selector: 'app-login',
+  host: { '[style.--login-bg-image]': 'bgImage' },
   imports: [DialogComponent, FieldComponent, IconComponent, TranslatePipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
@@ -30,13 +31,15 @@ import { AuthService } from './auth.service';
     :host {
       display: block;
       height: 100%;
-      background: var(--c-bg) url('/images/login-backgroun.png') center / cover no-repeat;
+      background: var(--c-bg) var(--login-bg-image) center / cover no-repeat;
     }
     form { display: flex; flex-direction: column; gap: 12px; }
     .dlg-btn { display: inline-flex; align-items: center; gap: 6px; }
   `,
 })
 export class LoginComponent {
+  /** Relativo al base href: in produzione l'app sta sotto `/cyber-cadungeon/`, un `/images/…` assoluto darebbe 404. */
+  protected readonly bgImage = `url("${new URL('images/login-backgroun.png', document.baseURI).href}")`;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   protected readonly failed = signal(false);
