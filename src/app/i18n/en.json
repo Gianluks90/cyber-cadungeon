@@ -1950,6 +1950,7 @@
   "location.complaintText": "You have the right to lodge a complaint with a supervisory authority: in Italy, the Garante per la protezione dei dati personali (garanteprivacy.it).",
   "location.refuseHint": "If you refuse, you leave the app: you are free not to use it.",
   "location.accept": "Accept",
+  "location.scrollToAccept": "Scroll to the bottom of the text to accept",
   "location.refuse": "Refuse",
   "location.searching": "Finding your precise location…",
   "location.lowAccuracy": "Location not very precise: ±{meters} m",

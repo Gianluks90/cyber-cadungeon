@@ -267,6 +267,11 @@ export class WorldMapComponent {
   private userArrow: HTMLElement | null = null;
   private userHalo: HTMLElement | null = null;
   private centeredOnUser = false;
+  /** Verso dove guarda l'utente (gradi dal nord), per girare la freccia rispetto alla mappa quando questa ruota. */
+  private userFacing = 0;
+  /** L'utente sta toccando la mappa: finché non passano 5 secondi di quiete la mappa non lo segue. */
+  private userBusy = false;
+  private resumeTimer: ReturnType<typeof setTimeout> | null = null;
   /** La mappa si è già riallineata sulla posizione precisa dopo quella approssimativa. */
   private refinedOnUser = false;
   /** I gruppi di filtri accesi (il pannello li mostra, la mappa li applica). */
@@ -398,6 +403,7 @@ export class WorldMapComponent {
       this.stopBreach();
       this.userMarker?.remove();
       this.userMarker = null;
+      if (this.resumeTimer) clearTimeout(this.resumeTimer);
       cancelAnimationFrame(this.routeFrame);
       this.contractMarkers.forEach((m) => m.remove());
       this.contractMarkers = [];
@@ -452,6 +458,8 @@ export class WorldMapComponent {
   /** Torna alla mia posizione, restando almeno allo zoom di partenza. */
   protected focusUser(): void {
     const pos = this.location.position();
+    if (this.resumeTimer) clearTimeout(this.resumeTimer);
+    this.userBusy = false; // il tasto «dove sono» riprende subito l'inseguimento
     if (this.map && pos) this.map.flyTo({ center: [pos.lng, pos.lat], zoom: Math.max(this.map.getZoom(), USER_ZOOM) });
   }
 
@@ -527,7 +535,12 @@ export class WorldMapComponent {
     map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); this.paintRoute(); });
     this.tileLoading = new TileLoadingView(map, BASEMAP_SOURCE_ID);
     map.once('idle', () => this.ready.set(true)); // 'idle': ha finito di caricare e disegnare (anche se qualche tassello è fallito)
-    map.on('rotate', () => this.bearing.set(Math.round(map.getBearing())));
+    map.on('rotate', () => {
+      this.bearing.set(Math.round(map.getBearing()));
+      this.turnArrow(map);
+    });
+    // Un gesto dell'utente (trascinare, zoomare, ruotare) sospende l'inseguimento; dopo 5 secondi senza gesti la mappa torna da lui.
+    for (const type of ['movestart', 'move', 'moveend'] as const) map.on(type, (e) => { if (e.originalEvent) this.userTouchedMap(map); });
     map.on('click', () => this.ngZone.run(() => this.selectedId.set(null))); // un tocco sulla mappa chiude il pannello del contratto (i marker fermano il loro tocco)
     map.on('zoom', () => this.sizeHalo(map));
 
@@ -785,9 +798,11 @@ un). */
       this.userMarker = new Marker({ element: el });
     }
     this.userMarker.setLngLat([pos.lng, pos.lat]).addTo(map);
-    this.userArrow!.style.transform = `rotate(${facing ?? 0}deg)`;
+    this.userFacing = facing ?? 0;
+    this.turnArrow(map);
     this.userHalo!.dataset['meters'] = String(pos.accuracy);
     this.sizeHalo(map);
+    const wasCentered = this.centeredOnUser;
     if (!this.centeredOnUser) {
       this.centeredOnUser = true;
       // Alla prima lettura (anche approssimativa) la mappa è subito sul giocatore, senza animazione (la mappa è ancora nascosta).
@@ -797,7 +812,30 @@ un). */
       // La prima lettura era approssimativa: appena arriva quella precisa, la mappa si sposta dolcemente lì (una volta sola).
       this.refinedOnUser = true;
       map.easeTo({ center: [pos.lng, pos.lat] });
+    } else if (wasCentered) {
+      this.followUser(map, pos);
     }
+  }
+
+  /** La freccia punta dove guarda l'utente, rispetto allo schermo: se la mappa è girata nello stesso verso (inseguimento) sta dritta. */
+  private turnArrow(map: MapLibreMap): void {
+    if (this.userArrow) this.userArrow.style.transform = `rotate(${this.userFacing - map.getBearing()}deg)`;
+  }
+
+  /** Solo mentre l'utente si muove davvero (il GPS dà una direzione): la mappa lo tiene al centro e si orienta come lui. Da fermo non si tocca. */
+  private followUser(map: MapLibreMap, pos: UserPosition): void {
+    if (pos.heading === null || this.userBusy) return;
+    map.easeTo({ center: [pos.lng, pos.lat], bearing: pos.heading, duration: 800, easing: (t) => t });
+  }
+
+  private userTouchedMap(map: MapLibreMap): void {
+    this.userBusy = true;
+    if (this.resumeTimer) clearTimeout(this.resumeTimer);
+    this.resumeTimer = setTimeout(() => {
+      this.userBusy = false;
+      const pos = this.location.position();
+      if (pos && this.map === map) this.followUser(map, pos);
+    }, 5000);
   }
 
   /** L'alone ha il raggio dell'incertezza in pixel, che dipende da zoom e latitudine (tasselli da 512 px). */

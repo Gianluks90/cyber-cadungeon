@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output } from '@angular/core';
+import { ChangeDetectionStrategy, Component, ElementRef, HostListener, afterNextRender, input, output, signal, viewChild } from '@angular/core';
 import type { MessageKey } from '../i18n/i18n.service';
 import { TranslatePipe } from '../i18n/translate.pipe';
 import type { LocationState } from './location.service';
@@ -30,7 +30,7 @@ const NOTICE: { label: MessageKey; text: MessageKey }[] = [
           <h2 id="loc-title">{{ 'location.title' | t }}</h2>
         </header>
         <hr />
-        <div class="body">
+        <div class="body" #body (scroll)="check(body)">
           <p id="loc-lead" class="lead">{{ 'location.lead' | t }}</p>
           @if (state() === 'denied') {
             <p class="warn">{{ 'location.denied' | t }}</p>
@@ -50,7 +50,7 @@ const NOTICE: { label: MessageKey; text: MessageKey }[] = [
           <p class="hint">{{ 'location.refuseHint' | t }}</p>
           <div class="buttons">
             <button type="button" class="btn" (click)="refused.emit()">{{ 'location.refuse' | t }}</button>
-            <button type="button" class="btn primary" (click)="accepted.emit()">{{ 'location.accept' | t }}</button>
+            <button type="button" class="btn primary" [disabled]="!readAll()" [attr.title]="readAll() ? null : ('location.scrollToAccept' | t)" (click)="accepted.emit()">{{ 'location.accept' | t }}</button>
           </div>
         </footer>
       </section>
@@ -60,7 +60,7 @@ const NOTICE: { label: MessageKey; text: MessageKey }[] = [
     :host { display: contents; }
     /* Copre tutto e prende i clic: finché non si sceglie, la mappa non si tocca. */
     .backdrop { position: absolute; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; padding: 16px; box-sizing: border-box; background: color-mix(in srgb, var(--c-bg) 70%, transparent); }
-    .dialog { width: min(520px, 100%); max-height: 100%; display: flex; flex-direction: column; box-sizing: border-box; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); }
+    .dialog { width: min(560px, 100%); height: min(520px, 100%); display: flex; flex-direction: column; box-sizing: border-box; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); }
     header { flex: none; padding: 14px 16px; }
     h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-line-strong); }
@@ -76,7 +76,8 @@ const NOTICE: { label: MessageKey; text: MessageKey }[] = [
     .buttons { display: flex; justify-content: flex-end; gap: 8px; }
     .btn { padding: 8px 18px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; font: 600 12px/1.2 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; transition: color var(--t-fast), border-color var(--t-fast); }
     .btn.primary { border-color: var(--c-interact); }
-    .btn:hover, .btn:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    .btn:hover:not(:disabled), .btn:focus-visible { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
   `,
 })
 export class LocationConsentComponent {
@@ -85,4 +86,20 @@ export class LocationConsentComponent {
   readonly accepted = output<void>();
   readonly refused = output<void>();
   protected readonly notice = NOTICE;
+  /** Vero quando il testo è stato scorso fino in fondo (o è così corto da non servire): solo allora si può accettare. */
+  protected readonly readAll = signal(false);
+  private readonly body = viewChild.required<ElementRef<HTMLElement>>('body');
+
+  constructor() {
+    afterNextRender(() => this.check(this.body().nativeElement));
+  }
+
+  protected check(el: HTMLElement) {
+    if (!this.readAll() && el.scrollHeight - el.scrollTop - el.clientHeight <= 4) this.readAll.set(true);
+  }
+
+  @HostListener('window:resize')
+  protected onResize() {
+    this.check(this.body().nativeElement);
+  }
 }

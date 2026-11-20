@@ -1950,6 +1950,7 @@
   "location.complaintText": "Hai il diritto di proporre reclamo all'autorità di controllo: in Italia, il Garante per la protezione dei dati personali (garanteprivacy.it).",
   "location.refuseHint": "Se rifiuti esci dall'app: sei libero di non usarla.",
   "location.accept": "Accetta",
+  "location.scrollToAccept": "Scorri il testo fino in fondo per poter accettare",
   "location.refuse": "Rifiuta",
   "location.searching": "Cerco la tua posizione precisa…",
   "location.lowAccuracy": "Posizione poco precisa: ±{meters} m",

@@ -13,6 +13,7 @@ export interface UserPosition {
 export type LocationState = 'idle' | 'waiting' | 'granted' | 'denied' | 'unavailable';
 
 const CONSENT_KEY = 'cad-location-consent';
+const FAKE_POSITION_KEY = 'cad-fake-position';
 /** Sotto questa incertezza (metri) la posizione è considerata precisa. */
 export const GOOD_ACCURACY_M = 25;
 /** Sotto questa velocità (m/s) la direzione del GPS non è affidabile e si usa la bussola. */
@@ -81,6 +82,14 @@ export class LocationService {
 
   private watch(): void {
     this.stop();
+    const fake = readFakePosition();
+    if (fake) {
+      // Posizione finta di prova (solo se scelta a mano nel browser): niente GPS, la mappa parte da lì.
+      this.fix = fake;
+      this.state.set('granted');
+      this.position.set(fake);
+      return;
+    }
     if (!('geolocation' in navigator)) {
       this.state.set('unavailable');
       return;
@@ -140,6 +149,22 @@ export class LocationService {
       window.removeEventListener('deviceorientationabsolute', onTurn);
       window.removeEventListener('deviceorientation', onTurn);
     };
+  }
+}
+
+/**
+ * Posizione finta per quando il dispositivo si localizza male (per esempio una rete aziendale che passa da un altro paese).
+ * Non è nel codice: si imposta nella console del browser con `localStorage.setItem('cad-fake-position', '44.41,8.88')` (lat,lng) e si toglie con `removeItem`.
+ */
+function readFakePosition(): UserPosition | null {
+  try {
+    const raw = localStorage.getItem(FAKE_POSITION_KEY);
+    if (!raw) return null;
+    const [lat, lng] = raw.split(',').map((n) => Number(n.trim()));
+    if (!Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+    return { lat, lng, heading: null, accuracy: 10 };
+  } catch {
+    return null;
   }
 }
 
