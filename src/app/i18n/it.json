@@ -115,6 +115,8 @@
   "worldMap.filter.poiCulture": "Cultura e svago",
   "worldMap.filter.poiServices": "Servizi",
   "worldMap.filter.poiNature": "Natura",
+  "login.tagline": "Una squadra di mercenari, una città vera sotto i piedi: accetta contratti sulla mappa, affronta le missioni e conquista il tuo territorio da Fixer.",
+  "login.locationWarning": "Il gioco richiede di consentire la posizione continuamente",
   "login.title": "Accedi",
   "login.user": "Utente",
   "login.password": "Password",

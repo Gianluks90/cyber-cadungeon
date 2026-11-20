@@ -115,6 +115,8 @@
   "worldMap.filter.poiCulture": "Culture and leisure",
   "worldMap.filter.poiServices": "Services",
   "worldMap.filter.poiNature": "Nature",
+  "login.tagline": "A crew of mercenaries and your real city under your feet: accept contracts on the map, take on the missions and claim your own territory as a Fixer.",
+  "login.locationWarning": "The game requires location access to be allowed at all times",
   "login.title": "Sign in",
   "login.user": "User",
   "login.password": "Password",
