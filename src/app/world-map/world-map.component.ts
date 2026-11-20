@@ -12,6 +12,9 @@ import { BrandLogoComponent } from '../ui/brand-logo.component';
 import { IconComponent } from '../ui/icon.component';
 import { BASEMAP_SOURCE_ID, START_VIEW } from './map-config';
 import { TileLoadingView } from './tile-loading';
+import { ProfileService, defaultNickname, type ProfileChange } from '../profile/profile.service';
+import { ProfileDialogComponent } from '../ui/profile-dialog.component';
+import { UserBadgeComponent } from './user-badge.component';
 import { LocationConsentComponent } from './location-consent.component';
 import { GOOD_ACCURACY_M, LocationService, type UserPosition } from './location.service';
 import { applyTerrain, buildMapStyle } from './map-style';
@@ -75,7 +78,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, HangoutInfoPanelComponent, ConfirmDialogComponent],
+  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, UserBadgeComponent, ProfileDialogComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, HangoutInfoPanelComponent, ConfirmDialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -86,12 +89,16 @@ const USER_ZOOM = 16;
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
     <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" [max]="maxHeld" (play)="playContract($event)" (cancel)="cancelContract($event)" />
+    <app-user-badge [name]="profile.nickname()" [photoURL]="profile.photoURL()" [label]="'worldMap.user.label' | t" />
     <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
         <app-icon [name]="fullscreen() ? 'fullscreen_exit' : 'fullscreen'" [size]="18" />
       </button>
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="'worldMap.menu.settings' | t" [title]="'worldMap.menu.settings' | t" (click)="openSettings()">
-        <app-icon name="settings" [size]="18" />
+        <app-icon name="tune" [size]="18" />
+      </button>
+      <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="'worldMap.menu.account' | t" [title]="'worldMap.menu.account' | t" (click)="openProfile()">
+        <app-icon name="manage_accounts" [size]="18" />
       </button>
     </app-dropdown-menu>
     <div class="corner">
@@ -180,6 +187,7 @@ const USER_ZOOM = 16;
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [alertLevel]="weatherAlert()?.level ?? null" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
+    <app-profile-dialog [open]="profileOpen()" [savedNickname]="profile.stored().nickname" [savedPhotoURL]="profile.stored().photoURL" [defaultNickname]="defaultNickname()" [googlePhoto]="!!auth.user()?.photoURL" (confirmed)="saveProfile($event)" (cancel)="profileOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
       <p class="status">{{ 'location.searching' | t }}</p>
@@ -293,7 +301,8 @@ export class WorldMapComponent {
   private readonly container = viewChild.required<ElementRef<HTMLDivElement>>('container');
   private readonly ngZone = inject(NgZone);
   private readonly destroyRef = inject(DestroyRef);
-  private readonly auth = inject(AuthService);
+  protected readonly auth = inject(AuthService);
+  protected readonly profile = inject(ProfileService);
   private readonly router = inject(Router);
   protected readonly location = inject(LocationService);
   /** Se la posizione è poco precisa, di quanti metri (altrimenti niente). */
@@ -334,6 +343,9 @@ export class WorldMapComponent {
   protected readonly panel = signal<'filters' | 'legend' | 'menu' | 'contracts' | null>(null);
   /** La dialog della grafica (tasto impostazioni del menu) è aperta. */
   protected readonly settingsOpen = signal(false);
+  protected readonly profileOpen = signal(false);
+  /** Il nickname che si userebbe senza scelta: il nome dell'account fino al primo spazio. */
+  protected readonly defaultNickname = computed(() => defaultNickname(this.auth.user()?.name ?? ''));
   /** La dialog dei crediti (voce Attribuzione del menu) è aperta. */
   protected readonly creditsOpen = signal(false);
   /** Le voci della tendina in alto a destra, nell'ordine in cui compaiono (si ricalcolano al cambio di lingua). */
@@ -678,6 +690,17 @@ export class WorldMapComponent {
   protected openSettings(): void {
     this.setPanel('menu', false);
     this.settingsOpen.set(true);
+  }
+
+  /** Il tasto account: chiude il menu e apre la dialog del profilo. */
+  protected openProfile(): void {
+    this.setPanel('menu', false);
+    this.profileOpen.set(true);
+  }
+
+  protected saveProfile(change: ProfileChange): void {
+    void this.profile.saveProfile(change);
+    this.profileOpen.set(false);
   }
 
   protected saveSettings(options: GraphicsOptions): void {

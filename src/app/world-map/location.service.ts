@@ -1,4 +1,5 @@
-import { Injectable, computed, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
+import { ProfileService } from '../profile/profile.service';
 
 export interface UserPosition {
   lng: number;
@@ -14,6 +15,10 @@ export type LocationState = 'idle' | 'waiting' | 'granted' | 'denied' | 'unavail
 
 const CONSENT_KEY = 'cad-location-consent';
 const FAKE_POSITION_KEY = 'cad-fake-position';
+/** La versione dell'informativa sulla posizione (location.* in it.json): da alzare quando il testo cambia nella sostanza. */
+export const LOCATION_NOTICE_VERSION = 1;
+/** Per salvare la zona di partenza serve una lettura almeno così precisa (metri): una approssimativa di rete può essere a chilometri. */
+const STARTING_POINT_MAX_ACCURACY_M = 100;
 /** Sotto questa incertezza (metri) la posizione è considerata precisa. */
 export const GOOD_ACCURACY_M = 25;
 /** Sotto questa velocità (m/s) la direzione del GPS non è affidabile e si usa la bussola. */
@@ -34,6 +39,9 @@ export class LocationService {
   readonly facing = computed(() => this.position()?.heading ?? this.compass());
   /** Si sta cercando una posizione precisa (consenso dato, ma ancora nessuna lettura). */
   readonly searching = computed(() => !this.needsPanel() && this.position() === null);
+  private readonly profile = inject(ProfileService);
+  /** In questa visita la zona di partenza non è ancora stata controllata/salvata. */
+  private startingPointPending = false;
   private fix: UserPosition | null = null;
   private compassCleanup: (() => void) | null = null;
   private readonly consented = signal(readConsent());
@@ -56,6 +64,7 @@ export class LocationService {
   accept(): void {
     try { localStorage.setItem(CONSENT_KEY, new Date().toISOString()); } catch { /* archivio bloccato: il consenso vale per questa visita */ }
     this.consented.set(true);
+    void this.profile.recordLocationConsent(LOCATION_NOTICE_VERSION); // la prova del consenso resta sull'account
     // Su iPhone il permesso per la bussola si chiede solo dentro un clic: per questo parte subito, prima di ogni attesa.
     void this.listenCompass();
     this.watch();
@@ -82,6 +91,7 @@ export class LocationService {
 
   private watch(): void {
     this.stop();
+    this.startingPointPending = true;
     const fake = readFakePosition();
     if (fake) {
       // Posizione finta di prova (solo se scelta a mano nel browser): niente GPS, la mappa parte da lì.
@@ -112,6 +122,7 @@ export class LocationService {
         const moving = (p.coords.speed ?? 0) > MOVING_SPEED && p.coords.heading !== null && !Number.isNaN(p.coords.heading);
         this.fix = { lng: p.coords.longitude, lat: p.coords.latitude, heading: moving ? p.coords.heading : null, accuracy: p.coords.accuracy };
         this.state.set('granted');
+        this.saveStartingPoint(this.fix);
         this.position.set(this.fix); // subito, anche se approssimativa: le letture successive la affinano
       },
       (e) => {
@@ -121,6 +132,13 @@ export class LocationService {
       // maximumAge 0: mai una lettura vecchia; l'alta precisione chiede il GPS vero.
       { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 },
     );
+  }
+
+  /** La prima lettura abbastanza precisa di una visita va (una volta sola, se l'account non ce l'ha già) sull'account come zona di partenza. La posizione finta di prova non passa di qui. */
+  private saveStartingPoint(fix: UserPosition): void {
+    if (!this.startingPointPending || fix.accuracy > STARTING_POINT_MAX_ACCURACY_M) return;
+    this.startingPointPending = false;
+    void this.profile.saveStartingPoint(fix.lat, fix.lng);
   }
 
   /** Ascolta la bussola. Android manda l'angolo assoluto (`alpha`), iPhone la direzione già pronta (`webkitCompassHeading`, dopo il permesso). Senza sensore non succede nulla. */

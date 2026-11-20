@@ -4,9 +4,24 @@ import { TranslatePipe } from '../i18n/translate.pipe';
 import { DialogComponent } from '../ui/dialog.component';
 import { FieldComponent } from '../ui/field.component';
 import { IconComponent } from '../ui/icon.component';
-import { AuthService } from './auth.service';
+import type { MessageKey } from '../i18n/i18n.service';
+import { ProfileService } from '../profile/profile.service';
+import { AuthService, type AuthError, type AuthResult } from './auth.service';
 
-/** La pagina di accesso (`/login`): utente e password in una dialog. Per ora il login è finto (utente `test`, password `test`). */
+/** Il testo da mostrare per ogni errore (`cancelled` non ne ha: chi chiude la finestra di Google non ha sbagliato niente). */
+const ERROR_KEYS: Record<Exclude<AuthError, 'cancelled'>, MessageKey> = {
+  missing: 'login.error.missing',
+  credentials: 'login.error.credentials',
+  'email-in-use': 'login.error.emailInUse',
+  'weak-password': 'login.error.weakPassword',
+  'invalid-email': 'login.error.invalidEmail',
+  'too-many': 'login.error.tooMany',
+  network: 'login.error.network',
+  'popup-blocked': 'login.error.popupBlocked',
+  unknown: 'login.error.unknown',
+};
+
+/** La pagina di accesso (`/login`): email e password (o Google) in una dialog, con la scelta tra accedere e creare un account. */
 @Component({
   selector: 'app-login',
   host: { '[style.--login-bg-image]': 'bgImage', '[style.--login-logo-image]': 'logoImage' },
@@ -24,17 +39,30 @@ import { AuthService } from './auth.service';
       <button type="button" class="enter dlg-btn primary" (click)="open.set(true)"><app-icon name="login" [size]="16" /> {{ 'login.title' | t }}</button>
     </div>
     @if (open()) {
-      <app-dialog [title]="'login.title' | t" width="360px" (closed)="open.set(false)">
-        <form id="login-form" (submit)="submit($event, user.value, password.value)">
-          <app-field [label]="'login.user' | t">
-            <input #user type="text" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" [class.bad]="failed()" (input)="failed.set(false)" />
+      <app-dialog [title]="(mode() === 'login' ? 'login.title' : 'login.registerTitle') | t" width="360px" (closed)="open.set(false)">
+        <form id="login-form" (submit)="submit($event, email.value, password.value)">
+          @if (mode() === 'register') {
+            <app-field [label]="'login.nickname' | t">
+              <input #nick type="text" name="nickname" maxlength="24" autocomplete="nickname" spellcheck="false" [class.bad]="!!errorKey()" (input)="nickname.set(nick.value); errorKey.set(null)" />
+            </app-field>
+          }
+          <app-field [label]="'login.email' | t">
+            <input #email type="email" name="email" autocomplete="email" autocapitalize="none" spellcheck="false" [class.bad]="!!errorKey()" (input)="errorKey.set(null); sent.set(false)" />
           </app-field>
-          <app-field [label]="'login.password' | t" [error]="failed() ? ('login.error' | t) : ''">
-            <input #password type="password" name="password" autocomplete="current-password" [class.bad]="failed()" (input)="failed.set(false)" />
+          <app-field [label]="'login.password' | t">
+            <input #password type="password" name="password" [attr.autocomplete]="mode() === 'login' ? 'current-password' : 'new-password'" [class.bad]="!!errorKey()" (input)="errorKey.set(null)" />
           </app-field>
+          @if (errorKey(); as key) { <p class="err" role="alert">{{ key | t }}</p> }
+          @if (sent()) { <p class="ok" role="status">{{ 'login.resetSent' | t }}</p> }
+          @if (mode() === 'login') { <button type="button" class="switch forgot" [disabled]="busy()" (click)="forgot(email.value)">{{ 'login.forgot' | t }}</button> }
         </form>
+        <div class="alt">
+          <span class="or">{{ 'login.or' | t }}</span>
+          <button type="button" class="dlg-btn google" [class.off]="busy()" [disabled]="busy()" (click)="google()">{{ 'login.google' | t }}</button>
+          <button type="button" class="switch" (click)="switchMode()">{{ (mode() === 'login' ? 'login.toRegister' : 'login.toLogin') | t }}</button>
+        </div>
         <button dialogFooter type="submit" form="login-form" class="dlg-btn primary" [class.off]="busy()" [disabled]="busy()">
-          <app-icon name="login" [size]="16" /> {{ 'login.submit' | t }}
+          <app-icon name="login" [size]="16" /> {{ (mode() === 'login' ? 'login.submit' : 'login.registerSubmit') | t }}
         </button>
       </app-dialog>
     }
@@ -63,6 +91,14 @@ import { AuthService } from './auth.service';
     /* Il sottotitolo (su due righe a schermo largo, bilanciate, largo meno del logo perché non lo pareggi in peso) su una lastra scura sfocata, con un filo azzurro e l'angolo in alto a destra e in basso a sinistra smussato (come i riquadri dell'app); le ombre scure attorno alle lettere le staccano dallo sfondo. */
     .tagline { box-sizing: border-box; width: min(100%, 700px); margin: 0; padding: 14px 28px; text-align: center; text-wrap: balance; color: var(--c-interact); font: 700 13px/1.6 var(--font-display); letter-spacing: 0.1em; text-transform: uppercase; background: color-mix(in srgb, var(--c-bg) 60%, transparent); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid color-mix(in srgb, var(--c-interact) 32%, transparent); border-radius: 0 var(--radius-2) 0 var(--radius-2); text-shadow: 0 1px 2px var(--c-bg), 0 0 8px rgba(0, 0, 0, 0.9), 0 0 14px color-mix(in srgb, var(--c-interact) 55%, transparent); }
     form { display: flex; flex-direction: column; gap: 12px; }
+    .ok { margin: 0; color: var(--c-interact); font-size: 12px; }
+    .forgot { align-self: flex-start; padding: 0; }
+    .err { margin: 0; color: var(--c-danger); font-size: 12px; }
+    .alt { display: flex; flex-direction: column; align-items: stretch; gap: 10px; margin-top: 16px; }
+    .or { align-self: center; color: var(--c-text-dim); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
+    .google { justify-content: center; }
+    .switch { align-self: center; padding: 4px; background: none; border: 0; color: var(--c-interact); font: 600 12px/1.4 var(--font-ui); cursor: pointer; }
+    .switch:hover { text-decoration: underline; }
     .dlg-btn { display: inline-flex; align-items: center; gap: 6px; }
   `,
 })
@@ -72,10 +108,18 @@ export class LoginComponent {
   protected readonly bgImage = `url("${new URL('images/login-backgroun.png', document.baseURI).href}")`;
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
-  protected readonly failed = signal(false);
+  private readonly profile = inject(ProfileService);
+  /** Il nickname scritto nella registrazione (chi entra con Google non lo sceglie qui). */
+  protected readonly nickname = signal('');
+  /** Il motivo dell'ultimo errore (la chiave del testo), se c'è. */
+  protected readonly errorKey = signal<MessageKey | null>(null);
+  /** L'email per reimpostare la password è partita. */
+  protected readonly sent = signal(false);
   protected readonly busy = signal(false);
-  /** La finestra con utente e password è aperta (si apre dal tasto in basso o con Invio). */
+  /** La finestra con email e password è aperta (si apre dal tasto in basso o con Invio). */
   protected readonly open = signal(false);
+  /** «Accedi» o «Crea account»: la stessa finestra, con testi diversi. */
+  protected readonly mode = signal<'login' | 'register'>('login');
 
   /** Invio apre la finestra di accesso; con la finestra aperta, Invio invia il modulo come sempre. */
   @HostListener('document:keydown.enter')
@@ -83,12 +127,47 @@ export class LoginComponent {
     if (!this.open()) this.open.set(true);
   }
 
-  protected async submit(event: Event, name: string, password: string): Promise<void> {
-    event.preventDefault();
+  protected switchMode(): void {
+    this.mode.update((m) => (m === 'login' ? 'register' : 'login'));
+    this.errorKey.set(null);
+    this.sent.set(false);
+  }
+
+  /** «Password dimenticata»: manda il link per reimpostarla all'email già scritta nel campo. */
+  protected async forgot(email: string): Promise<void> {
     this.busy.set(true);
-    const ok = await this.auth.login(name, password);
+    this.errorKey.set(null);
+    this.sent.set(false);
+    const error = await this.auth.resetPassword(email);
     this.busy.set(false);
-    if (ok) void this.router.navigateByUrl('/');
-    else this.failed.set(true);
+    if (error === null) this.sent.set(true);
+    else this.errorKey.set(ERROR_KEYS[error === 'cancelled' ? 'unknown' : error]);
+  }
+
+  protected async submit(event: Event, email: string, password: string): Promise<void> {
+    event.preventDefault();
+    if (this.mode() === 'login') return this.enter(this.auth.login(email, password));
+    const nick = this.nickname().trim();
+    if (!nick) {
+      this.errorKey.set('login.error.nickname');
+      return;
+    }
+    await this.enter(this.auth.register(email, password), nick);
+  }
+
+  protected google(): Promise<void> {
+    return this.enter(this.auth.loginWithGoogle());
+  }
+
+  private async enter(attempt: Promise<AuthResult>, nickname?: string): Promise<void> {
+    this.busy.set(true);
+    this.errorKey.set(null);
+    const result = await attempt;
+    this.busy.set(false);
+    if ('user' in result) {
+      if (nickname) void this.profile.saveProfile({ nickname }); // senza aspettare la rete: si entra subito
+      void this.router.navigateByUrl('/');
+    }
+    else if (result.error !== 'cancelled') this.errorKey.set(ERROR_KEYS[result.error]);
   }
 }

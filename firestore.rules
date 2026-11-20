@@ -1,0 +1,123 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: users
+    // Document ID: the Firebase Auth uid of the owner
+    // Fields (all optional, nothing else is allowed):
+    //   - role: string, 'player' | 'admin'. Absent = 'player'.
+    //       NEVER writable by clients (not on create, not on update): it is set
+    //       by hand from the Firebase console (which bypasses these rules).
+    //       Clients only read it, to enable admin/development features.
+    //   - nickname: string, 1-24 characters. Chosen by the user; optional.
+    //   - photoURL: string, https URL up to 500 characters. Chosen by the
+    //       user; optional (Google users show their Google photo instead).
+    //   - locationConsent: map { at: timestamp, version: int }
+    //       Proof that the user accepted the location notice. `at` is the
+    //       server time of the write; `version` is the notice version (>= 1).
+    //       Rewritten at every acceptance.
+    //   - startingPoint: map { lat: number, lng: number, at: timestamp }
+    //       First (rounded) position of the user. Written once by the client;
+    //       after that it can no longer be changed (only deleted together with
+    //       the whole document).
+    //
+    // Everything not listed here is denied. New fields need a new rule.
+    // Deleting the document also deletes the role (the console can set it again).
+    //
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // `role` is allowed to EXIST in the document (set from the console), but
+    // the validators below never let a client create or change it.
+    function hasOnlyAllowedFields(data) {
+      return data.keys().hasOnly(['role', 'nickname', 'photoURL', 'locationConsent', 'startingPoint']);
+    }
+
+    // ===============================================================
+    // Domain Validators (used by BOTH create and update)
+    // ===============================================================
+
+    function isValidNickname(n) {
+      return n is string && n.size() >= 1 && n.size() <= 24;
+    }
+
+    function isValidPhotoUrl(u) {
+      return u is string && u.size() <= 500 && u.matches('^https://.*');
+    }
+
+    // A freshly written consent: server time, positive integer version.
+    function isValidConsent(c) {
+      return c is map
+        && c.keys().hasOnly(['at', 'version'])
+        && c.at is timestamp
+        && c.at == request.time
+        && c.version is int
+        && c.version >= 1
+        && c.version <= 1000;
+    }
+
+    // A freshly written starting point: coordinates in range, server time.
+    function isValidStartingPoint(p) {
+      return p is map
+        && p.keys().hasOnly(['lat', 'lng', 'at'])
+        && p.lat is number && p.lat >= -90 && p.lat <= 90
+        && p.lng is number && p.lng >= -180 && p.lng <= 180
+        && p.at is timestamp
+        && p.at == request.time;
+    }
+
+    // Whole document after a create: every present field must be valid.
+    function isValidNewUser(data) {
+      return hasOnlyAllowedFields(data)
+        && !('role' in data)
+        && (!('nickname' in data) || isValidNickname(data.nickname))
+        && (!('photoURL' in data) || isValidPhotoUrl(data.photoURL))
+        && (!('locationConsent' in data) || isValidConsent(data.locationConsent))
+        && (!('startingPoint' in data) || isValidStartingPoint(data.startingPoint));
+    }
+
+    // Whole document after an update: only fields that actually change are
+    // validated as "new" (the untouched ones keep their old server time).
+    function isValidUserUpdate(before, after) {
+      let changed = after.diff(before).affectedKeys();
+      return hasOnlyAllowedFields(after)
+        && !('role' in changed)
+        // nickname and photoURL can be set, changed or removed (field deleted).
+        && (!('nickname' in changed) || !('nickname' in after) || isValidNickname(after.nickname))
+        && (!('photoURL' in changed) || !('photoURL' in after) || isValidPhotoUrl(after.photoURL))
+        && (!('locationConsent' in changed) || isValidConsent(after.locationConsent))
+        // The starting point can be set once; an existing one never changes.
+        && (!('startingPoint' in changed)
+            || (!('startingPoint' in before) && isValidStartingPoint(after.startingPoint)));
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /users/{userId} {
+      // Contains location data: only the owner reads it.
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId) && isValidNewUser(request.resource.data);
+      allow update: if isOwner(userId) && isValidUserUpdate(resource.data, request.resource.data);
+      // The user can erase their own data (GDPR).
+      allow delete: if isOwner(userId);
+    }
+
+    // Everything else: no access (default deny).
+  }
+}

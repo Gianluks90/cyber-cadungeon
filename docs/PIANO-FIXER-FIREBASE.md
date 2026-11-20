@@ -45,7 +45,7 @@ Proposta (non ancora approvata):
 - **Sull'account (Firestore)**: profilo, ritrovo e area, contratti accettati e sbloccati, contratti creati, Fama e Reputazione, e la **prova del consenso alla posizione** (data e versione dell'informativa). Solo sul dispositivo: filtri, 3D, alone, e mai la posizione in tempo reale.
 - **Modello del territorio**: un documento per edificio (`territory/{identificativo edificio}`), non una lista nell'utente. Così «un edificio ha un solo proprietario» lo garantisce il database (creare un documento già esistente fallisce) e fissare il ritrovo è un'unica operazione su 3 documenti. Per la contesa (difesa, tempi di attesa) serviranno funzioni sul server (piano a pagamento); fino ad allora basta tenere pronto il modello.
 - **Come**: SDK modulare di Firebase (non AngularFire), implementazioni Firestore degli archivi già dietro interfaccia (`HangoutStore`, `HeldStore`, `UnlockStore`, `ContractStore`, `SaveStore`). I metodi di oggi sono sincroni: alla login si carica in memoria e si scrive in differita, senza cambiare il resto del codice. Emulatore locale per sviluppare senza toccare i dati veri. Importazione di ciò che l'utente ha già nel browser al primo accesso.
-- **Hosting**: non serve, si resta su GitHub Pages (basta aggiungere il suo dominio ai domini autorizzati di Auth).
+- **Hosting**: per ora si resta su GitHub Pages (il suo dominio è tra quelli autorizzati di Auth). Passare a Firebase Hosting si può fare più avanti (`firebase.json` ha già il blocco `hosting`); attenzione alla banda gratuita: 10 GB al mese.
 - **Rischi**: dati in regione europea (la regione non si cambia dopo la creazione del progetto), esportazione e cancellazione dei dati dell'utente, le chiavi web di Firebase non sono segrete (la sicurezza sta nelle regole e poi in App Check), possibili blocchi della rete aziendale ai domini di Firebase.
 
 Domande aperte, con la risposta che consiglio:
@@ -53,6 +53,8 @@ Domande aperte, con la risposta che consiglio:
 2. Il progetto Firebase esistente è in una regione europea? Se no, conviene crearne uno nuovo.
 3. La prova del consenso con data lato server (più solida): sì o no?
 4. Territorio contendibile vicino o lontano? Se vicino, partire direttamente dal modello a un documento per edificio.
+
+**Fatto**: Auth; primo archivio Firestore `users/{uid}` con `locationConsent` (data del server e versione dell'informativa, riscritta a ogni «Accetta») e `startingPoint` (prima lettura con precisione ≤ 100 m, arrotondata a 3 decimali ≈ 100 m, scritta una volta sola e mai più modificata dal client; non si salva con la posizione finta). `nickname` (1-24 caratteri) e `photoURL` (https, max 500): li sceglie il giocatore, ancora senza schermata per cambiarli (per ora si scrivono dalla console). Ruolo `role` (`player` se manca, `admin` per l'amministratore e gli strumenti di sviluppo): lo imposta a mano chi amministra dalla console, le regole non lo lasciano scrivere al client; `ProfileService.role` e `isAdmin` lo espongono. Regole in `firestore.rules`, con elenco chiuso dei campi. L'informativa (`location.*`) dice che la zona di partenza resta sull'account.
 
 Ordine suggerito quando si decide: Auth → archivi Firestore del ritrovo e del consenso → emulatore e regole → importazione → contratti creati → territorio.
 
@@ -66,7 +68,6 @@ Ordine suggerito quando si decide: Auth → archivi Firestore del ritrovo e del 
 ## Chiavi del localStorage (tutto ciò che oggi si perde con la cache)
 | Chiave | Cosa contiene |
 |---|---|
-| `cad-auth-user` | l'utente del login finto (`test`/`test`) |
 | `cad-location-consent` | data in cui è stato dato il consenso alla posizione |
 | `cad-fake-position` | posizione finta di sviluppo (`lat,lng`) |
 | `cad-hangout` | il ritrovo: luogo e identificativi degli edifici |
