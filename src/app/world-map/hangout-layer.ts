@@ -1,13 +1,16 @@
-import { Marker, type FilterSpecification, type Map as MapLibreMap } from 'maplibre-gl';
+import { Marker, type FilterSpecification, type GeoJSONSource, type Map as MapLibreMap } from 'maplibre-gl';
 import type { HangoutPlace } from '../game/hangout/hangout-store';
 import { translate } from '../i18n/i18n.service';
 import { BASEMAP_SOURCE_ID } from './map-config';
-import { EXPAND_REACH_M, INFLUENCE_MAX_M, INFLUENCE_POINTS, INFLUENCE_START_M, INFLUENCE_STEP_M, PUBLIC_POI_KINDS, blockedLandFrom, blockedBuildingsWithin, buildingsWithin, footprintsFrom, type Ring } from './hangout-geo';
+import { EXPAND_REACH_M, INFLUENCE_MAX_M, INFLUENCE_POINTS, INFLUENCE_START_M, INFLUENCE_STEP_M, PUBLIC_POI_KINDS, blockedLandFrom, ZONE_BUILDING_M, ZONE_PLACE_M, blockedBuildingsWithin, buildingsWithin, centerOf, footprintsFrom, unionOfCircles, type Circle, type Ring } from './hangout-geo';
 
 const AREA_FILL = 'hangout-area-fill';
 const AREA_LINE = 'hangout-area-line';
 const REACH_FILL = 'hangout-reach-fill';
 const REACH_LINE = 'hangout-reach-line';
+const ZONE_SOURCE = 'hangout-zone';
+const ZONE_FILL = 'hangout-zone-fill';
+const ZONE_LINE = 'hangout-zone-line';
 const BLOCKED_FILL = 'hangout-blocked-fill';
 const BLOCKED_LINE = 'hangout-blocked-line';
 /** L'immagine delle righe a 45 gradi (id nelle immagini della mappa). */
@@ -65,6 +68,7 @@ export class HangoutLayer {
   private placeButtons: { key: string; button: HTMLButtonElement; hover: boolean }[] = [];
   private selectedKey: string | null = null;
   private blocked: readonly BlockedBuilding[] = [];
+  private zone: readonly Circle[] = [];
   private blockedMarkers: Marker[] = [];
 
   constructor(private readonly map: MapLibreMap) {}
@@ -77,6 +81,25 @@ export class HangoutLayer {
   setReach(ids: readonly number[]): void {
     this.reachIds = ids;
     this.render();
+  }
+
+  /** Le aree rotonde dell'influenza (l'occhio del profilo Fixer): l'unione dei cerchi come un'unica area; vuoto = nascoste. */
+  setZone(circles: readonly Circle[]): void {
+    this.zone = circles;
+    this.render();
+  }
+
+  /** I cerchi dell'area: uno di ZONE_PLACE_M attorno al luogo del ritrovo e uno di ZONE_BUILDING_M attorno a ogni edificio dell'influenza (quelli di cui i tasselli caricati hanno la forma). */
+  zoneCircles(place: HangoutPlace, ids: readonly number[]): Circle[] {
+    const buildings = this.readBuildings();
+    const circles: Circle[] = [{ lng: place.lng, lat: place.lat, r: ZONE_PLACE_M }];
+    for (const id of ids) {
+      const fp = buildings.get(id);
+      if (!fp?.rings.length) continue;
+      const [lng, lat] = centerOf(fp);
+      circles.push({ lng, lat, r: ZONE_BUILDING_M });
+    }
+    return circles;
   }
 
   /** Gli edifici non selezionabili: righe a 45 gradi rosse e, al centro, un box rosso con l'icona di avviso e la scritta «Vietato» («Off limits»). */
@@ -164,7 +187,15 @@ export class HangoutLayer {
       const interact = css.getPropertyValue('--c-interact').trim();
       // Sopra gli edifici e sotto le scritte.
       const before = map.getStyle().layers.find((l) => l.type === 'symbol')?.id;
-      const fill = (id: string, ids: readonly number[], color: string, opacity: number) => {
+      // Le aree rotonde: l'unione dei cerchi (il luogo e ogni edificio) come un'unica area, verde con il contorno tratteggiato; dove i cerchi si sovrappongono non si scurisce due volte e il contorno segue solo il bordo esterno.
+      const zoneData = { type: 'FeatureCollection' as const, features: this.zone.length ? [{ type: 'Feature' as const, properties: {}, geometry: { type: 'MultiPolygon' as const, coordinates: unionOfCircles(this.zone) } }] : [] };
+      const zoneSource = map.getSource(ZONE_SOURCE);
+      if (zoneSource && 'setData' in zoneSource) (zoneSource as GeoJSONSource).setData(zoneData);
+      else {
+        map.addSource(ZONE_SOURCE, { type: 'geojson', data: zoneData });
+        map.addLayer({ id: ZONE_FILL, type: 'fill', source: ZONE_SOURCE, paint: { 'fill-color': you, 'fill-opacity': 0.08 } }, before);
+        map.addLayer({ id: ZONE_LINE, type: 'line', source: ZONE_SOURCE, paint: { 'line-color': you, 'line-width': 1.5, 'line-dasharray': [3, 2], 'line-opacity': 0.9 } }, before);
+      }      const fill = (id: string, ids: readonly number[], color: string, opacity: number) => {
         if (map.getLayer(id)) map.setFilter(id, idFilter(ids));
         else map.addLayer({ id, type: 'fill', source: BASEMAP_SOURCE_ID, 'source-layer': BUILDINGS, filter: idFilter(ids), paint: { 'fill-color': color, 'fill-opacity': opacity } }, before);
       };

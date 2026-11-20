@@ -185,3 +185,87 @@ export function blockedBuildingsWithin(
 ): { id: number; center: [number, number] }[] {
   return nearby(sources, buildings, blocked, new Set(), maxM, true).map((fp) => ({ id: fp.id, center: centerOf(fp) }));
 }
+
+/** Un cerchio sulla mappa: centro e raggio in metri. */
+export interface Circle {
+  lng: number;
+  lat: number;
+  r: number;
+}
+
+/** Raggio dell'area che il ritrovo proietta attorno al suo luogo, e quello di ogni edificio dell'influenza, in metri. */
+export const ZONE_PLACE_M = 100;
+export const ZONE_BUILDING_M = 50;
+
+/**
+ * L'unione di più cerchi come poligoni GeoJSON (MultiPolygon: per ogni poligono il contorno esterno e gli eventuali buchi, in [lng, lat]). Le aree si sommano: dove due cerchi si
+ * sovrappongono resta un solo pezzo, quindi disegnata con un po' di trasparenza non si scurisce mai due volte. Si calcola sui bordi: per ogni cerchio si tengono gli archi che non
+ * stanno dentro altri cerchi e li si concatena in anelli (esterni in senso antiorario, buchi in senso orario). `stepDeg` è la finezza dei bordi.
+ */
+export function unionOfCircles(circles: readonly Circle[], stepDeg = 6): number[][][][] {
+  if (!circles.length) return [];
+  const lat0 = circles.reduce((s, c) => s + c.lat, 0) / circles.length;
+  const kx = Math.cos((lat0 * Math.PI) / 180) * 111_320;
+  const ky = 110_574;
+  const all = circles.map((c) => ({ x: c.lng * kx, y: c.lat * ky, r: c.r }));
+  // Un cerchio tutto dentro un altro non conta (a parità, ne resta uno).
+  const alive = all.filter((a, i) => !all.some((b, j) => j !== i && (b.r > a.r || (b.r === a.r && j < i)) && Math.hypot(a.x - b.x, a.y - b.y) + a.r <= b.r + 1e-6));
+  const TAU = Math.PI * 2;
+  const norm = (a: number) => ((a % TAU) + TAU) % TAU;
+  const at = (c: { x: number; y: number; r: number }, a: number): [number, number] => [c.x + c.r * Math.cos(a), c.y + c.r * Math.sin(a)];
+  const pointsOf = (c: { x: number; y: number; r: number }, a0: number, a1: number): [number, number][] => {
+    const n = Math.max(2, Math.ceil((a1 - a0) / ((stepDeg * Math.PI) / 180)));
+    return Array.from({ length: n + 1 }, (_, k) => at(c, a0 + ((a1 - a0) * k) / n));
+  };
+
+  const arcs: { c: (typeof alive)[number]; a0: number; a1: number }[] = [];
+  const rings: [number, number][][] = [];
+  alive.forEach((a, i) => {
+    const angles: number[] = [];
+    alive.forEach((b, j) => {
+      if (j === i) return;
+      const d = Math.hypot(b.x - a.x, b.y - a.y);
+      if (d >= a.r + b.r || d <= Math.abs(a.r - b.r)) return; // non si incrociano
+      const base = Math.atan2(b.y - a.y, b.x - a.x);
+      const half = Math.acos(Math.max(-1, Math.min(1, (a.r * a.r + d * d - b.r * b.r) / (2 * a.r * d))));
+      angles.push(norm(base - half), norm(base + half));
+    });
+    if (!angles.length) {
+      rings.push(pointsOf(a, 0, TAU)); // un cerchio che non tocca nessuno: un anello a sé
+      return;
+    }
+    angles.sort((p, q) => p - q);
+    angles.forEach((a0, k) => {
+      const a1 = k + 1 < angles.length ? angles[k + 1] : angles[0] + TAU;
+      const mid = at(a, (a0 + a1) / 2);
+      if (!alive.some((b, j) => j !== i && Math.hypot(mid[0] - b.x, mid[1] - b.y) < b.r - 1e-6)) arcs.push({ c: a, a0, a1 });
+    });
+  });
+
+  // Gli archi si concatenano: la fine di uno è l'inizio del successivo.
+  const used = new Array<boolean>(arcs.length).fill(false);
+  const near = (p: [number, number], q: [number, number]) => Math.hypot(p[0] - q[0], p[1] - q[1]) < 0.05;
+  arcs.forEach((first, i) => {
+    if (used[i]) return;
+    used[i] = true;
+    const ring: [number, number][] = pointsOf(first.c, first.a0, first.a1);
+    for (;;) {
+      const end = ring[ring.length - 1];
+      const next = arcs.findIndex((arc, k) => !used[k] && near(at(arc.c, arc.a0), end));
+      if (next === -1) break;
+      used[next] = true;
+      ring.push(...pointsOf(arcs[next].c, arcs[next].a0, arcs[next].a1).slice(1));
+    }
+    rings.push(ring);
+  });
+
+  const area = (r: [number, number][]) => r.reduce((s, p, k) => { const q = r[(k + 1) % r.length]; return s + (p[0] * q[1] - q[0] * p[1]); }, 0) / 2;
+  const inside = (p: [number, number], r: [number, number][]) => pointInRing(p, r);
+  const outers = rings.filter((r) => area(r) > 0).map((ring) => ({ ring, holes: [] as [number, number][][] }));
+  for (const hole of rings.filter((r) => area(r) <= 0)) {
+    const owner = outers.filter((o) => inside(hole[0], o.ring)).sort((p, q) => area(p.ring) - area(q.ring))[0];
+    owner?.holes.push(hole);
+  }
+  const back = (r: [number, number][]) => [...r, r[0]].map(([x, y]) => [x / kx, y / ky]);
+  return outers.map((o) => [back(o.ring), ...o.holes.map(back)]);
+}

@@ -131,7 +131,7 @@ const USER_ZOOM = 16;
       @if (hangoutMode() === 'view') {
         <div class="pill" role="toolbar" [attr.aria-label]="'worldMap.hangout.pill.label' | t">
           <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.edit' | t" [title]="'worldMap.hangout.pill.edit' | t"><app-icon name="edit" [size]="18" /></button>
-          <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.visibility' | t" [title]="'worldMap.hangout.pill.visibility' | t"><app-icon name="visibility" [size]="18" /></button>
+          <button type="button" [attr.aria-pressed]="zonesOn()" [attr.aria-label]="'worldMap.hangout.pill.visibility' | t" [title]="'worldMap.hangout.pill.visibility' | t" (click)="zonesOn.set(!zonesOn())"><app-icon [name]="zonesOn() ? 'visibility' : 'visibility_off'" [size]="18" /></button>
           <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.delete' | t" [title]="'worldMap.hangout.pill.delete' | t"><app-icon name="delete" [size]="18" /></button>
         </div>
       }      <section class="fixer" [class.mine]="!!hangout()" [class.active]="hangoutMode() === 'view'" [attr.aria-label]="'worldMap.fixer.title' | t">
@@ -252,6 +252,7 @@ const USER_ZOOM = 16;
     .pill { align-self: flex-end; display: flex; gap: 4px; padding: 3px; border: 1px solid var(--c-you); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: auto; animation: mode-rise 0.28s var(--ease-draw); }
     .pill button { width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 0; background: none; color: var(--c-you); cursor: pointer; }
     .pill button:disabled { opacity: 0.4; cursor: default; }
+    .pill button:enabled:hover, .pill button:enabled:focus-visible, .pill button[aria-pressed='true'] { background: color-mix(in srgb, var(--c-you) 20%, transparent); outline: none; }
     .clock, .weather { margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; }
     /* L'allerta prende il colore del suo livello (gialla, arancione, rossa); il nome del livello e della zona sta nel suggerimento. */
     .weather { pointer-events: auto; border-color: var(--alert-color); color: var(--alert-color); animation: weather-blink 1s ease-in-out 2; }
@@ -410,6 +411,8 @@ export class WorldMapComponent {
     const here = this.location.position();
     return p && here ? distanceMeters(p, here) : null;
   });
+  /** L'occhio della pillola: le aree rotonde attorno al ritrovo (100 m) e agli edifici (50 m) sono visibili. */
+  protected readonly zonesOn = signal(false);
   private hangoutLayer: HangoutLayer | null = null;
   /** Rilegge i tasselli per la modalità in corso (a ogni «idle» della mappa) e l'ultimo risultato, per non ridisegnare se non è cambiato nulla. */
   private hangoutRefresh: (() => void) | null = null;
@@ -560,6 +563,12 @@ export class WorldMapComponent {
         this.hangoutLayer?.setHome(h?.place ?? null);
       }));
     });
+    // L'occhio acceso o spento: le aree rotonde si mostrano o si nascondono subito.
+    effect(() => {
+      this.zonesOn();
+      if (!this.mapCreated()) return;
+      this.ngZone.runOutsideAngular(() => untracked(() => { if (this.hangoutMode() === 'view') this.hangoutRefresh?.(); }));
+    });
     // La casetta del luogo aperto nel pannello resta evidenziata.
     effect(() => {
       const place = this.pendingPlace();
@@ -652,6 +661,7 @@ export class WorldMapComponent {
     layer.setPlaces([]);
     layer.setReach([]);
     layer.setBlocked([]);
+    layer.setZone([]);
     // Fuori dalla scelta dell'influenza la mappa mostra il ritrovo salvato (o niente).
     if (mode !== 'influence') {
       layer.setArea(mode === 'view' ? (this.hangout()?.buildings ?? []) : []); // l'area si vede solo guardandola (espansione)
@@ -692,7 +702,26 @@ export class WorldMapComponent {
       map.flyTo({ center: [place.lng, place.lat], zoom: Math.max(map.getZoom(), 16) });
     }
 
-    if (mode === 'view') return; // si guarda soltanto: niente da rileggere né da toccare
+    if (mode === 'view') {
+      // Si guarda soltanto: l'unica cosa da tenere aggiornata sono le aree rotonde, se l'occhio è acceso (a ogni riposo della mappa, perché la forma degli edifici arriva coi tasselli).
+      const refreshZone = () => {
+        const current = this.hangout();
+        if (!current) return;
+        if (!this.zonesOn()) {
+          if (this.hangoutSignature !== 'off') { this.hangoutSignature = 'off'; layer.setZone([]); }
+          return;
+        }
+        const circles = layer.zoneCircles(current.place, current.buildings);
+        const signature = 'on:' + circles.map((c) => `,,`).join('|');
+        if (signature === this.hangoutSignature) return;
+        this.hangoutSignature = signature;
+        layer.setZone(circles);
+      };
+      this.hangoutRefresh = refreshZone;
+      refreshZone();
+      map.on('idle', refreshZone);
+      return;
+    }
 
     const refresh = () => {
       if (mode === 'influence') {
