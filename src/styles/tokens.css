@@ -150,11 +150,11 @@
   --hud-edge: 10px;      /* distanza dei tasti e dei pannelli dal bordo dello schermo */
   --hud-btn: 36px;       /* lato dei tasti quadrati (menu, filtri, navigazione…) */
   --hud-gap: 10px;       /* spazio tra due elementi vicini */
-  --counter-w: 260px;    /* larghezza fissa del box dei contratti in alto a destra (etichetta + 5 posti + margini, con margine per l'inglese) */
-  /* I pannelli che scivolano da destra: larghi quanto tasto menu + spazio + box contratti, appena sotto la riga in alto. */
-  --side-panel-w: calc(var(--hud-btn) + var(--hud-gap) + var(--counter-w));
+  --hud-gap-tight: 4px;  /* spazio ridotto tra i tasti di uno stesso gruppo (filtri e legenda, navigazione) */
+  /* I pannelli che scivolano da destra e la colonna di riquadri in basso a destra (Fixer, Mercenario con i contratti): larghi uguale; i pannelli stanno appena sotto il tasto del menu. */
+  --side-panel-w: 306px;
   --side-panel-top: calc(var(--hud-edge) + var(--hud-btn) + var(--hud-gap));
-  --side-panel-reserve: 180px; /* altezza lasciata libera in basso per profilo Fixer e Fama */
+  --side-panel-reserve: 250px; /* altezza lasciata libera in basso per i riquadri Fixer e Mercenario (con i contratti) */
 }
 
 /* ---------- Componenti base ---------- */

@@ -85,7 +85,6 @@ const USER_ZOOM = 16;
     <app-brand-logo class="logo" role="img" [attr.aria-label]="'worldMap.logo' | t" />
     <app-map-filter-panel [enabled]="enabled()" [preset]="preset()" [open]="panel() === 'filters'" (openChange)="setPanel('filters', $event)" (toggled)="toggle($event)" (presetChosen)="choosePreset($event)" />
     <app-map-legend-panel [open]="panel() === 'legend'" (openChange)="setPanel('legend', $event)" />
-    <app-contract-counter [count]="heldContracts().length" [open]="panel() === 'contracts'" (toggle)="setPanel('contracts', panel() !== 'contracts')" />
     <app-contract-list-panel [open]="panel() === 'contracts'" (openChange)="setPanel('contracts', $event)" [contracts]="heldContracts()" [max]="maxHeld" (play)="playContract($event)" (cancel)="cancelContract($event)" />
     <app-dropdown-menu [label]="'home.menu' | t" [title]="'home.menu' | t" [items]="menuItems()" hotkey="m" [open]="panel() === 'menu'" (openChange)="setPanel('menu', $event)" (picked)="onMenu($event)">
       <button dropdown-actions type="button" class="hbtn" [attr.aria-label]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" [title]="(fullscreen() ? 'home.exitFullscreen' : 'home.fullscreen') | t" (click)="toggleFullscreen()">
@@ -171,6 +170,8 @@ const USER_ZOOM = 16;
           <span class="stat-label">{{ 'worldMap.fame.label' | t }}</span>
           <span class="stat-val">{{ fame() }}</span>
         </p>
+        <!-- I contratti accettati: una riga del riquadro, che apre anche l'elenco (tasto C). -->
+        <app-contract-counter [count]="heldContracts().length" [open]="panel() === 'contracts'" (toggle)="setPanel('contracts', panel() !== 'contracts')" />
       </section>
     </div>
     <app-confirm-dialog [open]="removeAsked()" [title]="'worldMap.hangout.removeTitle' | t" [text]="'worldMap.hangout.removeText' | t" [confirmLabel]="'worldMap.hangout.remove' | t" (confirmed)="removeHangout()" (cancel)="removeAsked.set(false)" />

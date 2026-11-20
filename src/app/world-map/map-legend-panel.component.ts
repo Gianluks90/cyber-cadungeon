@@ -54,7 +54,7 @@ const ENTRIES: { icon: string; color: string; label: MessageKey }[] = [
     :host { display: contents; }
     .wrap { --w: min(320px, 82vw); --rail: 56px; position: absolute; inset: 0; pointer-events: none; }
     /* Il tasto sta sotto quello dei filtri: quello è al centro del lato (36px) e qui si parte da metà più 18px più 10px di spazio. */
-    .item { position: absolute; z-index: 3; left: 10px; top: calc(50% + 28px); }
+    .item { position: absolute; z-index: 3; left: 10px; top: calc(50% + 18px + var(--hud-gap-tight)); } /* subito sotto il tasto dei filtri (che finisce 18px sotto metà altezza), con lo spazio ridotto */
     .tab, .close { position: relative; display: flex; align-items: center; justify-content: center; padding: 0; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .tab { pointer-events: auto; width: 36px; height: 36px; border-color: var(--c-line-strong); background: var(--c-surface); }
     .close { width: 32px; height: 32px; color: var(--c-text-dim); }

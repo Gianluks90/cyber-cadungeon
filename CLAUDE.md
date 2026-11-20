@@ -17,7 +17,7 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 - Angular (ultima stabile), componenti standalone e signals.
 - PixiJS per la scena di gioco e dell'editor, avviato fuori da NgZone (`runOutsideAngular`).
 - PeerJS per ciò che è veloce ed effimero (puntatori, pedine in movimento, anteprime). Server pubblico in sviluppo; in produzione serviranno PeerServer e TURN propri.
-- Firebase: il progetto esiste, ma per ora **né Auth né Hosting**. Firestore solo per ciò che deve restare (avventure, mappe, eroi, salvataggi), sempre dietro un'interfaccia: oggi la persistenza è in memoria/localStorage (`game/save-store.ts`, `editor/draft-store.ts`).
+- Firebase: il progetto esiste, ma per ora **né Auth né Hosting** (introdurre Auth è in discussione: vedi docs/PIANO-FIXER-FIREBASE.md). Firestore solo per ciò che deve restare (avventure, mappe, eroi, salvataggi), sempre dietro un'interfaccia: oggi la persistenza è in memoria/localStorage (`game/save-store.ts`, `editor/draft-store.ts`).
 
 ## Multilingua
 - Ogni nuovo testo dell'interfaccia (etichette, suggerimenti, `aria-label`, notifiche, errori, titoli di dialog) va in **tutti e due** `src/app/i18n/it.json` ed `en.json`, con la stessa chiave. Mai testi scritti a mano nei template o nel codice. Una chiave mancante in `en.json` o sbagliata nel pipe non compila.
@@ -59,6 +59,7 @@ Design in corso: `docs/DESIGN-MOD-CONTRATTI.md` (mod, cyberware, cyberdeck, cont
 - **Contratti** (passi 1-4 di `docs/PIANO-PROTOTIPO.md` fatti): intestazioni in `public/contracts/index.json` + `game/contracts/` (`ContractStore`, `UnlockStore`, regola di sblocco); la missione resta un `MapData` in `public/maps/`. Titolo della missione = fonte, quello del contratto è una copia. Marker e scheda in `world-map/`.
 - **Mod e Briefing**: catalogo in `public/mods/` + `game/mods/mod.ts`; scelta nel dialog `ui/pregame-shop-dialog.component.ts`; Berserk in `game/state/berserk.ts`. Cosa resta è in `docs/TODO-v2.md` («Aggiornamento 2026-11-12»).
 - **Allerta meteo** (solo avviso, nessun effetto sulle regole): `world-map/weather-alert.ts` (`WeatherAlertService`, oggi i bollettini DPC su GitHub, CC BY 4.0, citati nei crediti; la zona si cerca sul dispositivo, la posizione non esce). Blocchetto «Allerta meteo» accanto all'orologio; conta solo l'allerta di adesso (non «domani»).
+- **Ritrovo del Fixer** (fatto, solo localStorage): scelta del luogo pubblico, 3 edifici di influenza, lente, pillola dei comandi, pannelli laterali info. Codice in `world-map/hangout-*.ts`, `place-names.ts`, `game/hangout/hangout-store.ts`; descrizione, limiti, chiavi del localStorage e come provarlo con la posizione finta (`cad-fake-position`) in `docs/PIANO-FIXER-FIREBASE.md`.
 - **Salvataggi**: `game/save-store.ts` (`SaveStore`, una partita per avventura); bozza dell'editor in `editor/draft-store.ts`.
 - **Interfaccia**: `src/app/ui/`, pagine in `app.routes.ts` (`/`, `/party/:map`, `/lobby/:code`, `/play/:map`, `/adversary/:map`, `/editor`).
 
@@ -82,4 +83,4 @@ Regole complete in `docs/REGOLE-v2.md` §1 e piano dei lavori in `docs/TODO-v2.m
 - **Nemico** sostituisce "mostro" (nel codice `enemy`, cartelle `enemies/`, rinomina fatta; "mostro/mostri" resta solo nei testi di carte e abilità, che verranno rifatti). Il catalogo ha i 9 nemici di `docs/NEMICI.md`. Le chiavi e i nomi nel codice (`glyph`, `progress`…) cambiano a passi piccoli: ogni nuova chiave sostituisce per intero la vecchia, senza alias.
 
 ## Fuori scope per ora
-La **mappa del mondo esiste ed è la home** (MapLibre + Protomaps, posizione con consenso). In lavorazione: il collegamento tra posizione e contratti (piano in `docs/PIANO-PROTOTIPO.md`). Fuori scope: Fixer-giocatori e contratti degli altri, territori delle Corp, eroi collezionabili, monetizzazione; inoltre Auth e Hosting di Firebase, famigli, gioco in rete completo.
+La **mappa del mondo esiste ed è la home** (MapLibre + Protomaps, posizione con consenso). In lavorazione: il collegamento tra posizione e contratti (piano in `docs/PIANO-PROTOTIPO.md`). Fuori scope: contratti degli altri giocatori e contesa del territorio, territori delle Corp, eroi collezionabili, monetizzazione; inoltre Hosting di Firebase, famigli, gioco in rete completo. **In arrivo, ma da decidere prima di scrivere codice**: Auth e Firestore (oggi tutto ciò che è dell'utente sta nel localStorage) e il flusso dei contratti personalizzati del Fixer; il piano e le domande aperte sono in docs/PIANO-FIXER-FIREBASE.md.

@@ -47,8 +47,8 @@ import { KeyLabelComponent } from '../ui/key-label.component';
   `,
   styles: `
     :host { display: contents; }
-    /* Contenitore trasparente sul lato sinistro, sotto i tasti dei filtri e della legenda (che occupano da metà altezza meno 18px a metà altezza più 64px) con uno spazio doppio tra i due gruppi; i tasti sono quadrati come quello del menu. */
-    .rail { position: absolute; left: 10px; top: calc(50% + 64px + 2 * var(--hud-gap)); z-index: 1; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    /* Contenitore trasparente sul lato sinistro, sotto i tasti dei filtri e della legenda (che occupano da metà altezza meno 18px fino a 18px + spazio ridotto + un tasto) con uno spazio doppio tra i due gruppi; i tasti sono quadrati come quello del menu. */
+    .rail { position: absolute; left: 10px; top: calc(50% + 18px + var(--hud-gap-tight) + var(--hud-btn) + 2 * var(--hud-gap)); z-index: 1; display: flex; flex-direction: column; gap: var(--hud-gap-tight); pointer-events: none; }
     .item { position: relative; }
     button { pointer-events: auto; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     button:hover, button:focus-visible, button.on { color: var(--c-interact); border-color: var(--c-interact); outline: none; }

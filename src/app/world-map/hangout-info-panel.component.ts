@@ -56,7 +56,7 @@ export interface HangoutInfo {
   styles: `
     :host { display: contents; }
     /* Lo stesso foglio degli altri pannelli a destra (token --side-panel-*); in basso lascia libera la colonna con la pillola, il Fixer e il Mercenario. */
-    .sheet { --side-panel-reserve: 280px; position: absolute; z-index: 0; top: var(--side-panel-top); right: var(--hud-edge); max-height: calc(100% - var(--side-panel-top) - var(--side-panel-reserve)); width: var(--side-panel-w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-you); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translateX(calc(100% + var(--hud-edge))); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet { --side-panel-reserve: 330px; position: absolute; z-index: 0; top: var(--side-panel-top); right: var(--hud-edge); max-height: calc(100% - var(--side-panel-top) - var(--side-panel-reserve)); width: var(--side-panel-w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-you); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translateX(calc(100% + var(--hud-edge))); transition: transform var(--t-base) var(--ease-draw); }
     .sheet.open { transform: none; }
     .sheet:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     @media (max-width: 640px) {
