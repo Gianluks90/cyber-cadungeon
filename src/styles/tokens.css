@@ -145,6 +145,16 @@
   --t-fast: 120ms;
   --t-base: 220ms;
   --t-draw: 600ms;     /* tratti che si "disegnano" */
+
+  /* ---------- Mappa del mondo: misure dell'interfaccia sopra la mappa (fisse, calcolate una volta) ---------- */
+  --hud-edge: 10px;      /* distanza dei tasti e dei pannelli dal bordo dello schermo */
+  --hud-btn: 36px;       /* lato dei tasti quadrati (menu, filtri, navigazione…) */
+  --hud-gap: 10px;       /* spazio tra due elementi vicini */
+  --counter-w: 260px;    /* larghezza fissa del box dei contratti in alto a destra (etichetta + 5 posti + margini, con margine per l'inglese) */
+  /* I pannelli che scivolano da destra: larghi quanto tasto menu + spazio + box contratti, appena sotto la riga in alto. */
+  --side-panel-w: calc(var(--hud-btn) + var(--hud-gap) + var(--counter-w));
+  --side-panel-top: calc(var(--hud-edge) + var(--hud-btn) + var(--hud-gap));
+  --side-panel-reserve: 180px; /* altezza lasciata libera in basso per profilo Fixer e Fama */
 }
 
 /* ---------- Componenti base ---------- */

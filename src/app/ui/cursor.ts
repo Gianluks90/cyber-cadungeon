@@ -23,4 +23,16 @@ export function installCursor(): void {
     `<circle cx="${HALF}" cy="${HALF}" r="1.5" fill="${color}"/>` +
     `</svg>`;
   document.documentElement.style.setProperty('--cursor', `url("data:image/svg+xml,${encodeURIComponent(svg)}") ${HALF} ${HALF}, auto`);
+
+  // La variante sopra ciò che si può scegliere (classe `cad-pick`): lo stesso quadrato, ma pieno di colore e con un quadratino al posto del puntino.
+  const core = 6;
+  const coreAt = HALF - core / 2;
+  const pick =
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${SIZE}" height="${SIZE}" viewBox="0 0 ${SIZE} ${SIZE}">` +
+    `<rect x="${at}" y="${at}" width="${box}" height="${box}" fill="${color}" fill-opacity="0.35" stroke="${halo}" stroke-width="4"/>` +
+    `<rect x="${coreAt - 1}" y="${coreAt - 1}" width="${core + 2}" height="${core + 2}" fill="${halo}"/>` +
+    `<rect x="${at}" y="${at}" width="${box}" height="${box}" fill="none" stroke="${color}" stroke-width="2"/>` +
+    `<rect x="${coreAt}" y="${coreAt}" width="${core}" height="${core}" fill="${color}"/>` +
+    `</svg>`;
+  document.documentElement.style.setProperty('--cursor-pick', `url("data:image/svg+xml,${encodeURIComponent(pick)}") ${HALF} ${HALF}, pointer`);
 }

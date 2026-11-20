@@ -34,6 +34,13 @@ import { DpcWeatherAlertService, WEATHER_CHECK_EVERY_MS, type WeatherAlert, type
 import { OsrmFootRouteService, type RouteService, type WalkingRoute } from './route-service';
 import { ContractCounterComponent } from './contract-counter.component';
 import { MapLegendPanelComponent } from './map-legend-panel.component';
+import { LocalHangoutStore, type Hangout, type HangoutStore } from '../game/hangout/hangout-store';
+import { HANGOUT_PICK_RANGE_M, INFLUENCE_POINTS } from './hangout-geo';
+import { HangoutPlacePanelComponent } from './hangout-place-panel.component';
+import { HangoutLayer, type Candidate } from './hangout-layer';
+
+/** Cosa si sta facendo con il ritrovo: niente, scegliere il luogo, scegliere gli edifici dell'influenza, o guardare l'area di influenza (la lente nel profilo Fixer). */
+type HangoutMode = 'none' | 'place' | 'influence' | 'view';
 
 /** Inclinazione fissa della vista 3D, in gradi: non si regola a mano. */
 const PITCH_3D = 60;
@@ -65,7 +72,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent],
+  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, MapLegendPanelComponent, HangoutPlacePanelComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -97,6 +104,72 @@ const USER_ZOOM = 16;
         </p>
       }
     </div>
+    <div class="corner end">
+      @if (hangoutMode() === 'place' || hangoutMode() === 'influence') {
+        <section class="mode-box" role="status">
+          <header>{{ (hangoutMode() === 'place' ? 'worldMap.hangout.title.place' : 'worldMap.hangout.title.influence') | t }}</header>
+          <div class="mode-body">
+            <p>
+              @if (hangoutMode() === 'place') {
+                {{ (placesCount() ? 'worldMap.hangout.place.hint' : 'worldMap.hangout.place.none') | t }}
+              } @else if (hangoutMode() === 'influence') {
+                {{ (influenceTotal() ? 'worldMap.hangout.influence.hint' : 'worldMap.hangout.influence.none') | t }}
+              }
+            </p>
+            <!-- Il contatore grosso, nel carattere del denaro: luoghi in vista, edifici scelti (su quanti servono) o edifici dell'area. -->
+            <span class="mode-count" [class.done]="hangoutMode() === 'influence' && influenceReady()">{{ modeCount() }}@if (hangoutMode() === 'influence') {<small>/{{ influenceNeeded() }}</small>}</span>
+          </div>
+          <footer>
+            @if (hangoutMode() === 'influence') {
+              <button type="button" class="dlg-btn primary" [class.off]="!influenceReady()" [disabled]="!influenceReady()" (click)="confirmInfluence()">{{ 'worldMap.hangout.influence.confirm' | t }}</button>
+            }
+            <button type="button" class="dlg-btn" (click)="hangoutMode.set('none')">{{ 'worldMap.hangout.cancel' | t }}</button>
+          </footer>
+        </section>
+      }
+      <!-- La pillola dei comandi, sopra il riquadro Fixer, mentre la lente è accesa: modificare, nascondere, eliminare (per ora tutti spenti). -->
+      @if (hangoutMode() === 'view') {
+        <div class="pill" role="toolbar" [attr.aria-label]="'worldMap.hangout.pill.label' | t">
+          <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.edit' | t" [title]="'worldMap.hangout.pill.edit' | t"><app-icon name="edit" [size]="18" /></button>
+          <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.visibility' | t" [title]="'worldMap.hangout.pill.visibility' | t"><app-icon name="visibility" [size]="18" /></button>
+          <button type="button" disabled [attr.aria-label]="'worldMap.hangout.pill.delete' | t" [title]="'worldMap.hangout.pill.delete' | t"><app-icon name="delete" [size]="18" /></button>
+        </div>
+      }      <section class="fixer" [class.mine]="!!hangout()" [class.active]="hangoutMode() === 'view'" [attr.aria-label]="'worldMap.fixer.title' | t">
+        <header>
+          <span>{{ 'worldMap.fixer.title' | t }}</span>
+          <!-- Con un ritrovo, la lente per guardare l'area di influenza: solo icona, tutto a destra dell'intestazione. -->
+          @if (hangout()) {
+            <button type="button" class="hdr-btn" [attr.aria-pressed]="hangoutMode() !== 'none'" [attr.aria-label]="'worldMap.hangout.viewLabel' | t" [title]="'worldMap.hangout.viewLabel' | t" (click)="onHangoutClick()">
+              <app-icon name="search" [size]="16" />
+            </button>
+          }
+        </header>
+        <div class="fixer-body">
+          @if (hangout()) {
+            <div class="rep-block">
+              <p class="rep"><app-icon name="groups_3" [size]="20" /><span class="stat-label">{{ 'worldMap.fixer.reputation' | t }}</span><span class="stat-val">{{ reputation() }}</span></p>
+              <p class="controls">{{ (hangout()!.buildings.length === 1 ? 'worldMap.fixer.controlsOne' : 'worldMap.fixer.controlsMany') | t: { n: hangout()!.buildings.length } }}</p>
+            </div>
+          } @else {
+            <p class="pitch">{{ 'worldMap.fixer.pitch' | t }}</p>
+          }
+          @if (!hangout()) {
+            <button type="button" class="add" [attr.aria-pressed]="hangoutMode() !== 'none'" [attr.aria-label]="'worldMap.hangout.setLabel' | t" [title]="'worldMap.hangout.setLabel' | t" (click)="onHangoutClick()">
+              <app-icon name="add_home" [size]="22" />
+            </button>
+          }
+        </div>
+      </section>
+      <section class="merc" [attr.aria-label]="'worldMap.mercenary.title' | t">
+        <header>{{ 'worldMap.mercenary.title' | t }}</header>
+        <p class="merc-body">
+          <app-icon name="star" [size]="20" />
+          <span class="stat-label">{{ 'worldMap.fame.label' | t }}</span>
+          <span class="stat-val">{{ fame() }}</span>
+        </p>
+      </section>
+    </div>
+    <app-hangout-place-panel [place]="pendingPlace()" [distance]="pendingDistance()" (closed)="pendingPlace.set(null)" (confirmed)="confirmPlace()" />
     <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
     <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [alertLevel]="weatherAlert()?.level ?? null" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
@@ -133,6 +206,52 @@ const USER_ZOOM = 16;
     .halo-toggle:hover, .halo-toggle:focus-visible { color: var(--c-interact); outline: none; }
     /* In basso a sinistra una fila di riquadri come i tasti (36px di altezza): l'orologio e, se c'è, l'avviso di allerta meteo. */
     .corner { position: absolute; left: 10px; bottom: 10px; z-index: 1; display: flex; align-items: center; gap: 8px; pointer-events: none; }
+    /* In basso a destra una colonna di larghezza fissa: il profilo Fixer sopra, la Fama sotto, larghi uguale. */
+    .corner.end { left: auto; right: 10px; flex-direction: column; align-items: stretch; width: min(var(--side-panel-w), calc(100% - 20px)); }
+    /* Il profilo Fixer: un riquadro con un'intestazione sottile. Giallo (avviso) finché non c'è un ritrovo, verde come il giocatore dopo. */
+    .fixer { --accent: var(--c-warn); pointer-events: auto; box-sizing: border-box; border: 1px solid var(--accent); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); }
+    /* Con un ritrovo il riquadro è blu; verde (insieme alla pillola dei suoi strumenti) solo mentre la lente è accesa. */
+    .fixer.mine { --accent: var(--c-interact); }
+    .fixer.active { --accent: var(--c-you); }
+    .fixer header { display: flex; align-items: center; justify-content: space-between; padding: 0 0 0 12px; border-bottom: 1px solid var(--accent); color: var(--accent); font: 600 10px/1.4 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
+    .fixer-body { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; }
+    .pitch, .rep-block { flex: 1; min-width: 0; margin: 0; }
+    .rep-block { display: flex; flex-direction: column; gap: 6px; }
+    .rep, .controls { margin: 0; }
+    .controls { font: 12px/1.35 'Helvetica Neue', Arial, Helvetica, sans-serif; color: var(--c-text-dim); }
+    .pitch { font: 12px/1.35 'Helvetica Neue', Arial, Helvetica, sans-serif; }
+    .rep { display: flex; align-items: center; gap: 8px; }
+    /* Fama e Reputazione: l'etichetta in maiuscolo come «Contratti», il valore nel carattere del denaro. */
+    .stat-label { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; color: var(--c-text-dim); }
+    .stat-val { font: 700 14px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-text); }
+    .add { flex: none; width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--accent); border-radius: var(--radius-1); background: none; color: var(--accent); cursor: pointer; transition: background var(--t-fast); }
+    /* Il tasto di ricerca nell'intestazione: solo icona, un blocchetto attaccato al fondo e al bordo destro dell'intestazione, con un filo a sinistra, del colore del riquadro. */
+    /* Le intestazioni dei tre riquadri della colonna (istruzioni, Fixer, Mercenario) sono alte uguali: 28px, quanto è largo il tasto di ricerca (il blocchetto è quadrato). */
+    .fixer header, .mode-box header, .merc header { box-sizing: content-box; height: 28px; display: flex; align-items: center; }
+    .mode-box header, .merc header { padding: 0 12px; }
+    /* Il riquadro del Mercenario: neutro (grigio), come l'orologio. */
+    .merc { pointer-events: auto; box-sizing: border-box; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); }
+    .merc header { border-bottom: 1px solid var(--c-line-strong); color: var(--c-text-dim); font: 600 10px/1.4 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
+    .merc-body { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; }
+    .hdr-btn { flex: none; align-self: stretch; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-left: 1px solid var(--accent); border-radius: 0; background: none; color: var(--accent); cursor: pointer; transition: background var(--t-fast); }
+    .hdr-btn:hover, .hdr-btn:focus-visible, .hdr-btn[aria-pressed='true'] { background: color-mix(in srgb, var(--accent) 20%, transparent); outline: none; }
+    .add:hover, .add:focus-visible, .add[aria-pressed='true'] { background: color-mix(in srgb, var(--accent) 20%, transparent); outline: none; }
+    /* Il box con le istruzioni mentre si sceglie il luogo, gli edifici dell'influenza o si espande l'area: sta sopra il profilo Fixer, nella colonna, e sale dal basso quando compare. */
+    .mode-box { pointer-events: auto; box-sizing: border-box; border: 1px solid var(--c-interact); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); animation: mode-rise 0.28s var(--ease-draw); }
+    @keyframes mode-rise { from { opacity: 0; transform: translateY(24px); } }
+    @media (prefers-reduced-motion: reduce) { .mode-box { animation: none; } }
+    .mode-box header { padding: 3px 12px; border-bottom: 1px solid var(--c-interact); color: var(--c-interact); font: 600 10px/1.4 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
+    .mode-body { display: flex; align-items: center; gap: 12px; padding: 10px 12px; }
+    .mode-body p { flex: 1; margin: 0; font: 12px/1.35 'Helvetica Neue', Arial, Helvetica, sans-serif; }
+    /* Il contatore grosso, nel carattere del denaro; verde quando gli edifici da scegliere sono tutti scelti. */
+    .mode-count { flex: none; font: 700 32px/1 var(--font-mono); font-variant-numeric: tabular-nums; color: var(--c-interact); }
+    .mode-count small { font-size: 14px; color: var(--c-text-dim); }
+    .mode-count.done { color: var(--c-you); }
+    .mode-box footer { display: flex; justify-content: flex-end; gap: 8px; padding: 8px 10px; border-top: 1px solid var(--c-line); }
+    /* La pillola dei comandi sopra il riquadro Fixer: tre tasti, con solo gli angoli in alto a destra e in basso a sinistra arrotondati (come i badge del Briefing), allineata a destra, sale dal basso come il box delle istruzioni. */
+    .pill { align-self: flex-end; display: flex; gap: 4px; padding: 3px; border: 1px solid var(--c-you); border-radius: 0 var(--radius-2) 0 var(--radius-2); background: var(--c-surface); pointer-events: auto; animation: mode-rise 0.28s var(--ease-draw); }
+    .pill button { width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 0; background: none; color: var(--c-you); cursor: pointer; }
+    .pill button:disabled { opacity: 0.4; cursor: default; }
     .clock, .weather { margin: 0; height: 36px; padding: 0 12px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); font: 14px/1 'Helvetica Neue', Arial, Helvetica, sans-serif; font-variant-numeric: tabular-nums; }
     /* L'allerta prende il colore del suo livello (gialla, arancione, rossa); il nome del livello e della zona sta nel suggerimento. */
     .weather { pointer-events: auto; border-color: var(--alert-color); color: var(--alert-color); animation: weather-blink 1s ease-in-out 2; }
@@ -148,7 +267,7 @@ const USER_ZOOM = 16;
     @media (prefers-reduced-motion: reduce) { .sun { transition: none; } }
     /* Su telefono l'orologio non si vede, l'allerta resta (è una sicurezza) e sale sopra l'avviso di posizione, che prende tutta la larghezza. */
     @media (max-width: 640px) {
-      .clock { display: none; }
+      .corner:not(.end) .clock { display: none; }
       .corner { bottom: 52px; }
       .status { left: 10px; right: 10px; transform: none; max-width: none; justify-content: center; }
     }
@@ -188,6 +307,10 @@ export class WorldMapComponent {
   /** L'icona è scesa e sta per cambiare. */
   protected readonly swapping = signal(false);
   /** L'allerta meteo in corso dove si trova il giocatore (null: nessuna o non si sa), dal servizio della Protezione Civile; ultimo controllo e posizione per cui è stato fatto. */
+  /** La Fama del giocatore: per ora sempre 0, finché non esiste il sistema che la assegna (vedi il glossario). */
+  protected readonly fame = signal(0);
+  /** La Reputazione del giocatore come Fixer (separata dalla Fama): per ora sempre 0, finché non esiste il sistema che la assegna. */
+  protected readonly reputation = signal(0);
   private readonly weatherService: WeatherAlertService = new DpcWeatherAlertService();
   protected readonly weatherAlert = signal<WeatherAlert | null>(null);
   private weatherAskedAt = 0;
@@ -260,6 +383,37 @@ export class WorldMapComponent {
   /** C'è già una linea disegnata (una nuova che compare corre dal punto A al punto B; un aggiornamento dello stesso percorso no) e il fotogramma dell'animazione in corso. */
   private routeDrawn = false;
   private routeFrame = 0;
+  /** Il ritrovo del giocatore (luogo pubblico + area di edifici), nel localStorage. */
+  private readonly hangoutStore: HangoutStore = new LocalHangoutStore();
+  protected readonly hangout = signal<Hangout | null>(this.hangoutStore.get());
+  /** Cosa si sta facendo con il ritrovo: niente, scegliere il luogo, o guardare l'area di influenza (la lente nel profilo Fixer). */
+  protected readonly hangoutMode = signal<HangoutMode>('none');
+  /** Il luogo appena scelto (non ancora salvato) mentre si scelgono gli edifici dove imporre l'influenza, gli edifici scelti finora e quanti se ne possono scegliere. */
+  private readonly influencePlace = signal<Candidate | null>(null);
+  protected readonly influenceChosen = signal<readonly number[]>([]);
+  protected readonly influenceTotal = signal(0);
+  /** Quanti edifici bisogna scegliere: INFLUENCE_POINTS, o meno se attorno al luogo non ce ne sono abbastanza. */
+  protected readonly influenceNeeded = computed(() => Math.min(INFLUENCE_POINTS, this.influenceTotal()));
+  /** Il numero grosso del box: luoghi in vista (scelta del luogo), edifici scelti (influenza) o edifici dell'area (espansione). */
+  protected readonly modeCount = computed(() => {
+    const mode = this.hangoutMode();
+    return mode === 'place' ? this.placesCount() : mode === 'influence' ? this.influenceChosen().length : (this.hangout()?.buildings.length ?? 0);
+  });
+  protected readonly influenceReady = computed(() => this.influenceNeeded() > 0 && this.influenceChosen().length >= this.influenceNeeded());
+  /** Il luogo toccato, in attesa di conferma. */
+  protected readonly pendingPlace = signal<Candidate | null>(null);
+  /** Quanti luoghi pubblici (o edifici da aggiungere) si vedono adesso: serve a dire cosa fare se non ce n'è nessuno. */
+  protected readonly placesCount = signal(0);
+  /** Quanto dista il giocatore dal luogo aperto, in metri (null senza posizione). */
+  protected readonly pendingDistance = computed(() => {
+    const p = this.pendingPlace();
+    const here = this.location.position();
+    return p && here ? distanceMeters(p, here) : null;
+  });
+  private hangoutLayer: HangoutLayer | null = null;
+  /** Rilegge i tasselli per la modalità in corso (a ogni «idle» della mappa) e l'ultimo risultato, per non ridisegnare se non è cambiato nulla. */
+  private hangoutRefresh: (() => void) | null = null;
+  private hangoutSignature = '';
   /** La mappa esiste: da qui si possono mettere i segnaposto dei contratti. */
   private readonly mapCreated = signal(false);
   private contractMarkers: Marker[] = [];
@@ -396,9 +550,34 @@ export class WorldMapComponent {
       });
     });
 
+    // Il ritrovo sulla mappa: il segnaposto c'è sempre; l'area di influenza solo quando la si guarda (tasto di ricerca = modalità espansione). Durante la scelta dell'influenza ci pensa quella.
+    effect(() => {
+      const h = this.hangout();
+      const mode = this.hangoutMode();
+      if (!this.mapCreated() || mode === 'influence') return;
+      this.ngZone.runOutsideAngular(() => untracked(() => {
+        this.hangoutLayer?.setArea(mode === 'view' ? (h?.buildings ?? []) : []);
+        this.hangoutLayer?.setHome(h?.place ?? null);
+      }));
+    });
+    // La casetta del luogo aperto nel pannello resta evidenziata.
+    effect(() => {
+      const place = this.pendingPlace();
+      if (!this.mapCreated()) return;
+      this.ngZone.runOutsideAngular(() => untracked(() => this.hangoutLayer?.setSelected(place)));
+    });
+    // Scegliere il luogo o espandere l'area: la mappa si prepara e legge i tasselli a ogni riposo.
+    effect(() => {
+      const mode = this.hangoutMode();
+      if (!this.mapCreated()) return;
+      this.ngZone.runOutsideAngular(() => untracked(() => this.applyHangoutMode(mode)));
+    });
+
     this.location.start();
 
     this.destroyRef.onDestroy(() => {
+      this.hangoutLayer?.destroy();
+      this.hangoutLayer = null;
       this.location.stop();
       this.stopBreach();
       this.userMarker?.remove();
@@ -453,6 +632,146 @@ export class WorldMapComponent {
 
   protected choosePreset(preset: FilterPreset): void {
     this.preset.set(preset);
+  }
+
+  /** Il tasto «ritrovo» in basso a destra: senza ritrovo apre la scelta del luogo, con un ritrovo apre (o chiude) l'espansione dell'area. */
+  protected onHangoutClick(): void {
+    this.panel.set(null);
+    this.selectedId.set(null);
+    this.hangoutMode.update((m) => (m !== 'none' ? 'none' : this.hangout() ? 'view' : 'place'));
+  }
+
+  /** Prepara la mappa per la modalità: legge i tasselli (ora e a ogni riposo della mappa) e mostra i luoghi tra cui scegliere o gli edifici da aggiungere. */
+  private applyHangoutMode(mode: HangoutMode): void {
+    const map = this.map;
+    const layer = this.hangoutLayer;
+    if (!map || !layer) return;
+    if (this.hangoutRefresh) map.off('idle', this.hangoutRefresh);
+    this.hangoutRefresh = null;
+    this.hangoutSignature = '';
+    layer.setPlaces([]);
+    layer.setReach([]);
+    layer.setBlocked([]);
+    // Fuori dalla scelta dell'influenza la mappa mostra il ritrovo salvato (o niente).
+    if (mode !== 'influence') {
+      layer.setArea(mode === 'view' ? (this.hangout()?.buildings ?? []) : []); // l'area si vede solo guardandola (espansione)
+      layer.setHome(this.hangout()?.place ?? null);
+    }
+    this.ngZone.run(() => {
+      this.placesCount.set(0);
+      this.pendingPlace.set(null);
+      if (mode !== 'influence') { this.influencePlace.set(null); this.influenceChosen.set([]); this.influenceTotal.set(0); }
+    });
+    if (mode === 'none') return;
+
+    // Gli edifici completi esistono solo da zoom 15: ci si avvicina se serve.
+    if (mode === 'place') {
+      const here = this.location.position();
+      map.easeTo({ center: here ? [here.lng, here.lat] : map.getCenter(), zoom: Math.max(map.getZoom(), 17) }); // i luoghi sono entro 50 m dal giocatore: si guarda da vicino
+    }
+    const h = this.hangout();
+    if (mode === 'view' && h) {
+      // La mappa si sposta e si avvicina (o si allontana) fino a contenere tutta l'area di influenza, lasciando liberi i bordi dove stanno i comandi. Se i tasselli dell'area non sono
+      // ancora caricati si va prima sul ritrovo e, a mappa a riposo, si inquadra l'area (con quello che si è trovato, se manca qualcosa).
+      const fit = (requireAll: boolean) => {
+        const box = layer.boundsOf(h.buildings, requireAll);
+        if (!box) return false;
+        const wide = map.getContainer().clientWidth > 640;
+        const padding = wide ? { top: 70, left: 70, right: 330, bottom: 70 } : { top: 70, left: 40, right: 40, bottom: 300 }; // a destra la colonna di riquadri (296px + bordo); sul telefono sta in basso
+        map.fitBounds([[box[0], box[1]], [box[2], box[3]]], { padding, maxZoom: 18, duration: 900 });
+        return true;
+      };
+      if (!fit(true)) {
+        map.flyTo({ center: [h.place.lng, h.place.lat], zoom: Math.max(map.getZoom(), 16) });
+        map.once('idle', () => { if (this.hangoutMode() === 'view') fit(false); });
+      }
+    }
+    const place = this.influencePlace();
+    if (mode === 'influence' && place) {
+      layer.setHome(place);
+      map.flyTo({ center: [place.lng, place.lat], zoom: Math.max(map.getZoom(), 16) });
+    }
+
+    if (mode === 'view') return; // si guarda soltanto: niente da rileggere né da toccare
+
+    const refresh = () => {
+      if (mode === 'influence') {
+        const target = this.influencePlace();
+        if (!target) return;
+        // Gli edifici scelti si ricordano; quelli che non sono più fra i possibili (i tasselli cambiano) cadono.
+        const { ids, blocked } = layer.eligibleAround(target);
+        const chosen = this.influenceChosen().filter((id) => ids.includes(id));
+        const signature = `${chosen.join(',')}|${ids.slice().sort((a, b) => a - b).join(',')}|${blocked.map((b) => b.id).sort((a, b) => a - b).join(',')}`;
+        if (signature === this.hangoutSignature) return;
+        this.hangoutSignature = signature;
+        layer.setBlocked(blocked);
+        layer.setArea(chosen);
+        layer.setReach(ids.filter((id) => !chosen.includes(id)));
+        this.ngZone.run(() => {
+          if (chosen.length !== this.influenceChosen().length) this.influenceChosen.set(chosen);
+          this.influenceTotal.set(ids.length);
+        });
+      } else if (mode === 'place') {
+        // Solo i luoghi entro 50 m dal giocatore (senza posizione, nessuno).
+        const here = this.location.position();
+        const places = here ? layer.readPlaces().filter((p) => distanceMeters(p, here) <= HANGOUT_PICK_RANGE_M) : [];
+        const signature = places.map((p) => `${p.lng},${p.lat}`).sort().join('|');
+        if (signature === this.hangoutSignature) return;
+        this.hangoutSignature = signature;
+        layer.setPlaces(places, (place) => this.ngZone.run(() => { this.selectedId.set(null); this.panel.set(null); this.pendingPlace.set(place); }));
+        this.ngZone.run(() => this.placesCount.set(places.length));
+      }
+    };
+    this.hangoutRefresh = refresh;
+    refresh();
+    map.on('idle', refresh);
+  }
+
+  /** Un tocco sulla mappa: nella scelta del luogo prende un luogo pubblico, nella scelta dell'influenza prende o toglie un edificio. */
+  private onHangoutTap(point: { x: number; y: number }): void {
+    const layer = this.hangoutLayer;
+    const mode = this.hangoutMode();
+    if (mode === 'place') {
+      this.ngZone.run(() => this.pendingPlace.set(null)); // un tocco sulla mappa chiude il pannello del luogo (le casette fermano il loro tocco)
+      return;
+    }
+    if (layer && mode === 'influence') {
+      // Un tocco su un edificio possibile lo sceglie (finché ci sono punti), uno su un edificio già scelto lo toglie.
+      const add = layer.reachAt(point);
+      const chosen = this.influenceChosen();
+      if (add !== null && chosen.length < this.influenceNeeded()) {
+        this.ngZone.run(() => this.influenceChosen.set([...chosen, add]));
+        this.hangoutRefresh?.();
+        return;
+      }
+      const drop = layer.areaAt(point);
+      if (drop !== null && chosen.includes(drop)) {
+        this.ngZone.run(() => this.influenceChosen.set(chosen.filter((id) => id !== drop)));
+        this.hangoutRefresh?.();
+      }
+      return;
+    }
+  }
+
+  /** Confermato il luogo: non si salva ancora niente, si passa alla scelta degli edifici dove imporre l'influenza (la mappa va lì e li cerca). */
+  protected confirmPlace(): void {
+    const place = this.pendingPlace();
+    if (!place) return;
+    this.influencePlace.set(place);
+    this.influenceChosen.set([]);
+    this.influenceTotal.set(0);
+    this.pendingPlace.set(null);
+    this.hangoutMode.set('influence');
+  }
+
+  /** Confermati gli edifici scelti: il ritrovo si salva con l'area di influenza fatta di quegli edifici. */
+  protected confirmInfluence(): void {
+    const place = this.influencePlace();
+    if (!place || !this.influenceReady()) return;
+    const hangout: Hangout = { place, buildings: [...this.influenceChosen()] };
+    this.hangoutStore.save(hangout);
+    this.hangout.set(hangout);
+    this.hangoutMode.set('none');
   }
 
   /** Torna alla mia posizione, restando almeno allo zoom di partenza. */
@@ -532,7 +851,9 @@ export class WorldMapComponent {
     this.setInteractive(map, !this.location.locked());
     this.showUser(map, this.location.position(), this.location.facing());
     // Lo stile si ricrea al cambio di tema e azzera le visibilità: i filtri si riapplicano a ogni caricamento.
-    map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); this.paintRoute(); });
+    this.hangoutLayer = new HangoutLayer(map);
+    map.on('style.load', () => { applyMapFilters(map, this.enabled(), this.view3d()); applyTerrain(map, this.view3d()); this.paintRoute(); this.hangoutLayer?.render(); });
+    map.on('click', (e) => this.onHangoutTap(e.point));
     this.tileLoading = new TileLoadingView(map, BASEMAP_SOURCE_ID);
     map.once('idle', () => this.ready.set(true)); // 'idle': ha finito di caricare e disegnare (anche se qualche tassello è fallito)
     map.on('rotate', () => {
@@ -680,6 +1001,7 @@ export class WorldMapComponent {
   /** Si tocca un contratto: la mappa va alle sue coordinate (spostando il centro fuori dal pannello che si apre) e si apre il pannello con le info. */
   private selectContract(c: Contract): void {
     this.panel.set(null);
+    this.pendingPlace.set(null); // un solo pannello alla volta
     this.selectedId.set(c.id);
     const map = this.map;
     if (!map) return;
@@ -824,7 +1146,7 @@ un). */
 
   /** Solo mentre l'utente si muove davvero (il GPS dà una direzione): la mappa lo tiene al centro e si orienta come lui. Da fermo non si tocca. */
   private followUser(map: MapLibreMap, pos: UserPosition): void {
-    if (pos.heading === null || this.userBusy) return;
+    if (pos.heading === null || this.userBusy || this.hangoutMode() !== 'none') return; // scegliendo il ritrovo la mappa resta dov'è
     map.easeTo({ center: [pos.lng, pos.lat], bearing: pos.heading, duration: 800, easing: (t) => t });
   }
 

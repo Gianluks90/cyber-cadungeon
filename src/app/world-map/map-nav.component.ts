@@ -4,8 +4,8 @@ import { IconComponent } from '../ui/icon.component';
 import { KeyLabelComponent } from '../ui/key-label.component';
 
 /**
- * I tasti di navigazione della mappa, in un container verticale trasparente lungo il lato destro (come quello dei filtri, a sinistra): la mia posizione, il 3D, il nord, + e −.
- * Non conosce la mappa: dice solo cosa viene premuto. Tenendo premuto H ogni tasto mostra il suo nome alla sinistra (`app-key-label`).
+ * I tasti di navigazione della mappa, in un container verticale trasparente lungo il lato sinistro, sotto i filtri e la legenda: la mia posizione, il 3D, il nord, + e −.
+ * Non conosce la mappa: dice solo cosa viene premuto. Tenendo premuto H ogni tasto mostra il suo nome alla destra (`app-key-label`).
  */
 @Component({
   selector: 'app-map-nav',
@@ -17,38 +17,38 @@ import { KeyLabelComponent } from '../ui/key-label.component';
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.locate' | t" [title]="'worldMap.nav.locate' | t" (click)="locate.emit()">
           <app-icon name="frame_person" [size]="20" />
         </button>
-        <app-key-label side="left">{{ 'worldMap.nav.locate' | t }}</app-key-label>
+        <app-key-label side="right">{{ 'worldMap.nav.locate' | t }}</app-key-label>
       </div>
       <div class="item">
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.view3d' | t" [title]="'worldMap.nav.view3d' | t" (click)="toggle3d.emit()">
           <app-icon [name]="view3d() ? '2d_2' : '3d_2'" [size]="20" />
         </button>
-        <app-key-label side="left">{{ 'worldMap.nav.view3d' | t }}</app-key-label>
+        <app-key-label side="right">{{ 'worldMap.nav.view3d' | t }}</app-key-label>
       </div>
       <div class="item">
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.resetNorth' | t" [title]="'worldMap.nav.resetNorth' | t" (click)="resetNorth.emit()">
           <app-icon name="explore" [size]="20" [style.transform]="'rotate(' + -bearing() + 'deg)'" />
         </button>
-        <app-key-label side="left">{{ 'worldMap.nav.resetNorth' | t }}</app-key-label>
+        <app-key-label side="right">{{ 'worldMap.nav.resetNorth' | t }}</app-key-label>
       </div>
       <div class="item">
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.zoomIn' | t" [title]="'worldMap.nav.zoomIn' | t" (click)="zoomIn.emit()">
           <app-icon name="add" [size]="20" />
         </button>
-        <app-key-label side="left">{{ 'worldMap.nav.zoomIn' | t }}</app-key-label>
+        <app-key-label side="right">{{ 'worldMap.nav.zoomIn' | t }}</app-key-label>
       </div>
       <div class="item">
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.zoomOut' | t" [title]="'worldMap.nav.zoomOut' | t" (click)="zoomOut.emit()">
           <app-icon name="remove" [size]="20" />
         </button>
-        <app-key-label side="left">{{ 'worldMap.nav.zoomOut' | t }}</app-key-label>
+        <app-key-label side="right">{{ 'worldMap.nav.zoomOut' | t }}</app-key-label>
       </div>
     </nav>
   `,
   styles: `
     :host { display: contents; }
-    /* Contenitore trasparente, al centro del lato destro; i tasti sono quadrati come quello del logout. */
-    .rail { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); z-index: 1; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
+    /* Contenitore trasparente sul lato sinistro, sotto i tasti dei filtri e della legenda (che occupano da metà altezza meno 18px a metà altezza più 64px) con uno spazio doppio tra i due gruppi; i tasti sono quadrati come quello del menu. */
+    .rail { position: absolute; left: 10px; top: calc(50% + 64px + 2 * var(--hud-gap)); z-index: 1; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
     .item { position: relative; }
     button { pointer-events: auto; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     button:hover, button:focus-visible, button.on { color: var(--c-interact); border-color: var(--c-interact); outline: none; }

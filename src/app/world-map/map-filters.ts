@@ -57,7 +57,6 @@ export const FILTER_GROUPS: readonly FilterGroup[] = [
   { id: 'water-names', section: 'names', label: 'worldMap.filter.waterNames', essential: true, layers: ['water_label_ocean', 'water_label_lakes', 'water_waterway_label', 'earth_label_islands'] },
   { id: 'road-names-main', section: 'names', label: 'worldMap.filter.roadNamesMain', essential: true, layers: ['roads_labels_major', 'roads_shields'] },
   { id: 'road-names-minor', section: 'names', label: 'worldMap.filter.roadNamesMinor', essential: false, layers: ['roads_labels_minor'] },
-  { id: 'addresses', section: 'names', label: 'worldMap.filter.addresses', essential: false, layers: ['address_label'] },
 
   { id: 'poi-transport', section: 'poi', label: 'worldMap.filter.poiTransport', essential: false, layers: [], poiKinds: ['station', 'bus_stop', 'ferry_terminal', 'aerodrome', 'marina'] },
   { id: 'poi-food', section: 'poi', label: 'worldMap.filter.poiFood', essential: false, layers: [], poiKinds: ['restaurant', 'fast_food', 'cafe', 'bar'] },

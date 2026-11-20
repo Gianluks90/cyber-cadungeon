@@ -5,7 +5,8 @@ import type { MapTheme } from './map-theme';
 
 /** Trasforma un tema nello stile completo di MapLibre (sorgente, font, icone, layer di Protomaps + contorno degli edifici). */
 export function buildMapStyle(theme: MapTheme): StyleSpecification {
-  const baseLayers = layers(BASEMAP_SOURCE_ID, theme.flavor, { lang: LABEL_LANGUAGE });
+  // I numeri civici non si mostrano mai (né nei filtri): gli edifici sono blocchi anonimi. I dati arrivano comunque coi tasselli, ma nessun livello li disegna.
+  const baseLayers = layers(BASEMAP_SOURCE_ID, theme.flavor, { lang: LABEL_LANGUAGE }).filter((l) => l.id !== 'address_label');
 
   // Il contorno degli edifici va subito dopo il loro riempimento; se l'id cambiasse in una versione futura della libreria, va in coda.
   const outline = {

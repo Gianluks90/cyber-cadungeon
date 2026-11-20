@@ -27,16 +27,17 @@ import { IconComponent } from '../ui/icon.component';
   styles: `
     /* A sinistra del tasto del menu (10px dal bordo + 36px di tasto + 10px di spazio). */
     :host { position: absolute; top: 10px; right: 56px; z-index: 2; }
-    .bar { position: relative; box-sizing: border-box; height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 18px 0 10px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: inherit; cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
+    /* Larghezza fissa (--counter-w): i pannelli che scivolano da destra sono larghi quanto questo box più il tasto del menu. */
+    .bar { position: relative; box-sizing: border-box; width: var(--counter-w); height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 18px 0 10px; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text-dim); font: inherit; cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .bar:hover, .bar:focus-visible, .bar.on { border-color: var(--c-interact); outline: none; }
     .label { font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
-    .slots { display: flex; gap: 4px; }
+    .slots { display: flex; gap: 4px; margin-left: auto; }
     .bar:hover .label, .bar:focus-visible .label, .bar.on .label { color: var(--c-interact); }
     /* La lettera del tasto, piccola e grigia in basso a destra, solo dove c'è una tastiera (come sui tasti dei filtri e del menu). Il margine a destra della barra le lascia posto accanto all'ultimo spazio. */
     kbd { display: none; position: absolute; right: 4px; bottom: 2px; font: 600 9px/1 var(--font-mono); text-transform: uppercase; color: var(--c-text-dim); pointer-events: none; }
     @media (pointer: fine) { kbd { display: block; } }
     /* Su telefono l'etichetta si toglie: non c'è posto accanto al logo. */
-    @media (max-width: 640px) { .label { display: none; } }
+    @media (max-width: 640px) { .label { display: none; } .bar { width: auto; } }
     .empty { box-sizing: border-box; width: 24px; height: 24px; border: 1px dashed var(--c-line-strong); border-radius: var(--radius-1); }
     .marker { color: var(--c-interact); }
   `,

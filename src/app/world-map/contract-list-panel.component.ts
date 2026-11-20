@@ -44,9 +44,9 @@ import { contractNumber } from './contract-panel.component';
   `,
   styles: `
     :host { display: contents; }
-    /* Come il pannello di dettaglio: a metà altezza, oltre i tasti di navigazione (10px + 36px + 10px = 56px), scivola da destra e cresce dal centro. */
-    .sheet { --w: min(320px, 82vw); --rail: 56px; position: absolute; z-index: 0; top: 50%; right: var(--rail); max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translate(calc(var(--w) + var(--rail)), -50%); transition: transform var(--t-base) var(--ease-draw); }
-    .sheet.open { transform: translate(0, -50%); }
+    /* Come il pannello di dettaglio: appena sotto il box dei contratti e il tasto del menu, largo quanto loro (token --side-panel-*), scivola da destra. */
+    .sheet { position: absolute; z-index: 0; top: var(--side-panel-top); right: var(--hud-edge); max-height: calc(100% - var(--side-panel-top) - var(--side-panel-reserve)); width: var(--side-panel-w); box-sizing: border-box; display: flex; flex-direction: column; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translateX(calc(100% + var(--hud-edge))); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet.open { transform: none; }
     .sheet:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     @media (max-width: 640px) {
       .sheet { z-index: 4; top: auto; right: 0; bottom: 0; left: 0; width: auto; max-height: 60dvh; padding-bottom: env(safe-area-inset-bottom); border-width: 1px 0 0; border-radius: 0; transform: translateY(100%); }

@@ -12,7 +12,7 @@ import type { AlertLevel } from './weather-alert';
 export const contractNumber = (n: number): string => `#${String(n).padStart(3, '0')}`;
 
 /** Una distanza leggibile: in metri sotto il chilometro, poi in chilometri con un decimale. */
-const formatDistance = (meters: number): string => (meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`);
+export const formatDistance =(meters: number): string => (meters < 1000 ? `${Math.round(meters)} m` : `${(meters / 1000).toLocaleString(undefined, { maximumFractionDigits: 1 })} km`);
 
 /** Passo a piedi in metri al secondo (circa 4,5 km/h), per stimare il tempo quando manca il percorso. */
 const WALK_SPEED_MS = 1.25;
@@ -73,8 +73,8 @@ const WEATHER_NOTE_FROM_M = 500;
   styles: `
     :host { display: contents; }
     /* Desktop: lo specchio dei filtri e della legenda, dall'altra parte. Nasce a metà altezza, oltre i tasti di navigazione (10px dal bordo + 36px di tasto + 10px di respiro = 56px), scivola da destra e cresce dal centro lasciando liberi la barra in alto e l'orologio. Sta sotto i tasti (z-index 0 contro l'1 dei tasti). */
-    .sheet { --w: min(320px, 82vw); --rail: 56px; position: absolute; z-index: 0; top: 50%; right: var(--rail); max-height: calc(100% - 112px); width: var(--w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translate(calc(var(--w) + var(--rail)), -50%); transition: transform var(--t-base) var(--ease-draw); }
-    .sheet.open { transform: translate(0, -50%); }
+    .sheet { position: absolute; z-index: 0; top: var(--side-panel-top); right: var(--hud-edge); max-height: calc(100% - var(--side-panel-top) - var(--side-panel-reserve)); width: var(--side-panel-w); box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); color: var(--c-text); font: 14px/1.4 var(--font-ui); transform: translateX(calc(100% + var(--hud-edge))); transition: transform var(--t-base) var(--ease-draw); }
+    .sheet.open { transform: none; }
     .sheet:not(.open) { visibility: hidden; transition: transform var(--t-base) var(--ease-draw), visibility 0s linear var(--t-base); }
     /* Telefono: un foglio alto metà schermo che sale dal basso a tutta larghezza, sopra i tasti della mappa. */
     @media (max-width: 640px) {
