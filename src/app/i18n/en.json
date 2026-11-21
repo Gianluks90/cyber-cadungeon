@@ -161,6 +161,7 @@
   "worldMap.weather.yellow": "Yellow alert · {zone}",
   "worldMap.weather.orange": "Orange alert · {zone}",
   "worldMap.weather.red": "Red alert · {zone}",
+  "worldMap.weather.explain": "This dot appears when Civil Protection has issued a weather alert for the area where you are. It is only a warning: it does not change the game rules. If you are outdoors, be careful and check the official channels.",
   "adventures.backHome": "Back to home",
   "adventures.goal": "Objective",
   "adventures.goalHint": "Adventure objective",

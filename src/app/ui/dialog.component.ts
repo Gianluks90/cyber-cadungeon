@@ -20,7 +20,7 @@ import { IconComponent } from './icon.component';
       <div class="frame" [style.width]="width()" [style.height]="height()">
       <!-- Facoltativo: una carta inclinata infilata sotto il bordo del pannello (dialogSide), come nella finestra dell'attacco. Sta nella cornice, sotto il pannello. -->
       <ng-content select="[dialogSide]" />
-      <section class="box" [class.adversary]="adversary()" role="dialog" aria-modal="true" [attr.aria-label]="title()">
+      <section class="box" [class.adversary]="adversary()" [style.--dlg-line]="tone()" role="dialog" aria-modal="true" [attr.aria-label]="title()">
         <header [class.tall]="!!subtitle()">
           <div class="heading">
             @if (kicker()) { <span class="kicker">{{ kicker() }}</span> }
@@ -100,6 +100,8 @@ export class DialogComponent {
   readonly closable = input(true);
   /** Un tocco fuori dalla finestra la chiude (se `closable`). Le dialog dell'editor lo spengono: un tocco sbagliato non deve far perdere ciò che si è scritto; restano la X ed Esc. */
   readonly closeOnBackdrop = input(true);
+  /** Il colore del bordo e delle linee (un valore CSS, per esempio `var(--c-warn)` per un avviso giallo); senza, quello normale. */
+  readonly tone = input<string | null>(null);
   /** Una dialog del Maligno: bordo e linee rossi. */
   readonly adversary = input(false);
   /** Nascosta senza chiuderla: il contenuto (e quello che l'utente ha scritto) resta com'è. */

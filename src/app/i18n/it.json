@@ -161,6 +161,7 @@
   "worldMap.weather.yellow": "Allerta gialla · {zone}",
   "worldMap.weather.orange": "Allerta arancione · {zone}",
   "worldMap.weather.red": "Allerta rossa · {zone}",
+  "worldMap.weather.explain": "Il pallino compare quando la Protezione Civile ha emesso un'allerta meteo per la zona in cui ti trovi. È solo un avviso: non cambia le regole del gioco. Se sei all'aperto, fai attenzione e informati sui canali ufficiali.",
   "adventures.backHome": "Torna alla home",
   "adventures.goal": "Obiettivo",
   "adventures.goalHint": "Obiettivo dell'avventura",

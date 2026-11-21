@@ -4,7 +4,7 @@ import { IconComponent } from '../ui/icon.component';
 import { KeyLabelComponent } from '../ui/key-label.component';
 
 /**
- * I tasti di navigazione della mappa, in un container verticale trasparente lungo il lato sinistro, sotto i filtri e la legenda: la mia posizione, il 3D, il nord, + e −.
+ * I tasti di navigazione della mappa, in un container verticale trasparente lungo il lato sinistro, sotto i filtri e la legenda: la mia posizione, il 3D, il nord, + e − (questi due non si vedono su telefono, dove si zooma con il pizzico).
  * Non conosce la mappa: dice solo cosa viene premuto. Tenendo premuto H ogni tasto mostra il suo nome alla destra (`app-key-label`).
  */
 @Component({
@@ -31,18 +31,20 @@ import { KeyLabelComponent } from '../ui/key-label.component';
         </button>
         <app-key-label side="right">{{ 'worldMap.nav.resetNorth' | t }}</app-key-label>
       </div>
-      <div class="item">
+      <div class="item zoom">
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.zoomIn' | t" [title]="'worldMap.nav.zoomIn' | t" (click)="zoomIn.emit()">
           <app-icon name="add" [size]="20" />
         </button>
         <app-key-label side="right">{{ 'worldMap.nav.zoomIn' | t }}</app-key-label>
       </div>
-      <div class="item">
+      <div class="item zoom">
         <button type="button" [disabled]="!located()" [attr.aria-label]="'worldMap.nav.zoomOut' | t" [title]="'worldMap.nav.zoomOut' | t" (click)="zoomOut.emit()">
           <app-icon name="remove" [size]="20" />
         </button>
         <app-key-label side="right">{{ 'worldMap.nav.zoomOut' | t }}</app-key-label>
       </div>
+      <!-- Facoltativo: un elemento in più in fondo alla colonna (navExtra), per esempio il pallino dell'allerta meteo. -->
+      <ng-content select="[navExtra]" />
     </nav>
   `,
   styles: `
@@ -50,6 +52,8 @@ import { KeyLabelComponent } from '../ui/key-label.component';
     /* Contenitore trasparente sul lato sinistro, sotto i tasti dei filtri e della legenda (che stanno appena sotto il logo, ancorati in alto, uno sopra l'altro con lo spazio ridotto) con uno spazio doppio tra i due gruppi; i tasti sono quadrati come quello del menu. */
     .rail { position: absolute; left: 10px; top: calc(var(--rail-top) + 2 * var(--hud-btn) + var(--hud-gap-tight) + 2 * var(--hud-gap)); z-index: 1; display: flex; flex-direction: column; gap: var(--hud-gap-tight); pointer-events: none; }
     .item { position: relative; }
+    /* Su telefono + e − non servono: si zooma con le dita (pizzico). */
+    @media (max-width: 640px) { .zoom { display: none; } }
     button { pointer-events: auto; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line-strong); border-radius: var(--radius-1); background: var(--c-surface); color: var(--c-text); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     button:hover, button:focus-visible, button.on { color: var(--c-interact); border-color: var(--c-interact); outline: none; }
     button:disabled { opacity: 0.45; cursor: default; color: var(--c-text); border-color: var(--c-line-strong); }

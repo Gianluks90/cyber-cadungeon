@@ -13,6 +13,7 @@ import { IconComponent } from '../ui/icon.component';
 import { BASEMAP_SOURCE_ID, START_VIEW } from './map-config';
 import { TileLoadingView } from './tile-loading';
 import { ProfileService, defaultNickname, type ProfileChange } from '../profile/profile.service';
+import { DialogComponent } from '../ui/dialog.component';
 import { ProfileDialogComponent } from '../ui/profile-dialog.component';
 import { UserBadgeComponent } from './user-badge.component';
 import { LocationConsentComponent } from './location-consent.component';
@@ -33,7 +34,7 @@ import { ContractListPanelComponent } from './contract-list-panel.component';
 import { DEV_CONTRACT_PREFIX, canUnlock, devContracts } from '../game/contracts/unlock-rule';
 import { ContractPanelComponent, contractNumber, formatDistance } from './contract-panel.component';
 import { distanceMeters } from '../game/contracts/unlock-rule';
-import { DpcWeatherAlertService, WEATHER_CHECK_EVERY_MS, type WeatherAlert, type WeatherAlertService } from './weather-alert';
+import { DpcWeatherAlertService, WEATHER_CHECK_EVERY_MS, fakeWeatherAlert, type WeatherAlert, type WeatherAlertService } from './weather-alert';
 import { OsrmFootRouteService, type RouteService, type WalkingRoute } from './route-service';
 import { ContractCounterComponent } from './contract-counter.component';
 import { MapLegendPanelComponent } from './map-legend-panel.component';
@@ -78,7 +79,7 @@ const USER_ZOOM = 16;
  */
 @Component({
   selector: 'app-world-map',
-  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, UserBadgeComponent, ProfileDialogComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, HangoutInfoPanelComponent, ConfirmDialogComponent],
+  imports: [BrandLogoComponent, IconComponent, TranslatePipe, DropdownMenuComponent, GraphicsDialogComponent, MapFilterPanelComponent, MapNavComponent, MapCreditsComponent, MapLocatingComponent, LocationConsentComponent, ContractPanelComponent, ContractCounterComponent, ContractListPanelComponent, UserBadgeComponent, ProfileDialogComponent, MapLegendPanelComponent, HangoutPlacePanelComponent, HangoutInfoPanelComponent, ConfirmDialogComponent, DialogComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div #container class="map" [class.ready]="ready()" role="application" [attr.aria-label]="'worldMap.label' | t"></div>
@@ -184,9 +185,22 @@ const USER_ZOOM = 16;
     <app-confirm-dialog [open]="removeAsked()" [title]="'worldMap.hangout.removeTitle' | t" [text]="'worldMap.hangout.removeText' | t" [confirmLabel]="'worldMap.hangout.remove' | t" (confirmed)="removeHangout()" (cancel)="removeAsked.set(false)" />
     <app-hangout-info-panel [info]="infoData()" (closed)="infoTarget.set(null)" />
     <app-hangout-place-panel [place]="pendingPlace()" [distance]="pendingDistance()" (closed)="pendingPlace.set(null)" (confirmed)="confirmPlace()" />
-    <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)" />
+    <app-map-nav [located]="!location.locked()" [view3d]="view3d()" [bearing]="bearing()" (locate)="focusUser()" (toggle3d)="toggle3d()" (resetNorth)="resetNorth()" (zoomIn)="zoom(1)" (zoomOut)="zoom(-1)">
+      <!-- Su telefono l'allerta meteo è un pallino in fondo alla colonna dei tasti di navigazione (tocco = spiegazione). -->
+      @if (weatherAlert(); as alert) {
+        <button navExtra type="button" class="weather-dot" [attr.data-level]="alert.level" [attr.aria-label]="alertTitle()" [title]="alertTitle()" (click)="weatherOpen.set(true)">
+          <app-icon name="warning" [size]="20" />
+        </button>
+      }
+    </app-map-nav>
     <app-contract-panel [contract]="selectedContract()" [unlocked]="!!selectedContract() && unlockedIds().has(selectedContract()!.id)" [accepted]="!!selectedContract() && heldIds().includes(selectedContract()!.id)" [heldCount]="heldContracts().length" [maxHeld]="maxHeld" [breach]="breach()" [distance]="selectedDistance()" [route]="route()" [alertLevel]="weatherAlert()?.level ?? null" (closed)="selectedId.set(null)" (accept)="acceptContract($event)" (devUnlock)="devUnlock($event)" (devReset)="devReset()" />
     <app-map-credits [open]="creditsOpen()" (closed)="creditsOpen.set(false)" />
+    @if (weatherOpen() && weatherAlert(); as alert) {
+      <app-dialog [title]="'worldMap.weather.alert' | t" [tone]="alertColor()" width="min(380px, 100%)" (closed)="weatherOpen.set(false)">
+        <p class="weather-level" [style.color]="alertColor()">{{ alertTitle() }}</p>
+        <p class="weather-explain">{{ 'worldMap.weather.explain' | t }}</p>
+      </app-dialog>
+    }
     <app-profile-dialog [open]="profileOpen()" [savedNickname]="profile.stored().nickname" [savedPhotoURL]="profile.stored().photoURL" [defaultNickname]="defaultNickname()" [googlePhoto]="!!auth.user()?.photoURL" (confirmed)="saveProfile($event)" (cancel)="profileOpen.set(false)" />
     <app-graphics-dialog [open]="settingsOpen()" (confirmed)="saveSettings($event)" (cancel)="settingsOpen.set(false)" />
     @if (location.searching() && ready()) {
@@ -277,16 +291,23 @@ const USER_ZOOM = 16;
     /* Quando compare (anche a ogni ricarica della pagina) lampeggia due volte e poi resta fisso. */
     @keyframes weather-blink { 50% { opacity: 0.15; } }
     @media (prefers-reduced-motion: reduce) { .weather { animation: none; } }
-    .weather[data-level='yellow'] { --alert-color: var(--c-warn); }
-    .weather[data-level='orange'] { --alert-color: var(--c-missing); }
-    .weather[data-level='red'] { --alert-color: var(--c-danger); }
+    .weather[data-level='yellow'], .weather-dot[data-level='yellow'] { --alert-color: var(--c-warn); }
+    .weather[data-level='orange'], .weather-dot[data-level='orange'] { --alert-color: var(--c-missing); }
+    .weather[data-level='red'], .weather-dot[data-level='red'] { --alert-color: var(--c-danger); }
+    /* Il pallino: un cerchio del colore del livello con il triangolo di avviso, in fondo alla colonna di navigazione, staccato dai tasti dello spazio doppio che separa la legenda dalla navigazione (il flex della colonna ne mette già uno ridotto); lampeggia due volte quando compare. Si vede solo su telefono. */
+    .weather-dot { display: none; flex: none; pointer-events: auto; margin-top: calc(2 * var(--hud-gap) - var(--hud-gap-tight)); width: var(--hud-btn); height: var(--hud-btn); padding: 0; align-items: center; justify-content: center; border: 1px solid var(--alert-color); border-radius: 50%; background: var(--c-surface); color: var(--alert-color); cursor: pointer; animation: weather-blink 1s ease-in-out 2; }
+    .weather-dot:focus-visible { outline: 2px solid var(--alert-color); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) { .weather-dot { animation: none; } }
+    .weather-level { margin: 0; font: 700 14px/1.3 var(--font-ui); letter-spacing: 0.04em; text-transform: uppercase; }
+    .weather-explain { margin: 0; color: var(--c-text-dim); }
     /* Il passaggio giorno/notte: l'icona scende, cambia mentre è nascosta e risale al suo posto. */
     .sun { display: inline-flex; transition: transform 240ms var(--ease-draw), opacity 240ms; }
     .sun.swapping { transform: translateY(28px); opacity: 0; }
     @media (prefers-reduced-motion: reduce) { .sun { transition: none; } }
-    /* Su telefono l'orologio non si vede, l'allerta resta (è una sicurezza) e sale sopra l'avviso di posizione, che prende tutta la larghezza. */
+    /* Su telefono l'orologio non si vede e l'allerta diventa un pallino in fondo alla colonna di navigazione, a sinistra: in basso non c'è più posto accanto ai riquadri a tutta larghezza. */
     @media (max-width: 640px) {
-      .corner:not(.end) .clock { display: none; }
+      .corner:not(.end) .clock, .corner:not(.end) .weather { display: none; }
+      .weather-dot { display: flex; }
       /* Sopra la riga di stato (alta 22px, a 10px dal fondo) con 4px di spazio. */
       .corner { bottom: 36px; }
       /* I riquadri Fixer e Mercenario occupano tutta la larghezza, meno 10px per lato. */
@@ -336,6 +357,13 @@ export class WorldMapComponent {
   protected readonly reputation = signal(0);
   private readonly weatherService: WeatherAlertService = new DpcWeatherAlertService();
   protected readonly weatherAlert = signal<WeatherAlert | null>(null);
+  /** La finestra che spiega il pallino dell'allerta (su telefono). */
+  protected readonly weatherOpen = signal(false);
+  /** Il colore del livello dell'allerta (gialla, arancione, rossa), per la finestra. */
+  protected readonly alertColor = computed(() => {
+    const level = this.weatherAlert()?.level;
+    return level === 'red' ? 'var(--c-danger)' : level === 'orange' ? 'var(--c-missing)' : 'var(--c-warn)';
+  });
   private weatherAskedAt = 0;
   /** Il suggerimento dell'avviso: livello e zona («Allerta arancione · Bacini Liguri Marittimi di Centro»). */
   protected readonly alertTitle = computed(() => {
@@ -1089,6 +1117,11 @@ export class WorldMapComponent {
 
   /** Chiede l'allerta meteo alla prima posizione e poi una volta all'ora (il servizio tiene l'ultimo esito nel localStorage e non chiama la rete prima). La posizione resta sul dispositivo: la zona si cerca qui. */
   private checkWeather(pos: UserPosition): void {
+    const fake = fakeWeatherAlert(); // allerta di prova (solo se scelta a mano nel browser): niente rete
+    if (fake) {
+      this.weatherAlert.set(fake);
+      return;
+    }
     if (this.weatherAskedAt && Date.now() - this.weatherAskedAt < WEATHER_CHECK_EVERY_MS) return;
     this.weatherAskedAt = Date.now();
     void this.weatherService.at(pos, new Date()).then((alert) => this.weatherAlert.set(alert));

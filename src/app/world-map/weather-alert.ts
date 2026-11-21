@@ -185,3 +185,17 @@ export class DpcWeatherAlertService implements WeatherAlertService {
     return null;
   }
 }
+
+/**
+ * Allerta finta per provare l'interfaccia (non c'è nel codice, come la posizione finta): si imposta nella console del browser con
+ * `localStorage.setItem('cad-fake-weather', 'yellow')` (anche `orange` o `red`) e si toglie con `localStorage.removeItem('cad-fake-weather')`; poi si ricarica la pagina.
+ * Serve la posizione (anche quella finta). Non chiama la rete.
+ */
+export function fakeWeatherAlert(): WeatherAlert | null {
+  try {
+    const level = localStorage.getItem('cad-fake-weather');
+    return level === 'yellow' || level === 'orange' || level === 'red' ? { level, zone: 'Zona di prova' } : null;
+  } catch {
+    return null;
+  }
+}
