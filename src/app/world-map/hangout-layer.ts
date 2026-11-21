@@ -315,11 +315,6 @@ export class HangoutLayer {
     return [...found.values()];
   }
 
-  /** Quanti luoghi di interesse (di qualunque tipo) ci sono nei tasselli caricati: serve a capire se mancano i dati o solo i tipi ammessi. */
-  poiCount(): number {
-    return this.map.querySourceFeatures(BASEMAP_SOURCE_ID, { sourceLayer: 'pois' }).length;
-  }
-
   private readBuildings() {
     return footprintsFrom(this.map.querySourceFeatures(BASEMAP_SOURCE_ID, { sourceLayer: BUILDINGS, filter: ['==', ['get', 'kind'], 'building'] as FilterSpecification }));
   }

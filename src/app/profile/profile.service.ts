@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal, untracked } from '@angular/core';
 import { deleteField, doc, getDoc, getFirestore, serverTimestamp, setDoc } from 'firebase/firestore';
 import { AuthService } from '../auth/auth.service';
+import { FirestoreHangoutStore, HANGOUT_NICKNAME_MAX, HANGOUT_PHOTO_URL_MAX, parseHangout, type Hangout, type HangoutCustom, type HangoutSaveResult, type HangoutStore } from '../game/hangout/hangout-store';
 import { firebaseApp } from '../firebase/firebase';
 
 /**
@@ -17,6 +18,8 @@ export interface UserProfile {
   nickname: string | null;
   /** L'immagine scelta dal giocatore (indirizzo https); `null` se non l'ha impostata. Chi entra con Google usa la foto di Google. */
   photoURL: string | null;
+  /** Il ritrovo del Fixer (luogo e edifici), o `null` se non ne ha uno. */
+  hangout: Hangout | null;
 }
 
 /** Le scelte del giocatore che si possono cambiare: ciò che manca non si tocca, `null` toglie il campo. */
@@ -26,7 +29,7 @@ export type ProfileChange = Partial<Pick<UserProfile, 'nickname' | 'photoURL'>>;
 export const NICKNAME_MAX = 24;
 export const PHOTO_URL_MAX = 500;
 
-const EMPTY_PROFILE: UserProfile = { role: 'player', nickname: null, photoURL: null };
+const EMPTY_PROFILE: UserProfile = { role: 'player', nickname: null, photoURL: null, hangout: null };
 
 /** Cifre decimali di latitudine e longitudine salvate: 3 = circa 100 m. Basta per una «zona di partenza» e non dice dove abiti. */
 const STARTING_POINT_DECIMALS = 3;
@@ -57,7 +60,7 @@ export class FirestoreProfileStore implements ProfileStore {
     if (!uid) return EMPTY_PROFILE;
     const data = (await getDoc(doc(this.db, 'users', uid))).data();
     const text = (v: unknown) => (typeof v === 'string' && v.trim() ? v : null);
-    return { role: data?.['role'] === 'admin' ? 'admin' : 'player', nickname: text(data?.['nickname']), photoURL: text(data?.['photoURL']) };
+    return { role: data?.['role'] === 'admin' ? 'admin' : 'player', nickname: text(data?.['nickname']), photoURL: text(data?.['photoURL']), hangout: parseHangout(data?.['hangout']) };
   }
 
   async saveProfile(change: ProfileChange): Promise<void> {
@@ -89,7 +92,13 @@ export class FirestoreProfileStore implements ProfileStore {
 export class ProfileService {
   private readonly auth = inject(AuthService);
   private readonly store: ProfileStore = new FirestoreProfileStore(() => this.auth.user()?.uid ?? null);
+  private readonly hangoutStore: HangoutStore = new FirestoreHangoutStore(() => this.auth.user()?.uid ?? null);
   private readonly loaded = signal<UserProfile>(EMPTY_PROFILE);
+  private readonly settled = signal(false);
+  /** Il profilo è stato letto (bene o male) per chi è dentro: prima, il ritrovo e le altre scelte non si sanno ancora. */
+  readonly ready = this.settled.asReadonly();
+  /** Il ritrovo del Fixer di chi è dentro, o `null` se non ne ha uno (o non si sa ancora: vedi `ready`). */
+  readonly hangout = computed(() => this.loaded().hangout);
   /** Il ruolo di chi è dentro; finché non è letto (e se la lettura fallisce) è `player`. */
   readonly role = computed(() => this.loaded().role);
   readonly isAdmin = computed(() => this.role() === 'admin');
@@ -109,16 +118,27 @@ export class ProfileService {
   /** Numera le letture del profilo: vale solo l'ultima, una più vecchia che arriva in ritardo non sovrascrive niente. */
   private reads = 0;
 
-  private async refresh(uid: string | null): Promise<void> {
+  private async refresh(uid: string | null, reset = true): Promise<void> {
     const mine = ++this.reads;
-    this.loaded.set(EMPTY_PROFILE);
+    if (reset) {
+      this.loaded.set(EMPTY_PROFILE);
+      this.settled.set(false);
+    }
     if (!uid) return;
     try {
       const profile = await this.store.load();
-      if (mine === this.reads && this.auth.user()?.uid === uid) this.loaded.set(profile); // nel frattempo è cambiato qualcosa: la risposta non vale
+      if (mine === this.reads && this.auth.user()?.uid === uid) {
+        this.loaded.set(profile);
+        this.settled.set(true);
+        return;
+      }
     } catch (e) {
       console.warn('Profilo non letto dall\'account', e);
+      if (mine === this.reads) this.settled.set(true);
+      return;
     }
+    // Una scrittura locale (nickname, ritrovo) è arrivata mentre si leggeva: questa risposta non vale, si rilegge (ora conosce anche quella scrittura).
+    if (this.auth.user()?.uid === uid) void this.refresh(uid, false);
   }
 
   /** Ciò che il giocatore ha scelto davvero (senza i valori di partenza): serve alla finestra del profilo. */
@@ -132,6 +152,41 @@ export class ProfileService {
     this.reads++; // una lettura ancora in corso non deve riportare il vecchio valore
     this.loaded.update((p) => ({ ...p, ...clean }));
     try { await this.store.saveProfile(clean); } catch (e) { console.warn('Profilo non salvato sull\'account', e); }
+  }
+
+  /** Fissa il ritrovo (e prende i suoi edifici). Si vede solo se il server dice di sì: con `taken` almeno un edificio è già di un altro Fixer. */
+  async saveHangout(hangout: Hangout): Promise<HangoutSaveResult> {
+    const result = await this.hangoutStore.save(hangout);
+    if (result === 'ok') this.setHangout(hangout);
+    return result;
+  }
+
+  /** Toglie il ritrovo e libera i suoi edifici. */
+  async clearHangout(): Promise<HangoutSaveResult> {
+    const current = this.hangout();
+    if (!current) return 'ok';
+    const result = await this.hangoutStore.clear(current);
+    if (result === 'ok') this.setHangout(null);
+    return result;
+  }
+
+  /** Il Fixer personalizza il ritrovo (soprannome, immagine, nascosto): si vede solo se il server dice di sì. */
+  async customizeHangout(custom: HangoutCustom): Promise<HangoutSaveResult> {
+    const current = this.hangout();
+    if (!current) return 'error';
+    const clean: HangoutCustom = {
+      nickname: custom.nickname?.trim().slice(0, HANGOUT_NICKNAME_MAX) || null,
+      photoURL: custom.photoURL?.trim().slice(0, HANGOUT_PHOTO_URL_MAX) || null,
+      hidden: custom.hidden,
+    };
+    const result = await this.hangoutStore.customize(clean);
+    if (result === 'ok') this.setHangout({ ...current, ...clean });
+    return result;
+  }
+
+  private setHangout(hangout: Hangout | null): void {
+    this.reads++; // una lettura ancora in corso non deve riportare il vecchio ritrovo
+    this.loaded.update((p) => ({ ...p, hangout }));
   }
 
   async recordLocationConsent(version: number): Promise<void> {

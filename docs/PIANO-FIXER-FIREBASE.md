@@ -2,7 +2,7 @@
 
 Scritto il 2026-11-20 per riprendere il lavoro da un altro computer. Fa fede solo ciò che è sotto «Fatto» e «Deciso»; «Da decidere» non si implementa finché non si decide.
 
-## Fatto: il ritrovo del Fixer (tutto nel localStorage)
+## Fatto: il ritrovo del Fixer (sull'account Firestore)
 Il giocatore, come Fixer, fissa un **ritrovo** su un luogo pubblico e impone la sua **influenza** su 3 edifici attorno. Flusso:
 1. Riquadro **Fixer** in basso a destra (giallo senza ritrovo): tasto `add_home` → scelta del luogo. Compaiono le casette (cerchi con una casetta) dei luoghi pubblici entro `HANGOUT_PICK_RANGE_M` dal giocatore (oggi 200 m, da riportare a 50-100 m con la posizione vera). Si tocca una casetta: pannello laterale con le info e «Fissa ritrovo».
 2. **Scelta dell'influenza**: edifici evidenziati entro 50 m dal luogo (+25 m alla volta fino a 500 m se meno di 3). Si scelgono 3 edifici (si toglie toccando di nuovo) e si conferma. Gli edifici dentro scuole, ospedali, caserme, ecc. sono **vietati** (righe a 45° rosse e box «Vietato»).
@@ -14,14 +14,13 @@ Dove sta il codice (`src/app/world-map/` salvo diversa indicazione):
 - `hangout-layer.ts`: disegno sulla mappa (livelli per identificativo di edificio, marker, tratteggio animato) e lettura dei tasselli.
 - `hangout-place-panel.component.ts`, `hangout-info-panel.component.ts`: i due pannelli laterali. `place-names.ts`: quartiere e città letti direttamente dal file dei dati (nessun servizio esterno).
 - `world-map.component.ts`: modalità `none | place | influence | view`, riquadri Fixer e Mercenario (con Fama, Reputazione e la riga dei contratti).
-- `game/hangout/hangout-store.ts`: `HangoutStore` (oggi `LocalHangoutStore`, chiave `cad-hangout`), dietro interfaccia come gli altri stati del giocatore.
+- `game/hangout/hangout-store.ts`: `HangoutStore` (`FirestoreHangoutStore`: una transazione scrive `users/{uid}.hangout` e un documento `territory/{id edificio}` per ognuno dei suoi edifici, che dicono di chi è l'edificio; le regole fanno rifiutare un edificio già preso, e il client lo mostra con «Edificio già di un altro Fixer»). Il ritrovo si legge insieme al profilo (`ProfileService.hangout`). Nessuna importazione dal vecchio localStorage (la chiave `cad-hangout` non si usa più).
 - Misure comuni dell'interfaccia sulla mappa: token `--hud-*`, `--side-panel-*` in `styles/tokens.css`.
 
 Cose che sono ancora segnaposto o provvisorie:
 - **Fama** e **Reputazione** sono sempre 0 (`fame`, `reputation` nel componente).
 - Il rimborso dei punti al cestino («metà dei punti spesi, minimo 3») non è accreditato: non esiste un conto dei punti. I Contratti creati nella zona non esistono ancora (dovranno tornare «posizionabili»).
-- La matita della pillola è spenta; il codice per aggiungere edifici all'area (`reachFrom`, `EXPAND_REACH_M`) è rimasto, ma l'espansione è fuori dall'interfaccia.
-- In `world-map.component.ts` c'è una riga `console.info('[ritrovo] luoghi', …)` solo in sviluppo, da togliere quando la scelta dei luoghi è stabile.
+- La **matita** della pillola apre «Personalizza il ritrovo» (`ui/hangout-dialog.component.ts`): `hangout.nickname` (soprannome, 1-32), `hangout.photoURL` (https) e `hangout.hidden` (nascosto). Un tocco sul segnaposto del ritrovo (anche senza lente) apre il pannello con soprannome, immagine, visibilità, città e quartiere. **Il flag `hidden` per ora si salva e basta**: gli altri giocatori non vedono ancora i ritrovi altrui (`territory` è leggibile solo dal proprietario), quindi manca la scoperta: servirà un indice pubblico dei ritrovi non nascosti (cosa esporre: luogo, soprannome, immagine?), da decidere con l'informativa. Il codice per aggiungere edifici all'area (`reachFrom`, `EXPAND_REACH_M`) è rimasto, ma l'espansione è fuori dall'interfaccia.
 - I luoghi ammessi sono una lista bianca stretta: in zone poco servite può non esserci nulla entro il raggio (la barra lo dice e dà la distanza del più vicino).
 
 ## Prossimo: il flusso dei contratti personalizzati (prima della contesa)
@@ -54,7 +53,7 @@ Domande aperte, con la risposta che consiglio:
 3. La prova del consenso con data lato server (più solida): sì o no?
 4. Territorio contendibile vicino o lontano? Se vicino, partire direttamente dal modello a un documento per edificio.
 
-**Fatto**: Auth; primo archivio Firestore `users/{uid}` con `locationConsent` (data del server e versione dell'informativa, riscritta a ogni «Accetta») e `startingPoint` (prima lettura con precisione ≤ 100 m, arrotondata a 3 decimali ≈ 100 m, scritta una volta sola e mai più modificata dal client; non si salva con la posizione finta). `nickname` (1-24 caratteri) e `photoURL` (https, max 500): li sceglie il giocatore, ancora senza schermata per cambiarli (per ora si scrivono dalla console). Ruolo `role` (`player` se manca, `admin` per l'amministratore e gli strumenti di sviluppo): lo imposta a mano chi amministra dalla console, le regole non lo lasciano scrivere al client; `ProfileService.role` e `isAdmin` lo espongono. Regole in `firestore.rules`, con elenco chiuso dei campi. L'informativa (`location.*`) dice che la zona di partenza resta sull'account.
+**Fatto**: Auth; il ritrovo del Fixer su Firestore (`users/{uid}.hangout` + `territory/{id}`, una scrittura sola, un proprietario per edificio, `territory` leggibile solo dal proprietario per ora); primo archivio Firestore `users/{uid}` con `locationConsent` (data del server e versione dell'informativa, riscritta a ogni «Accetta») e `startingPoint` (prima lettura con precisione ≤ 100 m, arrotondata a 3 decimali ≈ 100 m, scritta una volta sola e mai più modificata dal client; non si salva con la posizione finta). `nickname` (1-24 caratteri) e `photoURL` (https, max 500): li sceglie il giocatore, ancora senza schermata per cambiarli (per ora si scrivono dalla console). Ruolo `role` (`player` se manca, `admin` per l'amministratore e gli strumenti di sviluppo): lo imposta a mano chi amministra dalla console, le regole non lo lasciano scrivere al client; `ProfileService.role` e `isAdmin` lo espongono. Regole in `firestore.rules`, con elenco chiuso dei campi. L'informativa (`location.*`) dice che la zona di partenza resta sull'account.
 
 Ordine suggerito quando si decide: Auth → archivi Firestore del ritrovo e del consenso → emulatore e regole → importazione → contratti creati → territorio.
 
@@ -70,7 +69,6 @@ Ordine suggerito quando si decide: Auth → archivi Firestore del ritrovo e del 
 |---|---|
 | `cad-location-consent` | data in cui è stato dato il consenso alla posizione |
 | `cad-fake-position` | posizione finta di sviluppo (`lat,lng`) |
-| `cad-hangout` | il ritrovo: luogo e identificativi degli edifici |
 | `cad-contracts-held`, `cad-contracts-unlocked` | contratti accettati e sbloccati |
 | `cad-map-preset`, `cad-map-filters-custom`, `cad-map-3d`, `cad-map-halo` | preferenze della mappa |
 | `cad-lang`, `cad-graphics` | lingua e grafica |

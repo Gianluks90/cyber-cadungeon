@@ -5,6 +5,8 @@ import { IconComponent } from '../ui/icon.component';
 /** Cosa mostra il pannello delle info: un titolo, una piccola etichetta (il tipo di elemento) e una riga per ogni informazione. */
 export interface HangoutInfo {
   title: string;
+  /** Sotto il titolo, in piccolo e in verde: per il ritrovo con un soprannome, il nome originale del luogo. */
+  subtitle?: string | null;
   badge: string;
   /** L'icona dell'etichetta (`home` per il ritrovo, `apartment` per un edificio). */
   icon: string;
@@ -13,6 +15,8 @@ export interface HangoutInfo {
   tags: { label: string; value: string }[];
   /** Quartiere e città si stanno ancora scaricando: al posto dei blocchetti compare un testo che lampeggia piano. */
   loading: boolean;
+  /** L'immagine scelta dal Fixer (solo per il ritrovo), in cima al pannello. */
+  photoURL?: string | null;
   /** Il raggio dell'area che proietta, in metri: sta nel piede, con l'etichetta «Influenza». */
   influence: number;
 }
@@ -30,11 +34,17 @@ export interface HangoutInfo {
     <aside class="sheet" [class.open]="open()" [attr.aria-hidden]="!open()" [attr.aria-label]="shown()?.title ?? null">
       @if (shown(); as s) {
         <header>
-          <h2>{{ s.title }}</h2>
+          <div class="heading">
+            <h2>{{ s.title }}</h2>
+            @if (s.subtitle) { <p class="subtitle">{{ s.subtitle }}</p> }
+          </div>
           <button type="button" class="close" [attr.aria-label]="'common.close' | t" [title]="'common.close' | t" (click)="closed.emit()"><app-icon name="close" [size]="20" /></button>
         </header>
         <hr />
         <div class="body">
+          @if (s.photoURL && failed() !== s.photoURL) {
+            <img class="photo" [src]="s.photoURL" alt="" referrerpolicy="no-referrer" (error)="failed.set(s.photoURL)" />
+          }
           <p class="meta"><span class="kind"><app-icon [name]="s.icon" [size]="16" />{{ s.badge }}</span></p>
           @if (s.loading) { <p class="loading" role="status">{{ 'worldMap.hangout.info.loading' | t }}</p> }
           @if (s.tags.length) {
@@ -65,7 +75,10 @@ export interface HangoutInfo {
       .body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
     }
     header { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 10px 10px 14px; }
-    h2 { flex: 1; min-width: 0; margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
+    .heading { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    /* Il nome originale del luogo: nel carattere del testo (non in quello dei titoli), normale e verde. */
+    .subtitle { margin: 0; color: var(--c-you); font: 400 13px/1.3 var(--font-ui); overflow-wrap: anywhere; }
+    h2 { margin: 0; font: 600 var(--fs-md)/1.2 var(--font-display); letter-spacing: 0.06em; text-transform: uppercase; }
     hr { flex: none; width: 100%; margin: 0; border: 0; border-top: 1px solid var(--c-you); }
     .close { flex: none; width: 32px; height: 32px; padding: 0; display: flex; align-items: center; justify-content: center; border: 1px solid var(--c-line); border-radius: var(--radius-1); background: none; color: var(--c-text-dim); cursor: pointer; transition: color var(--t-fast), border-color var(--t-fast); }
     .close:hover, .close:focus-visible { color: var(--c-you); border-color: var(--c-you); outline: none; }
@@ -74,6 +87,8 @@ export interface HangoutInfo {
     .meta { display: flex; align-items: center; gap: 10px; }
     .kind { display: inline-flex; align-items: center; gap: 6px; color: var(--c-you); font: 600 11px/1 var(--font-ui); letter-spacing: var(--label-tracking); text-transform: uppercase; }
     .line { color: var(--c-text); }
+    /* L'immagine del ritrovo: larga quanto il pannello, tagliata e un po' desaturata. */
+    .photo { width: 100%; max-height: 160px; object-fit: cover; border: 1px solid var(--c-you); border-radius: var(--radius-1); filter: grayscale(0.6); }
     /* I blocchetti città e quartiere, uno sotto l'altro a tutta larghezza: etichetta piccola in maiuscolo a sinistra e valore a destra sulla stessa riga, in verde, con gli angoli in alto a destra e in basso a sinistra arrotondati (come i badge). */
     /* Il testo del download in corso: lampeggia lentamente (con la riduzione del movimento resta fisso, attenuato). */
     .loading { color: var(--c-you); font-size: 13px; animation: loading-blink 1.8s ease-in-out infinite; }
@@ -97,6 +112,8 @@ export class HangoutInfoPanelComponent {
   protected readonly open = computed(() => !!this.info());
   /** Le ultime info aperte: restano scritte mentre il pannello scivola via. */
   protected readonly shown = signal<HangoutInfo | null>(null);
+  /** L'ultima immagine che non si è riusciti a caricare: se cambia, si riprova. */
+  protected readonly failed = signal<string | null>(null);
 
   constructor() {
     effect(() => {

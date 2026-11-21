@@ -25,9 +25,28 @@ service cloud.firestore {
     //       First (rounded) position of the user. Written once by the client;
     //       after that it can no longer be changed (only deleted together with
     //       the whole document).
+    //   - hangout: map { place, buildings, at, nickname?, photoURL?, hidden? }
+    //       The Fixer's hangout: a public place { name: string|null, kind:
+    //       string, lng: number, lat: number } and 1-3 building ids (the ids
+    //       the map data gives them). place, buildings and at are set once,
+    //       then only removed: the rules force removal to go together with the
+    //       territory documents below. nickname (1-32 characters), photoURL
+    //       (https URL up to 500) and hidden (bool: other players cannot find
+    //       the hangout by exploring) are the owner's customisation and can be
+    //       changed, or removed (nickname and photoURL) at any time.
+    //
+    // Collection: territory
+    // Document ID: a building id (digits only)
+    // Fields: ownerUid: string (the uid of the owner), at: timestamp (server).
+    //   One document per building = one owner per building: a document can be
+    //   CREATED only if it does not exist yet (there is no update rule), so the
+    //   database itself refuses a building that is already taken. A territory
+    //   document and the hangout that lists its building are always written and
+    //   deleted in the same batch/transaction (getAfter/existsAfter checks).
+    //   Read: only the owner, for now (other Fixers cannot see who owns what).
     //
     // Everything not listed here is denied. New fields need a new rule.
-    // Deleting the document also deletes the role (the console can set it again).
+    // Deleting the user document also deletes the role (the console can set it again).
     //
     // ===============================================================
     // Helper Functions
@@ -44,7 +63,32 @@ service cloud.firestore {
     // `role` is allowed to EXIST in the document (set from the console), but
     // the validators below never let a client create or change it.
     function hasOnlyAllowedFields(data) {
-      return data.keys().hasOnly(['role', 'nickname', 'photoURL', 'locationConsent', 'startingPoint']);
+      return data.keys().hasOnly(['role', 'nickname', 'photoURL', 'locationConsent', 'startingPoint', 'hangout']);
+    }
+
+    // Path of the territory document of a building (id is an int).
+    function territoryPath(id) {
+      return /databases/$(database)/documents/territory/$(string(id));
+    }
+
+    // After the write, every building in the list is owned by the caller.
+    // (A list has at most 3 elements: rules have no loops, so they are checked one by one.)
+    function ownsAllAfter(b) {
+      return getAfter(territoryPath(b[0])).data.ownerUid == request.auth.uid
+        && (b.size() < 2 || getAfter(territoryPath(b[1])).data.ownerUid == request.auth.uid)
+        && (b.size() < 3 || getAfter(territoryPath(b[2])).data.ownerUid == request.auth.uid);
+    }
+
+    // After the write, none of the buildings in the list has a territory document.
+    function goneAfter(b) {
+      return !existsAfter(territoryPath(b[0]))
+        && (b.size() < 2 || !existsAfter(territoryPath(b[1])))
+        && (b.size() < 3 || !existsAfter(territoryPath(b[2])));
+    }
+
+    // The user document as it will be after the current write.
+    function userAfter(uid) {
+      return getAfter(/databases/$(database)/documents/users/$(uid)).data;
     }
 
     // ===============================================================
@@ -80,6 +124,48 @@ service cloud.firestore {
         && p.at == request.time;
     }
 
+    function isValidHangoutNickname(n) {
+      return n is string && n.size() >= 1 && n.size() <= 32;
+    }
+
+    // The customisation fields of a hangout (all optional).
+    function isValidHangoutCustom(h) {
+      return (!('nickname' in h) || isValidHangoutNickname(h.nickname))
+        && (!('photoURL' in h) || isValidPhotoUrl(h.photoURL))
+        && (!('hidden' in h) || h.hidden is bool);
+    }
+
+    // 1 to 3 distinct non-negative integer building ids.
+    function isValidBuildingIds(b) {
+      return b is list && b.size() >= 1 && b.size() <= 3
+        && b[0] is int && b[0] >= 0
+        && (b.size() < 2 || (b[1] is int && b[1] >= 0 && b[1] != b[0]))
+        && (b.size() < 3 || (b[2] is int && b[2] >= 0 && b[2] != b[0] && b[2] != b[1]));
+    }
+
+    function isValidPlace(p) {
+      return p is map
+        && p.keys().hasOnly(['name', 'kind', 'lng', 'lat'])
+        && p.keys().hasAll(['name', 'kind', 'lng', 'lat'])
+        && (p.name == null || (p.name is string && p.name.size() <= 120))
+        && p.kind is string && p.kind.size() >= 1 && p.kind.size() <= 40
+        && p.lng is number && p.lng >= -180 && p.lng <= 180
+        && p.lat is number && p.lat >= -90 && p.lat <= 90;
+    }
+
+    // A freshly written hangout: valid place, valid buildings that the caller owns after this write.
+    function isValidHangout(h) {
+      return h is map
+        && h.keys().hasOnly(['place', 'buildings', 'at', 'nickname', 'photoURL', 'hidden'])
+        && h.keys().hasAll(['place', 'buildings', 'at'])
+        && isValidHangoutCustom(h)
+        && h.at is timestamp
+        && h.at == request.time
+        && isValidPlace(h.place)
+        && isValidBuildingIds(h.buildings)
+        && ownsAllAfter(h.buildings);
+    }
+
     // Whole document after a create: every present field must be valid.
     function isValidNewUser(data) {
       return hasOnlyAllowedFields(data)
@@ -87,7 +173,8 @@ service cloud.firestore {
         && (!('nickname' in data) || isValidNickname(data.nickname))
         && (!('photoURL' in data) || isValidPhotoUrl(data.photoURL))
         && (!('locationConsent' in data) || isValidConsent(data.locationConsent))
-        && (!('startingPoint' in data) || isValidStartingPoint(data.startingPoint));
+        && (!('startingPoint' in data) || isValidStartingPoint(data.startingPoint))
+        && (!('hangout' in data) || isValidHangout(data.hangout));
     }
 
     // Whole document after an update: only fields that actually change are
@@ -102,7 +189,27 @@ service cloud.firestore {
         && (!('locationConsent' in changed) || isValidConsent(after.locationConsent))
         // The starting point can be set once; an existing one never changes.
         && (!('startingPoint' in changed)
-            || (!('startingPoint' in before) && isValidStartingPoint(after.startingPoint)));
+            || (!('startingPoint' in before) && isValidStartingPoint(after.startingPoint)))
+        // The hangout can be set when there is none, or removed together with its territory; once set, only its customisation changes.
+        && (!('hangout' in changed)
+            || (!('hangout' in before) && isValidHangout(after.hangout))
+            || (!('hangout' in after) && goneAfter(before.hangout.buildings))
+            || ('hangout' in before && 'hangout' in after
+                && after.hangout.place == before.hangout.place
+                && after.hangout.buildings == before.hangout.buildings
+                && after.hangout.at == before.hangout.at
+                && after.hangout.keys().hasOnly(['place', 'buildings', 'at', 'nickname', 'photoURL', 'hidden'])
+                && isValidHangoutCustom(after.hangout)));
+    }
+
+    // A territory document as written by its owner, at server time.
+    function isValidTerritory(t) {
+      return t.keys().hasOnly(['ownerUid', 'at'])
+        && t.keys().hasAll(['ownerUid', 'at'])
+        && t.ownerUid is string
+        && t.ownerUid == request.auth.uid
+        && t.at is timestamp
+        && t.at == request.time;
     }
 
     // ===============================================================
@@ -114,8 +221,26 @@ service cloud.firestore {
       allow read: if isOwner(userId);
       allow create: if isOwner(userId) && isValidNewUser(request.resource.data);
       allow update: if isOwner(userId) && isValidUserUpdate(resource.data, request.resource.data);
-      // The user can erase their own data (GDPR).
-      allow delete: if isOwner(userId);
+      // The user can erase their own data (GDPR); a hangout goes together with its territory documents.
+      allow delete: if isOwner(userId) && (!('hangout' in resource.data) || goneAfter(resource.data.hangout.buildings));
+    }
+
+    match /territory/{buildingId} {
+      // Only the owner (nobody sees other Fixers' territory for now).
+      allow read: if isAuthenticated() && resource.data.ownerUid == request.auth.uid;
+      // Create only: an existing document cannot be overwritten, so a building has one owner.
+      // The caller's hangout (after this same write) must list this building.
+      allow create: if isAuthenticated()
+        && buildingId.matches('^[0-9]{1,16}$')
+        && isValidTerritory(request.resource.data)
+        && 'hangout' in userAfter(request.auth.uid)
+        && userAfter(request.auth.uid).hangout.buildings.hasAny([int(buildingId)]);
+      allow update: if false;
+      // Only the owner, and only if the hangout (after this same write) no longer lists the building.
+      allow delete: if isAuthenticated()
+        && resource.data.ownerUid == request.auth.uid
+        && (!('hangout' in userAfter(request.auth.uid))
+            || !userAfter(request.auth.uid).hangout.buildings.hasAny([int(buildingId)]));
     }
 
     // Everything else: no access (default deny).

@@ -16,7 +16,7 @@ export type LocationState = 'idle' | 'waiting' | 'granted' | 'denied' | 'unavail
 const CONSENT_KEY = 'cad-location-consent';
 const FAKE_POSITION_KEY = 'cad-fake-position';
 /** La versione dell'informativa sulla posizione (location.* in it.json): da alzare quando il testo cambia nella sostanza. */
-export const LOCATION_NOTICE_VERSION = 1;
+export const LOCATION_NOTICE_VERSION = 2;
 /** Per salvare la zona di partenza serve una lettura almeno così precisa (metri): una approssimativa di rete può essere a chilometri. */
 const STARTING_POINT_MAX_ACCURACY_M = 100;
 /** Sotto questa incertezza (metri) la posizione è considerata precisa. */
